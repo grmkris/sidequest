@@ -216,6 +216,21 @@ describe('get_task creator selection authorization and persistence', () => {
     expect(context.read.mock.calls.some(([call]) => call.functionName === 'selectionNonceUsed')).toBe(false)
   })
 
+  it('tells the selected worker to activate from its own live selection, without throwing for anyone else', async () => {
+    const context = fixture()
+    const mine = await context.get(worker)
+    expect(mine.nextAction).toEqual({ actor: 'worker', action: 'activate', deadline: 1_100 })
+    expect(mine.mine).toMatchObject({ selected: true, liveSelection: { activateBy: 1_100 } })
+    const other = await context.get(curator)
+    expect(other.nextAction).toMatchObject({ actor: 'creator', action: 'select_worker' })
+    expect(other.mine).toMatchObject({ selected: false, liveSelection: null })
+    expect(context.verify).not.toHaveBeenCalled()
+    context.setNow(1_101)
+    const expired = await context.get(worker)
+    expect(expired.nextAction).toMatchObject({ actor: 'creator', action: 'select_worker' })
+    expect(expired.mine).toMatchObject({ selected: true, liveSelection: null })
+  })
+
   it('expires a persisted selection strictly after its cutoff', async () => {
     const context = fixture()
     context.setNow(1_101)

@@ -110,7 +110,8 @@ timely finalized submission is acceptance. No refund can erase earned worker pay
 or an open appeal. A classifier advises; it never pays or slashes.
 
 Use `settlement_actions` and chain state for deferred decisions, timeouts, top-up
-refunds and owed withdrawals. Activated-job penalties apply only if resolved before the listing's `expiredAt`;
+refunds and owed withdrawals. A hire nobody activated before its deadline lapses: `get_task`
+then names you to `cancel_task`, which refunds its reward and bond; nothing else settles it. Activated-job penalties apply only if resolved before the listing's `expiredAt`;
 at or after expiry Holding releases those bonds. Never-activated listings still forfeit their snapshotted share.
 Confirm `BondSlashed`, `BondForfeited` or `BondReleased` rather than inferring a loss from an outcome.
 A terminal core status alone may leave a bond penalty

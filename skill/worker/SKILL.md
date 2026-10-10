@@ -56,6 +56,7 @@ Penalties apply only if resolved before the listing's `expiredAt`; at or after e
    pays the worker under the frozen rules. A rejection opens its dispute window;
    `dispute` before the cutoff if the published criteria were met.
 7. Use `settlement_actions` to finish permissionless timeout or settlement steps.
+   When it prepares nothing, its note says who acts next or that nothing is left.
    A deferred decision needs retryDeferred followed by settle. Failed token payouts
    may become owed; withdraw owed funds separately and verify the receipt.
 

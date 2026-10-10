@@ -44,7 +44,7 @@ import { type GitHubApp, checkRuns, installationToken, repoSlug } from './github
 import type { ModelEndpoint } from './model.ts'
 import { screenOffer } from './screening.ts'
 import { creatorSelectionProjection } from './selection.ts'
-import { publisherFunding, publisherNextAction } from './publisher-view.ts'
+import { type NextAction, publisherFunding, publisherNextAction, settlementNote } from './publisher-view.ts'
 import { assertAgentEnvelope, assertExactAgentTypedData } from './agent-signing-scope.ts'
 import { typedDataJson } from './typed-data.ts'
 import { BoardError } from './board-error.ts'
@@ -2447,13 +2447,19 @@ export class Board {
     }
   }
 
+  /** The worker's newest signed selection on this task that can still be activated, if any. Board records only. */
+  #liveSelection(task: TaskRow, worker: Address): SelectionRow | undefined {
+    return this.#sql
+      .all<SelectionRow>(
+        'SELECT * FROM selections WHERE task_id = ? AND signature IS NOT NULL AND activate_by >= ? ORDER BY created_at DESC',
+        task.id,
+        this.#now(),
+      )
+      .find((r) => eq(r.worker, worker))
+  }
+
   #liveSelectionFor(task: TaskRow, worker: Address): SelectionRow {
-    const rows = this.#sql.all<SelectionRow>(
-      'SELECT * FROM selections WHERE task_id = ? AND signature IS NOT NULL AND activate_by >= ? ORDER BY created_at DESC',
-      task.id,
-      this.#now(),
-    )
-    const sel = rows.find((r) => eq(r.worker, worker))
+    const sel = this.#liveSelection(task, worker)
     if (sel === undefined) throw new BoardError('not-found', 'you have no live signed selection for this task')
     return sel
   }
@@ -3329,9 +3335,13 @@ export class Board {
   async settlementActions(caller: Caller, input: { taskId: string }) {
     const task = this.#task(input.taskId)
     const ctx = this.#taskCtx(task)
+    const view = await this.#chainView(task)
+    const transactions = await sidequest.settleSidequest(ctx, this.#jobId(task), caller.address, this.#now())
+    // An empty list alone reads like a silent failure; say who acts next instead, or that nothing is left.
     return {
-      status: (await this.#chainView(task)).status,
-      transactions: await sidequest.settleSidequest(ctx, this.#jobId(task), caller.address, this.#now()),
+      status: view.status,
+      transactions,
+      ...(transactions.length === 0 ? { note: settlementNote(view, this.#now()) } : {}),
     }
   }
 
@@ -3438,12 +3448,9 @@ export class Board {
 
   async getTask(caller: Caller, input: { taskId: string }) {
     const task = this.#task(input.taskId)
-    const summary = await this.#summary(task, caller)
+    const { summary, creatorSelection } = await this.#summaryParts(task, caller, true)
     const me = caller.address
-    const creatorSelection =
-      me === undefined || !this.#actsForCreator(task, me)
-        ? undefined
-        : await this.#selectionView(task, summary.chain, summary.deliveryDeadline)
+    const live = me === undefined ? undefined : this.#liveSelection(task, me)
     const mine =
       me === undefined
         ? undefined
@@ -3460,6 +3467,7 @@ export class Board {
                 task.id,
                 me,
               ).length > 0,
+            liveSelection: live === undefined ? null : { activateBy: live.activate_by },
           }
     const operations = this.#sql.all<OperationRow>(
       'SELECT kind, status, tx_hash, updated_at FROM operations WHERE task_id = ? ORDER BY created_at',
@@ -3486,12 +3494,8 @@ export class Board {
         'SELECT deliverable_hash, tx_hash FROM onchain_submissions WHERE task_id = ?',
         task.id,
       )[0] ?? null
-    const signed = creatorSelection?.find((selection) => selection.state === 'signed')
-    const nextAction =
-      signed === undefined ? summary.nextAction : { actor: 'worker', action: 'activate', deadline: signed.activateBy }
     return {
       ...summary,
-      nextAction,
       terms: JSON.parse(task.terms_json) as unknown,
       mine,
       ...(creatorSelection === undefined ? {} : { selection: creatorSelection }),
@@ -3545,6 +3549,33 @@ export class Board {
   }
 
   async #summary(task: TaskRow, caller: Caller) {
+    return (await this.#summaryParts(task, caller, false)).summary
+  }
+
+  /**
+   * Who acts next. While a hire is open with a signed, unexpired selection, the selected worker activates: the creator
+   * learns it from the verified selection view, the worker from its own live selection (no chain read).
+   */
+  #openNextAction(
+    task: TaskRow,
+    view: ChainView,
+    caller: Caller,
+    creatorSelection: Awaited<ReturnType<typeof creatorSelectionProjection>> | undefined,
+  ): NextAction | null {
+    if (view.status === 'open') {
+      const signed = creatorSelection?.find((selection) => selection.state === 'signed')
+      if (signed !== undefined) return { actor: 'worker', action: 'activate', deadline: signed.activateBy }
+      const live =
+        creatorSelection === undefined && caller.address !== undefined
+          ? this.#liveSelection(task, caller.address)
+          : undefined
+      if (live !== undefined) return { actor: 'worker', action: 'activate', deadline: live.activate_by }
+    }
+    return publisherNextAction(view, this.#now())
+  }
+
+  /** The task summary, plus the creator's selection view when the caller acts for the creator (read once). */
+  async #summaryParts(task: TaskRow, caller: Caller, alwaysSelection: boolean) {
     const terms = parseTerms(task.terms_json)
     const view = await this.#chainView(task)
     const operation =
@@ -3557,17 +3588,14 @@ export class Board {
         'SELECT count(*) AS count FROM quotes q JOIN quote_requests r ON r.id=q.request_id WHERE r.task_id = ?',
         task.id,
       )[0]?.count ?? 0
-    const signedSelection =
-      view.status === 'open' && caller.address !== undefined && this.#actsForCreator(task, caller.address)
-        ? (await this.#selectionView(task, view, terms.deliveryDeadline)).find(
-            (selection) => selection.state === 'signed',
-          )
+    const creatorSelection =
+      (alwaysSelection || view.status === 'open') &&
+      caller.address !== undefined &&
+      this.#actsForCreator(task, caller.address)
+        ? await this.#selectionView(task, view, terms.deliveryDeadline)
         : undefined
-    const nextAction =
-      signedSelection === undefined
-        ? publisherNextAction(view, this.#now())
-        : { actor: 'worker', action: 'activate', deadline: signedSelection.activateBy }
-    return {
+    const nextAction = this.#openNextAction(task, view, caller, creatorSelection)
+    const summary = {
       taskId: task.id,
       title: terms.title,
       mode: terms.mode,
@@ -3627,6 +3655,7 @@ export class Board {
               return roles
             })(),
     }
+    return { summary, creatorSelection }
   }
 
   #roles(terms: OfferTerms, view: ChainView, me: Address): string[] {
