@@ -33,6 +33,7 @@ coordinator runs live publication.
 ```
 bun run mining:epoch <n> [--network monad-testnet|monad-mainnet] --prices <signed price list JSON> --out <dir>
                       [--rpc <url>] [--config <config JSON>] [--page <blocks>] [--previous-prices <signed JSON>]
+                      [--logs rpc|hypersync]
 bun run mining:epoch <n> --recompute <published epoch-n.json> [--network ...] [--rpc <url>] [--config <config JSON>]
 ```
 
@@ -52,6 +53,24 @@ bun run mining:epoch <n> --recompute <published epoch-n.json> [--network ...] [-
   - **Test floor:** 178 passed / 3 skipped across 23 files, recorded on 10 October 2026 with
     `heavy bun --no-env-file test scripts/mining` and RPC variables unset. The coordinator runs the three fork tests;
     the backer-share and credit fork tests check that a backer claim grows `positionOf(backer, backer)`.
+
+## Log sources
+
+The public Monad RPC caps `eth_getLogs` at 100 blocks. A full replay can therefore take hours even though contract
+reads are quick. Rule v2 and recomputation accept `--logs hypersync`, with `HYPERSYNC_API_TOKEN` supplied by environment
+name. HyperSync reads the entire requested range, follows its own pages and retries rate limits; it refuses stalled or
+incomplete paging. Testnet uses `monad-testnet.hypersync.xyz`, mainnet `monad.hypersync.xyz`. The token is sent only in the
+authorization header. All block, integrity and `eth_call` reads still use `--rpc`.
+
+The default is `--logs rpc`, with the shrinking `--page` pager above. Normal v1 epoch runs retain their original RPC
+path. Use RPC recomputation as the independent check of a HyperSync-built artifact:
+
+```
+bun run mining:epoch <n> --recompute <dir>/epoch-<n>.json --network monad-testnet --logs rpc --from-genesis
+```
+
+For large independent replays, use a keyed RPC that supports larger log ranges. Free-tier RPCs can have the same or
+smaller caps as the public endpoint. `--from-genesis` also checks the checkpoint chain without loading saved state.
 
 ## What it counts (rule v1)
 

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { logSource } from './hypersync.ts'
 import { creditRuleOf, type CreditRuleConfig } from './rule.ts'
 import type { EpochOptions, MiningConfig } from './epoch-v2.ts'
 import type { PriceListFile } from './prices.ts'
@@ -28,6 +29,7 @@ async function dispatch() {
   const epochArg = argv[0]
   if (epochArg === undefined || !/^[0-9]+$/.test(epochArg)) throw new Error('usage: bun run mining:epoch <n> ...')
   if (network !== 'monad-testnet' && network !== 'monad-mainnet') throw new Error('unsupported mining network')
+  const logs = logSource(flag('logs'))
   const epoch = BigInt(epochArg)
   const configPath = resolve(flag('config') ?? join(import.meta.dirname, '../../contracts/config', `${network}.json`))
   // SAFETY: deploymentFromConfig validates the selected deployment; creditRuleOf validates its cutover.
@@ -45,6 +47,7 @@ async function dispatch() {
     network,
     config,
     rpc,
+    logs,
     page: BigInt(pageArg),
     ...checkpointOptions(),
   }

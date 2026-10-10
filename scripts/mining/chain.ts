@@ -1,4 +1,5 @@
 import { createPublicClient, http, parseAbi, parseAbiItem, type Address, type Hex, type PublicClient } from './viem.ts'
+import { hypersync, type HyperSyncNetwork, type LogSource } from './hypersync.ts'
 import type { FeeCharged, OwedWithdrawn, PayoutOwed } from './compute.ts'
 import type { TopUp } from './contributors.ts'
 import { cumulativeBudget as scheduledBudget, replayLots, type EpochFunding } from './lots.ts'
@@ -28,13 +29,19 @@ export const distributorAbi = parseAbi([
 const safeAbi = parseAbi(['function getOwners() view returns (address[])'])
 const erc20Abi = parseAbi(['function decimals() view returns (uint8)'])
 
-export const logClient = (rpc: string): PublicClient =>
-  createPublicClient({ transport: http(rpc, { retryCount: 0, timeout: 30_000 }) })
+export interface ClientOptions {
+  logs?: LogSource
+  network?: HyperSyncNetwork
+}
+export const logClient = (rpc: string, opts: ClientOptions = {}): PublicClient =>
+  createPublicClient({
+    transport: opts.logs === 'hypersync' ? hypersync(rpc, opts.network) : http(rpc, { retryCount: 0, timeout: 30_000 }),
+  })
 
 /** General reads retain transport retries; the pager owns retries for the dedicated getLogs transport. */
-export const client = (rpc: string): PublicClient =>
+export const client = (rpc: string, opts: ClientOptions = {}): PublicClient =>
   createPublicClient({ transport: http(rpc, { retryCount: 3, timeout: 30_000 }) }).extend(() => ({
-    getLogs: logClient(rpc).getLogs,
+    getLogs: logClient(rpc, opts).getLogs,
   })) as PublicClient
 
 /** Pure contract clock reads: the reserve defines both boundaries, including fast testnet clocks. */
@@ -61,6 +68,7 @@ export async function firstBlockAtOrAfter(c: PublicClient, t: bigint, lo: bigint
 
 export interface LogPager {
   page: bigint
+  logs?: LogSource
 }
 
 const isErrorRecord = (
@@ -105,15 +113,12 @@ async function logsWithRetry<T>(
   }
 }
 
-/** Shared page sizes only shrink, including across histories that reuse the same pager. */
-export async function pagedLogs<T>(
+async function rpcPages<T>(
   from: bigint,
   to: bigint,
-  pageSize: bigint | LogPager,
+  pager: LogPager,
   fetch: (from: bigint, to: bigint) => Promise<T[]>,
-): Promise<T[]> {
-  const pager = isBigint(pageSize) ? { page: pageSize } : pageSize
-  if (pager.page < 1n) throw new Error('the page size must be at least one block')
+) {
   const out: T[] = []
   for (let start = from; start <= to;) {
     const page = pager.page
@@ -130,11 +135,30 @@ export async function pagedLogs<T>(
   return out
 }
 
+/** Shared RPC page sizes only shrink; HyperSync owns its complete range and retries. */
+export async function pagedLogs<T>(
+  from: bigint,
+  to: bigint,
+  pageSize: bigint | LogPager,
+  fetch: (from: bigint, to: bigint) => Promise<T[]>,
+): Promise<T[]> {
+  const pager = isBigint(pageSize) ? { page: pageSize } : pageSize
+  if (pager.page < 1n) throw new Error('the page size must be at least one block')
+  if (from > to) return []
+  return pager.logs === 'hypersync' ? fetch(from, to) : rpcPages(from, to, pager, fetch)
+}
+
 const lower = (a: string) => a.toLowerCase() as Address
 const chainOrder = (x: { block: bigint; logIndex: number }, y: { block: bigint; logIndex: number }) =>
   x.block === y.block ? x.logIndex - y.logIndex : x.block < y.block ? -1 : 1
 
-export async function holdingLogs(c: PublicClient, holdings: Address[], from: bigint, to: bigint, page: bigint) {
+export async function holdingLogs(
+  c: PublicClient,
+  holdings: Address[],
+  from: bigint,
+  to: bigint,
+  page: bigint | LogPager,
+) {
   const logs = await pagedLogs(from, to, page, (fromBlock, toBlock) =>
     c.getLogs({ address: holdings, events: holdingEvents, fromBlock, toBlock, strict: true }),
   )
@@ -183,7 +207,7 @@ export async function topUpLogs(
   fees: readonly FeeCharged[],
   deployBlock: bigint,
   toBlock: bigint,
-  page: bigint,
+  page: bigint | LogPager,
 ): Promise<TopUp[]> {
   const jobs = new Map<Address, bigint[]>()
   for (const fee of fees) {
@@ -232,7 +256,7 @@ export async function budgetOf(
   epoch: bigint,
   deployBlock: bigint,
   head: bigint,
-  page: bigint,
+  page: bigint | LogPager,
 ) {
   const cumulativeBudget = await c.readContract({
     address: reserve,

@@ -267,13 +267,13 @@ async function rebuildV1(context: EpochContext) {
     epoch,
     prices,
     budget,
-    page,
     chainId,
     window,
     holdings,
     priceList,
     factoryPriceEvidence,
   } = context
+  const page = context.logs === 'hypersync' ? context.head.number + 1n : context.page
   const logs =
     fromBlock <= toBlock
       ? await holdingLogs(lc, holdings, fromBlock, toBlock, page)

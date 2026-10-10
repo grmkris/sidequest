@@ -1,3 +1,4 @@
+import type { LogSource } from './hypersync.ts'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
@@ -62,6 +63,7 @@ export interface EpochOptions {
   config: MiningConfig
   rpc: string
   page: bigint
+  logs?: LogSource
   pricesFile: PriceListFile
   previousFile?: PriceListFile
   previousPath?: string
@@ -80,8 +82,9 @@ export async function readEpochContext(options: EpochOptions) {
   const holdings = [
     ...new Set(Object.values(d.stacks).flatMap((st) => (st?.kind === 'sidequest-v1' ? [lower(st.holding)] : []))),
   ].toSorted()
-  const c = client(rpc),
-    lc = logClient(rpc)
+  const opts = { logs: options.logs ?? 'rpc', network }
+  const c = client(rpc, opts),
+    lc = logClient(rpc, opts)
   const chainId = await c.getChainId()
   if (chainId !== d.chainId) throw new Error(`the RPC is chain ${chainId}, the config is chain ${d.chainId}`)
   const owners = await safeOwners(c, h.safe)
@@ -114,7 +117,7 @@ export async function readEpochContext(options: EpochOptions) {
   const selected = selectFactoryPrice(epoch, samples, previous?.prices.factoryUsdPrice)
   if (signed.prices.factoryUsdPrice !== selected.factoryUsdPrice)
     throw new Error('signed SIDE price differs from the conservative-high hourly rule')
-  const pager = { page }
+  const pager = { page, logs: options.logs ?? 'rpc' }
   const budget = await initialBudgetOf({
     version: creditRuleOf(config, epoch).version,
     c,
