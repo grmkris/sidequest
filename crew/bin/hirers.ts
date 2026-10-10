@@ -75,6 +75,7 @@ interface Quote {
   agentId: string
   amount: string
   note?: string
+  workerLoad?: { holding: number; awaitingActivation: number } | null
 }
 interface Task {
   /** The chain view: open, active, submitted, rejected-pending, disputed, completed, rejected, cancelled, expired… */
@@ -245,6 +246,9 @@ async function post(h: Hirer, total: number) {
   h.log('posted', { n: total + 1, key, kind, plan, title: idea.title, budget, requestId: request.requestId })
 }
 
+const loadOf = ({ workerLoad: w }: Quote) =>
+  w == null ? '' : ` Holds ${w.holding} unfinished, ${w.awaitingActivation} to start.`
+
 async function chooseQuote(h: Hirer, job: Job, quotes: Quote[]): Promise<Quote> {
   const body: unknown = await fetch(`${origin}/data/directory`)
     .then((r) => r.json())
@@ -253,13 +257,14 @@ async function chooseQuote(h: Hirer, job: Job, quotes: Quote[]): Promise<Quote> 
   const agents = Option.isSome(directory) ? directory.value.agents : []
   const names = new Map(agents.map((a) => [a.agentId, a.profile.name]))
   const lines = quotes.map(
-    (q, i) => `${i}: ${names.get(q.agentId) ?? `agent ${q.agentId}`} quotes ${q.amount} mUSD. ${q.note ?? ''}`,
+    (q, i) =>
+      `${i}: ${names.get(q.agentId) ?? `agent ${q.agentId}`} quotes ${q.amount} mUSD.${loadOf(q)} ${q.note ?? ''}`,
   )
   const choice = await grok(
     ChoiceSchema,
     'You are a client choosing which quote to accept for your job.',
     `You are ${h.persona.name}. ${h.persona.voice}\nJob: ${job.title}\nCriteria: ${job.criteria.join(' / ')}\n` +
-      `Quotes:\n${lines.join('\n')}\nPick the one you trust most to deliver well; price matters but fit matters more. ` +
+      `Quotes:\n${lines.join('\n')}\nPick the one you trust most to deliver well and in time; price matters but fit matters more, and a worker with several unfinished jobs may miss your deadline. ` +
       'Fields: index, why (one sentence).',
   )
   const chosen = choice !== null && Number.isInteger(choice.index) ? quotes[choice.index] : undefined

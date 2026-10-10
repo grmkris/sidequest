@@ -36,8 +36,10 @@ function fixture(workerBond = 0n, expiredAt = 260200) {
       functionName,
     }: {
       functionName: string
-    }): Promise<boolean | number | bigint | (number | bigint)[] | typeof listing> => {
+    }): Promise<boolean | number | bigint | string | (number | bigint)[] | typeof listing> => {
       if (functionName === 'selectionNonceUsed' || functionName === 'paused') return false
+      if (functionName === 'decimals') return 6
+      if (functionName === 'symbol') return 'mUSD'
       if (functionName === 'UNSTAKE_DELAY') return 259200
       if (functionName === 'getListing') return listing
       if (functionName === 'availableOf') return 100n
@@ -248,6 +250,43 @@ describe('get_task creator selection authorization and persistence', () => {
     vi.mocked(sdk.sidequestState).mockClear()
     expect(await held(curator)).toEqual([])
     expect(sdk.sidequestState).not.toHaveBeenCalled()
+  })
+
+  it('shows the requester how busy each bidder is, and the bidder nothing of the kind', async () => {
+    const context = fixture()
+    const board = context.boot()
+    context.sql.run(
+      'INSERT INTO quote_requests (id, creator, stack, request_json, request_hash, quote_deadline, task_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'req',
+      creator,
+      'main',
+      '{"title":"Next job"}',
+      '0xreq',
+      5000,
+      null,
+      900,
+    )
+    context.sql.run(
+      'INSERT INTO quotes (id, request_id, worker, agent_id, token, amount, note, quote_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'q1',
+      'req',
+      worker,
+      '7001',
+      context.terms.token,
+      '9000000',
+      '',
+      '0xq1',
+      950,
+    )
+    // Roadmap #4: the worker's earlier hire is selected and waiting for it to activate.
+    const waiting = await board.listQuotes({ address: creator }, { requestId: 'req' })
+    expect(waiting.quotes[0]).toMatchObject({ workerLoad: { holding: 0, awaitingActivation: 1 } })
+    vi.mocked(sdk.sidequestState).mockResolvedValue(context.chainState(worker, 'active'))
+    const busy = await board.listQuotes({ address: creator }, { requestId: 'req' })
+    expect(busy.quotes[0]).toMatchObject({ workerLoad: { holding: 1, awaitingActivation: 0 } })
+    expect((await board.listQuotes({ address: worker }, { requestId: 'req' })).quotes[0]).not.toHaveProperty(
+      'workerLoad',
+    )
   })
 
   it('expires a persisted selection strictly after its cutoff', async () => {

@@ -675,6 +675,7 @@ function QuoteRow({
         </span>
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-ui text-muted-foreground">
           {record}
+          <WorkerLoad load={q.workerLoad} />
           {lowest && <Badge variant="success">Lowest</Badge>}
         </span>
         {q.expectedCosts !== null && (
@@ -771,4 +772,14 @@ function QuoteComparison({
       </div>
     </>
   )
+}
+
+/** How busy the bidder is right now (roadmap #4): its unfinished jobs and hires waiting for it to start. */
+function WorkerLoad({ load }: { load: Quote['workerLoad'] }) {
+  if (load === undefined || load === null) return null
+  const parts = [
+    load.holding > 0 ? `${load.holding} ${load.holding === 1 ? 'job' : 'jobs'} in progress` : '',
+    load.awaitingActivation > 0 ? `${load.awaitingActivation} waiting to start` : '',
+  ].filter((part) => part !== '')
+  return <span>{parts.length === 0 ? 'No unfinished jobs' : parts.join(' · ')}</span>
 }

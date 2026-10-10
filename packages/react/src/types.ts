@@ -189,6 +189,10 @@ export interface Quote {
   note: string
   expectedCosts: { token: string; symbol: string; amount: string; note: string } | null
   quoteHash: string
+  /** Once a quote is picked: whether this one won. */
+  won?: boolean | null
+  /** The requester's view only: the bidder's unfinished jobs and hires awaiting its activation on this board. */
+  workerLoad?: { holding: number; awaitingActivation: number } | null
 }
 
 /** A tenant board (ADR-0008) as `get_board` / `list_boards` / `/data/boards` return it. */

@@ -2223,9 +2223,21 @@ export class Board {
     const all = eq(req.creator, me)
     const ctx = this.#ctx(req.stack)
     const winner = this.#pickedQuote(req)
+    const rows = this.#sql
+      .all<QuoteRow>('SELECT * FROM quotes WHERE request_id = ? ORDER BY created_at', req.id)
+      .filter((q) => all || eq(q.worker, me))
+    // The requester alone sees how busy each bidder is (roadmap #4), read once per worker.
+    const loads = new Map(
+      all
+        ? await Promise.all(
+            [...new Set(rows.map((q) => q.worker.toLowerCase()))].map(
+              async (worker) => [worker, await this.#workerLoad(worker)] as const,
+            ),
+          )
+        : [],
+    )
     const out = []
-    for (const q of this.#sql.all<QuoteRow>('SELECT * FROM quotes WHERE request_id = ? ORDER BY created_at', req.id)) {
-      if (!all && !eq(q.worker, me)) continue
+    for (const q of rows) {
       const { symbol, decimals } = await this.#tokenMeta(ctx, q.token as Address)
       out.push({
         quoteId: q.id,
@@ -2244,6 +2256,7 @@ export class Board {
               ),
         quoteHash: q.quote_hash,
         won: winner === undefined ? null : winner.id === q.id,
+        ...(all ? { workerLoad: loads.get(q.worker.toLowerCase()) ?? null } : {}),
       })
     }
     return {
@@ -2262,6 +2275,31 @@ export class Board {
       invite: this.#requestInvite(req),
       quotes: out,
     }
+  }
+
+  /**
+   * How busy a bidder is on this board, for the requester choosing among quotes: of its ten newest signed selections,
+   * the jobs it holds unfinished on chain (active, submitted, or in a rejection or dispute) and the hires still waiting
+   * for it to activate. A task whose chain read fails counts as neither.
+   */
+  async #workerLoad(worker: string): Promise<{ holding: number; awaitingActivation: number }> {
+    const tasks = this.#sql
+      .all<TaskRow>(
+        `SELECT t.* FROM tasks t JOIN selections s ON s.task_id = t.id
+        WHERE lower(s.worker) = ? AND s.signature IS NOT NULL GROUP BY t.id ORDER BY max(s.created_at) DESC LIMIT 10`,
+        worker,
+      )
+      .filter((t) => this.#findTaskCtx(t) !== undefined)
+    const views = await Promise.all(tasks.map((t) => this.#chainView(t).catch(() => undefined)))
+    let holding = 0
+    let awaitingActivation = 0
+    views.forEach((view, i) => {
+      if (view === undefined) return
+      if (UNFINISHED.has(view.status) && eq(view.provider, worker)) holding += 1
+      else if (view.status === 'open' && this.#liveSelection(tasks[i]!, getAddress(worker)) !== undefined)
+        awaitingActivation += 1
+    })
+    return { holding, awaitingActivation }
   }
 
   /** The quote a request's pick was made from, by the quote hash frozen in the picked task's terms. */
@@ -3874,6 +3912,8 @@ export type TaskRole = (typeof TASK_ROLES)[number]
 
 /** The most tasks a status filter reads chain views for in one list_tasks call. */
 const LIST_STATUS_SCAN = 40
+/** Chain statuses in which the job's worker still owes or awaits something. */
+const UNFINISHED = new Set(['active', 'submitted', 'rejected-pending', 'disputed'])
 const LIST_CONCURRENCY = 8
 
 export interface ChainView {
