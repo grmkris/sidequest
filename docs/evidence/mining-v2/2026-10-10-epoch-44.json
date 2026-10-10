@@ -1,0 +1,79 @@
+{
+  "claim": "ADR-0020 mining v2 live on Monad testnet (10143) and the dev stage: first v2 epoch 44 computed, funded, rooted, published with its state file and claimed; epoch 45 chained from epoch 44's checkpoint and byte-identical to a from-genesis run; a hosted agent set its own backer share through the standing permission.",
+  "date": "2026-10-10",
+  "network": "monad-testnet",
+  "chainId": 10143,
+  "stage": "dev",
+  "source": {
+    "cutover": "ad785498 config: start mining v2 on testnet at epoch 44 (mining.creditRule.fromEpoch = 44)",
+    "code": "M1 e68c8291, P 63a24ae5 + fix 9dfac147, M2 41257cf1, U d9fb18cc, M3 ca2ac64b, docs 48d1d460/d49c1c62 (dev CI green on c650eeee, ffb3c865, 9dfac147)"
+  },
+  "epoch44": {
+    "window": { "start": 1791651529, "end": 1791655129, "fromBlock": 69878968, "toBlock": 69890890 },
+    "shareWindow": { "start": 1791392329, "block": 69362265, "note": "start − unstake delay (3 days) falls before the deploy block, so the window starts at deployment.sidequest.block" },
+    "hires": {
+      "underAgent2081": { "jobId": 60, "settle": "0x8ca429cb9b81a3814556d3650879067e76b4be261fea0682716ef3c4102d2055", "block": 69879100 },
+      "underSecondAgent2125": {
+        "jobId": 61,
+        "register": "0x58902deca652cd5c942dafd6f123b0411ebd1d448e502f41f42f7c9dbee6651f",
+        "settle": "0x6da9daa181e203ec61e28a1a232bd47425797dcdfd63e3d540e911953081677f",
+        "block": 69879188,
+        "note": "same worker wallet 0xD7e3…E571, fresh agent ID 2125 with no share set (0 %)"
+      }
+    },
+    "counted": "7 fees (2 demo hires + 5 crew jobs), all tier 0 (feeBps 3000) at activation and held, so boost 4000 and credit = 0.4 % of gross; fee USD 16.80, credit USD 0.224",
+    "emission": "1120 SIDE",
+    "backerShare2081": {
+      "walletAgentIds": ["2081", "2125"],
+      "bps": 10000,
+      "source": "MetadataSet for 2081 = 10000 at block 69700519 (tx 0x177b13e3…1daf), inside the 3-day window",
+      "ignored": ["the cut to 1000 at block 69855853 (tx 0x23a51b13…c0ef): a cut applies only after the unstake delay", "agent 2125's 0 %: the wallet share is the maximum over its IDs"]
+    },
+    "dust": "creator delegateFor(#2081, 0x3001…78dC, 1 wei) at block 69855828 (tx 0xe8026925…66a4): no backerPositions row, no leaf",
+    "backerPositions2081": { "A": "300", "C": "400", "B": "100", "D": "100", "self": "100" },
+    "leaves": {
+      "#2081 backers (240 SIDE slice, 100 %)": "A 72, C 96, B 24, D 24, worker self 24",
+      "creator 0x9819…c71c": "160",
+      "crew agent 2036 worker": "348",
+      "crew agent 2029 worker": "84",
+      "crew creators": "48, 64, 56, 48, 72"
+    },
+    "root": "0x4966ffb5689b76ff2d700861e7fbec80911666048d5323f3f96869423f5469ac",
+    "dataHash": "0x0d86f2da1e5c94431f271495ba8b63acc3949e5a7a165f60c042a679d9acccdf",
+    "artifactSha256": "2c4f5036a5e455f992eda10375e76a9770edae5eb2e3d020a389464137d2c03a",
+    "stateSha256": "a6a8c4906d60280da0dafa7e4306d08017344bb715134938b21d22faad1c2d85",
+    "safe": {
+      "fund": { "tx": "0xef05587f17c2f2c773d93aaef15a6a18b5beb4f5a8355d5e14b4187497963015", "block": 69932151 },
+      "setRoot": { "tx": "0xabaa26eb164f9aa186451dbaae8bc87d4f159573f951b4a88d55311e61acf502", "block": 69932398 },
+      "publish": "mining:publish epoch-44.json --stage dev --state state-44.json: uploaded and verified"
+    },
+    "claim": { "account": "backer A 0x642F…0950", "tx": "0x5b0125ae879578ab0bf4ed77dcfb0f514fa87d9dbd6dc21f6efa71add12fa2cd", "block": 69932417, "result": "PASS claim stake increased by 72 SIDE" },
+    "rootOf44": "root 0x4966…69ac, total 1120 SIDE, claimed 72 SIDE, dataHash 0x0d86…ccdf (equal to the artifact)"
+  },
+  "epoch45Checkpoint": {
+    "incremental": "built from state-44 (previous {epoch 44, dataHash 0x0d86…ccdf, stateHash 0x385c…8cea}); 1 counted crew fee (agent 2025, tier 0); emission 120 SIDE",
+    "root": "0x67dae09e15c8b3ed0f66086236f04504be6043b893b14da618775d98a745e014",
+    "dataHash": "0x553ef38102802c81b627eb35674013b66afded15affc6da8435b83245954bfba",
+    "fromGenesis": "identical inputs, dataHash, root, claims and state file (24,968 bytes)",
+    "onChain": "not funded: no demo wallet has a leaf; the comparison needs no anchor"
+  },
+  "hostedBackerShare": {
+    "agent": "Ship, agent 2022 (hosted crew bot; operator crew.sidequest@myinbox.lol = 0x5f3D…9Ce7)",
+    "first": "set_backer_share 2500 → approval (standing sidequest:backer-share, 10 calls, 30 days); Kris approved as operator; retry confirmed, tx 0x7748e7abac549ffac9b30c6d0e88b64bcc7d2249ab0016a1a774181741f2cdbf",
+    "second": "set_backer_share 3000 → confirmed with no approval after fix 9dfac147, tx 0x416ee329b70c058eb501ec0ae8b6a60338c97411dac105efceea9d27b6fd1b36",
+    "permissionId": "0xbd76155c5ba04863b7a6d7d7488cb2e2a1337967a38872df33d0e35f63cc1791",
+    "readback": "getMetadata(2022, sidequest.backerShareBps) = 0x…0bb8 = 3000"
+  },
+  "logSource": {
+    "used": "Envio HyperSync (the indexer's token), through a local JSON-RPC translation router; non-log calls via a keyed RPC",
+    "equivalence": "router eth_getLogs equal to the public RPC on a sample window (10 logs, 8 fields); a full public-RPC recompute of epoch 44 was still running at the time of writing",
+    "timing": "first v2 replay from deployment: 6 s via HyperSync; the public RPC (100-block getLogs cap, shared rate limit) had not finished after hours"
+  },
+  "forkTests": "credit.fork.test.ts (two v2 epochs, checkpoint chain), backers.fork.test.ts, contributors.fork.test.ts, backer-share.fork.test.ts: all pass on a Monad testnet fork",
+  "notEstablished": [
+    "Independent full public-RPC recompute of epoch 44 (running).",
+    "A tier above 0 inside a v2 epoch on testnet (Ship at tier 1 settled no job in 44/45); covered by the fork test.",
+    "Native HyperSync support in scripts/mining (the router is a demo helper).",
+    "Mainnet: untouched."
+  ]
+}

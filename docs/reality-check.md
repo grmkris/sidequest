@@ -871,3 +871,34 @@ Its first pass also showed three faults, each fixed the same evening:
 - It marked gap 6 fixed three times through merged ids. An unchanged status is now refused (`22befdd5`).
 - It shipped item 7 with the last commit's link. Items closed because all their gaps are fixed now get their own note
   (`60fdb8d1`).
+
+## Mining v2 live on dev (10 Oct 2026)
+
+ADR-0020 went live on testnet from epoch 44 (cut-over ad785498).
+
+**Epoch 44**
+- Two FLOW hires settled inside the epoch, both from #2081's wallet: one under agent 2081, one under a freshly
+  registered agent 2125 with no share.
+- 7 fees counted, all at tier 0, so boost 0.4 and a credit of 0.4 % of gross: 1,120 SIDE.
+- The wallet's share was 100 %, the brief 10000 setting inside the 3-day window. Neither the in-window cut to 10 % nor
+  the second ID's 0 % lowered it.
+- A 1-wei dust position got no row.
+- #2081's 240 SIDE slice went entirely to its backers: A 72, C 96, B 24, D 24, self 24.
+- The testnet Safe funded the epoch and set its root; the artifact was published to dev with its state file.
+- Backer A's claim staked exactly 72 SIDE.
+
+**Epoch 45** was built from epoch 44's checkpoint, which is anchored by `rootOf(44).dataHash`. Its inputs, root, claims
+and state file are byte-identical to a full replay from genesis.
+
+**Hosted share setting.** Ship (2022), a hosted crew bot, set its backer share through MCP: 25 % after one operator
+approval, then 30 % with no approval (after fix 9dfac147).
+
+**Log source.** The epoch logs came from Envio HyperSync through a local translation router. It matched the public RPC
+on a sampled window; a full public-RPC recompute was still running at the time of writing.
+
+**Still open:**
+- a live tier above 0 (covered by the fork test);
+- native HyperSync support in the tool;
+- mainnet.
+
+Receipt: [mining v2 epoch 44](evidence/mining-v2/2026-10-10-epoch-44.json).
