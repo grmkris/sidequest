@@ -32,6 +32,13 @@ open and which fixes need a redeploy, so Kris can decide each one.
 | G4 | **Instant Holding setters.** The Safe can change `setUnfilledForfeitBps`, `setMinimumCreatorBond` and `setDefaultArbitrator` at once, and `publish` takes no maximum. A compromised key can front-run a publish into a 50 % forfeit. | `SidequestHolding.sol:124-140,193` | Holding owner behind a timelock (no redeploy). A `maxForfeitBps` field in `PublishParams` would need a redeploy. |
 | G5 | **The Safe can cancel unclaimed mining leaves.** `resizeRoot` can cut a live root down to what has already been claimed, instantly. ADR-0011 doesn't list this as a Safe power. | `EpochDistributor.sol:63-77` | Document it now; a redeploy can forbid cuts below the leaf sum. |
 | G6 | **Mining runs depend on one operator.** Prices, the run, `fund`, `setRoot` and publishing are all by hand. No keeper exists for timeouts or settlement either; parties settle their own jobs. | `docs/mainnet-runbook.md:355-412` | A runbook cadence plus monitoring. `fund` could be opened to anyone (redeploy). |
+| O1 | **Mining needs a large-range log source.** Public and free-tier RPCs cap `eth_getLogs` ranges at 100 or fewer blocks; full mining replay can take hours. | Mining v2 testnet epochs 44/45 live-run evidence supplied to lane FIN; `scripts/mining/hypersync.ts` | Use `--logs hypersync` with `HYPERSYNC_API_TOKEN`, or a keyed RPC supporting large log ranges. Keep RPC `--recompute --from-genesis` as the independent check. |
+
+**Testnet operations fixed by lane FIN:** `contracts/script/testnet-safe-policy.json` now pins the G1e Safe
+(`0x77923113FD1a71Ad91F81064C3c05cA1EfB44CD8`), its two reviewed owners and threshold 1, matching the checked-in
+testnet config and the coordinator's 10 Oct readback. The epoch runner validates the selected owner against both
+that policy and live `getOwners()`, publishes v2 state and allows publication without a claimant. FIN's verification
+is offline; the coordinator runs the updated live proof. This does not change G1's mainnet custody recommendation.
 
 ## Needs a redeploy (decide per item)
 

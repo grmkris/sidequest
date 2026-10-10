@@ -50,9 +50,12 @@ bun run mining:epoch <n> --recompute <published epoch-n.json> [--network ...] [-
   halved and retried.
 - **Tests.** `bun test scripts/mining` runs the fixture tests. The anvil fork run is step 7 of
   `contracts/script/rehearse-launch.sh`.
-  - **Test floor:** 178 passed / 3 skipped across 23 files, recorded on 10 October 2026 with
+  - **Test floor:** 186 passed / 3 skipped across 24 files, recorded on 11 October 2026 with
     `heavy bun --no-env-file test scripts/mining` and RPC variables unset. The coordinator runs the three fork tests;
     the backer-share and credit fork tests check that a backer claim grows `positionOf(backer, backer)`.
+  - **Testnet runner floor:** 13 passed / 9 skipped across 4 files with
+    `heavy bun --no-env-file test contracts/script/{testnet-mining-options,testnet-mining-binding,epoch0-transactions,mine-epoch0-testnet}.test.ts`.
+    RPC variables are unset; the coordinator runs the nine Safe/claim fork cases, including publish-only resume.
 
 ## Log sources
 
@@ -71,6 +74,35 @@ bun run mining:epoch <n> --recompute <dir>/epoch-<n>.json --network monad-testne
 
 For large independent replays, use a keyed RPC that supports larger log ranges. Free-tier RPCs can have the same or
 smaller caps as the public endpoint. `--from-genesis` also checks the checkpoint chain without loading saved state.
+
+## Testnet epoch runner
+
+Run the launch-lock wrapper from the repo root, with unsigned prices naming an ended epoch and a private output
+directory. It signs, computes, journals the Safe's ECDSA fund/setRoot operations, publishes and verifies the artifacts,
+then stops. Add `--claim-key-env <NAME>` to claim a leaf and check the resulting stake:
+
+```
+heavy bash contracts/script/mine-epoch0-testnet.sh <unsigned-prices.json> <private-output-dir> \
+  --epoch <n> --stage dev --owner-key-env SAFE_OWNER_PRIVATE_KEY --logs hypersync
+```
+
+`--stage dev|prod` loads the chosen `~/.config/sidequest/<stage>.env` in-process and overlays it on `process.env`.
+The stage must still use Monad testnet. Without `--stage`, the runner keeps plain-env credentials and dev publication.
+The selected stage supplies `MONAD_RPC_URL`; plain-env runs use `MONAD_TESTNET_RPC_URL`. Publication requires the
+Cloudflare credentials above. The owner defaults to `SAFE_OWNER_PRIVATE_KEY` and must be both a live Safe owner and in
+the reviewed G1e testnet policy. Key flags take environment variable names only; usage and errors never print values.
+
+The runner defaults to HyperSync; `--logs rpc` selects the original shrinking RPC pager. Supply `HYPERSYNC_API_TOKEN`
+when using HyperSync. With no official-pool samples, it also signs the preceding epoch's list at the same SIDE reference
+price and journals both signatures. For v2 it uses the output directory as `--checkpoint-dir`, retrieving missing
+`epoch-<k>.json` and `state-<k>.json` from the selected stage's verified Manifests store. It checks the on-chain input
+commitment, state hash, block hash, chain, contracts and rule before replay. Empty epochs are skipped when selecting
+the latest published v2 checkpoint.
+
+The journal captures the v2 state alongside the epoch and publishes it with `--state`. Resume the identical command
+and directory after an interruption: signatures, artifacts and original Safe transaction bytes are reused. A changed
+deployment, input or owner refuses; reconcile the original operation before choosing a fresh directory. This runner
+refuses chain 143; mainnet uses the keystore/Safe route in the runbook.
 
 ## What it counts (rule v1)
 

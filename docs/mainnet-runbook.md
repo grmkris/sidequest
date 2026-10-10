@@ -359,14 +359,19 @@ from epoch 0: `monad-mainnet.json` must carry `mining.creditRule.fromEpoch` = 0 
 may hold only USD-pegged tokens from the config's `usdPegged` list, each priced within 1 % of $1, and SIDE itself only
 at the factory (reference) price. The reference price needs an official pool configured in the same file; see
 `docs/mainnet-gate-findings.md` (G2). Anyone can re-check a published epoch with
-`bun run mining:epoch <n> --recompute <epoch-n.json> --network monad-mainnet`. After an epoch ends:
+`bun run mining:epoch <n> --recompute <epoch-n.json> --network monad-mainnet --logs rpc --from-genesis`.
+Weekly mining uses HyperSync for logs (`HYPERSYNC_API_TOKEN` by environment name); contract and block reads stay on
+the configured RPC. Public and free-tier RPCs cap log ranges at 100 or fewer blocks, so independent full RPC replay
+needs a large-range keyed provider. Keep the previous published v2 epoch and state in the checkpoint directory.
+After an epoch ends:
 1. Compute the epoch with B8 (`scripts/mining/README.md`). A Safe owner signs the epoch's price list (USD per priced
    token, the SIDE reference price):
    `pwcheck ~/.config/sidequest/safe-owner.password && bun scripts/mining/sign-prices.ts <list> --network monad-mainnet
    --out <signed> --account sidequest-safe-owner --password-file ~/.config/sidequest/safe-owner.password`. The helper
    checks the password file the same way before it signs. Then, from the repo root, run
    `(set -a && . ./.env.local && set +a && bun run mining:epoch <n> --network monad-mainnet --rpc "$MONAD_MAINNET_RPC_URL"
-   --prices <signed> --out <dir>)`. It writes `epoch-<n>.json` (root, total, dataHash, tree, proofs) and prints the
+   --prices <signed> --out <dir> --checkpoint-dir <dir> --logs hypersync)`. It writes `epoch-<n>.json` (root, total, dataHash, tree, proofs)
+   and `state-<n>.json` (the committed replay checkpoint), and prints the
    Safe's two calls.
 2. The Safe sends the file's calls. `/admin`'s mining panel is the route to use: it builds both and checks them.
    - **`calls.fund`**, when present: `MiningReserve.fund(n, amount)` for the remainder the epoch still needs, not the
@@ -404,13 +409,14 @@ at the factory (reference) price. The reference price needs an official pool con
 3. After `setRoot` and before any claim, publish the epoch file for hosted claims, at the repo root. The command reads
    `.env.local` itself (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`, `MONAD_MAINNET_RPC_URL`):
    ```
-   bun run mining:publish <dir>/epoch-<n>.json --stage prod
+   bun run mining:publish <dir>/epoch-<n>.json --stage prod --state <dir>/state-<n>.json
    sha256sum <dir>/epoch-<n>.json
    ```
    It checks every proof and the total, and requires the file's root, total and `dataHash` to equal
    `EpochDistributor.rootOf(n)` on chain. It uploads the file to the production API's Manifests R2 bucket at
    `mining/epoch-<n>.json` and reads it back, comparing sha256. It prints only `mining:publish uploaded and verified`,
-   or `mining:publish refused: <code>` (retry the same file).
+   or `mining:publish refused: <code>` (retry the same file). Rule v2 also validates and uploads the committed state to
+   `mining/state-<n>.json`; retain the epoch/state pair for the next weekly replay.
    Record the key `mining/epoch-<n>.json` and the file's sha256, which the readback matched, in the launch evidence
    (LAUNCH-AUDIT-005). Until it has run, hosted `mining_proof` and Collect cannot find the epoch, though a direct claim
    with the file's proof still works.
