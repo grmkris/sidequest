@@ -2,7 +2,7 @@ import { FlowJournal } from '../../packages/sdk/src/flow-journal.ts'
 import type { Ctx, Wallet } from '../../packages/sdk/src/actions.ts'
 import { epochDistributorAbi } from '../../packages/sdk/src/abi/epochDistributor.ts'
 import { stakeVaultAbi } from '../../packages/sdk/src/abi/stakeVault.ts'
-import { budgetOf, reserveAbi } from '../../scripts/mining/chain.ts'
+import { budgetOf, reserveAbi, type LogPager } from '../../scripts/mining/chain.ts'
 import { decodeEventLog, encodeFunctionData, parseAbi, zeroAddress, type Address, type Hex, type TransactionReceipt } from '../../scripts/mining/viem.ts'
 
 export const safeEpochAbi = parseAbi([
@@ -24,7 +24,7 @@ const equal = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 
 /** One immutable draft and one outer signed transaction per operation; no nonce refresh on retry. */
 export async function safeEpochCall(ctx: Ctx, j: FlowJournal, owner: Wallet, signHash: (hash: Hex) => Promise<Hex>,
-  name: 'fund' | 'setRoot', to: Address, data: Hex, expect?: NonNullable<EpochFile['calls']['fund']>['expect'], epoch = 0n) {
+  name: 'fund' | 'setRoot', to: Address, data: Hex, expect?: NonNullable<EpochFile['calls']['fund']>['expect'], epoch = 0n, pager: LogPager = { page: 1000n }) {
   const h = ctx.deployment.sidequest!
   const key = `epoch${epoch}/${name}`
   const checkReceipt = (receipt: TransactionReceipt, hash: Hex) => {
@@ -49,7 +49,7 @@ export async function safeEpochCall(ctx: Ctx, j: FlowJournal, owner: Wallet, sig
     const block = await ctx.publicClient.getBlockNumber({ cacheTime: 0 })
     // Reserve exposes no per-epoch funding getter. Sum EpochFunded through this
     // same block; Safe.nonce and totalFunded are pinned to it (D18).
-    const budget = await budgetOf(ctx.publicClient, h.miningReserve, epoch, h.block, block, 1000n)
+    const budget = await budgetOf(ctx.publicClient, h.miningReserve, epoch, h.block, block, pager)
     const nonce = await ctx.publicClient.readContract({ address: h.safe, abi: safeEpochAbi, functionName: 'nonce', blockNumber: block })
     if (expect && (budget.totalFunded !== BigInt(expect.totalFunded) || budget.fundedThis !== BigInt(expect.fundedForEpoch))) {
       throw new Error('fund snapshot changed: recompute the epoch before creating a new operation')
@@ -89,17 +89,17 @@ export function epochCalls(ctx: Ctx, file: EpochFile, epoch = 0n) {
 }
 
 export async function runEpoch(ctx: Ctx, j: FlowJournal, owner: Wallet, signHash: (hash: Hex) => Promise<Hex>,
-  file: EpochFile, publish: () => Promise<void>, claimant: Wallet, epoch = 0n) {
+  file: EpochFile, publish: () => Promise<void>, claimant?: Wallet, epoch = 0n, pager: LogPager = { page: 1000n }) {
   epochCalls(ctx, file, epoch)
   if (await ctx.publicClient.getChainId() !== 10143) throw new Error('RPC is not Monad testnet')
   const h = ctx.deployment.sidequest!
   if (file.calls.fund) {
     const f = file.calls.fund
-    await safeEpochCall(ctx, j, owner, signHash, 'fund', f.to, f.data, f.expect, epoch)
+    await safeEpochCall(ctx, j, owner, signHash, 'fund', f.to, f.data, f.expect, epoch, pager)
   }
   const rootBefore = await ctx.publicClient.readContract({ address: h.distributor, abi: epochDistributorAbi, functionName: 'rootOf', args: [epoch] })
   if (!equal(rootBefore.root, file.root) || rootBefore.total !== BigInt(file.total) || !equal(rootBefore.dataHash, file.dataHash)) {
-    await safeEpochCall(ctx, j, owner, signHash, 'setRoot', h.distributor, file.calls.setRoot.data, undefined, epoch)
+    await safeEpochCall(ctx, j, owner, signHash, 'setRoot', h.distributor, file.calls.setRoot.data, undefined, epoch, pager)
   } else if (j.state.sends[`epoch${epoch}/setRoot`]) {
     const receipt = await j.mined(`epoch${epoch}/setRoot`)
     if (!receipt) throw new Error('root matches but the saved setRoot transaction is unconfirmed: reconcile first')
@@ -110,6 +110,7 @@ export async function runEpoch(ctx: Ctx, j: FlowJournal, owner: Wallet, signHash
   // Repeat the idempotent same-byte upload/readback on resume; a saved boolean
   // is never evidence that the current hosted object is still the same.
   await publish()
+  if (claimant === undefined) return
   const account = claimant.account.address, claim = file.claims[account.toLowerCase()]
   if (!claim) throw new Error('claimant has no leaf in this epoch')
   const claimKey = `epoch${epoch}/claim/${account.toLowerCase()}`
@@ -129,6 +130,6 @@ export async function runEpoch(ctx: Ctx, j: FlowJournal, owner: Wallet, signHash
 
 /** Compatibility entry point: existing epoch-0 callers keep their journal keys and calldata. */
 export async function runEpoch0(ctx: Ctx, j: FlowJournal, owner: Wallet, signHash: (hash: Hex) => Promise<Hex>,
-  file: EpochFile, publish: () => Promise<void>, claimant: Wallet) {
+  file: EpochFile, publish: () => Promise<void>, claimant?: Wallet) {
   return runEpoch(ctx, j, owner, signHash, file, publish, claimant, 0n)
 }

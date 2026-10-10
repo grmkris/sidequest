@@ -7,12 +7,38 @@ import { factoryV2Abi } from '../../packages/sdk/src/abi/factoryV2.ts'
 import { holdingLogs, reserveAbi } from '../../scripts/mining/chain.ts'
 import { buildTree, proofOf } from '../../scripts/mining/tree.ts'
 import { computeEpoch } from '../../scripts/mining/compute.ts'
-import { registerAgent, stake } from '../../packages/sdk/src/actions.ts'
+import { registerAgent, delegate as stake } from '../../packages/sdk/src/actions.ts'
 import { runV1CoreFlow } from '../../packages/sdk/src/v1-flows.ts'
-import { decodeEventLog, encodeFunctionData, parseAbi, parseEther, zeroAddress, type Address, type Hex } from '../../scripts/mining/viem.ts'
+import { createPublicClient, custom, decodeEventLog, encodeFunctionResult, encodeFunctionData, parseAbi, parseEther, zeroAddress, type Address, type Hex } from '../../scripts/mining/viem.ts'
+import { context, wallet } from '../../packages/sdk/src/client.ts'
+import { privateKeyToAccount } from '../../scripts/mining/viem.ts'
 import { epochCalls, runEpoch, runEpoch0, safeEpochAbi, safeEpochCall, type Epoch0File } from './epoch0-transactions.ts'
 
 const fork = forkEnabled ? describe : describe.skip
+
+it('publish-only resumes a matching root without preparing a claim or requiring a claimant', async () => {
+  const base = context('monad-testnet', 'main', 'http://rpc.invalid'), h = base.deployment.sidequest!
+  const root = `0x${'11'.repeat(32)}` as const, dataHash = `0x${'22'.repeat(32)}` as const
+  const file: Epoch0File = { chainId: 10143, epoch: '45', root, total: '1', dataHash, claims: {}, calls: {
+    setRoot: { to: h.distributor, data: encodeFunctionData({ abi: epochDistributorAbi, functionName: 'setRoot', args: [45n, root, 1n, dataHash] }) },
+  } }
+  const request = vi.fn(async ({ method }: { method: string }) => {
+    if (method === 'eth_chainId') return '0x279f'
+    if (method === 'eth_call') return encodeFunctionResult({ abi: epochDistributorAbi, functionName: 'rootOf', result: { root, total: 1n, claimed: 0n, dataHash } })
+    throw new Error(`unexpected method ${method}`)
+  })
+  const ctx = { ...base, publicClient: createPublicClient({ transport: custom({ request }) }) }
+  const state: FlowState = { binding: 'unit', values: {}, sends: {} }, j = new FlowJournal(ctx, state, () => {}, () => {})
+  const owner = wallet('monad-testnet', privateKeyToAccount(`0x${'01'.padStart(64, '0')}`), 'http://rpc.invalid')
+  const publish = vi.fn(async () => {}), sign = vi.fn(async () => dataHash)
+  await runEpoch(ctx, j, owner, sign, file, publish, undefined, 45n)
+  await runEpoch(ctx, j, owner, sign, file, publish, undefined, 45n)
+  expect(publish).toHaveBeenCalledTimes(2)
+  expect(sign).not.toHaveBeenCalled()
+  expect(state.sends).toEqual({})
+  expect(state.values).toEqual({})
+})
+
 fork('testnet epoch script on real Safe and v1 contracts (local Monad fork only)', () => {
   let f: Awaited<ReturnType<typeof startSidequestFork>>, snapshot: unknown, file: Epoch0File
   beforeAll(async () => {
@@ -54,6 +80,18 @@ fork('testnet epoch script on real Safe and v1 contracts (local Monad fork only)
   afterAll(() => f?.close())
   const sign = (hash: Hex) => f.admin.account.sign!({ hash })
   const journal = (state: FlowState = { binding: 'fork', values: {}, sends: {} }, save = (_state: FlowState) => {}) => new FlowJournal(f.ctx, state, save, () => {})
+
+  it('funds and publishes without a claimant, then resumes the original Safe operations', async () => {
+    const j = journal(), signer = vi.fn(sign), publish = vi.fn(async () => {})
+    await runEpoch(f.ctx, j, f.admin, signer, file, publish)
+    const sends = flowJson(j.state.sends), h = f.ctx.deployment.sidequest!
+    expect(Object.keys(j.state.sends).toSorted()).toEqual(['epoch0/fund', 'epoch0/setRoot'])
+    expect(await f.ctx.publicClient.readContract({ address: h.distributor, abi: epochDistributorAbi, functionName: 'isClaimed', args: [0n, f.worker.account.address] })).toBe(false)
+    await runEpoch(f.ctx, j, f.admin, signer, file, publish)
+    expect(flowJson(j.state.sends)).toBe(sends)
+    expect(signer).toHaveBeenCalledTimes(2)
+    expect(publish).toHaveBeenCalledTimes(2)
+  }, 120_000)
 
   it('stops at failed publication, resumes identical fund/root, and claims only after readback', async () => {
     const j = journal(), signer = vi.fn(sign), publisher = vi.fn(async (): Promise<void> => { throw new Error('readback failed') })
@@ -125,7 +163,7 @@ fork('testnet epoch script on real Safe and v1 contracts (local Monad fork only)
     expect(signer).toHaveBeenCalledTimes(2)
     expect(publish).toHaveBeenCalledTimes(2)
     expect(() => epochCalls(f.ctx, later, 1n)).toThrow('selected epoch')
-    expect(() => epochCalls(f.ctx, { ...later, calls: { ...later.calls, fund: file.calls.fund } }, epoch)).toThrow('fund calldata mismatch')
+    expect(() => epochCalls(f.ctx, { ...later, calls: { ...later.calls, ...(file.calls.fund === undefined ? {} : { fund: file.calls.fund }) } }, epoch)).toThrow('fund calldata mismatch')
   }, 120_000)
 
   it('mines fees earned after empty epoch 0 and stakes the worker leaf of the later epoch', async () => {
