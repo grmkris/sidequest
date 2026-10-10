@@ -126,7 +126,7 @@ async function checks() {
   }
   const source = readFileSync(resolve(repo, 'skill/start.md'), 'utf8').replaceAll('{{SIDEQUEST_ORIGIN}}', origin)
   assert.equal(await (await checkResponse('/start.md')).text(), source, 'start.md content unchanged')
-  for (const role of ['connector', 'worker', 'publisher', 'arbitrator'])
+  for (const role of ['connector', 'worker', 'publisher', 'arbitrator', 'self-run'])
     assert.equal(
       await (await checkResponse(`/skills/${role}/SKILL.md`)).text(),
       readFileSync(resolve(repo, `skill/${role}/SKILL.md`), 'utf8').replaceAll('{{SIDEQUEST_ORIGIN}}', origin),

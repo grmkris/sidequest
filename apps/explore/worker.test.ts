@@ -147,6 +147,13 @@ describe('explore worker routing', () => {
     expect((await get('/skills/nobody/SKILL.md', e)).status).toBe(404)
   })
 
+  it('serves a skill whose name has a hyphen, rendered for the request origin', async () => {
+    const e = env({ '/skills/self-run/SKILL.md': '# Self-run\n{{SIDEQUEST_ORIGIN}}/api' })
+    const response = await worker.fetch(new Request('https://dev.sidequest.exchange/skills/self-run/SKILL.md'), e.env)
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe('# Self-run\nhttps://dev.sidequest.exchange/api')
+  })
+
   it('renders connector skills for the request origin and discards the template byte metadata', async () => {
     const e = env({ '/skills/connector/SKILL.md': '# Connect\n{{SIDEQUEST_ORIGIN}}/mcp' })
     for (const origin of ['https://sidequest.exchange', 'https://dev.sidequest.exchange']) {

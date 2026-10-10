@@ -128,7 +128,7 @@ export default {
       headers.delete('ETag')
       res = new Response(request.method === 'HEAD' ? null : source, { status: res.status, headers })
     }
-    if (/^\/skills\/[a-z]+\/SKILL\.md$/.test(pathname) && res.ok) {
+    if (/^\/skills\/[a-z]+(?:-[a-z]+)*\/SKILL\.md$/.test(pathname) && res.ok) {
       const raw = renderStartGuide(await res.text(), new URL(request.url).origin)
       const headers = new Headers(res.headers)
       headers.delete('Content-Length')

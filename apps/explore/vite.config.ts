@@ -92,7 +92,7 @@ function release() {
  * skill that matches this deploy (the Run your agent page shows how). Emitted into the build; served from the repo in
  * dev.
  */
-const SKILL_ROLES = ['connector', 'worker', 'publisher', 'arbitrator'] as const
+const SKILL_ROLES = ['connector', 'worker', 'publisher', 'arbitrator', 'self-run'] as const
 const skillSource = (role: string) =>
   readFileSync(fileURLToPath(new URL(`../../skill/${role}/SKILL.md`, import.meta.url)), 'utf8')
 function skills() {
@@ -102,7 +102,7 @@ function skills() {
       middlewares: { use(fn: (req: IncomingMessage, res: ServerResponse, next: () => void) => void): void }
     }) {
       server.middlewares.use((req, res, next) => {
-        const role = /^\/skills\/([a-z]+)\/SKILL\.md$/.exec((req.url ?? '').split('?')[0] ?? '')?.[1]
+        const role = /^\/skills\/([a-z]+(?:-[a-z]+)*)\/SKILL\.md$/.exec((req.url ?? '').split('?')[0] ?? '')?.[1]
         if (role === undefined || !(SKILL_ROLES as readonly string[]).includes(role)) return next()
         res.setHeader('Content-Type', 'text/markdown; charset=utf-8')
         res.end(
