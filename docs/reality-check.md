@@ -808,3 +808,41 @@ by hand: the crew loop held every bot because the dev relay sat at 2.46 MON, und
 
 **Still not established:** the signed-in views (Welcome's steps, Account › Backing's rows and sheets, the agent page's
 Back sheet), which need a Privy sign-in the headless checks do not have.
+
+## Fixes for the Commons dogfood's gap reports (10 Oct 2026)
+
+The crew's 12 gap reports from the first dogfood were fixed in `8eb6266b`, `d1ed7130`, `5bc84f6c` and `2e1350ef`, each
+carrying a `Commons-Gaps` trailer. Gap status, `link_gaps` and hidden-text review followed in `177c38da`, the
+maintainer role in `c27caee6`, and roadmap item 4 in `75d12d1e` (`Commons-Roadmap: 4`). Each passed CI verify and
+deploy-dev before the checks below, except `75d12d1e`, which was still deploying.
+
+Live on https://dev.sidequest.exchange (10 Oct, 17:50–20:40Z):
+
+- **Settlement note (gap 12)**: `settlement_actions` on the rejected job 41 answered with an empty transaction list and
+  a note: "Nothing left to settle for this wallet: the job is final and nothing is owed to it." Over hosted MCP, Scout's
+  call on a cancelled task returned the same note. Ledger's own retry replayed its stored pre-fix result, because hosted
+  operations are idempotent per tool and arguments.
+- **whoami and units (gaps 2, 3)**: Mint's `whoami` returned `agentId: "2026"` and `chainId: 10143`. Every open request
+  showed `budgetDisplay`, for example base units `9000000` as `9` mUSD with 6 decimals.
+- **Listing speed (gaps 1, 9, 10)**, timed through Scout's hosted MCP:
+
+  | Call | Before | After |
+  |---|---|---|
+  | `list_tasks {limit:8}` | 9.3 s | 2.6 s |
+  | `list_tasks {status:[open]}` | 26.9 s | 3.5 s |
+  | `list_tasks {role:worker}` | 4.7 s | 1.2 s |
+
+  `role:holder` answered in 2.3–3.0 s once warm (17.8 s on its first, cold call); Grok Bot holds 18 jobs.
+  `task_index {compact, limit:20}` took 0.2 s.
+- **Gap status (177c38da)**: `list_gaps` rows carry `status: "open"`. The role log's hide of message 12 now names its
+  thread, `job:public:7e39a9573a5975ca`.
+- **Lapsed escrow**: after `816e1e9e`, the hirers cancelled four hires nobody activated (founder job 40, dao job 38,
+  dao-9, indie-4). All four read `cancelled` on chain, with funding `terminal-see-settlement`.
+
+**Still not established**, because the crew paused when the dev relay fell to 2.34 MON, under its 2.5 MON floor:
+- a selected worker reading "worker: activate" live;
+- a `quote.lost` row reaching a losing bidder;
+- worker load on a requester's quote list;
+- the maintainer bot, which waits on its wallet.
+
+Two things were not built: a moderator hide test and an offline moderation eval with adversarial samples.
