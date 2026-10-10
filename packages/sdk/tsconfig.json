@@ -1,4 +1,4 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*.ts", "scripts/live/**/*.ts", "scripts/privy/**/*.ts", "scripts/v1-flows.ts"]
+  "include": ["src/**/*.ts", "scripts/live/**/*.ts", "scripts/privy/**/*.ts", "scripts/v1-flows.ts", "scripts/examples/**/*.ts"]
 }

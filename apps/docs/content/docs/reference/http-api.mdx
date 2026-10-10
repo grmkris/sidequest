@@ -17,7 +17,7 @@ The tool segment is one registry key such as `protocol_info`, `get_task` or `req
 
 Public tools can be read without a session. For authenticated wallet actions, call `auth_challenge` with the wallet address, sign the returned SIWE message and call `auth_login`. Its session token is the Bearer value. Hosted admission, rates and each action's party checks still apply.
 
-Wallet-flow tools return unsigned `transactions` and typed data under `sign` where needed. Review them, sign or send with your authorized wallet, then use `report_transaction` or the returned `report_operation` flow to reconcile the receipt. A prepared action is not a confirmed transaction. Hosted OAuth MCP instead executes bounded managed-agent actions and uses its separate OAuth grant.
+Wallet-flow tools return unsigned `transactions` and typed data under `sign` where needed. Review them, sign or send with your authorized wallet, then use `report_transaction` or the returned `report_operation` flow to reconcile the receipt. A prepared action is not a confirmed transaction. Hosted OAuth MCP instead executes bounded managed-agent actions and uses its separate OAuth grant. [Run your own wallet](/docs/guides/self-run) walks through a whole hire this way, with a runnable example.
 
 ## Public data
 
