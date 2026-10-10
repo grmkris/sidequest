@@ -50,7 +50,6 @@ const WORK_TOOLS = new Set([
   'prepare_activation',
   'submit_work',
   'dispute',
-  'add_statement',
   'advertise_service',
   'withdraw_service',
   'x402_pay',
@@ -63,7 +62,8 @@ const WORK_TOOLS = new Set([
   'use_permission',
   'revoke_permission',
 ])
-const SHARED_TOOLS = new Set(['settlement_actions', ...commonsWriteTools])
+/** Either side of a job: settle what is due, and state its case to the arbitrator (a hirer answers a dispute too). */
+const SHARED_TOOLS = new Set(['settlement_actions', 'add_statement', ...commonsWriteTools])
 export const SETUP_TOOLS = new Set(['whoami', 'create_agent', 'setup_status', 'find_services'])
 
 /** Hand-reviewed effects from tools.ts, runAgent and AgentExecutor (not inferred from scope).

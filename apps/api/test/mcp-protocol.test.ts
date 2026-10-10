@@ -288,7 +288,7 @@ describe('hosted tool metadata', () => {
       inputSchema: { required: expect.arrayContaining(['bps', 'operationKey']), additionalProperties: false },
     })
     expect(requiredToolScope('check_operation')).toBe('sidequest:read')
-    expect(requiredToolScope('add_statement')).toBe('sidequest:work')
+    expect(requiredToolScope('add_statement')).toBe('write')
     expect(toolAnnotations('settlement_actions')).toMatchObject({ readOnlyHint: false, destructiveHint: true })
     expect(toolAnnotations('request_quotes')).toMatchObject({ destructiveHint: false })
   })
@@ -309,6 +309,7 @@ describe('hosted tool metadata', () => {
         'reject_work',
         'cancel_task',
         'settlement_actions',
+        'add_statement',
       ]),
     )
     for (const name of [
