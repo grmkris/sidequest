@@ -999,14 +999,12 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "crew/bin/crew.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 10,
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
     "complexity(complexity)": 1,
     "eslint(max-lines)": 1,
-    "typescript(no-base-to-string)": 1,
     "typescript(no-misused-promises)": 1,
     "typescript(no-unnecessary-type-assertion)": 2,
-    "typescript(no-unnecessary-type-conversion)": 1,
-    "typescript(no-unnecessary-type-parameters)": 1
+    "typescript(no-unnecessary-type-conversion)": 1
   },
   "infra/stage.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1

@@ -39,7 +39,7 @@ const keys: string[] = []
 function board(...replies: Array<{ text: string; isError?: boolean }>) {
   fetchSpy.mockImplementation(async (_url, init) => {
     // SAFETY: the client under test always sends a JSON-RPC tools/call with an arguments object.
-    const body = JSON.parse(String(init?.body)) as { params: { arguments: { operationKey?: string } } }
+    const body = JSON.parse(init?.body as string) as { params: { arguments: { operationKey?: string } } }
     keys.push(body.params.arguments.operationKey ?? '')
     const reply = replies.shift() ?? { text: '{"status":"pending"}' }
     // A write's state comes back as the tool result, inside the board's `{ ok, result }`; a refusal as it is.
