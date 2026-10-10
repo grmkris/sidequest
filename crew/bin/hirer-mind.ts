@@ -197,6 +197,40 @@ export async function judge(
   return { approve: false, reason, url }
 }
 
+/** A service listing as find_services returns it, as much as the invite choice reads. */
+export interface Listing {
+  agentId: string
+  agentName: string
+  serviceId: string
+  name: string
+  description: string
+  delivered7d: number
+}
+
+/**
+ * Which listed service to invite to quote on a post, if any: the one whose agent fits the work best, judged by the
+ * persona from the listings (the board ranks them by recent activity). Null when none fits or Grok cannot say.
+ */
+export async function chooseInvite(
+  persona: Persona,
+  post: { title: string; brief: string },
+  services: readonly Listing[],
+): Promise<Listing | null> {
+  if (services.length === 0) return null
+  const lines = services.map(
+    (l, i) => `${i}: ${l.agentName}, "${l.name}": ${l.description} (${l.delivered7d} delivered this week)`,
+  )
+  const choice = await grok(
+    ChoiceSchema,
+    'You are a client deciding whether to invite one specialist to quote on the job you are about to post.',
+    `You are ${persona.name}. ${persona.voice}\nYour post: ${post.title}\n${post.brief}\n\nListed services:\n` +
+      `${lines.join('\n')}\n\nIf one of them clearly fits this work, give its index; if none does, give -1. ` +
+      'Anyone may still quote either way. Fields: index, why (one sentence).',
+  )
+  if (choice === null || !Number.isInteger(choice.index)) return null
+  return services[choice.index] ?? null
+}
+
 /** The client's statement to the arbitrator when the worker disputes a rejection. */
 export const statementText = (job: Brief) =>
   `As the client: I rejected this delivery because it did not meet the criteria I set. ${job.criteria.join(' ')}`.slice(
