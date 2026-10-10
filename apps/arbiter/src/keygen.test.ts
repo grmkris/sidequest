@@ -4,7 +4,7 @@ import path from 'node:path'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { Hex } from 'viem'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { generateModeratorKey } from './keygen.ts'
+import { generateModeratorKey, generateRoleKey, parseKeygenArguments } from './keygen.ts'
 
 // Synthetic unit-test key, never a funded or operational key.
 const key: Hex = `0x${'1'.repeat(64)}`
@@ -49,5 +49,27 @@ describe('moderator keygen in a temporary HOME', () => {
 
   it('rejects a stage path outside the config directory', async () => {
     await expect(generateModeratorKey(await temporaryHome(), '../other', { generateKey: () => key })).rejects.toThrow()
+  })
+})
+
+describe('maintainer keygen', () => {
+  it('appends its own variable beside the moderator key, once, and prints only its address', async () => {
+    const home = await temporaryHome()
+    await generateModeratorKey(home, 'dev', { generateKey: () => key, print: vi.fn() })
+    const other: Hex = `0x${'2'.repeat(64)}`
+    const print = vi.fn()
+    const address = await generateRoleKey('maintainer', home, 'dev', { generateKey: () => other, print })
+    const file = path.join(home, '.config/sidequest/dev.env')
+    expect(await readFile(file, 'utf8')).toBe(`MODERATOR_PRIVATE_KEY=${key}\nMAINTAINER_PRIVATE_KEY=${other}\n`)
+    expect(print.mock.calls).toEqual([[`maintainer address: ${address}`]])
+    await expect(generateRoleKey('maintainer', home, 'dev', { generateKey: () => other })).rejects.toThrow(
+      'MAINTAINER_PRIVATE_KEY is already set',
+    )
+  })
+
+  it('reads --role and --stage, defaulting to the moderator', () => {
+    expect(parseKeygenArguments(['--role', 'maintainer']).role).toBe('maintainer')
+    expect(parseKeygenArguments(['--stage', 'local'])).toMatchObject({ role: 'moderator', stage: 'local' })
+    expect(() => parseKeygenArguments(['--role', 'arbiter'])).toThrow('usage')
   })
 })

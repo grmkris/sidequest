@@ -4,6 +4,7 @@ import * as sdk from '@sidequest/sdk'
 import { runArbiterPass } from './arbiter-run.ts'
 import { runRoleLoop } from './loop.ts'
 import { moderateOnce } from './moderator.ts'
+import { maintainOnce } from './maintainer.ts'
 import { parseRoleArguments, roleEnvironment, type RoleClient } from './role.ts'
 import { accountFromPrivateKey, arbiterAccounts, boardUrls } from './runtime.ts'
 
@@ -17,7 +18,7 @@ const network = Schema.decodeUnknownSync(Schema.Literals(['monad-mainnet', 'mona
 const accounts =
   args.role === 'arbiter'
     ? arbiterAccounts(sdk.deployment(network), env)
-    : [accountFromPrivateKey('MODERATOR_PRIVATE_KEY', env)]
+    : [accountFromPrivateKey(args.role === 'maintainer' ? 'MAINTAINER_PRIVATE_KEY' : 'MODERATOR_PRIVATE_KEY', env)]
 const clients = boardUrls(env).flatMap((url) =>
   accounts.map((account) => ({
     account,
@@ -32,6 +33,14 @@ const pass = async (client: RoleClient): Promise<void> => {
   if (args.role === 'arbiter') {
     const result = await runArbiterPass(client, { network, endpoint, env, log })
     skipped ||= result
+  } else if (args.role === 'maintainer') {
+    await maintainOnce({
+      board: client.board,
+      endpoint,
+      stateFile: config.cursorFile!,
+      shipSince: config.shipSince!,
+      log,
+    })
   } else {
     await moderateOnce({
       board: client.board,

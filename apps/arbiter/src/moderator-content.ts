@@ -83,7 +83,7 @@ export function targetText(target: ModerationTarget, reply: unknown): string | n
 }
 
 /** Where a subject is, in words: the model judges a request from a job's owner to its worker as ordinary work. */
-const placeOf = (subject: string | undefined) =>
+export const placeOf = (subject: string | undefined) =>
   subject === 'lobby'
     ? 'the lobby'
     : subject?.startsWith('job:') === true

@@ -6,6 +6,7 @@
   "scripts": {
     "start": "bun src/main.ts",
     "keygen:moderator": "bun src/keygen.ts",
+    "keygen:maintainer": "bun src/keygen.ts --role maintainer",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run"
   },

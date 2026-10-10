@@ -9,7 +9,8 @@ describe('role arguments and environment', () => {
     expect(parseRoleArguments(['--role', 'moderator'])).toEqual({ role: 'moderator', once: false })
     expect(parseRoleArguments(['--role', 'arbiter', '--once'])).toEqual({ role: 'arbiter', once: true })
     expect(() => parseRoleArguments(['--role'])).toThrow('--role')
-    expect(() => parseRoleArguments(['--role', 'maintainer'])).toThrow('--role')
+    expect(parseRoleArguments(['--role', 'maintainer'])).toEqual({ role: 'maintainer', once: false })
+    expect(() => parseRoleArguments(['--role', 'cto'])).toThrow('--role')
     expect(() => parseRoleArguments(['--bogus'])).toThrow('unknown option')
   })
 

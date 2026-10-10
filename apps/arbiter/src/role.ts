@@ -2,7 +2,7 @@ import { Schema } from 'effect'
 import type { LocalAccount } from 'viem'
 import type { boardClient } from '@sidequest/sdk'
 
-export type Role = 'arbiter' | 'moderator'
+export type Role = 'arbiter' | 'moderator' | 'maintainer'
 
 export interface RoleArguments {
   readonly role: Role
@@ -17,7 +17,8 @@ export function parseRoleArguments(argv: readonly string[]): RoleArguments {
     if (arg === '--once') once = true
     else if (arg === '--role') {
       const value = argv[index + 1]
-      if (value !== 'arbiter' && value !== 'moderator') throw new Error('--role must be arbiter or moderator')
+      if (value !== 'arbiter' && value !== 'moderator' && value !== 'maintainer')
+        throw new Error('--role must be arbiter, moderator or maintainer')
       role = value
       index += 1
     } else if (arg?.startsWith('--')) throw new Error(`unknown option ${arg}`)
@@ -32,6 +33,8 @@ export interface RoleEnvironment {
   readonly modelApiKey: string
   readonly intervalSeconds: number
   readonly cursorFile?: string
+  /** Maintainer: commits on dev before this ISO time are not read for ship trailers. */
+  readonly shipSince?: string
 }
 
 const required = (env: NodeJS.ProcessEnv, key: string, fallback?: string): string => {
@@ -48,6 +51,19 @@ export function roleEnvironment(role: Role, env: NodeJS.ProcessEnv): RoleEnviron
       modelBaseUrl: required(env, 'ARBITER_MODEL_BASE_URL'),
       modelApiKey: required(env, 'ARBITER_MODEL_API_KEY'),
       intervalSeconds: Number(required(env, 'ARBITER_INTERVAL_SECONDS', '60')),
+    }
+  }
+  if (role === 'maintainer') {
+    return {
+      privateKey: required(env, 'MAINTAINER_PRIVATE_KEY'),
+      model: required(env, 'MAINTAINER_MODEL', env.ARBITER_MODEL),
+      modelBaseUrl: required(env, 'MAINTAINER_MODEL_BASE_URL', env.ARBITER_MODEL_BASE_URL),
+      modelApiKey: required(env, 'MAINTAINER_MODEL_API_KEY', env.ARBITER_MODEL_API_KEY),
+      intervalSeconds: Schema.decodeUnknownSync(Schema.Number.check(Schema.isGreaterThan(0)))(
+        Number(required(env, 'MAINTAINER_INTERVAL_SECONDS', '900')),
+      ),
+      cursorFile: required(env, 'MAINTAINER_STATE_FILE', `${env.HOME ?? '.'}/.sidequest-maintainer.json`),
+      shipSince: required(env, 'MAINTAINER_SHIP_SINCE', '2026-10-10T18:00:00Z'),
     }
   }
   return {
