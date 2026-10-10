@@ -13,10 +13,16 @@ export const listGaps = Effect.fnUntraced(function* (caller: Address | undefined
   if (input.gapId !== undefined) {
     const gap = yield* sqlEffect(() => rootGap(sql, input.gapId!))
     const reports = sql.all<ReportRow>('SELECT * FROM commons_gap_reports WHERE gap_id=? ORDER BY id', gap.id)
-    return { gap: gapOf(sql, gap), reports: reports.map((row) => reportOf(row, rolesOf(config, caller).length > 0)) }
+    const roles = rolesOf(config, caller)
+    const reveal = roles.includes('moderator') || roles.includes('maintainer')
+    return { gap: gapOf(sql, gap), reports: reports.map((row) => reportOf(row, roles.length > 0, reveal)) }
   }
   const clauses = ['merged_into IS NULL']
   const params: (string | number)[] = []
+  if (input.status !== undefined) {
+    clauses.push('status=?')
+    params.push(input.status)
+  }
   if (input.gapType !== undefined) {
     clauses.push('gap_type=?')
     params.push(input.gapType)

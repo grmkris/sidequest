@@ -40,6 +40,14 @@ const examples: Record<string, { valid: unknown; invalid: unknown }> = {
     valid: { sourceGapId: '1', targetGapId: 2, reason: 'Duplicate' },
     invalid: { sourceGapId: 'NaN', targetGapId: 2, reason: 'Duplicate' },
   },
+  link_gaps: {
+    valid: { itemId: '2', gapIds: ['6', 7], reason: 'Same root cause' },
+    invalid: { itemId: 2, gapIds: [], reason: 'Same root cause' },
+  },
+  set_gap_status: {
+    valid: { gapId: '8', status: 'fixed', reason: 'Shipped in 8eb6266b' },
+    invalid: { gapId: 8, status: 'done', reason: 'Shipped' },
+  },
   list_roles: { valid: { cursor: 'c:1', limit: '10' }, invalid: { cursor: '1' } },
 }
 

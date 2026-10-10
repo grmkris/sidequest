@@ -74,4 +74,10 @@ export const WithdrawSupportOutput = Schema.Struct({
   activeSupports: Integer,
 })
 export const SetItemStatusOutput = Schema.Struct({ item: RoadmapItemDetail, logSeq: OutputId })
+export const LinkGapsInput = Schema.Struct({
+  itemId: ItemId,
+  gapIds: Schema.Array(GapId).check(Schema.isMinLength(1), Schema.isMaxLength(10)),
+  reason: text(3, 500),
+})
+export const LinkGapsOutput = Schema.Struct({ item: RoadmapItemDetail, linked: Integer, logSeq: OutputId })
 export const MergeItemsOutput = Schema.Struct({ item: RoadmapItemDetail, movedSupports: Integer, logSeq: OutputId })

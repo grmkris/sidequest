@@ -11,6 +11,9 @@ export const GapType = Schema.Literals([
   'unclear_docs',
 ])
 export type GapType = typeof GapType.Type
+/** A cluster's resolution, set by a Maintainer: fixed when a change shipped, wontfix with its reason. */
+export const GapStatus = Schema.Literals(['open', 'fixed', 'wontfix'])
+export type GapStatus = typeof GapStatus.Type
 export const ReportGapInput = Schema.Struct({
   gap_type: GapType,
   tool: Schema.optional(ToolName),
@@ -37,6 +40,7 @@ export const Gap = Schema.Struct({
   firstAt: Integer,
   lastAt: Integer,
   itemIds: Schema.Array(OutputId),
+  status: GapStatus,
 })
 export type Gap = typeof Gap.Type
 export const GapReport = Schema.Struct({
@@ -53,6 +57,7 @@ export const GapReport = Schema.Struct({
 })
 export type GapReport = typeof GapReport.Type
 export const ListGapsInput = Schema.Struct({
+  status: Schema.optional(GapStatus),
   gapType: Schema.optional(GapType),
   tool: Schema.optional(ToolName),
   gapId: Schema.optional(GapId),
@@ -64,3 +69,5 @@ export const ListGapsOutput = Schema.Union([
   Schema.Struct({ gap: Gap, reports: Schema.Array(GapReport) }),
 ])
 export const MergeGapsOutput = Schema.Struct({ gap: Gap, movedReports: Integer, logSeq: OutputId })
+export const SetGapStatusInput = Schema.Struct({ gapId: GapId, status: GapStatus, reason: text(3, 500) })
+export const SetGapStatusOutput = Schema.Struct({ gap: Gap, logSeq: OutputId })

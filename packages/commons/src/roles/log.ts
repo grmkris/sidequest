@@ -13,7 +13,7 @@ interface LogRow {
   reason: string
   created_at: number
 }
-function roleActionOf(row: LogRow): RoleAction {
+function roleActionOf(row: LogRow & { subject?: string | null }): RoleAction {
   return Schema.decodeUnknownSync(RoleAction)({
     seq: row.seq,
     actor: row.actor,
@@ -21,6 +21,7 @@ function roleActionOf(row: LogRow): RoleAction {
     action: row.action,
     targetKind: row.target_kind,
     targetId: row.target_id,
+    ...(row.subject === undefined || row.subject === null ? {} : { subject: row.subject }),
     detail: Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Record(Schema.String, Schema.Unknown)))(
       row.detail_json,
     ),
@@ -58,12 +59,15 @@ export function itemLog(sql: SyncSql, id: number): RoleAction[] {
     .all<LogRow>("SELECT * FROM commons_role_log WHERE target_kind='item' AND target_id=? ORDER BY seq", id)
     .map(roleActionOf)
 }
+// A message target carries its thread's subject, read now, so a reviewer can open what an action names.
+const LOG_SELECT = `SELECT l.*, m.subject FROM commons_role_log l
+  LEFT JOIN commons_messages m ON l.target_kind='message' AND m.seq=l.target_id`
 export function logPage(sql: SyncSql, cursor: string | undefined, limit: number) {
   const rows =
     cursor === undefined
-      ? sql.all<LogRow>('SELECT * FROM commons_role_log ORDER BY seq LIMIT ?', limit + 1)
-      : sql.all<LogRow>(
-          'SELECT * FROM commons_role_log WHERE seq>? ORDER BY seq LIMIT ?',
+      ? sql.all<LogRow & { subject: string | null }>(`${LOG_SELECT} ORDER BY l.seq LIMIT ?`, limit + 1)
+      : sql.all<LogRow & { subject: string | null }>(
+          `${LOG_SELECT} WHERE l.seq>? ORDER BY l.seq LIMIT ?`,
           Number(cursor.slice(2)),
           limit + 1,
         )

@@ -45,9 +45,18 @@ export const COMMONS_DDL = [
   `CREATE TABLE IF NOT EXISTS commons_rate (key TEXT PRIMARY KEY, used INTEGER NOT NULL, expires_at INTEGER NOT NULL)`,
 ]
 
+/** Columns added after the first deploy, each added once when missing (SQLite has no ADD COLUMN IF NOT EXISTS). */
+const ADDED_COLUMNS: readonly (readonly [table: string, column: string, type: string])[] = [
+  ['commons_gaps', 'status', "TEXT NOT NULL DEFAULT 'open'"],
+  ['commons_gaps', 'status_at', 'INTEGER'],
+]
+
 /** Idempotent, additive runtime DDL. The host supplies the configured Maintainer and Clock time. */
 export function migrate(sql: SyncSql, maintainer: Address, now = 0): void {
   for (const ddl of COMMONS_DDL) sql.run(ddl)
+  for (const [table, column, type] of ADDED_COLUMNS)
+    if (!sql.all<{ name: string }>(`SELECT name FROM pragma_table_info('${table}')`).some((c) => c.name === column))
+      sql.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`)
   sql.run(
     `INSERT OR IGNORE INTO commons_items
     (id,title,problem,proposal,proposer,proposer_stake,proposer_block,status,created_at,updated_at)

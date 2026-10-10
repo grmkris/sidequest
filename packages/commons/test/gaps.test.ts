@@ -73,7 +73,7 @@ it.effect('gap merge reroutes old keys and gapId reads; deduplicates linked item
     }).pipe(Effect.provide(h.layer))
   }),
 )
-it.effect('hidden gap reports become stubs and never leak goal or example to public or roles', () =>
+it.effect('hidden gap reports are stubs to the public; a maintainer reviewing the hide still reads them', () =>
   Effect.gen(function* () {
     const h = yield* makeHarness()
     yield* Effect.gen(function* () {
@@ -83,19 +83,22 @@ it.effect('hidden gap reports become stubs and never leak goal or example to pub
         id: gap.reportId,
         reason: 'Spam content',
       })
-      for (const caller of [undefined, maintainer]) {
-        const result = yield* invoke('list_gaps', ListGapsOutput, caller, { gapId: gap.gapId })
-        if (!('reports' in result)) throw new Error('Expected gap detail')
-        expect(result.reports[0]).toMatchObject({
-          whatINeeded: null,
-          whatITried: null,
-          suggestion: null,
-          hidden: { logSeq: 1 },
-        })
-        expect(JSON.stringify(result)).not.toContain('Private goal')
-        expect(result.gap.example).toBeNull()
-        expect(JSON.stringify(result)).not.toContain('Hide this report')
-      }
+      const shown = yield* invoke('list_gaps', ListGapsOutput, undefined, { gapId: gap.gapId })
+      if (!('reports' in shown)) throw new Error('Expected gap detail')
+      expect(shown.reports[0]).toMatchObject({
+        whatINeeded: null,
+        whatITried: null,
+        suggestion: null,
+        hidden: { logSeq: 1 },
+      })
+      expect(JSON.stringify(shown)).not.toContain('Private goal')
+      expect(shown.gap.example).toBeNull()
+      expect(JSON.stringify(shown)).not.toContain('Hide this report')
+      // The maintainer can judge the hide (and unhide a false positive); the cluster summary stays clean.
+      const reviewed = yield* invoke('list_gaps', ListGapsOutput, maintainer, { gapId: gap.gapId })
+      if (!('reports' in reviewed)) throw new Error('Expected gap detail')
+      expect(reviewed.reports[0]).toMatchObject({ whatINeeded: 'Hide this report', hidden: { logSeq: 1 } })
+      expect(reviewed.gap.example).toBeNull()
     }).pipe(Effect.provide(h.layer))
   }),
 )

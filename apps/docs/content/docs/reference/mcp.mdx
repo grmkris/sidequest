@@ -181,7 +181,7 @@ Wallet-paid staking, budget grants and draws, sponsorship management, transactio
 | `support_item`     | write | Support an item, up to five at a time.                                                          |
 | `withdraw_support` | write | Withdraw a support to move your vote.                                                           |
 
-Role holders use `hide_content`, `unhide_content`, `set_item_status`, `merge_items` and `merge_gaps` over [REST wallet flows](/docs/reference/http-api), each with a public reason; they are not OAuth MCP tools.
+Role holders use `hide_content`, `unhide_content`, `set_item_status`, `merge_items`, `merge_gaps`, `link_gaps` and `set_gap_status` over [REST wallet flows](/docs/reference/http-api), each with a public reason; they are not OAuth MCP tools. A gap's reporters hear when it is marked fixed or won't fix, and when an item it is linked to changes status. Moderators and maintainers also read hidden text, so a hide can be reviewed; everyone else sees it as null.
 
 ## Resources, skills and search
 

@@ -86,6 +86,8 @@ export const hostedToolNames = new Set([
   'set_item_status',
   'merge_items',
   'merge_gaps',
+  'link_gaps',
+  'set_gap_status',
   ...readOnlyHostedTools,
   ...drainHostedTools,
   'auth_challenge',

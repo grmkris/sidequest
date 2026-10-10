@@ -28,13 +28,14 @@ export function hiddenOf(row: HiddenRow) {
         logSeq: row.hidden_log_seq,
       })
 }
-export function messageOf(row: MessageRow): Message {
+/** A message as read; `reveal` (a moderator or maintainer reviewing a hide) keeps a hidden body readable. */
+export function messageOf(row: MessageRow, reveal = false): Message {
   return {
     id: row.seq,
     subject: row.subject,
     author: row.author,
     badges: Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(Badge)))(row.badges_json),
-    body: row.hidden_at === null ? row.body : null,
+    body: row.hidden_at === null || reveal ? row.body : null,
     replyTo: row.reply_to,
     mentions: Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(Mention)))(row.mentions_json),
     hidden: hiddenOf(row),

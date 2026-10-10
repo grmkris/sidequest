@@ -12,5 +12,5 @@ export const getDisputeThread = Effect.fnUntraced(function* (boardId: string, ta
   const rows = sql
     .all<MessageRow>('SELECT * FROM commons_messages WHERE subject=? ORDER BY seq DESC LIMIT 100', subject)
     .toReversed()
-  return rows.map(messageOf)
+  return rows.map((row) => messageOf(row))
 })

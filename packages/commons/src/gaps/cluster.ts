@@ -9,6 +9,7 @@ export interface GapRow {
   tool: string | null
   needed: string
   merged_into: number | null
+  status: string
   created_at: number
 }
 function clusterKey(input: typeof ReportGapInput.Type): string {

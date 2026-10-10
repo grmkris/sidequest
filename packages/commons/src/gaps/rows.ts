@@ -42,10 +42,15 @@ export function gapOf(sql: SyncSql, gap: GapRow): Gap {
     itemIds: sql
       .all<{ item_id: number }>('SELECT item_id FROM commons_item_gaps WHERE gap_id=? ORDER BY item_id', gap.id)
       .map((r) => r.item_id),
+    status: gap.status,
   })
 }
-export function reportOf(row: ReportRow, roleHolder: boolean): GapReport {
-  const visible = row.hidden_at === null
+/**
+ * A report as the viewer may read it. Role holders also see the private user goal; a moderator or maintainer
+ * (`reveal`) also reads hidden text, so a hide can be reviewed. Everyone else sees a hidden report's text as null.
+ */
+export function reportOf(row: ReportRow, roleHolder: boolean, reveal = false): GapReport {
+  const visible = row.hidden_at === null || reveal
   return {
     id: row.id,
     gapId: row.gap_id,

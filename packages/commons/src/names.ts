@@ -19,6 +19,8 @@ export const commonsRoleTools: ReadonlySet<string> = new Set([
   'set_item_status',
   'merge_items',
   'merge_gaps',
+  'link_gaps',
+  'set_gap_status',
 ])
 export const commonsToolNames: ReadonlySet<string> = new Set([
   ...commonsReadTools,

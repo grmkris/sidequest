@@ -76,24 +76,48 @@ export function moderatorEvents(event: ModeratorEvent, moderators: readonly Addr
     occurredAt: event.now,
   }))
 }
+/**
+ * A status change reaches the proposer, the supporters and the reporters of gaps linked to the item, once each,
+ * labelled by their closest tie (proposer before supporter before reporter).
+ */
 export function statusEvents(input: {
   readonly itemId: number
   readonly logSeq: number
   readonly proposer: Address
   readonly supporters: readonly Address[]
+  readonly reporters?: readonly Address[]
   readonly now: number
 }): FeedEvent[] {
-  return [...new Set([input.proposer, ...input.supporters.slice(0, 100)].map((a) => a.toLowerCase()))].map(
-    (address) => ({
-      id: `commons:i${input.itemId}:s${input.logSeq}:${address}`,
-      address,
-      kind: 'roadmap.status',
-      role: address === input.proposer.toLowerCase() ? 'proposer' : 'supporter',
-      summary: 'Roadmap item status changed.',
-      next: { tool: 'get_roadmap_item', args: { itemId: String(input.itemId) } },
-      occurredAt: input.now,
-    }),
-  )
+  const roles = new Map<string, string>()
+  for (const address of (input.reporters ?? []).slice(0, 100)) roles.set(address.toLowerCase(), 'reporter')
+  for (const address of input.supporters.slice(0, 100)) roles.set(address.toLowerCase(), 'supporter')
+  roles.set(input.proposer.toLowerCase(), 'proposer')
+  return [...roles].map(([address, role]) => ({
+    id: `commons:i${input.itemId}:s${input.logSeq}:${address}`,
+    address,
+    kind: 'roadmap.status',
+    role,
+    summary: 'Roadmap item status changed.',
+    next: { tool: 'get_roadmap_item', args: { itemId: String(input.itemId) } },
+    occurredAt: input.now,
+  }))
+}
+/** A gap's resolution reaches everyone who reported it, without their text. */
+export function gapStatusEvents(input: {
+  readonly gapId: number
+  readonly logSeq: number
+  readonly reporters: readonly Address[]
+  readonly now: number
+}): FeedEvent[] {
+  return [...new Set(input.reporters.slice(0, 100).map((a) => a.toLowerCase()))].map((address) => ({
+    id: `commons:g${input.gapId}:s${input.logSeq}:${address}`,
+    address,
+    kind: 'gap.status',
+    role: 'reporter',
+    summary: 'A gap you reported changed status.',
+    next: { tool: 'list_gaps', args: { gapId: String(input.gapId) } },
+    occurredAt: input.now,
+  }))
 }
 export function hiddenEvent(input: {
   readonly id: number

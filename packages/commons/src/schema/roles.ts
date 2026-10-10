@@ -17,9 +17,11 @@ export const RoleAction = Schema.Struct({
   seq: OutputId,
   actor: Address,
   role: Role,
-  action: Schema.Literals(['hide', 'unhide', 'set_status', 'merge_items', 'merge_gaps']),
+  action: Schema.Literals(['hide', 'unhide', 'set_status', 'merge_items', 'merge_gaps', 'link_gaps', 'set_gap_status']),
   targetKind: Schema.Literals(['message', 'item', 'gap_report', 'gap']),
   targetId: OutputId,
+  /** A message target's thread, so a reviewer can open the content an action names. */
+  subject: Schema.optional(Schema.String),
   detail: Schema.Record(Schema.String, Schema.Unknown),
   reason: text(3, 500),
   createdAt: Integer,

@@ -14,6 +14,7 @@ import { Conflict, NotFound } from '../errors.ts'
 import { activeSupports, itemOf, requireItem } from '../roadmap/common.ts'
 import { hiddenEvent, statusEvents } from '../feed.ts'
 import type { SyncSql } from '../sql/sync.ts'
+import { reportersOf } from './gap-actions.ts'
 
 const targets = {
   message: { table: 'commons_messages', id: 'seq', author: 'author' },
@@ -146,7 +147,11 @@ export const setItemStatus = Effect.fnUntraced(function* (
           input.itemId,
         )
         .map((r) => r.voter)
-      return { item: itemOf(tx, requireItem(tx, input.itemId)), logSeq, supporters }
+      const gapIds = tx
+        .all<{ gap_id: number }>('SELECT gap_id FROM commons_item_gaps WHERE item_id=?', input.itemId)
+        .map((r) => r.gap_id)
+      const reporters = reportersOf(tx, gapIds)
+      return { item: itemOf(tx, requireItem(tx, input.itemId)), logSeq, supporters, reporters }
     }),
   )
   yield* (yield* FeedSink).write(
@@ -155,6 +160,7 @@ export const setItemStatus = Effect.fnUntraced(function* (
       logSeq: result.logSeq,
       proposer: result.item.proposer,
       supporters: result.supporters,
+      reporters: result.reporters,
       now,
     }),
   )
