@@ -21,7 +21,10 @@ function fixture() {
   const multicall = vi.fn(async ({ contracts }: { contracts: { args: [string] }[] }) =>
     contracts.map((c) => ({ status: 'success' as const, result: balances[c.args[0].toLowerCase()] ?? 0n })),
   )
-  const ctx = { ...base, publicClient: { ...base.publicClient, multicall } } as unknown as sdk.Ctx
+  const readContract = vi.fn(async ({ functionName }: { functionName: string }) =>
+    functionName === 'decimals' ? 6 : 'mUSD',
+  )
+  const ctx = { ...base, publicClient: { ...base.publicClient, multicall, readContract } } as unknown as sdk.Ctx
   const hostedCreators = vi.fn(async (query: HostedCreatorQuery) => ({
     // Like hostedCreatorFacts: every queried wallet, whether named as an address or in an allowance.
     agents: [...new Set([...query.addresses, ...query.allowances.map((a) => a.address)])]
@@ -63,7 +66,7 @@ function fixture() {
       null,
       900,
     )
-  return { board, multicall, hostedCreators, clock, request }
+  return { board, multicall, readContract, hostedCreators, clock, request }
 }
 
 const byId = (rows: readonly Record<string, unknown>[]) =>
@@ -120,4 +123,22 @@ it('a poster read that hangs gives up after 4 s: the list answers with null inst
   } finally {
     vi.useRealTimers()
   }
+})
+
+it('shows a budget cap in token units beside the hashed base-unit max, reading token metadata once', async () => {
+  const f = fixture()
+  f.request('alice', alice, '11000000')
+  f.request('bob', bob, '2500000')
+  f.request('open-budget', alice, null)
+  const rows = await f.board.listQuoteRequests({})
+  const display = Object.fromEntries(rows.map((r) => [r.requestId, r.budgetDisplay]))
+  // Gap 2: budget.max stays "11000000" (base units, inside the request hash); submit_quote takes token units.
+  expect(display).toEqual({
+    alice: { max: '11', symbol: 'mUSD', decimals: 6 },
+    bob: { max: '2.5', symbol: 'mUSD', decimals: 6 },
+    'open-budget': undefined,
+  })
+  expect(rows.find((r) => r.requestId === 'alice')?.budget).toMatchObject({ max: '11000000' })
+  await f.board.listQuoteRequests({})
+  expect(f.readContract).toHaveBeenCalledTimes(2)
 })

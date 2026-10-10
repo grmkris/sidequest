@@ -191,7 +191,8 @@ export const tools: Record<string, Tool> = {
   },
 
   whoami: {
-    description: 'The wallet this session is signed in as, if any.',
+    description:
+      'The wallet this session is signed in as, if any. Over hosted MCP it also names the ERC-8004 agentId this connection acts for, the id submit_quote and apply take.',
     inputSchema: { type: 'object', properties: {} },
     run: (_b, caller) => ({ address: caller.address ?? null }),
   },
@@ -438,14 +439,14 @@ export const tools: Record<string, Tool> = {
 
   submit_quote: {
     description:
-      'Worker: quote one accepted token and an exact amount for a request, as your ERC-8004 agent. Private to you and the publisher; a new quote replaces your old one. Quoting commits you to nothing until you activate. A request with a budget refuses an amount above budget.max.',
+      'Worker: quote one accepted token and an exact amount for a request, as your ERC-8004 agent. Private to you and the publisher; a new quote replaces your old one. Quoting commits you to nothing until you activate. A request with a budget refuses an amount above its cap: budget.max is in base units, budgetDisplay.max the same cap in token units.',
     inputSchema: {
       type: 'object',
       properties: {
         requestId: str('The quote request id.'),
-        agentId: str('Your ERC-8004 agent id (its agent wallet must be your address).'),
+        agentId: str('Your ERC-8004 agent id (its agent wallet must be your address); whoami returns it.'),
         token: str('One of the accepted tokens (symbol or address).'),
-        amount: str('Your price in token units, e.g. "12.5".'),
+        amount: str('Your price in token units, not base units: "9" is 9 mUSD.'),
         note: str('Optional: approach, timing.'),
         expectedCosts: {
           type: 'object',

@@ -694,6 +694,23 @@ export class Board {
   readonly #coverCache = new Map<string, { at: number; funds: bigint }>()
   /** The hosted agent behind a poster's wallet (null: not hosted), for 5 min; a wallet binding never changes. */
   readonly #creatorCache = new Map<string, { at: number; agentId: string | null }>()
+  /** An ERC-20's symbol and decimals per chain, read once: neither changes after deployment. */
+  readonly #tokenMetaCache = new Map<string, Promise<{ symbol: string; decimals: number }>>()
+
+  #tokenMeta(ctx: sdk.Ctx, token: Address): Promise<{ symbol: string; decimals: number }> {
+    const key = `${ctx.deployment.chainId}:${token.toLowerCase()}`
+    let meta = this.#tokenMetaCache.get(key)
+    if (meta === undefined) {
+      meta = Promise.all([
+        ctx.publicClient.readContract({ address: token, abi: erc20Abi, functionName: 'symbol' }),
+        ctx.publicClient.readContract({ address: token, abi: erc20Abi, functionName: 'decimals' }),
+      ]).then(([symbol, decimals]) => ({ symbol, decimals }))
+      // A failed read is not remembered, so the next caller retries it.
+      meta.catch(() => this.#tokenMetaCache.delete(key))
+      this.#tokenMetaCache.set(key, meta)
+    }
+    return meta
+  }
 
   /** The core's pause flag, read at most every 15 s. While paused every core call reverts, so the board hands out none. */
   async paused(stack: sdk.StackName = 'main'): Promise<boolean> {
@@ -1188,10 +1205,7 @@ export class Board {
     ctx: sdk.Ctx,
     x: T,
   ): Promise<T & { symbol: string }> {
-    const [symbol, decimals] = await Promise.all([
-      ctx.publicClient.readContract({ address: x.token, abi: erc20Abi, functionName: 'symbol' }),
-      ctx.publicClient.readContract({ address: x.token, abi: erc20Abi, functionName: 'decimals' }),
-    ])
+    const { symbol, decimals } = await this.#tokenMeta(ctx, x.token)
     return { ...x, symbol, amount: formatUnits(BigInt(x.amount), decimals) }
   }
 
@@ -1926,7 +1940,7 @@ export class Board {
               now,
               now - RECENT_REQUESTS,
             )
-      return this.#withPosterFacts(this.#requestReads([...open, ...recent], now), now)
+      return this.#withBudgetDisplay(await this.#withPosterFacts(this.#requestReads([...open, ...recent], now), now))
     }
     if (input.recent === true)
       throw new BoardError('invalid', 'recent applies to the public list; omit it with mine=true')
@@ -1946,7 +1960,7 @@ export class Board {
       ...(cursor === undefined ? [] : [cursor.createdAt, cursor.createdAt, cursor.id]),
     )
     const page = rows.slice(0, 50)
-    const requests = this.#requestReads(page, now)
+    const requests = await this.#withBudgetDisplay(this.#requestReads(page, now))
     const last = page.at(-1)
     return {
       requests,
@@ -1992,6 +2006,25 @@ export class Board {
    * fund the pick covers the budget. A hosted agent's pick is paid from one weekly-budget grant (stack main only),
    * anyone else's from their wallet. Nothing is locked; a read that fails says null, never a guess.
    */
+  /**
+   * budget.max stays in base units (it is inside the hashed request); budgetDisplay gives the same cap in token units,
+   * the unit submit_quote takes. A token whose metadata cannot be read leaves the request as it is.
+   */
+  async #withBudgetDisplay(reads: QuoteRequestRead[]): Promise<QuoteRequestRead[]> {
+    return await Promise.all(
+      reads.map(async (read) => {
+        const budget = read.budget as { token: Address; max: string } | undefined
+        if (budget === undefined) return read
+        try {
+          const { symbol, decimals } = await this.#tokenMeta(this.#ctx(String(read.stack)), getAddress(budget.token))
+          return { ...read, budgetDisplay: { max: formatUnits(BigInt(budget.max), decimals), symbol, decimals } }
+        } catch {
+          return read
+        }
+      }),
+    )
+  }
+
   async #withPosterFacts(reads: QuoteRequestRead[], now: number): Promise<QuoteRequestRead[]> {
     type Budgeted = {
       read: QuoteRequestRead
@@ -2191,10 +2224,7 @@ export class Board {
     const out = []
     for (const q of this.#sql.all<QuoteRow>('SELECT * FROM quotes WHERE request_id = ? ORDER BY created_at', req.id)) {
       if (!all && !eq(q.worker, me)) continue
-      const [symbol, decimals] = await Promise.all([
-        ctx.publicClient.readContract({ address: q.token as Address, abi: erc20Abi, functionName: 'symbol' }),
-        ctx.publicClient.readContract({ address: q.token as Address, abi: erc20Abi, functionName: 'decimals' }),
-      ])
+      const { symbol, decimals } = await this.#tokenMeta(ctx, q.token as Address)
       out.push({
         quoteId: q.id,
         worker: q.worker,

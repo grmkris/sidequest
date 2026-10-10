@@ -92,6 +92,34 @@ describe('feed from finalized chain events', () => {
     expect((await sql.all<{ n: number }>('SELECT count(*) AS n FROM feed_events'))[0]!.n).toBe(8)
   })
 
+  it('lists a public publish only when a board offers the job, and finds the offer by its manifest hash', async () => {
+    const sql = await setup()
+    await sql.batch([stmt('DELETE FROM board_offers')])
+    await event(sql, 1, 'Published')
+    await feedFromChain(sql, 'monad-testnet', now, { caughtUp: true })
+    // Published straight to the contract (gaps 5-7, 10): no reader can act on the public row, so none is listed,
+    // and the reader's cursor still moves past it. The creator keeps its own row, without a next step.
+    const theirs = await read(sql, stranger)
+    expect(theirs.events).toEqual([])
+    expect(theirs.cursor).not.toBeNull()
+    const own = await read(sql, creator)
+    expect(own.events).toMatchObject([{ kind: 'job.published', public: false, taskId: null }])
+    expect(own.events[0]!.next).toBeUndefined()
+
+    const manifest = `0x${'cd'.repeat(32)}`
+    const other = await setup()
+    await other.batch([
+      stmt('UPDATE jobs SET manifest_hash = ?', manifest),
+      stmt('DELETE FROM board_offers'),
+      stmt("INSERT INTO board_offers VALUES (?, 'public', 'task-7', ?)", manifest, now),
+    ])
+    await event(other, 1, 'Published')
+    await feedFromChain(other, 'monad-testnet', now, { caughtUp: true })
+    expect((await read(other, stranger)).events).toMatchObject([
+      { kind: 'job.published', public: true, taskId: 'task-7', next: { tool: 'get_task' } },
+    ])
+  })
+
   it('never feeds from a stale or lagging index', async () => {
     const sql = await setup()
     await event(sql, 1, 'Activated')

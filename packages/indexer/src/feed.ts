@@ -5,7 +5,7 @@
  */
 import { BoardError, errorDiagnostics } from '@sidequest/board'
 import { type AsyncSql, type Statement, stmt } from './store.ts'
-import { foreignOffersForJobs, type ForeignOffer } from './foreign-offers.ts'
+import { foreignOffersForJobs, OFFER_HASH_SQL, type ForeignOffer } from './foreign-offers.ts'
 import type { JobRow } from './read.ts'
 import type { Network } from '@sidequest/sdk'
 import { telegramChainId, publicOrigin } from './telegram.ts'
@@ -260,19 +260,26 @@ export async function readInbox(
     chainId,
     page.map((row) => row.job_id),
   )
-  const events: InboxEvent[] = page.map((row) => ({
-    id: row.id,
-    kind: row.kind,
-    cursor: cursorOf(row.seq),
-    occurredAt: row.occurred_at,
-    chainId,
-    boardId: row.board_id,
-    taskId: row.task_id,
-    jobId: row.job_id,
-    foreignOffer: offers.get(row.job_id),
-    public: row.address === PUBLIC_ADDRESS,
-    ...(JSON.parse(row.data_json) as Pick<InboxEvent, 'requestId' | 'role' | 'summary' | 'url' | 'next'>),
-  }))
+  const events: InboxEvent[] = page.flatMap((row) => {
+    const event: InboxEvent = {
+      id: row.id,
+      kind: row.kind,
+      cursor: cursorOf(row.seq),
+      occurredAt: row.occurred_at,
+      chainId,
+      boardId: row.board_id,
+      taskId: row.task_id,
+      jobId: row.job_id,
+      foreignOffer: offers.get(row.job_id),
+      public: row.address === PUBLIC_ADDRESS,
+      ...(JSON.parse(row.data_json) as Pick<InboxEvent, 'requestId' | 'role' | 'summary' | 'url' | 'next'>),
+    }
+    // A public job.published row for a job published outside every board (a direct contract call) names no task and
+    // no offer, so no reader can act on it; the creator keeps its own row. The cursor still moves past it.
+    const orphan =
+      event.public && event.kind === 'job.published' && event.taskId === null && event.foreignOffer === undefined
+    return orphan ? [] : [event]
+  })
   const last = page.at(-1)
   return {
     events,
@@ -556,8 +563,9 @@ export async function feedFromChain(
         e.job_id,
         (
           await sql.all<JobRow & { board_id: string | null; task_id: string | null }>(
+            // The registry's offer hash: a board's manifest hash, which equals the policy hash only on hosted boards.
             `SELECT j.*, o.board_id, o.task_id FROM jobs j
-      LEFT JOIN board_offers o ON lower(o.terms_hash) = lower(j.policy_hash) WHERE j.chain_id = ? AND j.job_id = ?`,
+      LEFT JOIN board_offers o ON lower(o.terms_hash) = lower(${OFFER_HASH_SQL}) WHERE j.chain_id = ? AND j.job_id = ?`,
             chainId,
             e.job_id,
           )

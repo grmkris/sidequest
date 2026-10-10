@@ -363,6 +363,8 @@ describe('hosted tool metadata', () => {
     expect(one.structuredContent).toMatchObject({
       id: expect.stringMatching(/^sq_[a-f0-9]{64}$/),
       name: expect.any(String),
+      // The ERC-8004 agent this connection acts for, where agents read tool results (gap 3: quoting needed it).
+      result: { agentId: '7', chainId: 10143 },
     })
     expect(JSON.parse((one.content as { text: string }[])[0]!.text)).toEqual(one.structuredContent)
   })

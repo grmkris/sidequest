@@ -63,7 +63,11 @@ const PUBLISHER_OUTPUT_SCHEMAS: Readonly<Record<string, Record<string, unknown>>
       id: stringOutput,
       name: stringOutput,
       ok: { type: 'boolean' },
-      result: objectOutput({ address: { type: ['string', 'null'] } }),
+      result: objectOutput({
+        address: { type: ['string', 'null'] },
+        agentId: { type: ['string', 'null'] },
+        chainId: { type: 'number' },
+      }),
     }),
     required: ['id', 'name'],
   },
@@ -159,6 +163,16 @@ async function profileId(agentId: string, address: string): Promise<string> {
     new TextEncoder().encode(`sidequest:profile:${agentId || address.toLowerCase()}`),
   )
   return `sq_${Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('')}`
+}
+
+/**
+ * whoami for a connection: the board's answer plus the connection's profile, and inside `result` the ERC-8004 agent
+ * this grant acts for, which `submit_quote` and `apply` name. Agents read `result`; the profile is for the host.
+ */
+function whoamiContent(output: unknown, grant: OAuthGrant, id: string, name: string) {
+  const base = typeof output === 'object' && output !== null ? (output as Record<string, unknown>) : { value: output }
+  const result = base.result instanceof Object ? Object.fromEntries(Object.entries(base.result)) : {}
+  return { ...base, result: { ...result, agentId: grant.registryAgentId, chainId: grant.chainId }, id, name }
 }
 
 export async function mcpRoute(input: {
@@ -452,13 +466,7 @@ export async function mcpRoute(input: {
         : await call(name, args, agentId)
       const structuredContent =
         name === 'whoami'
-          ? {
-              ...(typeof output === 'object' && output !== null
-                ? (output as Record<string, unknown>)
-                : { value: output }),
-              id: await profileId(agentId, grant.address),
-              name: agentId || 'Sidequest agent',
-            }
+          ? whoamiContent(output, grant, await profileId(agentId, grant.address), agentId || 'Sidequest agent')
           : typeof output === 'object' && output !== null
             ? output
             : { value: output }
