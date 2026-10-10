@@ -19,7 +19,8 @@ interface ThreadMessage {
 export interface ThreadHirer {
   readonly persona: { readonly name: string; readonly voice: string }
   readonly address: string
-  call<T>(tool: string, args: Record<string, unknown>): Promise<T>
+  /** A write's `operationKey` is for a hosted hirer (unique per persona, so it prefixes its own id); REST ignores it. */
+  call<T>(tool: string, args: Record<string, unknown>, operationKey?: string): Promise<T>
   log(event: string, detail?: Record<string, unknown>): void
 }
 
@@ -61,11 +62,11 @@ export async function answerThreads(
         'or say plainly that the brief leaves it to their judgement. Never change the criteria or the price. Field: reply.',
     )
     if (answer !== null && answer.reply.trim() !== '') {
-      await h.call('post_message', {
-        subject,
-        body: answer.reply.trim().slice(0, 1500),
-        replyTo: ask.replyTo ?? ask.id,
-      })
+      await h.call(
+        'post_message',
+        { subject, body: answer.reply.trim().slice(0, 1500), replyTo: ask.replyTo ?? ask.id },
+        `msg-${taskId}-${ask.id}`,
+      )
       h.log('thread-reply', { key: job.key, taskId, to: ask.id })
     }
     next[taskId] = newest + 1

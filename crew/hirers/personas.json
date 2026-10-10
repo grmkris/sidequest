@@ -12,7 +12,10 @@
         "trailer scripts and voiceover",
         "a devlog post",
         "a small marketing site"
-      ]
+      ],
+      "operator": "studio",
+      "tagline": "A two-person studio making a cozy pixel-art fishing game; hires art, copy and small web pages.",
+      "avatar": "a tiny pixel-art fishing boat on a calm teal pond at dusk, cozy game studio mascot"
     },
     {
       "id": "climate",
@@ -25,7 +28,10 @@
         "a chart or dashboard page from public data",
         "plain-language explainers of a paper",
         "translating a summary for policymakers"
-      ]
+      ],
+      "operator": "research",
+      "tagline": "A small Norwegian climate-data lab; hires sourced memos, charts and data dashboards.",
+      "avatar": "a fjord with a weather station and a soft line chart in the sky, calm Nordic palette"
     },
     {
       "id": "dao",
@@ -38,7 +44,10 @@
         "a vesting or multisig contract review",
         "a governance proposal write-up",
         "a token dashboard"
-      ]
+      ],
+      "operator": "research",
+      "tagline": "The treasury desk of a small grants DAO on Monad; hires on-chain reports and clear dashboards.",
+      "avatar": "a moss-covered treasury vault with a small sprouting tree, purple and green tones"
     },
     {
       "id": "cafe",
@@ -52,7 +61,10 @@
         "Instagram captions and a newsletter",
         "a loyalty-card design",
         "translating the menu"
-      ]
+      ],
+      "operator": "shop",
+      "tagline": "A neighbourhood coffee shop and bakery in Ljubljana; hires menus, signage and friendly web pages.",
+      "avatar": "a steaming coffee cup beside a fresh croissant on a wooden counter, warm morning light"
     },
     {
       "id": "founder",
@@ -66,7 +78,10 @@
         "an app icon",
         "a 60-second explainer video",
         "competitor research"
-      ]
+      ],
+      "operator": "shop",
+      "tagline": "A solo founder launching a hiking packing-list app; hires launch copy, landing pages and assets.",
+      "avatar": "a neat hiking backpack with a checklist tag on a mountain trail at sunrise"
     },
     {
       "id": "maker",
@@ -75,7 +90,30 @@
       "strict": false,
       "budget": [6, 14],
       "likes": ["a 3D-printable functional part", "a parametric OpenSCAD model", "a build guide page"],
-      "always": "3d"
+      "always": "3d",
+      "operator": "studio",
+      "tagline": "A hobby maker with a Prusa printer; hires 3D-printable parts with their OpenSCAD source.",
+      "avatar": "a friendly workbench robot holding a freshly 3D-printed bracket, warm workshop light"
     }
-  ]
+  ],
+  "operators": {
+    "studio": {
+      "email": "studio.sidequest@myinbox.lol",
+      "role": "Runs Tidepool Games and Bram's Workbench",
+      "backing": "300",
+      "weeklyBudget": "250"
+    },
+    "research": {
+      "email": "research.sidequest@myinbox.lol",
+      "role": "Runs the Fjord Climate Lab and the Mossgrove DAO treasury desk",
+      "backing": "300",
+      "weeklyBudget": "250"
+    },
+    "shop": {
+      "email": "shop.sidequest@myinbox.lol",
+      "role": "Runs Kava & Crumb and Packlight",
+      "backing": "300",
+      "weeklyBudget": "250"
+    }
+  }
 }
