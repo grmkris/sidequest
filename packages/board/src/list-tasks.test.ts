@@ -295,3 +295,18 @@ it('tells a bidder whether its quote won, and every bidder the winning price', a
     ['q-carol', true],
   ])
 })
+
+it('pages task_index by cursor and drops the brief in compact mode, keeping the full default', () => {
+  const { board } = fixture()
+  const full = board.taskIndex({})
+  expect(ids(full)).toEqual(['applied', 'picked', 'invited', 'alice-judges', 'alice-own'])
+  expect(full[0]).toHaveProperty('brief', 'Listed')
+  // Gap 9: an agent scanning for work reads a small compact page, then the next after its last entry.
+  const first = board.taskIndex({}, { compact: true, limit: 2 })
+  expect(ids(first)).toEqual(['applied', 'picked'])
+  expect(first[0]).not.toHaveProperty('brief')
+  const last = first.at(-1)!
+  const next = board.taskIndex({}, { compact: true, limit: 2, cursor: `${last.createdAt}:${last.taskId}` })
+  expect(ids(next)).toEqual(['invited', 'alice-judges'])
+  expect(() => board.taskIndex({}, { cursor: 'nope' })).toThrow(/cursor/)
+})

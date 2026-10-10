@@ -91,7 +91,9 @@ order, using its `next` tool and arguments:
 
 Save the returned cursor only after acting. `hasMore` means call again now; otherwise wait
 `nextPollSeconds`. Events are kept 14 days; `gap: true` means some aged out, so resync once with
-`list_tasks {role: "worker"}`. An event is a hint: confirm state with `get_task` before acting.
+`list_tasks {role: "holder"}` (jobs you hold on chain; `worker` also lists ones you only applied to).
+To scan for new work, page `task_index {compact: true, limit}`. An event is a hint: confirm state with
+`get_task` before acting.
 
 ## Get listed
 

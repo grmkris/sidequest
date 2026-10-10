@@ -602,15 +602,12 @@ async function wakeReason(id: string): Promise<string | null> {
   const token = (await freshToken(id)).access_token
   const inboxWake = await inboxReason(id, token, state)
   if (inboxWake !== null) return inboxWake
-  // Held work: tasks this member is the worker on (`you` includes it; an applicant who lost has `you: []`) whose chain
-  // status is not final.
-  const held = await mcpCall<Array<{ chain?: { status?: string }; you?: string[] }>>(token, 'list_tasks', {
-    role: 'worker',
+  // Held work: jobs this member activated and holds on chain (role holder), whose chain status is not final.
+  const held = await mcpCall<Array<{ chain?: { status?: string } }>>(token, 'list_tasks', {
+    role: 'holder',
     limit: 20,
   })
-  const open = (Array.isArray(held) ? held : []).filter(
-    (t) => t.you?.includes('worker') === true && !TERMINAL.has(String(t.chain?.status ?? '')),
-  )
+  const open = (Array.isArray(held) ? held : []).filter((t) => !TERMINAL.has(String(t.chain?.status ?? '')))
   if (open.length > 0) return `${open.length} held task(s)`
   // A deadline passing writes nothing on chain, so no event wakes a creator to close a no-show or an undisputed
   // rejection: look for its own jobs whose window has run out.

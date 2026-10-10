@@ -3401,49 +3401,32 @@ export class Board {
    * Every task's off-chain record for Explore, without chain reads (Explore takes chain facts from the indexer's
    * D1): the frozen offer's display fields, the job id once published, and Jev's advisory verdict.
    */
-  taskIndex(_caller: Caller) {
+  /**
+   * Every task's offer fields, newest first, without chain reads. With no arguments: the newest 500, full entries
+   * (Explore's index). An agent scanning for work passes `compact` (no brief or criteria), a `limit`, and then the
+   * last entry's `<createdAt>:<taskId>` as `cursor` for the next page.
+   */
+  taskIndex(caller: Caller, input?: TaskIndexInput & { compact?: false }): ReturnType<typeof fullIndexEntry>[]
+  taskIndex(caller: Caller, input: TaskIndexInput & { compact: true }): ReturnType<typeof compactIndexEntry>[]
+  taskIndex(_caller: Caller, input: TaskIndexInput & { compact?: boolean } = {}) {
+    const limit = Math.min(Math.max(Math.floor(input.limit ?? 500), 1), 500)
+    const after = input.cursor === undefined ? undefined : indexCursor(input.cursor)
     return this.#sql
-      .all<TaskRow>('SELECT * FROM tasks ORDER BY created_at DESC')
+      .all<TaskRow>('SELECT * FROM tasks ORDER BY created_at DESC, id DESC')
+      .filter(
+        (t) =>
+          after === undefined ||
+          t.created_at < after.createdAt ||
+          (t.created_at === after.createdAt && t.id < after.id),
+      )
       .flatMap((t) => {
         const ctx = this.#findTaskCtx(t)
         return ctx === undefined ? [] : [{ t, kind: ctx.stack.kind }]
       })
-      .slice(0, 500)
-      .map(({ t, kind }) => {
-        const terms = parseTerms(t.terms_json)
-        const screening =
-          t.screening_json === null ? null : (JSON.parse(t.screening_json) as { verdict?: string; reasons?: string[] })
-        return {
-          taskId: t.id,
-          jobId: t.job_id,
-          stack: t.stack,
-          kind,
-          creatorAgentId: t.creator_agent_id ?? null,
-          title: terms.title,
-          brief: terms.brief,
-          acceptanceCriteria: terms.acceptanceCriteria,
-          mode: terms.mode,
-          tags: terms.tags ?? [],
-          token: terms.token,
-          reward: terms.reward.toString(),
-          creatorBond: terms.creatorBond.toString(),
-          workerBond: terms.workerBond.toString(),
-          creator: terms.creator,
-          approver: terms.approver,
-          deliveryDeadline: terms.deliveryDeadline,
-          requiredChecks: terms.evidencePolicy?.checks ?? [],
-          quoted: terms.quote !== null,
-          deliverable: specOf(terms),
-          executionBudget:
-            terms.executionBudget === undefined
-              ? null
-              : { ...terms.executionBudget, cap: terms.executionBudget.cap.toString() },
-          termsHash: t.terms_hash,
-          manifestUrl: `${this.#config.manifestBaseUrl}/${t.terms_hash}.json`,
-          screening: { verdict: screening?.verdict ?? 'unscreened', reasons: screening?.reasons ?? [] },
-          createdAt: t.created_at,
-        }
-      })
+      .slice(0, limit)
+      .map(({ t, kind }) =>
+        input.compact === true ? compactIndexEntry(t, kind) : fullIndexEntry(t, kind, this.#config.manifestBaseUrl),
+      )
   }
 
   /**
@@ -3472,7 +3455,17 @@ export class Board {
                 )
                 .map((row) => row.task_id),
             )
-          : undefined
+          : role === 'holder'
+            ? // Only a signed selection can become an activation: the chain's provider then confirms who holds it.
+              new Set(
+                this.#sql
+                  .all<{ task_id: string }>(
+                    'SELECT DISTINCT task_id FROM selections WHERE lower(worker) = ? AND signature IS NOT NULL',
+                    me.toLowerCase(),
+                  )
+                  .map((row) => row.task_id),
+              )
+            : undefined
       rows = rows.filter((t) =>
         role === 'creator'
           ? this.#actsForCreator(t, me)
@@ -3488,14 +3481,24 @@ export class Board {
     ) {
       throw new BoardError('invalid', `status must be among ${TASK_STATUSES.join(', ')}`)
     }
+    // A chain filter (a status, or holding the job) reads at most LIST_STATUS_SCAN candidates, LIST_CONCURRENCY at a
+    // time: each summary is a handful of chain reads, which the board's client batches into one multicall.
+    const chainFiltered = statuses !== undefined || input.role === 'holder'
+    const candidates = chainFiltered ? rows.slice(0, LIST_STATUS_SCAN) : rows.slice(0, limit)
     const out = []
-    for (const row of statuses === undefined ? rows.slice(0, limit) : rows.slice(0, LIST_STATUS_SCAN)) {
-      const summary = await this.#summary(row, caller)
-      if (statuses !== undefined && !statuses.has(summary.chain.status)) continue
-      out.push(summary)
-      if (out.length >= limit) break
+    for (let at = 0; at < candidates.length && out.length < limit; at += LIST_CONCURRENCY) {
+      const summaries = await Promise.all(
+        candidates.slice(at, at + LIST_CONCURRENCY).map((row) => this.#summary(row, caller)),
+      )
+      out.push(
+        ...summaries.filter(
+          (summary) =>
+            (statuses === undefined || statuses.has(summary.chain.status)) &&
+            (input.role !== 'holder' || eq(summary.chain.provider, caller.address)),
+        ),
+      )
     }
-    return out
+    return out.slice(0, limit)
   }
 
   async getTask(caller: Caller, input: { taskId: string }) {
@@ -3796,11 +3799,82 @@ export const TASK_STATUSES = [
 export type TaskStatus = (typeof TASK_STATUSES)[number]
 
 /** list_tasks roles: creator owns the offer; worker is any application; invited is a direct invite or a picked quote. */
-export const TASK_ROLES = ['creator', 'approver', 'worker', 'invited'] as const
+interface TaskIndexInput {
+  readonly limit?: number
+  readonly cursor?: string
+}
+
+/** A task_index cursor: the last entry's `<createdAt>:<taskId>`. */
+function indexCursor(cursor: string): { createdAt: number; id: string } {
+  const at = cursor.indexOf(':')
+  const createdAt = Number(cursor.slice(0, at))
+  if (at <= 0 || !Number.isSafeInteger(createdAt))
+    throw new BoardError('invalid', 'cursor must be <createdAt>:<taskId>')
+  return { createdAt, id: cursor.slice(at + 1) }
+}
+
+/** A full task_index entry: every offer field Explore shows, the screening verdict, no chain reads. */
+function fullIndexEntry(t: TaskRow, kind: string, manifestBaseUrl: string) {
+  const terms = parseTerms(t.terms_json)
+  const screening =
+    t.screening_json === null ? null : (JSON.parse(t.screening_json) as { verdict?: string; reasons?: string[] })
+  return {
+    taskId: t.id,
+    jobId: t.job_id,
+    stack: t.stack,
+    kind,
+    creatorAgentId: t.creator_agent_id ?? null,
+    title: terms.title,
+    brief: terms.brief,
+    acceptanceCriteria: terms.acceptanceCriteria,
+    mode: terms.mode,
+    tags: terms.tags ?? [],
+    token: terms.token,
+    reward: terms.reward.toString(),
+    creatorBond: terms.creatorBond.toString(),
+    workerBond: terms.workerBond.toString(),
+    creator: terms.creator,
+    approver: terms.approver,
+    deliveryDeadline: terms.deliveryDeadline,
+    requiredChecks: terms.evidencePolicy?.checks ?? [],
+    quoted: terms.quote !== null,
+    deliverable: specOf(terms),
+    executionBudget:
+      terms.executionBudget === undefined
+        ? null
+        : { ...terms.executionBudget, cap: terms.executionBudget.cap.toString() },
+    termsHash: t.terms_hash,
+    manifestUrl: `${manifestBaseUrl}/${t.terms_hash}.json`,
+    screening: { verdict: screening?.verdict ?? 'unscreened', reasons: screening?.reasons ?? [] },
+    createdAt: t.created_at,
+  }
+}
+
+/** The fields an agent needs to decide whether to look closer: no brief, criteria or deliverable spec. */
+function compactIndexEntry(t: TaskRow, kind: string) {
+  const terms = parseTerms(t.terms_json)
+  return {
+    taskId: t.id,
+    jobId: t.job_id,
+    stack: t.stack,
+    kind,
+    title: terms.title,
+    mode: terms.mode,
+    tags: terms.tags ?? [],
+    token: terms.token,
+    reward: terms.reward.toString(),
+    deliveryDeadline: terms.deliveryDeadline,
+    quoted: terms.quote !== null,
+    createdAt: t.created_at,
+  }
+}
+
+export const TASK_ROLES = ['creator', 'approver', 'worker', 'invited', 'holder'] as const
 export type TaskRole = (typeof TASK_ROLES)[number]
 
 /** The most tasks a status filter reads chain views for in one list_tasks call. */
 const LIST_STATUS_SCAN = 40
+const LIST_CONCURRENCY = 8
 
 export interface ChainView {
   status: TaskStatus

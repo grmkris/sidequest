@@ -35,10 +35,23 @@ export function throttledFetch(perSecond = 8, retries = 6): typeof fetch {
 const sharedFetch = throttledFetch()
 const transport = (rpcUrl: string) => http(rpcUrl, { fetchFn: sharedFetch })
 
-export function context(network: Network, stackName: StackName, rpcUrl: string): Ctx {
+/**
+ * `batch` merges reads issued in the same tick into one multicall3 call. The board turns it on: a task summary is
+ * several concurrent reads and a listing summarises many tasks at once.
+ */
+export function context(
+  network: Network,
+  stackName: StackName,
+  rpcUrl: string,
+  options: { readonly batch?: boolean } = {},
+): Ctx {
   const d = deployment(network)
   return {
-    publicClient: createPublicClient({ chain: chains[network], transport: transport(rpcUrl) }),
+    publicClient: createPublicClient({
+      chain: chains[network],
+      transport: transport(rpcUrl),
+      ...(options.batch === true ? { batch: { multicall: true } } : {}),
+    }),
     deployment: d,
     stack: stack(d, stackName),
   }

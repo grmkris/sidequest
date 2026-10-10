@@ -1249,7 +1249,7 @@
   "packages/board/src/selection-service.test.ts": {
     "anti-slop(no-chained-type-assertions)": 4,
     "anti-slop(no-module-mocking)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 8
+    "anti-slop(require-safety-comment-for-type-assertion)": 6
   },
   "packages/board/src/service.ts": {
     "anti-slop(no-runtime-typeof)": 18,

@@ -199,7 +199,7 @@ export const tools: Record<string, Tool> = {
 
   list_tasks: {
     description:
-      'Recent tasks with their live on-chain status, newest first. role keeps tasks where you are the creator, approver, a worker (any application) or invited (a direct invite or a picked quote); status keeps chain statuses, reading at most the newest 40 matches.',
+      'Recent tasks with their live on-chain status, newest first. role keeps tasks where you are the creator, approver, a worker (any application), invited (a direct invite or a picked quote) or holder (the job you activated and hold on chain); status keeps chain statuses. A status or holder filter reads at most the newest 40 matches.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -618,9 +618,22 @@ export const tools: Record<string, Tool> = {
 
   task_index: {
     description:
-      'Anyone: every task’s offer fields, job id and Jev verdict, without chain reads (Explore’s board index). No sign-in needed.',
-    inputSchema: { type: 'object', properties: {} },
-    run: (board, caller) => board.taskIndex(caller),
+      'Anyone: every task’s offer fields, job id and Jev verdict, newest first, without chain reads (Explore’s board index). No sign-in needed. To scan for work, pass compact (no brief or criteria) and a limit, then the last entry’s "<createdAt>:<taskId>" as cursor for the next page.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: num('At most 500, the default.'),
+        cursor: str('Optional: the last entry you have, as "<createdAt>:<taskId>"; returns the tasks after it.'),
+        compact: { type: 'boolean', description: 'Optional: ids, title, reward and deadline only.' },
+      },
+    },
+    run: (board, caller, a) => {
+      const page = {
+        ...(a.limit === undefined ? {} : { limit: n(a, 'limit') }),
+        ...(a.cursor === undefined ? {} : { cursor: s(a, 'cursor') }),
+      }
+      return a.compact === true ? board.taskIndex(caller, { ...page, compact: true }) : board.taskIndex(caller, page)
+    },
   },
 
   report_transaction: {

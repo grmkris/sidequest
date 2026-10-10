@@ -154,25 +154,29 @@ function fixture(workerBond = 0n, expiredAt = 260200) {
     bonus: 0n,
   }
   vi.mocked(sdk.getListing).mockResolvedValue(listing as unknown as Awaited<ReturnType<typeof sdk.getListing>>)
-  vi.mocked(sdk.sidequestState).mockResolvedValue({
-    job: { statusName: 'Open', provider: zeroAddress, submittedAt: 0 },
-    listing,
-    terms: { deliveryDeadline: terms.deliveryDeadline, funded: 0n },
-    decision: { outcome: 0, rejectedAt: 0, disputedAt: 0, violation: 0 },
-    outcome: 'None',
-    status: 'open',
-    paused: false,
-    deferredDecision: false,
-    collectPending: false,
-    reviewEndsAt: null,
-    disputeEndsAt: null,
-    arbitrationEndsAt: null,
-  } as unknown as Awaited<ReturnType<typeof sdk.sidequestState>>)
+  // SAFETY: the board reads only these fields of the chain state; the rest of the type is never touched.
+  const chainState = (provider: Address, status: string) =>
+    ({
+      job: { statusName: status === 'active' ? 'Funded' : 'Open', provider, submittedAt: 0 },
+      listing,
+      terms: { deliveryDeadline: terms.deliveryDeadline, funded: 0n },
+      decision: { outcome: 0, rejectedAt: 0, disputedAt: 0, violation: 0 },
+      outcome: 'None',
+      status,
+      paused: false,
+      deferredDecision: false,
+      collectPending: false,
+      reviewEndsAt: null,
+      disputeEndsAt: null,
+      arbitrationEndsAt: null,
+    }) as unknown as Awaited<ReturnType<typeof sdk.sidequestState>>
+  vi.mocked(sdk.sidequestState).mockResolvedValue(chainState(zeroAddress, 'open'))
   vi.mocked(sdk.agentWallet).mockResolvedValue(worker)
   const get = (address?: Address) => board.getTask(address === undefined ? {} : { address }, { taskId: terms.taskId })
   return {
     get,
     boot,
+    chainState,
     sql,
     terms,
     read,
@@ -229,6 +233,21 @@ describe('get_task creator selection authorization and persistence', () => {
     const expired = await context.get(worker)
     expect(expired.nextAction).toMatchObject({ actor: 'creator', action: 'select_worker' })
     expect(expired.mine).toMatchObject({ selected: true, liveSelection: null })
+  })
+
+  it('lists a job under holder only for the selected worker the chain names as provider', async () => {
+    const context = fixture()
+    const board = context.boot()
+    const held = async (address: Address) =>
+      (await board.listTasks({ address }, { role: 'holder' })).map((task) => task.taskId)
+    // Selected but not yet activated: the chain names no provider, so nobody holds it.
+    expect(await held(worker)).toEqual([])
+    vi.mocked(sdk.sidequestState).mockResolvedValue(context.chainState(worker, 'active'))
+    expect(await held(worker)).toEqual([context.terms.taskId])
+    // No signed selection: excluded before any chain read.
+    vi.mocked(sdk.sidequestState).mockClear()
+    expect(await held(curator)).toEqual([])
+    expect(sdk.sidequestState).not.toHaveBeenCalled()
   })
 
   it('expires a persisted selection strictly after its cutoff', async () => {
