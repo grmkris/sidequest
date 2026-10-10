@@ -33,7 +33,8 @@ export class HostedBrowser {
   #pending = new Set<Promise<void>>()
 
   constructor(
-    readonly run: RunState,
+    /** Where the persistent Chromium profile lives: a run's directory, or an operator's. */
+    readonly run: Pick<RunState, 'directory'>,
     readonly chain?: Chain,
   ) {}
 
@@ -118,7 +119,11 @@ export class HostedBrowser {
     return owner.address as Address
   }
 
-  async login(): Promise<Address> {
+  /**
+   * Signs in through Privy and the board's SIWE prompt. Without `creds`, the Privy test account from the environment
+   * (PRIVY_TEST_EMAIL, PRIVY_TEST_OTP); with them, a real email whose code `otp` fetches once it is sent.
+   */
+  async login(creds?: { email: string; otp: () => Promise<string> }): Promise<Address> {
     await this.page.goto(`${ORIGIN}/agents`, { waitUntil: 'domcontentloaded' })
     const session = await this.page.evaluate(() =>
       (globalThis as unknown as { localStorage: { getItem(key: string): string | null } }).localStorage.getItem(
@@ -182,7 +187,7 @@ export class HostedBrowser {
       await email.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => {
         throw new Error('P8_PRIVY_EMAIL_FORM_UNAVAILABLE')
       })
-      await email.fill(required('PRIVY_TEST_EMAIL'))
+      await email.fill(creds?.email ?? required('PRIVY_TEST_EMAIL'))
       // Privy also offers "Continue with a wallet"; submit only the email form.
       await this.page
         .getByRole('button', { name: 'Submit', exact: true })
@@ -198,7 +203,7 @@ export class HostedBrowser {
         .catch(() => {
           throw new Error('P8_PRIVY_OTP_FORM_UNAVAILABLE')
         })
-      const otp = required('PRIVY_TEST_OTP')
+      const otp = creds === undefined ? required('PRIVY_TEST_OTP') : await creds.otp()
       const count = await inputs.count()
       if (count === 1) await inputs.fill(otp)
       else {
