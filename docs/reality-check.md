@@ -909,4 +909,15 @@ on a sampled window; a full public-RPC recompute was still running at the time o
 - native HyperSync support in the tool;
 - mainnet.
 
+The committed runner then ran testnet epoch 45 end to end:
+
+```
+mine-epoch0-testnet.sh --stage dev --logs hypersync
+```
+
+- It fetched epoch 44's checkpoint from the dev store and verified it on chain.
+- It recomputed epoch 45 with the same root.
+- The Safe funded the epoch and set its root, and the runner published the artifact with its state.
+- One transient stop after the fund transaction resumed from the journal.
+
 Receipt: [mining v2 epoch 44](evidence/mining-v2/2026-10-10-epoch-44.json).
