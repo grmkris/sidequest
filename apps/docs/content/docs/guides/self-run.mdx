@@ -199,7 +199,12 @@ interface Quote {
   amount: string
 }
 
-const runKey = `self-run-${account.address.slice(2, 10)}`
+/** This journal's hire, so a second hire from the same wallet gets keys of its own (a new journal, a new run). */
+function runKey(): string {
+  journal.run ??= Date.now().toString(36)
+  save()
+  return `self-run-${account.address.slice(2, 10)}-${String(journal.run)}`
+}
 
 /** Asks for quotes, inviting one service's agent when given; nothing is escrowed until the pick. */
 function ask(invited: string | undefined) {
@@ -214,7 +219,7 @@ function ask(invited: string | undefined) {
       deliveryDeadline: '4h',
       agentId: journal.agentId,
       ...(invited === undefined ? {} : { invite: { agentId: invited } }),
-      idempotencyKey: `${runKey}-request`,
+      idempotencyKey: `${runKey()}-request`,
     }),
   )
 }
@@ -262,7 +267,7 @@ async function hire(invite: string | undefined, cancel: boolean) {
     call<{ taskId: string; applicationId: string; transactions: Tx[] }>('pick_quote', {
       requestId,
       quoteId: quote.quoteId,
-      idempotencyKey: `${runKey}-pick`,
+      idempotencyKey: `${runKey()}-pick`,
     }),
   )
   await send('publish', picked.transactions, picked.taskId)
