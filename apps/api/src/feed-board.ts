@@ -42,9 +42,30 @@ export function boardFeedEvents(board: Sql, input: BoardToolEvent): FeedEvent[] 
 
   if (tool === 'pick_quote') {
     const requestId = text(args.requestId),
+      quoteId = text(args.quoteId),
       target = task(text(result.taskId))
     if (requestId === undefined || target === undefined) return []
-    return [target.creator, PUBLIC_ADDRESS].map((address) => ({
+    // Every other bidder learns it lost (gap 4): list_quotes then shows the winning quote and its price.
+    const lost: FeedEvent[] =
+      quoteId === undefined
+        ? []
+        : board
+            .all<{ worker: string }>('SELECT worker FROM quotes WHERE request_id = ? AND id <> ?', requestId, quoteId)
+            .map(({ worker }) => ({
+              id: `board:${boardId}:quote-lost:${requestId}:${worker.toLowerCase()}`,
+              address: worker,
+              kind: 'quote.lost',
+              boardId,
+              requestId,
+              taskId: target.id,
+              jobId: target.job_id,
+              role: 'bidder',
+              summary: `Another quote was picked on request ${requestId}.`,
+              url: `${base}/request/${encodeURIComponent(requestId)}`,
+              next: { tool: 'list_quotes', args: { requestId } },
+              occurredAt: now,
+            }))
+    const picked = [target.creator, PUBLIC_ADDRESS].map((address) => ({
       id: `board:${boardId}:picked:${requestId}:${address.toLowerCase()}`,
       address,
       kind: 'request.picked',
@@ -58,6 +79,7 @@ export function boardFeedEvents(board: Sql, input: BoardToolEvent): FeedEvent[] 
       next: { tool: 'get_task', args: { taskId: target.id } },
       occurredAt: now,
     }))
+    return [...picked, ...lost]
   }
 
   if (tool === 'submit_quote') {

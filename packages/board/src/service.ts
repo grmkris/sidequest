@@ -2013,6 +2013,7 @@ export class Board {
   async #withBudgetDisplay(reads: QuoteRequestRead[]): Promise<QuoteRequestRead[]> {
     return await Promise.all(
       reads.map(async (read) => {
+        // SAFETY: request_json budgets are written only by #requestBudget, as { token, max } with max in base units.
         const budget = read.budget as { token: Address; max: string } | undefined
         if (budget === undefined) return read
         try {
@@ -2221,6 +2222,7 @@ export class Board {
     const req = this.#quoteRequest(input.requestId)
     const all = eq(req.creator, me)
     const ctx = this.#ctx(req.stack)
+    const winner = this.#pickedQuote(req)
     const out = []
     for (const q of this.#sql.all<QuoteRow>('SELECT * FROM quotes WHERE request_id = ? ORDER BY created_at', req.id)) {
       if (!all && !eq(q.worker, me)) continue
@@ -2241,6 +2243,7 @@ export class Board {
                 JSON.parse(q.expected_costs_json) as { token: Address; amount: string; note: string },
               ),
         quoteHash: q.quote_hash,
+        won: winner === undefined ? null : winner.id === q.id,
       })
     }
     return {
@@ -2248,9 +2251,28 @@ export class Board {
       requestHash: req.request_hash,
       creator: req.creator,
       picked: req.task_id,
+      // The picked quote and its price: public once the job is published (its reward), so every bidder learns it.
+      winning:
+        winner === undefined
+          ? null
+          : {
+              quoteId: winner.id,
+              ...(await this.#displayAmount(ctx, { token: winner.token as Address, amount: winner.amount })),
+            },
       invite: this.#requestInvite(req),
       quotes: out,
     }
+  }
+
+  /** The quote a request's pick was made from, by the quote hash frozen in the picked task's terms. */
+  #pickedQuote(req: QuoteRequestRow): QuoteRow | undefined {
+    if (req.task_id === null) return undefined
+    const task = this.#sql.all<TaskRow>('SELECT * FROM tasks WHERE id = ?', req.task_id)[0]
+    const quoteHash = task === undefined ? undefined : parseTerms(task.terms_json).quote?.quoteHash
+    if (quoteHash === undefined) return undefined
+    return this.#sql
+      .all<QuoteRow>('SELECT * FROM quotes WHERE request_id = ?', req.id)
+      .find((q) => q.quote_hash.toLowerCase() === quoteHash.toLowerCase())
   }
 
   /**

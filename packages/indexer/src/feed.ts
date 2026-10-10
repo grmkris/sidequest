@@ -292,7 +292,7 @@ export async function readInbox(
 
 const FEED_KINDS =
   'job.published, job.activated, job.submitted, job.rejected, job.disputed, job.ruled, job.completed, job.closed, job.expired, ' +
-  'job.cancelled, settlement.deferred, payout.owed, quote.received, application.received, selection.received, invite.received, quote.invited, request.opened, request.picked, ' +
+  'job.cancelled, settlement.deferred, payout.owed, quote.received, application.received, selection.received, invite.received, quote.invited, quote.lost, request.opened, request.picked, ' +
   'approval.requested, approval.decided, permission.granted, ' +
   'message.posted, message.mention, message.reply, roadmap.proposed, roadmap.status, gap.reported, message.hidden'
 

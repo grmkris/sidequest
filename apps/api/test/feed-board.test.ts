@@ -83,6 +83,33 @@ describe('board feed hook', () => {
     expect(boardFeedEvents(board, call('apply', { taskId: 'nope' }, { applicationId: 'a9' }))).toEqual([])
   })
 
+  it('tells every other bidder its quote lost when the creator picks one, without its text', async () => {
+    const { board } = await setup()
+    const loser = '0x3333333333333333333333333333333333333333'
+    for (const [id, bidder] of [
+      ['q1', worker],
+      ['q2', loser],
+    ] as const)
+      board.run(
+        "INSERT INTO quotes (id, request_id, worker, agent_id, token, amount, note, quote_hash, created_at) VALUES (?, 'r1', ?, '9', '0xcc', '9000000', 'private note', ?, 1)",
+        id,
+        bidder,
+        `0x${id}`,
+      )
+    board.run("UPDATE quote_requests SET task_id = 't1' WHERE id = 'r1'")
+    const events = boardFeedEvents(board, call('pick_quote', { requestId: 'r1', quoteId: 'q1' }, { taskId: 't1' }))
+    expect(events.filter((e) => e.kind === 'quote.lost')).toEqual([
+      expect.objectContaining({
+        id: `board:public:quote-lost:r1:${loser}`,
+        address: loser,
+        role: 'bidder',
+        requestId: 'r1',
+        next: { tool: 'list_quotes', args: { requestId: 'r1' } },
+      }),
+    ])
+    expect(JSON.stringify(events)).not.toContain('private note')
+  })
+
   it('tells an invited worker only once the offer is escrowed on chain', async () => {
     const { board } = await setup()
     expect(boardFeedEvents(board, call('report_transaction', { taskId: 't1' }, {}))).toEqual([])

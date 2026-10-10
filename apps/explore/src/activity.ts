@@ -31,6 +31,7 @@ const BY_KIND: Readonly<Record<string, LucideIcon>> = {
   'job.cancelled': CircleSlash,
   'request.opened': Megaphone,
   'request.picked': Handshake,
+  'quote.lost': CircleX,
 }
 const BY_FAMILY: Readonly<Record<string, LucideIcon>> = {
   payout: Coins,

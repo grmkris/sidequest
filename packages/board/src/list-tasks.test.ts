@@ -15,7 +15,7 @@ afterEach(() => {
 
 function fixture() {
   const base = sdk.context('monad-testnet', 'main', 'http://127.0.0.1:1')
-  const read = vi.fn(async ({ functionName }: { functionName: string }) => {
+  const read = vi.fn(async ({ functionName }: { functionName: string }): Promise<string | number | boolean> => {
     if (functionName === 'policyListed' || functionName === 'paused') return false
     throw new Error(`unexpected chain read: ${functionName}`)
   })
@@ -31,7 +31,13 @@ function fixture() {
     manifestBaseUrl: 'https://list.test/offers',
     now: () => 1000,
   })
-  const add = (taskId: string, creator: `0x${string}`, approver: `0x${string}`, createdAt: number) => {
+  const add = (
+    taskId: string,
+    creator: `0x${string}`,
+    approver: `0x${string}`,
+    createdAt: number,
+    quote: OfferTerms['quote'] = null,
+  ) => {
     const terms: OfferTerms = {
       v: 2,
       mode: 'hire',
@@ -58,7 +64,7 @@ function fixture() {
       windows: { reviewSeconds: 120, disputeSeconds: 120, arbitrationSeconds: 300 },
       eligibility: null,
       evidencePolicy: null,
-      quote: null,
+      quote,
       salt: sdk.EMPTY_HASH,
     }
     sql.run(
@@ -92,7 +98,7 @@ function fixture() {
   apply('picked', alice.toUpperCase().replace('0X', '0x') as `0x${string}`, 'picked quote q1')
   apply('applied', alice, 'I can do this')
   apply('applied', bob, 'direct hire invitation')
-  return { board, read, sql }
+  return { board, read, sql, add }
 }
 
 const ids = (tasks: readonly { taskId: string }[]) => tasks.map((task) => task.taskId)
@@ -245,4 +251,47 @@ it('creator dashboard keeps chain status, funding, operation and next actor sepa
   expect(await board.getTask({ address: alice }, { taskId: 'alice-own' })).toMatchObject({
     nextAction: { actor: 'creator', action: 'publish', deadline: 2000 },
   })
+})
+
+it('tells a bidder whether its quote won, and every bidder the winning price', async () => {
+  const { board, read, sql, add } = fixture()
+  const token: Readonly<Record<string, string | number>> = { decimals: 6, symbol: 'mUSD' }
+  read.mockImplementation(async ({ functionName }) => token[functionName] ?? false)
+  add('hire', alice, alice, 6, { requestHash: '0xreq', quoteHash: '0xcarolquote' })
+  sql.run(
+    'INSERT INTO quote_requests (id, creator, stack, request_json, request_hash, quote_deadline, task_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    'req',
+    alice,
+    'main',
+    '{"title":"Request"}',
+    '0xreq',
+    5000,
+    'hire',
+    500,
+  )
+  for (const [id, worker, amount, hash] of [
+    ['q-bob', bob, '9000000', '0xBOBQUOTE'],
+    ['q-carol', carol, '7000000', '0xCAROLQUOTE'],
+  ] as const)
+    sql.run(
+      'INSERT INTO quotes (id, request_id, worker, agent_id, token, amount, note, quote_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      id,
+      'req',
+      worker,
+      '7',
+      alice,
+      amount,
+      '',
+      hash,
+      900,
+    )
+  // Gap 4: the losing bidder sees only its own quote, that it lost, and what won.
+  const bobs = await board.listQuotes({ address: bob }, { requestId: 'req' })
+  expect(bobs.quotes.map((q) => [q.quoteId, q.won])).toEqual([['q-bob', false]])
+  expect(bobs.winning).toMatchObject({ quoteId: 'q-carol', amount: '7', symbol: 'mUSD' })
+  const alices = await board.listQuotes({ address: alice }, { requestId: 'req' })
+  expect(alices.quotes.map((q) => [q.quoteId, q.won])).toEqual([
+    ['q-bob', false],
+    ['q-carol', true],
+  ])
 })
