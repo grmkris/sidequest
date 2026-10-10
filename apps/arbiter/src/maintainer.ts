@@ -203,11 +203,10 @@ async function ship(o: MaintainerOptions, state: State, budget: Budget): Promise
     if (budget.left < commit.gaps.length + commit.items.length * 2) return
     for (const gapId of commit.gaps)
       await settle(o, 'set_gap_status', { gapId, status: 'fixed', reason: shippedReason(commit) }, budget)
-    for (const itemId of commit.items) await shipItem(o, itemId, commit, budget)
+    for (const itemId of commit.items) await shipItem(o, itemId, byCommit(commit), budget)
     state.shipped = [...state.shipped, commit.sha].slice(-200)
   }
-  const last = commits.at(-1)
-  if (last !== undefined) await shipCoveredItems(o, last, budget)
+  if (commits.length > 0) await shipCoveredItems(o, budget)
 }
 
 async function settle(o: MaintainerOptions, tool: string, args: object, budget: Budget) {
@@ -220,18 +219,19 @@ async function settle(o: MaintainerOptions, tool: string, args: object, budget: 
   }
 }
 
-async function shipItem(o: MaintainerOptions, itemId: number, commit: Shipped, budget: Budget) {
-  await settle(o, 'set_item_status', { itemId, status: 'shipped', reason: shippedReason(commit) }, budget)
-  await settle(
-    o,
-    'post_message',
-    { subject: `roadmap:${itemId}`, body: `Shipped on dev: ${commitLink(commit)}` },
-    budget,
-  )
+/** Ships an item with a public reason and a note in its thread: a named commit, or the gaps that fixed it. */
+async function shipItem(o: MaintainerOptions, itemId: number, why: { reason: string; note: string }, budget: Budget) {
+  await settle(o, 'set_item_status', { itemId, status: 'shipped', reason: why.reason }, budget)
+  await settle(o, 'post_message', { subject: `roadmap:${itemId}`, body: why.note }, budget)
+}
+const byCommit = (commit: Shipped) => ({ reason: shippedReason(commit), note: `Shipped on dev: ${commitLink(commit)}` })
+const BY_GAPS = {
+  reason: 'Every linked gap is fixed on dev.',
+  note: 'Shipped on dev: every gap linked to this item is fixed; each gap names its commit.',
 }
 
 /** Items still open, planned or building whose linked gaps all read fixed. */
-async function shipCoveredItems(o: MaintainerOptions, commit: Shipped, budget: Budget) {
+async function shipCoveredItems(o: MaintainerOptions, budget: Budget) {
   const { items } = await o.board.call<{ items: (TriageItem & { gapIds: number[] })[] }>('list_roadmap', {
     status: 'all',
   })
@@ -240,7 +240,7 @@ async function shipCoveredItems(o: MaintainerOptions, commit: Shipped, budget: B
     const statuses = await Promise.all(
       item.gapIds.map(async (gapId) => (await o.board.call<GapDetail>('list_gaps', { gapId })).gap.status),
     )
-    if (statuses.every((status) => status === 'fixed') && budget.left >= 2) await shipItem(o, item.id, commit, budget)
+    if (statuses.every((status) => status === 'fixed') && budget.left >= 2) await shipItem(o, item.id, BY_GAPS, budget)
   }
 }
 
