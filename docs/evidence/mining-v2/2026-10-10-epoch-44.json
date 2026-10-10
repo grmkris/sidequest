@@ -102,14 +102,15 @@
   },
   "logSource": {
     "used": "Envio HyperSync (the indexer's token), through a local JSON-RPC translation router; non-log calls via a keyed RPC",
-    "equivalence": "router eth_getLogs equal to the public RPC on a sample window (10 logs, 8 fields); a full public-RPC recompute of epoch 44 was still running at the time of writing",
-    "timing": "first v2 replay from deployment: 6 s via HyperSync; the public RPC (100-block getLogs cap, shared rate limit) had not finished after hours"
+    "equivalence": "router eth_getLogs equal to the public RPC on a sample window (10 logs, 8 fields); the tool's head-state integrity checks (vault totalAssets, pools, fee schedule, share metadata, listings, funding) passed against the live chain",
+    "timing": "first v2 replay from deployment: 6 s via HyperSync; the public RPC (100-block getLogs cap, shared rate limit) had not finished after hours",
+    "fullRpcRecompute": "attempted 20:52–22:16Z on the public RPC at 100-block pages; stopped by the RPC's rate limit (429 Too Many Requests) after 1 h 24 min, so not established"
   },
   "forkTests": "credit.fork.test.ts (two v2 epochs, checkpoint chain), backers.fork.test.ts, contributors.fork.test.ts, backer-share.fork.test.ts: all pass on a Monad testnet fork",
   "notEstablished": [
-    "Independent full public-RPC recompute of epoch 44 (running).",
     "A tier above 0 inside a v2 epoch on testnet (Ship at tier 1 settled no job in 44/45); covered by the fork test.",
-    "Mainnet: untouched."
+    "Mainnet: untouched.",
+    "A full independent public-RPC recompute of epoch 44: the public RPC rate-limits a whole-history replay (429). A keyed large-range RPC would allow it."
   ],
   "committedRunner": {
     "source": "f26263b4 (HyperSync log transport), 8cd54b27 (runner: G1e Safe, --stage, --owner-key-env, optional claim, v2 checkpoints and state publication), 80472b52 (docs), 11a0baec (launch check: no core role differences on G1e)",

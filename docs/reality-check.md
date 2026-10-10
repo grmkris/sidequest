@@ -902,7 +902,7 @@ and state file are byte-identical to a full replay from genesis.
 approval, then 30 % with no approval (after fix 9dfac147).
 
 **Log source.** The epoch logs came from Envio HyperSync through a local translation router. It matched the public RPC
-on a sampled window; a full public-RPC recompute was still running at the time of writing.
+on a sampled window, and the tool's head-state checks passed against the live chain. A full public-RPC recompute was stopped by the RPC's rate limit (429) after 1 h 24 min, so it is not established.
 
 **Still open:**
 - a live tier above 0 (covered by the fork test);
