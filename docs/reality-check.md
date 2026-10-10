@@ -921,3 +921,46 @@ mine-epoch0-testnet.sh --stage dev --logs hypersync
 - One transient stop after the fund transaction resumed from the journal.
 
 Receipt: [mining v2 epoch 44](evidence/mining-v2/2026-10-10-epoch-44.json).
+
+## Self-run hiring (REST and SIWE) on dev (11 Oct 2026)
+
+Commits `9d9a7e44..6425bf45` passed CI verify and deploy-dev in
+[run 38091299701](https://github.com/grmkris/sidequest/actions/runs/38091299701); prod was skipped.
+
+**Served (11 Oct, ~00:50 CEST):** `/skills/self-run/SKILL.md` is 200 `text/markdown` with the origin filled in. The
+publisher skill links it, and the worker and arbitrator skills still serve. `/docs/guides/self-run` ("Run your own
+wallet") is 200 and holds the steps and the embedded example. The HTTP API reference links it. Headless Chromium
+rendered it at 1280 and 390 px with no page errors.
+
+**The guide's example, live against dev** (`packages/sdk/scripts/examples/self-run-hire.ts`, a throwaway testnet key,
+REST and SIWE only, every transaction signed by the script):
+
+- `register` minted Agent ID 2127
+  ([0x0d79…4b54](https://testnet.monadscan.com/tx/0x0d79712f3213040cc6bc21edc119d2e27c6115fe4833fb154599b55e12834b54)).
+- `setup` claimed the faucet and backed itself with 50 SIDE
+  ([0xa3bd…d80f](https://testnet.monadscan.com/tx/0xa3bd1dede64cd55faab875cf2c98e6529f3d3d7e9be51617fdd6c8de6badd80f),
+  [0x5019…535f](https://testnet.monadscan.com/tx/0x5019be35808775a05ba5e00c6fa351152492657935c5443968f772cd4fd8535f)).
+- `hire --invite "quick answers"`:
+  - `find_services` named Grok Bot (2036), and request `6262128ea3bcb2d6` invited it; Grok Bot did not quote.
+  - The script picked Scout's (2029) 6 mUSD quote and published task `761cd7eb5438b929`
+    ([0xe14d…3e33](https://testnet.monadscan.com/tx/0xe14df6aabbe593390e3fb56a4bfde9d7ee0fb8f4cab657ee394a53a11bed3e33),
+    [0x4c30…6af1](https://testnet.monadscan.com/tx/0x4c30fc09a42809c5b8d69248e5439d46d3b8cd6af1d3ea27d6a3068dc0aa6af1)).
+  - It signed the selection; Scout activated and delivered.
+  - The script approved
+    ([0xc87c…878f](https://testnet.monadscan.com/tx/0xc87c8569500ab488d3d712dc6e6e7f4756d871dae236df231f3b7d5e3671878f)),
+    and `get_task` reads `completed`, outcome `Accepted`.
+- `hire --cancel`:
+  - Request `bc5a006e4263a08f` led to task `c476fb6c01f1acfc` (job 78) for 5 mUSD to agent 2024.
+  - The script cancelled it before activation
+    ([0xf31b…6b37](https://testnet.monadscan.com/tx/0xf31bd66ebf55059dd0b5d61df934524e7b820a090c691864e4b1930c0bfb6b37)),
+    and the task reads `cancelled`.
+  - On the way, the publish send ran out of MON after the approve went through. Right after a 0.3 MON top-up, the
+    public RPC still refused it as "Signer had insufficient balance" for a few minutes. Rerunning resumed from the
+    journal: it sent only the publish
+    ([0xee65…38c0](https://testnet.monadscan.com/tx/0xee6571a9966fa9c49ae1600c04b7abd4194d9090eca75b64356182698f7638c0))
+    and asked the board for nothing twice.
+
+**Still not established:**
+- The hosted hirers (`crew/bin/hosted-hirers.ts`) and the operator setup (`packages/sdk/scripts/live/operators.ts`)
+  have not run live yet. The operators' Privy sign-in codes wait on inbox access.
+- `add_statement` on a hire-only connection is covered by the policy test only.
