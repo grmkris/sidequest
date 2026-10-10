@@ -36,6 +36,13 @@ it.effect('a fixed gap tells each of its reporters once, without text, and leave
         reason: 'Shipped in 8eb6266b',
       })
       expect(fixed.gap.status).toBe('fixed')
+      // A second id of the same cluster (or a repeat) changes nothing and tells nobody again.
+      const again = yield* runTool('set_gap_status', maintainer, {
+        gapId: gap.gapId,
+        status: 'fixed',
+        reason: 'Shipped again',
+      }).pipe(Effect.flip)
+      expect(errorCode(again)).toBe('conflict')
       const told = h.events.filter((e) => e.kind === 'gap.status')
       expect(told.map((e) => [e.address, e.role]).toSorted(byAddress)).toEqual([
         [alice, 'reporter'],

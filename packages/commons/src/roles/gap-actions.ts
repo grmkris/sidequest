@@ -66,6 +66,8 @@ export const setGapStatus = Effect.fnUntraced(function* (
   const result = yield* sqlEffect(() =>
     sql.transaction((tx) => {
       const gap = rootGap(tx, input.gapId)
+      // Merged ids resolve to one cluster, so a commit naming several of them must not tell its reporters twice.
+      if (gap.status === input.status) throw new Conflict({ message: `Gap ${gap.id} is already ${input.status}` })
       const logSeq = writeRoleLog(tx, {
         actor: actor.address,
         role: actor.role,
