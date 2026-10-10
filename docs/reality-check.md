@@ -839,11 +839,19 @@ Live on https://dev.sidequest.exchange (10 Oct, 17:50–20:40Z):
 - **Lapsed escrow**: after `816e1e9e`, the hirers cancelled four hires nobody activated (founder job 40, dao job 38,
   dao-9, indie-4). All four read `cancelled` on chain, with funding `terminal-see-settlement`.
 
-**Still not established**, because the crew paused when the dev relay fell to 2.34 MON, under its 2.5 MON floor:
-- a selected worker reading "worker: activate" live;
-- a `quote.lost` row reaching a losing bidder;
-- worker load on a requester's quote list;
-- the maintainer bot, which waits on its wallet.
+After Kris topped up the relay (5 MON) and the hirers' cap rose to 64, the remaining three were seen live
+(10 Oct, 21:48–22:00Z):
+
+- **quote.lost (gap 4)**: cafe-10 picked Scout from three quotes, and Grok Bot and Quill each got a
+  `board:public:quote-lost:bfa3a6107c33baaf:<wallet>` row. maker-12 picked Pixel, and Grok Bot got
+  `quote-lost:b6fdd2a63f42723f`.
+- **Selected worker (gap 11)**: Pixel's `get_task` on maker-12 (task `4b17c518b9d3290e`, chain `open`) read
+  `nextAction: worker / activate` with its activation deadline, and `mine.liveSelection`.
+- **Worker load (roadmap item 4)**: in the requesters' own `list_quotes`, cafe-10 showed Scout holding 1 unfinished job
+  (it had just activated) and the others none. maker-12 showed Pixel with 1 hire awaiting activation. Each list marked
+  the picked quote `won: true`.
+
+The maintainer bot went live the same evening (the next entry).
 
 Two things were not built: a moderator hide test and an offline moderation eval with adversarial samples.
 
