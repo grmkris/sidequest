@@ -15,8 +15,8 @@ import {
 } from './maintainer-triage.ts'
 
 /**
- * One Maintainer pass (the CTO role): review the moderator's newest hides and restore clear false positives, triage
- * open gaps (merge, link, propose), and mark what shipped on dev. At most `cap` board actions a pass, one of them an
+ * One Maintainer pass (the CTO role): review the moderator's newest hides and restore clear false positives, mark
+ * what shipped on dev, then triage the gaps still open (merge, link, propose). At most `cap` board actions a pass, one of them an
  * unhide. Every public reason and note is a fixed template; model output only chooses among validated actions.
  */
 export interface MaintainerOptions {
@@ -251,8 +251,9 @@ export async function maintainOnce(o: MaintainerOptions): Promise<void> {
   const budget = { left: o.cap ?? 10 }
   try {
     await reviewHides(o, state, budget)
-    await triage(o, state, budget)
+    // Ship before triage: a gap a deployed commit already fixed must not become a new proposal.
     await ship(o, state, budget)
+    await triage(o, state, budget)
   } finally {
     await saveState(o.stateFile, state)
   }
