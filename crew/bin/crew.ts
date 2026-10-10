@@ -14,7 +14,6 @@
  *   bun crew/bin/crew.ts status
  */
 import { spawn, spawnSync } from 'node:child_process'
-import { createHash, randomBytes } from 'node:crypto'
 import {
   appendFileSync,
   chmodSync,
@@ -33,6 +32,8 @@ import {
 import { basename, dirname, join, resolve } from 'node:path'
 import { parseEnv } from 'node:util'
 import { stageProfile } from '../../infra/stage.ts'
+import * as hosted from './hosted-mcp.ts'
+import { type ConnectionFiles, type Token, readToken } from './hosted-mcp.ts'
 
 const crewDir = resolve(import.meta.dir, '..')
 const repo = resolve(crewDir, '..')
@@ -43,7 +44,6 @@ const stateRoot =
   process.env.CREW_STATE_ROOT ??
   (crew.board.stage === 'dev' ? join(repo, '.crew', 'hosted') : join(repo, '.crew', 'hosted', crew.board.stage))
 const cliproxyUrl = inContainer ? crew.harness.containerBaseUrl : crew.harness.baseUrl
-const REDIRECT = 'http://127.0.0.1:8765/callback'
 const IMAGE = 'sidequest-crew'
 const PROJECT = 'sidequest-crew'
 const HARNESS_UID = 1000
@@ -121,22 +121,7 @@ function withBoard(file: CrewFile): Crew {
     },
   }
 }
-interface Token {
-  access_token: string
-  refresh_token: string
-  expires_at: number
-  agent_id: string
-  scope: string
-}
-
 const json = (value: unknown) => JSON.stringify(value, null, 2) + '\n'
-const secretFile = (path: string, value: unknown) => {
-  mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
-  writeFileSync(path, json(value), { mode: 0o600 })
-  chmodSync(path, 0o600)
-}
-const readJson = <T>(path: string): T | undefined =>
-  existsSync(path) ? (JSON.parse(readFileSync(path, 'utf8')) as T) : undefined
 const home = (member: string) => join(stateRoot, member)
 const memberOf = (id: string | undefined): [string, Member] => {
   const m = id === undefined ? undefined : crew.members[id]
@@ -185,82 +170,33 @@ function env(): Record<string, string> {
   return { ...merged, ...(process.env as Record<string, string>) }
 }
 
-async function form(path: string, body: Record<string, string>) {
-  const res = await fetch(`${crew.board.origin}${path}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams(body),
-  })
-  const reply = (await res.json()) as Record<string, unknown>
-  if (!res.ok) throw new Error(`${path}: ${res.status} ${String(reply.error_description ?? reply.error ?? '')}`)
-  return reply
-}
+/** A member's OAuth files: in `secrets/` once it runs in its container (see secretPath). */
+const oauthFiles = (id: string): ConnectionFiles => ({
+  client: secretPath(id, 'client.json'),
+  login: secretPath(id, 'login.json'),
+  token: secretPath(id, 'token.json'),
+  lock: secretPath(id, 'token.lock'),
+})
 
 async function login(id: string, landed?: string) {
   const [, m] = memberOf(id)
-  const clientPath = secretPath(id, 'client.json')
-  const loginPath = secretPath(id, 'login.json')
   if (landed === undefined) {
-    let client = readJson<{ clientId: string }>(clientPath)
-    if (client === undefined) {
-      const res = await fetch(`${crew.board.origin}/oauth/register`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ client_name: `Sidequest crew: ${m.name}`, redirect_uris: [REDIRECT] }),
-      })
-      const reg = (await res.json()) as { client_id?: string; error_description?: string }
-      if (reg.client_id === undefined) throw new Error(`register: ${reg.error_description ?? res.status}`)
-      client = { clientId: reg.client_id }
-      secretFile(clientPath, client)
-    }
-    const verifier = randomBytes(32).toString('base64url')
-    const state = randomBytes(12).toString('hex')
-    secretFile(loginPath, { verifier, state })
-    const q = new URLSearchParams({
-      response_type: 'code',
-      client_id: client.clientId,
-      redirect_uri: REDIRECT,
-      scope: m.scopes ?? crew.board.scopes,
-      resource: crew.board.mcp,
-      state,
-      code_challenge: createHash('sha256').update(verifier).digest('base64url'),
-      code_challenge_method: 'S256',
+    const url = await hosted.beginLogin(crew.board, oauthFiles(id), {
+      clientName: `Sidequest crew: ${m.name}`,
+      scopes: m.scopes ?? crew.board.scopes,
     })
     console.log(
       `Open this while signed in to ${crew.board.origin}, pick ${m.name}'s agent and approve. The browser then`,
     )
-    console.log(`lands on a page that does not load (${REDIRECT}?code=…); pass that whole address within 2 minutes:\n`)
-    console.log(`${crew.board.origin}/oauth/authorize?${q}\n`)
+    console.log(
+      `lands on a page that does not load (${hosted.REDIRECT}?code=…); pass that whole address within 2 minutes:\n`,
+    )
+    console.log(`${url}\n`)
     console.log(`  bun crew/bin/crew.ts login ${id} '<that address>'`)
     return
   }
-  const client = readJson<{ clientId: string }>(clientPath)
-  const pending = readJson<{ verifier: string; state: string }>(loginPath)
-  if (client === undefined || pending === undefined) throw new Error(`run "login ${id}" first`)
-  const url = new URL(landed)
-  if (url.searchParams.get('error') !== null) throw new Error(`consent refused: ${url.searchParams.get('error')}`)
-  if (url.searchParams.get('state') !== pending.state)
-    throw new Error('that address is from a different login; start again')
-  const t = await form('/oauth/token', {
-    grant_type: 'authorization_code',
-    code: url.searchParams.get('code') ?? '',
-    redirect_uri: REDIRECT,
-    client_id: client.clientId,
-    code_verifier: pending.verifier,
-    resource: crew.board.mcp,
-  })
-  saveToken(id, t)
-  console.log(`${m.name} connected as agent ${String(t.agent_id)} with ${String(t.scope)}`)
-}
-
-function saveToken(id: string, t: Record<string, unknown>) {
-  secretFile(secretPath(id, 'token.json'), {
-    access_token: t.access_token,
-    refresh_token: t.refresh_token,
-    expires_at: Math.floor(Date.now() / 1000) + Number(t.expires_in ?? 3600),
-    agent_id: String(t.agent_id),
-    scope: String(t.scope),
-  })
+  const t = await hosted.finishLogin(crew.board, oauthFiles(id), landed)
+  console.log(`${m.name} connected as agent ${t.agent_id} with ${t.scope}`)
 }
 
 /** Minutes a member's run may take: its own override or the harness default, never past a fresh token's hour. */
@@ -268,48 +204,9 @@ function runTimeout(id: string): number {
   return Math.min(crew.members[id]?.runTimeoutMinutes ?? crew.harness.runTimeoutMinutes, 55)
 }
 
-/** One refresh at a time per member: a refresh token works once, and replaying it revokes the member's grant. */
-async function withTokenLock<T>(id: string, work: () => Promise<T>): Promise<T> {
-  const lock = secretPath(id, 'token.lock')
-  for (let waited = 0; ; waited += 250) {
-    try {
-      mkdirSync(lock)
-      break
-    } catch {
-      // A lock older than a minute outlived its holder (a refresh takes seconds); a younger one is still in use.
-      const age = Date.now() - (statSync(lock, { throwIfNoEntry: false })?.mtimeMs ?? 0)
-      if (age > 60_000) rmSync(lock, { recursive: true, force: true })
-      else if (waited > 30_000) throw new Error(`${id}: its token lock has been held for 30 s`)
-      else await Bun.sleep(250)
-    }
-  }
-  try {
-    return await work()
-  } finally {
-    rmSync(lock, { recursive: true, force: true })
-  }
-}
-
-async function freshToken(id: string): Promise<Token> {
-  return withTokenLock(id, async () => {
-    const path = secretPath(id, 'token.json')
-    const t = readJson<Token>(path)
-    const client = readJson<{ clientId: string }>(secretPath(id, 'client.json'))
-    if (t === undefined || client === undefined) throw new Error(`${id} is not connected; run "login ${id}"`)
-    // A run may last its timeout, so start it with a token that outlives it (access tokens last an hour).
-    if (t.expires_at - Math.floor(Date.now() / 1000) > (runTimeout(id) + 5) * 60) return t
-    saveToken(
-      id,
-      await form('/oauth/token', {
-        grant_type: 'refresh_token',
-        refresh_token: t.refresh_token,
-        client_id: client.clientId,
-        resource: crew.board.mcp,
-      }),
-    )
-    return readJson<Token>(path)!
-  })
-}
+/** A token that outlives the member's run (it may last its timeout; access tokens last an hour). */
+const freshToken = (id: string): Promise<Token> =>
+  hosted.freshToken(crew.board, oauthFiles(id), (runTimeout(id) + 5) * 60, id)
 
 const bin = (name: string) =>
   realpathSync(spawnSync('bash', ['-lc', `command -v ${name}`], { encoding: 'utf8' }).stdout.trim())
@@ -552,33 +449,11 @@ async function run(id: string, note = '', model?: string): Promise<number | null
 }
 
 /** The sponsor relay's MON: below the floor the board refuses sponsored sends, so a run would only fail. */
-async function relayMon(): Promise<number> {
-  const res = await fetch(crew.board.rpc, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getBalance', params: [crew.board.relay, 'latest'] }),
-  })
-  const { result } = (await res.json()) as { result: string }
-  return Number(BigInt(result) / 10n ** 14n) / 10_000
-}
+const relayMon = (): Promise<number> => hosted.relayMon(crew.board.rpc, crew.board.relay)
 
 /** One MCP tool call as the member (JSON-RPC over the board's /mcp; no session needed). */
-async function mcpCall<T = unknown>(token: string, name: string, args: Record<string, unknown> = {}): Promise<T> {
-  const res = await fetch(crew.board.mcp, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      accept: 'application/json, text/event-stream',
-      authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }),
-  })
-  const body = (await res.json()) as { result?: { content?: Array<{ text?: string }>; isError?: boolean } }
-  const text = body.result?.content?.[0]?.text ?? ''
-  if (body.result?.isError === true || !res.ok) throw new Error(`${name}: ${text.slice(0, 200) || res.status}`)
-  const parsed = JSON.parse(text) as { ok?: boolean; result?: T }
-  return (parsed.result ?? parsed) as T
-}
+const mcpCall = <T = unknown>(token: string, name: string, args: Record<string, unknown> = {}): Promise<T> =>
+  hosted.mcpCall<T>(crew.board.mcp, token, name, args)
 
 const TERMINAL = new Set(['completed', 'cancelled', 'expired', 'closed', 'settled', 'ruled'])
 
@@ -708,7 +583,7 @@ function runsToday(id: string): number {
 function connection(id: string, now: number): string {
   if (!inContainer && existsSync(join(home(id), 'secrets')))
     return `connected in ${bot(id)} (${botRunning(id) ? 'up' : 'down'})`
-  const t = readJson<Token>(secretPath(id, 'token.json'))
+  const t = readToken(secretPath(id, 'token.json'))
   if (t === undefined) return 'not connected'
   const left = t.expires_at - now
   return `agent ${t.agent_id}, token ${left > 0 ? `valid ${Math.round(left / 60)} min` : 'expired (refreshes on run)'}`
