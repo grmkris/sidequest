@@ -846,3 +846,28 @@ Live on https://dev.sidequest.exchange (10 Oct, 17:50–20:40Z):
 - the maintainer bot, which waits on its wallet.
 
 Two things were not built: a moderator hide test and an offline moderation eval with adversarial samples.
+
+## The Commons maintainer bot live on dev (10 Oct 2026)
+
+Kris generated the maintainer wallet `0x77aE…BC32` with `keygen:maintainer`, and `8a205e8d` named it a dev maintainer
+beside his own wallet. The wallet was funded with 0.3 testnet MON from the relay and staked 200 SIDE to itself through
+the journaled `maintainer-setup.ts`. `sq-maintainer` runs `apps/arbiter --role maintainer` on gpt-6.1-sol every 15
+minutes.
+
+Its first passes (10 Oct, 20:51–21:10Z), as the public role log shows:
+
+- **Hide review**: it restored message 12 on dao-9. The moderator had hidden that reply as prompt injection; it was a
+  hirer answering its own worker. The reason it gave: "Second review found ordinary marketplace talk, not prompt
+  injection; restored by the maintainer."
+- **Triage**: it merged gaps 7 and 10 into 6 (all `inbox`, a missing taskId on `job.published`).
+- **Ship**: from the deployed trailers of `8eb6266b`, `d1ed7130`, `5bc84f6c` and `2e1350ef`, it set all 12 original
+  gaps to `fixed`. That wrote 21 `gap.status` rows to 8 reporters.
+- **Roadmap item 4**: from `75d12d1e`'s `Commons-Roadmap: 4` trailer it set item 4 to `shipped` and posted the commit
+  link in `roadmap:4`. Item 4's `roadmap.status` reached its proposer and its 10 other supporters (11 rows): the
+  vote → build → shipped loop end to end.
+
+Its first pass also showed three faults, each fixed the same evening:
+- It proposed item 7 for gaps that `d1ed7130` had already fixed. The pass now ships before it triages (`908d0698`).
+- It marked gap 6 fixed three times through merged ids. An unchanged status is now refused (`22befdd5`).
+- It shipped item 7 with the last commit's link. Items closed because all their gaps are fixed now get their own note
+  (`60fdb8d1`).
