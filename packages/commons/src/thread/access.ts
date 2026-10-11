@@ -4,7 +4,7 @@ import { StakeRequired } from '../errors.ts'
 import type { Address } from '../schema/ids.ts'
 import type { Viewer } from '../schema/messages.ts'
 import { authenticated, enabled, rolesOf } from '../roles/holders.ts'
-import { POST_MINIMUM, readStake } from '../stake.ts'
+import { Minimums, readStake } from '../stake.ts'
 import { RolesConfig, type ParticipantsSnapshot, type StakePosition } from '../services.ts'
 
 export const postingAccess = Effect.fnUntraced(function* (
@@ -17,9 +17,10 @@ export const postingAccess = Effect.fnUntraced(function* (
   let stake: StakePosition | null = null
   if (roles.length === 0 && !isParticipant(address, people)) {
     stake = yield* readStake(address)
-    if (stake.stake < POST_MINIMUM && stake.backing.total < POST_MINIMUM)
+    const { post } = yield* Minimums
+    if (stake.stake < post && stake.backing.total < post)
       return yield* new StakeRequired({
-        minimum: POST_MINIMUM.toString(),
+        minimum: post.toString(),
         stake: stake.stake.toString(),
         backing: stake.backing.total.toString(),
       })
@@ -36,14 +37,14 @@ export const threadViewer = Effect.fnUntraced(function* (
   const roles = rolesOf(config, caller)
   const bypass = roles.length > 0 || isParticipant(caller, people)
   const position = bypass ? null : yield* readStake(caller).pipe(Effect.catch(() => Effect.succeed(null)))
-  const canPost =
-    bypass || (position !== null && (position.stake >= POST_MINIMUM || position.backing.total >= POST_MINIMUM))
+  const { post } = yield* Minimums
+  const canPost = bypass || (position !== null && (position.stake >= post || position.backing.total >= post))
   const viewer: Viewer = {
     address: caller,
     roles,
     canPost,
     needs: canPost ? null : 'stake',
-    minimum: POST_MINIMUM.toString(),
+    minimum: post.toString(),
     stake: position?.stake.toString() ?? null,
     backing: position?.backing.total.toString() ?? null,
   }

@@ -3,7 +3,10 @@ import { fromD1 } from '@sidequest/indexer'
 import * as sdk from '@sidequest/sdk'
 import {
   Caches,
+  MAINNET_MINIMUMS,
+  Minimums,
   RolesConfig,
+  TESTNET_MINIMUMS,
   Address,
   Subject,
   getDisputeThread,
@@ -80,7 +83,11 @@ export function commonsHostFactory(input: { state: CommonsState; bindings: Commo
     }
     const ctx = sdk.context(env.network, 'main', env.rpcUrl)
     const d1 = fromD1(bindings.Database)
-    const base = Layer.mergeAll(sqlLayer(sql, transaction), Layer.succeed(RolesConfig, roleConfig))
+    const base = Layer.mergeAll(
+      sqlLayer(sql, transaction),
+      Layer.succeed(RolesConfig, roleConfig),
+      Layer.succeed(Minimums, env.network === 'monad-mainnet' ? MAINNET_MINIMUMS : TESTNET_MINIMUMS),
+    )
     const runtime = ManagedRuntime.make(
       Layer.mergeAll(
         base,

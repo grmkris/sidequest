@@ -1,11 +1,25 @@
 import { parseUnits } from 'viem'
-import { Clock, Effect, Ref, Schema } from 'effect'
+import { Clock, Context, Effect, Ref, Schema } from 'effect'
 import { Unavailable } from './errors.ts'
 import { Address, WeiString } from './schema/ids.ts'
 import { Caches, CommonsSql, StakeReader, type StakePosition } from './services.ts'
 
-export const POST_MINIMUM = parseUnits('10', 18)
-export const PROPOSE_MINIMUM = parseUnits('100', 18)
+/**
+ * The SIDE a caller needs, staked or backed, to post in a thread (`post`), and staked to propose a roadmap item
+ * (`propose`). Testnet's are the default; the host provides mainnet's, which match SIDE's launch amounts (note 22).
+ */
+export interface StakeMinimums {
+  readonly post: bigint
+  readonly propose: bigint
+}
+export const TESTNET_MINIMUMS: StakeMinimums = { post: parseUnits('10', 18), propose: parseUnits('100', 18) }
+export const MAINNET_MINIMUMS: StakeMinimums = { post: parseUnits('10000', 18), propose: parseUnits('100000', 18) }
+export const Minimums = Context.Reference<StakeMinimums>('@sidequest/commons/Minimums', {
+  defaultValue: () => TESTNET_MINIMUMS,
+})
+/** Testnet's thresholds, the default, for tests and callers outside an Effect. */
+export const POST_MINIMUM = TESTNET_MINIMUMS.post
+export const PROPOSE_MINIMUM = TESTNET_MINIMUMS.propose
 const Positions = Schema.Array(Schema.Struct({ account: Address, value: WeiString }))
 interface CachedRow {
   stake: string
@@ -34,7 +48,8 @@ const freshPosition = Effect.fnUntraced(function* (address: Address) {
   const complete = stakes !== null && own !== undefined && backing !== null
   const knownStake = own ?? 0n
   const knownBacking = backing?.total ?? 0n
-  if (!complete && knownStake < POST_MINIMUM && knownBacking < POST_MINIMUM)
+  const { post } = yield* Minimums
+  if (!complete && knownStake < post && knownBacking < post)
     return yield* new Unavailable({ message: 'Unable to establish stake or backing authority' })
   const value: StakePosition = {
     stake: knownStake,

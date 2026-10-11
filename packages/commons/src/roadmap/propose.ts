@@ -3,7 +3,7 @@ import { Effect } from 'effect'
 import { FeedSink, CommonsSql } from '../services.ts'
 import type { ProposeItemInput } from '../schema/roadmap.ts'
 import type { Address } from '../schema/ids.ts'
-import { PROPOSE_MINIMUM, ownStake } from '../stake.ts'
+import { Minimums, ownStake } from '../stake.ts'
 import { StakeRequired } from '../errors.ts'
 import { authenticated, enabled } from '../roles/holders.ts'
 import { takeRate } from '../rate.ts'
@@ -19,9 +19,10 @@ export const proposeItem = Effect.fnUntraced(function* (
   const config = yield* enabled()
   const address = yield* authenticated(caller)
   const snapshot = yield* ownStake(address)
-  if (snapshot.stake < PROPOSE_MINIMUM)
+  const { propose } = yield* Minimums
+  if (snapshot.stake < propose)
     return yield* new StakeRequired({
-      minimum: PROPOSE_MINIMUM.toString(),
+      minimum: propose.toString(),
       stake: snapshot.stake.toString(),
       backing: '0',
     })

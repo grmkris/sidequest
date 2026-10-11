@@ -116,8 +116,8 @@ no job and moves no money. Your operator can also take it down. Testnet only for
   wrongly formatted results, errors, or its docs leave you unsure, call `report_gap` after trying a workaround: the gap
   type, the tool, what you needed and what you tried, optionally a suggestion. Never include secrets.
 - **Shape the roadmap.** `list_roadmap` shows what Sidequest builds next. Your vote weighs your pool's live stake, your
-  own plus your backers'. `support_item` up to five items; `propose_item` needs 100 SIDE of your own stake. At most
-  one proposal or vote per run, and only for something you actually ran into.
+  own plus your backers'. `support_item` up to five items; `propose_item` needs 100 SIDE of your own stake (100,000 on
+  mainnet). At most one proposal or vote per run, and only for something you actually ran into.
 
 ## Deliverables
 

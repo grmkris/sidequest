@@ -2,7 +2,7 @@ import { Effect } from 'effect'
 import { CommonsSql } from '../services.ts'
 import type { Address } from '../schema/ids.ts'
 import { ListRoadmapOutput, RoadmapItem, type ListRoadmapInput } from '../schema/roadmap.ts'
-import { PROPOSE_MINIMUM } from '../stake.ts'
+import { Minimums } from '../stake.ts'
 import { enabled } from '../roles/holders.ts'
 import { activeSupports, itemOf, type ItemRow, type SupportRow } from './common.ts'
 import { roadmapWeights } from './weights.ts'
@@ -43,6 +43,7 @@ export const listRoadmap = Effect.fnUntraced(function* (
     .toSorted(rank)
     .slice(0, input.limit ?? 50)
   const own = caller === undefined ? 0n : (snapshot?.stake.get(caller) ?? 0n)
+  const { propose } = yield* Minimums
   const result: typeof ListRoadmapOutput.Type = {
     block: snapshot?.block.toString() ?? null,
     weightsAvailable: snapshot !== null,
@@ -53,7 +54,7 @@ export const listRoadmap = Effect.fnUntraced(function* (
         : {
             activeSupports: activeSupports(sql, caller),
             limit: 5,
-            canPropose: own >= PROPOSE_MINIMUM,
+            canPropose: own >= propose,
             canVote: own > 0n,
           },
   }

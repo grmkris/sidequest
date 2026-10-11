@@ -3,7 +3,7 @@ import { Effect } from 'effect'
 import { TestClock } from 'effect/testing'
 import { makeHarness, alice, bob, maintainer, moderator } from './layers.ts'
 import { invoke } from './calls.ts'
-import { PROPOSE_MINIMUM } from '../src/stake.ts'
+import { MAINNET_MINIMUMS, Minimums, PROPOSE_MINIMUM } from '../src/stake.ts'
 import {
   ProposeItemOutput,
   SupportItemOutput,
@@ -53,6 +53,23 @@ it.effect.each([PROPOSE_MINIMUM - 1n, PROPOSE_MINIMUM])('propose gate at %s with
         ),
       ).toEqual(stake < PROPOSE_MINIMUM ? [] : [{ proposer_stake: stake.toString(), proposer_block: '42' }])
     }).pipe(Effect.provide(h.layer))
+  }),
+)
+it.effect("mainnet's minimum is the host's: testnet's 100 SIDE no longer proposes, 100k SIDE does", () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    const propose = invoke('propose_item', ProposeItemOutput, alice, {
+      title: 'Roadmap',
+      problem: 'Need it',
+      proposal: 'Build it',
+    })
+    yield* Effect.gen(function* () {
+      h.state.stakes.set(alice, PROPOSE_MINIMUM)
+      const refused = yield* propose.pipe(Effect.flip)
+      expect(refused).toMatchObject({ _tag: 'StakeRequired', minimum: MAINNET_MINIMUMS.propose.toString() })
+      h.state.stakes.set(alice, MAINNET_MINIMUMS.propose)
+      expect((yield* propose.pipe(Effect.result))._tag).toBe('Success')
+    }).pipe(Effect.provide(h.layer), Effect.provideService(Minimums, MAINNET_MINIMUMS))
   }),
 )
 it.effect('backing and roles cannot substitute for proposal stake; invalid linked gap rolls back rate', () =>
