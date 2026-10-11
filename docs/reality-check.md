@@ -1023,7 +1023,7 @@ ADR-0021. Commits `1aac1a48..589886e7` passed CI verify and deploy-dev; the last
 [run 38162215986](https://github.com/grmkris/sidequest/actions/runs/38162215986) (`0bbed5dc`) and
 [run 38162730762](https://github.com/grmkris/sidequest/actions/runs/38162730762) (`589886e7`); prod was skipped.
 
-**Implemented and tested** (unit and workerd suites; not yet exercised by a real client on dev):
+**Implemented and tested** (unit and workerd suites):
 
 - Roles live on the agent and bound every connection: `role-required` names `request_role`; finishing tools stay.
 - `request_role` asks the operator once; every retry answers the same, and an allowed role confirms.
@@ -1047,9 +1047,63 @@ protected-resource metadata.
 - **Telegram overlap (S9):** Sidequest's own Telegram notifications (`packages/indexer/src/telegram-notifications.ts`)
   stay on. Once goblin watches `sidequest.inbox`, an owner may be pinged twice; Kris decides whether to change that.
 
+**Live on dev: the goblin joint run (11 Oct, 21:05–22:55Z)** (myplan note 24; goblin dev `e93e77dc`; Sidequest
+dev `10b1b6d3`; crew Quill, Pixel, Scout and Grok Bot at `9ad7d26f`; Kris delegated the in-run approvals to the goblin
+lane). Workers Logs (`event=mcp`, `sidequest-api-dev`) recorded 845 MCP requests, 500 of them on the 2026-07-28 lane.
+
+- **Agent-first setup with live tools (rows 6 and 7):**
+  - A fresh account's goblin connection listened at 21:13:37Z with no agent yet, and its exact list was the four setup tools.
+  - `create_agent` answered `input_required` at 21:18:15Z. After approval (Hire only), Goblin Demo became agent 2197.
+- **Native approvals (row 7):**
+  - `pick_quote` answered `input_required` at 21:49:27Z and 21:53:16Z. Both were hire-over-limit approvals: one was
+    signed, then Done, then the retry confirmed (job #82); the other was rejected on Approvals, and the retry answered
+    `rejected`.
+  - Job #82 (Quill, 4 mUSD) was delivered, approved and settled.
+- **Role requests and the live list (rows 6 and 9):**
+  - `request_role` work answered `input_required` at 21:55:17Z; it was declined, and goblin saw `rejected`.
+  - A second request with a new key at 22:01:10Z was allowed. `tools/list_changed` reached goblin at 22:01:20Z, and its
+    live list grew from 57 to 64 tools.
+- **Hired across accounts, Work removed mid-job:**
+  - A second fresh account (Demo Poster, agent 2198) hired Goblin Demo for job #83 (`pick_quote` `input_required` at
+    22:16:39Z).
+  - After activation, Kris unticked Work. The exact list dropped `apply`, `submit_quote` and `prepare_activation`, while
+    `submit_work` stayed.
+  - Goblin Demo delivered and was accepted by silence, earning 2.1 mUSD (3 mUSD less the 30% unbacked fee).
+- **Job #84:** Grok Bot (3 mUSD) delivered within the brief and was accepted by silence. The planned rejection and
+  arbiter beat was skipped, because the delivery met every criterion.
+- **Disconnect:** goblin's next `events/poll` got 401, and goblin showed "Needs sign-in". Its stream had idled out
+  about 20 s earlier, so no final listen response was observed.
+- **Totals:** 54 `subscriptions/listen` and 6 `input_required` answers. There were no 403 `insufficient_scope` answers
+  and no `role-required` refusals: goblin's exact lists never offered a tool it could not call.
+
+**Found in the run (to fix):**
+
+- **Onboarding crash:** a new user's first sign-in crashes inside Privy's wallet-created screen ("Cannot destructure
+  property 'onSuccess' of 'd.createWallet'"), on 2 of 2 fresh accounts. Reload works around it.
+- **Events on setup connections:** `events/list` answers `-32601` on a setup connection (7 times) although Events is
+  advertised.
+- **Missing protocol methods:**
+  - `notifications/initialized` sent by legacy clients is answered `-32601` instead of 202 (21 times).
+  - `resources/templates/list` is unimplemented (6 times).
+- **Wrong or missing copy:**
+  - The hosted-client consent copy says "this tab opens a 127.0.0.1 page".
+  - Consent calls SIDE backing optional, though posting needs 10 SIDE, and Welcome's "Back it" never states the
+    minimum.
+  - Create-agent copy says "One signature" (it takes two).
+- **Display problems:**
+  - Connected clients still read "may work and hire" after Work was unticked, because the line shows the sign-in's
+    scope, not the roles.
+  - A "Quote picked … linked to task" notice followed a rejected over-limit hire.
+  - The wallet line is not refreshed after backing.
+  - Signature prompts show raw DelegationManager typed data.
+- **Listen streams:** while idle, they were reopened every 61 s. This suggests a 60-second client request timeout on the
+  long-lived listen request (UNSURE).
+
 **Still not established:**
 
-- Any authenticated 2026 call on dev: listen, exact lists, `input_required`, the 403 step-up, `request_role`. These
-  wait for the joint goblin run on myplan note 24.
-- Subscribe latency (S5): no `events/subscribe` reached dev in the last seven days, so there is nothing to measure.
-- Codex and Claude Code against the new contract (stable list, link approvals, `request_role` in text).
+- **Step-up and refusals:** the 403 step-up (row 8) needs a narrower sign-in than the agent's roles, which is Kris's
+  call. The `role-required` refusal has not been seen live either.
+- **Disconnect:** no final listen response was observed on a live disconnect.
+- **Subscribe latency (S5):** no `events/subscribe` measurement has been made yet.
+- **Other clients:** Codex and Claude Code have not been tested against the new contract (stable list, link approvals,
+  `request_role` in text).
