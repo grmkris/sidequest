@@ -45,6 +45,7 @@ import { useTokenRegistry } from './useTokens.ts'
 import { AgentNewPage } from './routes/AgentNew.tsx'
 import { AgentApprovePage } from './routes/AgentApprove.tsx'
 import { HomePage } from './routes/Home.tsx'
+import { recoverOnce } from './app-recovery.ts'
 
 function Layout() {
   const location = useLocation()
@@ -346,6 +347,13 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error
   override state: { error: Error | null } = { error: null }
   static getDerivedStateFromError(error: unknown) {
     return { error: error instanceof Error ? error : new Error('An unexpected error') }
+  }
+  override componentDidCatch(error: unknown) {
+    try {
+      if (error instanceof Error && recoverOnce(error, sessionStorage)) window.location.reload()
+    } catch {
+      // no sessionStorage: show the error page rather than risk a reload loop
+    }
   }
   override render() {
     if (this.state.error === null) return this.props.children
