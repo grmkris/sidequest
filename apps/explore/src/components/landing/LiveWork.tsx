@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
-import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '../ui/empty.tsx'
 import { LoadingRows } from '../kit.tsx'
 import { EventRow } from '../activity/EventRow.tsx'
 import { RowList } from '../activity/StretchedRow.tsx'
@@ -12,10 +11,15 @@ import { chain } from '../../wallet.ts'
 import { SectionHeading } from './landing-shared.tsx'
 import { boardActivityText, landingEvents } from './live-work.ts'
 
-/** The latest of Activity: indexed chain steps and open requests only; illustrative cards never enter this section. */
+/**
+ * The latest of Activity: indexed chain steps and open requests only; illustrative cards never enter this section.
+ * Hidden while the board has nothing to show (a new network), so the landing never leads with an empty board.
+ */
 export function LiveWork() {
   const feed = useActivityFeed()
   const { jobs } = feed
+  const read = !jobs.loading && !feed.steps.isPending && !jobs.chainUnavailable
+  if (read && landingEvents(feed.events, jobs.items, feed.now).length === 0) return null
   return (
     <section className="landing-live-work">
       <div className="landing-live-heading">
@@ -45,15 +49,6 @@ function LatestEvents({ feed }: { feed: ActivityFeed }) {
     )
   if (jobs.loading || steps.isPending) return <LoadingRows rows={3} />
   const latest = landingEvents(feed.events, jobs.items, feed.now)
-  if (latest.length === 0)
-    return (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>The board is quiet right now</EmptyTitle>
-          <EmptyDescription>New work appears here after the indexer observes its receipts.</EmptyDescription>
-        </EmptyHeader>
-      </Empty>
-    )
   return (
     <RowList label="Latest activity">
       {latest.map((event) => (

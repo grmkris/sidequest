@@ -40,7 +40,22 @@ function Preview({ item, eager }: { item: ShowcaseItem; eager: boolean }) {
   }
 }
 
-function AgentLink({ agent, children }: { agent: { name: string; agentId: string }; children: ReactNode }) {
+/** The agent's page: in this app, or on the delivering stage's site (`origin`), where its Agent ID means that agent. */
+function AgentLink({
+  agent,
+  origin,
+  children,
+}: {
+  agent: { name: string; agentId: string }
+  origin: string | null
+  children: ReactNode
+}) {
+  if (origin !== null)
+    return (
+      <a href={`${origin}/agent/${agent.agentId}`} className="showcase-agent">
+        {children}
+      </a>
+    )
   return (
     <Link to="/agent/$agentId" params={{ agentId: agent.agentId }} className="showcase-agent">
       {children}
@@ -64,8 +79,9 @@ function usePaid(jobId: string | undefined) {
 }
 
 /**
- * One delivered job as a card: what was delivered, in its frame, the job's title, who posted it and who did it. On
- * the job's own stage the whole card opens the job; elsewhere it is an example and only its agent links.
+ * One delivered job as a card: what was delivered, in its frame, the job's title, who posted it and who did it. The
+ * whole card opens the job: here on its own stage, with what it paid; elsewhere on that stage's site, labelled
+ * "Testnet" because the job and its payment happened there.
  */
 export function ShowcaseCard({
   item,
@@ -80,19 +96,26 @@ export function ShowcaseCard({
   slot?: string
 }) {
   const job = showcaseJob(item, stage)
-  const paid = usePaid(job?.jobId)
+  const here = job.origin === null
+  const paid = usePaid(here ? job.jobId : undefined)
   return (
     <article
       className={className === undefined ? 'showcase-card' : `showcase-card ${className}`}
       data-kind={item.kind}
       data-slot={slot}
     >
-      {job !== null && (
+      {here ? (
         <Link
           to="/job/$jobId"
           params={{ jobId: job.jobId }}
           className="showcase-open"
           aria-label={`Job #${job.jobId}: ${item.title}`}
+        />
+      ) : (
+        <a
+          href={`${job.origin}/job/${job.jobId}`}
+          className="showcase-open"
+          aria-label={`Testnet job #${job.jobId}: ${item.title}`}
         />
       )}
       <div className="showcase-frame">
@@ -104,34 +127,28 @@ export function ShowcaseCard({
       </div>
       <footer className="showcase-footer">
         <span className="showcase-people">
-          {job !== null && (
-            <>
-              <AgentLink agent={job.poster}>
-                <AgentOrb agentId={job.poster.agentId} size="sm" />
-                <span className="sr-only">Posted by {job.poster.name}</span>
-              </AgentLink>
-              <span aria-hidden="true">→</span>
-            </>
-          )}
-          <AgentLink agent={item.agent}>
+          <AgentLink agent={job.poster} origin={job.origin}>
+            <AgentOrb agentId={job.poster.agentId} size="sm" />
+            <span className="sr-only">Posted by {job.poster.name}</span>
+          </AgentLink>
+          <span aria-hidden="true">→</span>
+          <AgentLink agent={item.agent} origin={job.origin}>
             <AgentOrb agentId={item.agent.agentId} size="sm" />
             {item.agent.name}
           </AgentLink>
         </span>
-        {job !== null ? (
-          <span className="showcase-status">
-            {paid?.net != null ? (
-              <>
-                Paid <TokenAmount value={paid.net} token={paid.token} static />
-              </>
-            ) : (
-              'Delivered'
-            )}
-            <span className="showcase-job"> · #{job.jobId}</span>
-          </span>
-        ) : (
-          <span className="proof-example">Example</span>
-        )}
+        <span className="showcase-status">
+          {!here ? (
+            'Testnet'
+          ) : paid?.net != null ? (
+            <>
+              Paid <TokenAmount value={paid.net} token={paid.token} static />
+            </>
+          ) : (
+            'Delivered'
+          )}
+          <span className="showcase-job"> · #{job.jobId}</span>
+        </span>
       </footer>
     </article>
   )

@@ -413,14 +413,6 @@
   color: var(--primary);
 }
 
-.proof-example {
-  color: var(--muted-foreground);
-  font-family: var(--font-mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
 /* Sellers: one band, the same prompt. */
 .landing-sellers {
   display: flex;

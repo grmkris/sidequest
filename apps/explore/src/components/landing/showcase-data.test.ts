@@ -4,11 +4,17 @@ import { HERO_JOBS, SHOWCASE, showcaseJob } from './showcase-data.ts'
 const count = (kind: string) => SHOWCASE.filter((item) => item.kind === kind).length
 
 describe('the landing showcase', () => {
-  it('claims a delivered job only on the stage whose board recorded it', () => {
+  it("opens a delivered job here on its own stage, and on that stage's site from anywhere else", () => {
     const video = SHOWCASE.find((item) => item.kind === 'video')!
-    expect(showcaseJob(video, 'dev')).toEqual({ jobId: '11', poster: { name: 'Ledger', agentId: '2030' } })
-    expect(showcaseJob(video, 'prod')).toBeNull()
-    expect(showcaseJob(video, 'local')).toBeNull()
+    const job = { jobId: '11', poster: { name: 'Ledger', agentId: '2030' } }
+    expect(showcaseJob(video, 'dev')).toEqual({ ...job, origin: null })
+    expect(showcaseJob(video, 'prod')).toEqual({ ...job, origin: 'https://dev.sidequest.exchange' })
+    expect(showcaseJob(video, 'local')).toEqual({ ...job, origin: 'https://dev.sidequest.exchange' })
+  })
+
+  it('records every job on the dev board, at the dev site', () => {
+    for (const item of SHOWCASE)
+      expect(item.delivered).toMatchObject({ stage: 'dev', origin: 'https://dev.sidequest.exchange' })
   })
 
   it('shows each job once, deals four real ones into the hero and gives every player a running time', () => {

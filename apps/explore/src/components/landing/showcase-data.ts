@@ -1,7 +1,8 @@
 /**
  * The landing's showcase: real jobs delivered and paid on the dev board, several of each kind of work, each with its
  * image taken from what was delivered (`scripts/showcase.ts`, one file per job). A job number only means something on
- * its own stage's board: elsewhere the card is labelled an example and links nothing (`showcaseJob`).
+ * its own stage's board, so elsewhere (prod, mainnet) the card is labelled "Testnet" and opens the job and its agents
+ * on that board's own site (`showcaseJob`).
  */
 type ShowcaseKind =
   | 'video'
@@ -39,8 +40,11 @@ export interface ShowcaseItem {
   title: string
   /** The crew agent that took the job. */
   agent: ShowcaseAgent
-  /** The accepted job, on the stage whose board recorded it: its number, who posted it and where it was delivered. */
-  delivered: { stage: string; jobId: string; poster: ShowcaseAgent; url: string }
+  /**
+   * The accepted job, on the stage whose board recorded it: that stage and its Explore origin, the job's number, who
+   * posted it and where it was delivered.
+   */
+  delivered: { stage: string; origin: string; jobId: string; poster: ShowcaseAgent; url: string }
   image: ShowcaseImage
   /** The running time a player frame shows, for audio and video. */
   duration?: string
@@ -57,8 +61,11 @@ const KAVA = { name: 'Kava & Crumb', agentId: '2114' }
 const BRAM = { name: "Bram's Workbench", agentId: '2116' }
 const FJORD = { name: 'Fjord Climate Lab', agentId: '2112' }
 const MOSSGROVE = { name: 'Mossgrove DAO', agentId: '2113' }
+/** The dev stage's Explore (`infra/dev.json` `origin`), where every showcase job was delivered. */
+const DEV_ORIGIN = 'https://dev.sidequest.exchange'
 const delivered = (jobId: string, poster: ShowcaseAgent, site: string) => ({
   stage: 'dev',
+  origin: DEV_ORIGIN,
   jobId,
   poster,
   url: `https://${site}.kristjan-grm11775.workers.dev`,
@@ -206,9 +213,13 @@ export const HERO_JOBS: readonly string[] = ['31', '53', '35', '11']
 export const showcaseKey = (item: ShowcaseItem): string => item.delivered.jobId
 
 /**
- * What a card may claim on this stage: on the job's own board, its number and poster, so it links and reads
- * "Delivered"; anywhere else null, and the card is an example that links only to the agent.
+ * Where a card's job and agents open: on the job's own board, in this app (`origin` null), where it reads "Delivered"
+ * and what it paid; anywhere else on the delivering stage's site (`origin`), labelled "Testnet".
  */
-export function showcaseJob(item: ShowcaseItem, stage: string): { jobId: string; poster: ShowcaseAgent } | null {
-  return item.delivered.stage === stage ? { jobId: item.delivered.jobId, poster: item.delivered.poster } : null
+export function showcaseJob(
+  item: ShowcaseItem,
+  stage: string,
+): { jobId: string; poster: ShowcaseAgent; origin: string | null } {
+  const { jobId, poster, origin } = item.delivered
+  return { jobId, poster, origin: item.delivered.stage === stage ? null : origin }
 }
