@@ -1,5 +1,12 @@
 import { expect, it } from 'vitest'
-import { effectiveRoles, listedTool, toolDecision, toolRefusal } from '../src/mcp-policy.ts'
+import {
+  OPERATOR_CONTINUATIONS,
+  effectiveRoles,
+  listedTool,
+  permittedTool,
+  toolDecision,
+  toolRefusal,
+} from '../src/mcp-policy.ts'
 
 const both = ['sidequest:read', 'sidequest:hire', 'sidequest:work']
 
@@ -74,4 +81,14 @@ it('refuses a missing role with a plain tool error that names request_role', () 
     },
   })
   expect(toolRefusal({ scopes: both, roles: ['work'] }, 'apply')).toBeUndefined()
+})
+
+// Reopening a declined pick is the hosted executor's job, never a client's.
+it('never lists or offers release_pick to a client, and lets only the executor run it', () => {
+  for (const listening of [false, true]) {
+    expect(listedTool({ scopes: both, roles: ['work', 'hire'], listening }, 'release_pick')).toBe(false)
+    expect(toolDecision({ scopes: both, roles: ['work', 'hire'], listening }, 'release_pick')).toBe('scope')
+  }
+  expect(permittedTool({ scopes: ['sidequest:read', 'sidequest:hire'] }, 'release_pick', true)).toBe(true)
+  expect(OPERATOR_CONTINUATIONS.has('release_pick')).toBe(true)
 })

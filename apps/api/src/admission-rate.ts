@@ -11,7 +11,7 @@ import { fromD1 } from '@sidequest/indexer'
 import type { Network } from '@sidequest/sdk'
 import type { OAuthGrant } from './oauth.ts'
 import { resourceBoard } from './oauth-validation.ts'
-import { toolDecision } from './mcp-policy.ts'
+import { OPERATOR_CONTINUATIONS, toolDecision } from './mcp-policy.ts'
 
 export interface AdmissionCall {
   network: Network
@@ -55,8 +55,7 @@ export async function admissionIdentity(bindings: Record<string, unknown>, input
           ...(input.bearer === undefined ? {} : { bearer: input.bearer }),
         }),
       ) as { address: typeof address }
-      if (!['request_unstake', 'withdraw_stake', 'report_transaction', 'report_operation'].includes(input.tool))
-        throw new Error('Operator continuation scope mismatch')
+      if (!OPERATOR_CONTINUATIONS.has(input.tool)) throw new Error('Operator continuation scope mismatch')
       address = agent.address
     } else {
       const grant = JSON.parse(

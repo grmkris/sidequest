@@ -41,7 +41,7 @@ import { stakingSnapshot } from './staking-index.ts'
 import { oauthRoute, resolveOAuth } from './oauth.ts'
 import { terminateGrantSubscriptions } from './webhooks.ts'
 import type { OAuthGrant } from './oauth.ts'
-import { toolDecision } from './mcp-policy.ts'
+import { OPERATOR_CONTINUATIONS, toolDecision } from './mcp-policy.ts'
 import { resourceBoard } from './oauth-validation.ts'
 import { runAgent, type AgentExecuteRequest } from './agent-runtime.ts'
 import { agentManagement } from './agent-management.ts'
@@ -232,7 +232,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         if (
           agent.address.toLowerCase() !== req.caller?.toLowerCase() ||
           agent.chain_id !== sdk.deployment(req.env.network).chainId ||
-          !['request_unstake', 'withdraw_stake', 'report_transaction', 'report_operation'].includes(req.tool)
+          !OPERATOR_CONTINUATIONS.has(req.tool)
         )
           throw new BoardError('forbidden', 'Operator continuation is outside this agent action')
         return { address: agent.address }
@@ -643,6 +643,9 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
           const result = callQueue.then(async (): Promise<string> => {
             const tool = tools[req.tool]
             if (tool === undefined) return toJson({ ok: false, code: 'not-found', message: `no tool ${req.tool}` })
+            // Only the hosted executor reopens a request, for an agent whose operator declined the pick.
+            if (req.tool === 'release_pick' && req.agentAuth === undefined)
+              return toJson({ ok: false, code: 'forbidden', message: 'release_pick is internal' })
             try {
               const bindings = runtimeEnv as Record<string, unknown>
               const network = bindings.NETWORK as sdk.Network

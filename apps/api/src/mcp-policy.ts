@@ -171,7 +171,24 @@ export function networkTool(network: string, name: string): boolean {
     network !== 'monad-mainnet' || (!PERMISSION_TOOLS.has(name) && !LISTING_TOOLS.has(name) && !X402_TOOLS.has(name))
   )
 }
-const CONTINUATIONS = new Set(['submit_selection', 'build_activation', 'report_transaction', 'report_operation'])
+const CONTINUATIONS = new Set([
+  'submit_selection',
+  'build_activation',
+  'report_transaction',
+  'report_operation',
+  'release_pick',
+])
+/**
+ * What the hosted executor may run for an operator on the agent's behalf, outside any OAuth connection. `release_pick`
+ * reopens a quote request after the operator declines its over-budget pick.
+ */
+export const OPERATOR_CONTINUATIONS = new Set([
+  'request_unstake',
+  'withdraw_stake',
+  'report_transaction',
+  'report_operation',
+  'release_pick',
+])
 
 export function requiredToolScope(
   name: string,

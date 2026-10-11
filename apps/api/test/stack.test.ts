@@ -347,6 +347,15 @@ test(
 )
 
 test(
+  'release_pick is internal: REST never reaches it',
+  Effect.gen(function* () {
+    const { apiUrl } = yield* stack
+    const refused = yield* postJson(`${apiUrl}/api/release_pick`, { requestId: 'r1', taskId: 't1' })
+    expect(refused.status).toBe(403)
+  }),
+)
+
+test(
   'agent lifecycle and approval routes refuse unauthenticated and cross-origin decisions',
   Effect.gen(function* () {
     const { apiUrl } = yield* stack

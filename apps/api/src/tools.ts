@@ -698,6 +698,17 @@ export const tools: Record<string, Tool> = {
       board.submitSelection(caller, { taskId: s(a, 'taskId'), nonce: s(a, 'nonce'), signature: s(a, 'signature') }),
   },
 
+  release_pick: {
+    description:
+      'Internal: withdraws a pick that never reached the chain, so its quote request opens for a new pick. The hosted executor calls it when an operator declines the pick; it is never a client tool.',
+    inputSchema: {
+      type: 'object',
+      properties: { requestId: str('The quote request.'), ...taskId },
+      required: ['requestId', 'taskId'],
+    },
+    run: (board, caller, a) => board.releasePick(caller, { requestId: s(a, 'requestId'), taskId: s(a, 'taskId') }),
+  },
+
   publish_transactions: {
     description:
       'Creator: the approvals and publish transaction again for an offer that is frozen but not on-chain (an earlier publish reverted or was never sent). Safe to repeat: a terms hash is listed once.',

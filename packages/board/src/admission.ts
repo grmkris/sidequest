@@ -48,6 +48,8 @@ export const drainHostedTools = new Set([
   'cancel_task',
   'sponsor_revoke',
   'report_operation',
+  // Reopens a quote request after its over-budget pick was declined; it only frees state.
+  'release_pick',
 ])
 
 export const recoveryHostedTools = new Set([
@@ -66,6 +68,7 @@ export const recoveryHostedTools = new Set([
   'cancel_task',
   'sponsor_revoke',
   'report_operation',
+  'release_pick',
 ])
 
 /**
