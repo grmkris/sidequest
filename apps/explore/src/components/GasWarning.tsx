@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from './ui/alert.tsx'
 import { textLinkClass } from './kit.tsx'
 
 /** About one backing send at testnet gas prices, with room to spare: backing is not gas-sponsored. */
-export const BACKING_GAS = parseEther('0.03')
+const BACKING_GAS = parseEther('0.03')
 /**
  * One Buy SIDE swap at testnet gas prices (102 gwei): the SDK sends two approvals of 80k gas and a 700k-gas swap, and
  * Monad bills the whole limit, so about 0.088 MON. More than the faucet's one-time 0.05 MON.
