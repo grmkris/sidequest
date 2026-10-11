@@ -55,6 +55,16 @@ export function agentConnections(sql: Sql, agentId: string, now: number): AgentC
     .toSorted((a, b) => (b.lastUsedAt ?? b.createdAt) - (a.lastUsedAt ?? a.createdAt))
 }
 
+/** Records a connection's use for its Connections row, at most once a minute so a busy agent does not write per call. */
+export function touchConnection(sql: Sql, familyId: string, now: number): void {
+  sql.run(
+    `INSERT INTO agent_oauth_activity (family_id,last_used_at) VALUES (?,?) ON CONFLICT(family_id) DO UPDATE
+     SET last_used_at=excluded.last_used_at WHERE excluded.last_used_at-agent_oauth_activity.last_used_at>=60`,
+    familyId,
+    now,
+  )
+}
+
 /** One family table's live row for a connection, with the agent it acts as. */
 const accessOf = (families: string) =>
   `SELECT f.agent_id,f.scopes_json,a.state,a.permissions_json FROM ${families} f LEFT JOIN agents a ON a.id=f.agent_id

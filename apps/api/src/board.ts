@@ -46,7 +46,7 @@ import { toolDecision } from './mcp-policy.ts'
 import { resourceBoard } from './oauth-validation.ts'
 import { runAgent, type AgentExecuteRequest } from './agent-runtime.ts'
 import { agentManagement } from './agent-management.ts'
-import { connectionAccess } from './agent-access.ts'
+import { connectionAccess, touchConnection } from './agent-access.ts'
 import { McpListeners, type ListenRequest } from './mcp-listen.ts'
 import { profileReader } from './profiles.ts'
 import { recordBoardEvent } from './feed-board.ts'
@@ -438,10 +438,13 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         }).pipe(
           Effect.flatMap((sql) =>
             Effect.promise(async () => {
-              const grant = await resolveOAuth(sql, req.bearer, req.resource, Math.floor(Date.now() / 1000))
-              if (grant !== undefined && req.activity === true)
-                new AgentStore(sql, () => Math.floor(Date.now() / 1000)).touch(grant.agentIds[0]!)
+              const now = Math.floor(Date.now() / 1000)
+              const grant = await resolveOAuth(sql, req.bearer, req.resource, now)
               if (grant === undefined) return toJson(null)
+              // An MCP call: the agent's directory presence and the connection's last use on its agent page.
+              if (req.activity === true && grant.setup !== true)
+                new AgentStore(sql, () => now).touch(grant.agentIds[0]!)
+              if (req.activity === true && grant.grantId !== undefined) touchConnection(sql, grant.grantId, now)
               // A connection that hears tool changes gets the exact list (ADR-0021).
               return toJson({ ...grant, listening: grant.grantId !== undefined && listeners.listening(grant.grantId) })
             }),

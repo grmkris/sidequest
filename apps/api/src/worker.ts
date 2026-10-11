@@ -650,15 +650,12 @@ export default class Api extends Cloudflare.Worker<Api>()(
         if (path === '/mcp') {
           const runMcp = Effect.runPromiseWith(yield* Effect.context<RuntimeContext>())
           const resource = `${url.origin}${url.pathname}`
+          // One resolution per MCP request, which also records the connection's use.
           const grant = JSON.parse(
             yield* boards
               .getByName(SPONSOR_OBJECT_NAME)
-              .oauthResolve({ resource, ...(bearer === undefined ? {} : { bearer }) }),
+              .oauthResolve({ resource, activity: true, ...(bearer === undefined ? {} : { bearer }) }),
           ) as OAuthGrant | null
-          if (grant !== null && grant.setup !== true)
-            yield* boards
-              .getByName(SPONSOR_OBJECT_NAME)
-              .oauthResolve({ resource, activity: true, ...(bearer === undefined ? {} : { bearer }) })
           const reply = yield* Effect.promise(() =>
             mcpRoute({
               method: request.method,

@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from 'vitest'
 import { Schema } from 'effect'
-import { agentAccess, agentConnections, connectionAccess } from '../src/agent-access.ts'
+import { agentAccess, agentConnections, connectionAccess, touchConnection } from '../src/agent-access.ts'
 import { resolveOAuth } from '../src/oauth.ts'
 import { agentRoute } from '../src/routes/agents.ts'
 import { setupFixture, operator, outsider, resource } from './setup-oauth-fixture.ts'
@@ -82,6 +82,18 @@ it('a connection’s access follows its agent’s roles and ends when it is disc
   await f.access('disconnect', { familyId: direct })
   expect(connectionAccess(f.sql, direct)).toBeUndefined()
   expect(connectionAccess(f.sql, 'oauth_unknown')).toBeUndefined()
+})
+
+it('records when each connection was last used, at most once a minute', async () => {
+  const f = await fixture()
+  const direct = (await resolveOAuth(f.sql, f.direct.access_token, resource, f.now()))!.grantId!
+  const lastUsed = () => agentConnections(f.sql, 'quill', f.now()).find((row) => row.id === direct)?.lastUsedAt
+  expect(lastUsed()).toBeNull()
+  touchConnection(f.sql, direct, 1_000)
+  touchConnection(f.sql, direct, 1_059)
+  expect(lastUsed()).toBe(1_000)
+  touchConnection(f.sql, direct, 1_060)
+  expect(lastUsed()).toBe(1_060)
 })
 
 it('routes roles, connections and a single disconnect to the management object', () => {
