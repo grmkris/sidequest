@@ -1,5 +1,5 @@
 /** The operator's controls over a hosted agent's access: its roles, and the clients connected as it (ADR-0021). */
-import { AGENT_ROLES, AgentStore, BoardError, type Sql } from '@sidequest/board'
+import { AGENT_ROLES, AgentStore, BoardError, agentRoles, type Sql } from '@sidequest/board'
 import { fromD1 } from '@sidequest/indexer'
 import { Schema } from 'effect'
 import type { Address } from 'viem'
@@ -53,6 +53,33 @@ export function agentConnections(sql: Sql, agentId: string, now: number): AgentC
       lastUsedAt: row.last_used_at,
     }))
     .toSorted((a, b) => (b.lastUsedAt ?? b.createdAt) - (a.lastUsedAt ?? a.createdAt))
+}
+
+/** One family table's live row for a connection, with the agent it acts as. */
+const accessOf = (families: string) =>
+  `SELECT f.agent_id,f.scopes_json,a.state,a.permissions_json FROM ${families} f LEFT JOIN agents a ON a.id=f.agent_id
+   WHERE f.id=? AND f.revoked_at IS NULL`
+
+/**
+ * What a connection's tools depend on, as one comparable value: the agent it acts as, the scope its client was
+ * granted, and that agent's roles. Undefined once the connection is gone: revoked, disconnected or its agent stopped.
+ */
+export function connectionAccess(sql: Sql, grantId: string): string | undefined {
+  const row = sql.all<{
+    agent_id: string | null
+    scopes_json: string
+    state: string | null
+    permissions_json: string | null
+  }>(`${accessOf('agent_oauth_families')} UNION ALL ${accessOf('agent_oauth_setup_families')}`, grantId, grantId)[0]
+  if (row === undefined) return undefined
+  // A setup connection waits for its agent: it keeps the setup tools until the operator approves one.
+  if (row.agent_id === null) return 'setup'
+  if (row.state !== 'active' || row.permissions_json === null) return undefined
+  return JSON.stringify([
+    row.agent_id,
+    strings(JSON.parse(row.scopes_json)).toSorted(),
+    agentRoles({ permissions_json: row.permissions_json }),
+  ])
 }
 
 /** Ends one connection: its tokens stop at once and its event subscriptions are terminated. */

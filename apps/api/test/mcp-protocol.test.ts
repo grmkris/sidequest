@@ -60,7 +60,8 @@ describe('2026-07-28 MCP lane', () => {
       resultType: 'complete',
       supportedVersions: ['2026-07-28'],
       capabilities: {
-        tools: { listChanged: false },
+        // ADR-0021: only the 2026 lane hears tool changes, over subscriptions/listen.
+        tools: { listChanged: true },
         prompts: {},
         resources: {},
         events: {},
@@ -78,6 +79,25 @@ describe('2026-07-28 MCP lane', () => {
       },
     })
     expect(result(await route('server/discover'))).not.toHaveProperty('serverInfo')
+  })
+
+  it('answers subscriptions/listen with the stream request, acknowledging only tool changes', async () => {
+    const listen = (params: Record<string, unknown>, overrides: Partial<Parameters<typeof mcpRoute>[0]> = {}) =>
+      route('subscriptions/listen', { ...params, _meta: meta }, overrides)
+    expect(await listen({ notifications: { toolsListChanged: true, resourcesListChanged: true } })).toEqual({
+      status: 200,
+      listen: { subscriptionId: 1, notifications: { toolsListChanged: true } },
+    })
+    expect(await listen({ notifications: {} })).toMatchObject({ listen: { notifications: {} } })
+    expect((await listen({ notifications: { toolsListChanged: 'yes' } })).body).toMatchObject({
+      error: { code: -32602 },
+    })
+    expect((await route('subscriptions/listen', { notifications: { toolsListChanged: true } })).body).toMatchObject({
+      error: { code: -32601 },
+    })
+    expect((await listen({ notifications: { toolsListChanged: true } }, { modernLane: false })).body).toMatchObject({
+      error: { code: -32601 },
+    })
   })
   it.each(['tools/list', 'prompts/list', 'resources/list', 'events/list'])('decorates modern %s', async (method) => {
     const events = new McpEvents(fromNodeSqlite(new DatabaseSync(':memory:')), 'monad-testnet')

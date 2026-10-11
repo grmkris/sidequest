@@ -1,8 +1,10 @@
 import { agentFailureReply } from '@sidequest/board'
+import { Schema } from 'effect'
 import type { OAuthGrant } from './oauth.ts'
 import { listedTool, requiredToolScope, toolRefusal } from './mcp-policy.ts'
 import { toolWireMetadata } from './mcp-tool-metadata.ts'
 import { approvalRound, settledCreation } from './mcp-mrtr.ts'
+import type { ListenRequest } from './mcp-listen.ts'
 import { ROLE_GUIDES, connectorInstructions, renderSkill } from './mcp-instructions.ts'
 import type { McpEvents } from './mcp-events.ts'
 import { EventRpcError } from './webhooks.ts'
@@ -21,7 +23,16 @@ export interface McpReply {
   readonly status: number
   readonly body?: unknown
   readonly headers?: Record<string, string>
+  /** A 2026 `subscriptions/listen`: the Worker answers with the management object's stream for this connection. */
+  readonly listen?: ListenRequest
 }
+
+const Listen = Schema.Struct({
+  id: Schema.Union([Schema.String, Schema.Number]),
+  params: Schema.Struct({
+    notifications: Schema.optionalKey(Schema.Struct({ toolsListChanged: Schema.optionalKey(Schema.Boolean) })),
+  }),
+})
 
 export interface McpTool {
   readonly description?: string
@@ -134,7 +145,8 @@ export async function mcpRoute(input: {
     return respond({
       resultType: 'complete',
       supportedVersions: [MODERN_VERSION],
-      capabilities,
+      // ADR-0021: tool changes reach 2026 clients over subscriptions/listen; the legacy lane never hears them.
+      capabilities: { ...capabilities, tools: { listChanged: true } },
       instructions: connectorInstructions(origin),
       ttlMs: 0,
       cacheScope: 'private',
@@ -154,6 +166,15 @@ export async function mcpRoute(input: {
     })
   }
   if (methodName === 'ping') return respond({})
+  if (modern && methodName === 'subscriptions/listen') {
+    if (!Schema.is(Listen)(body)) return rpcError(-32602, 'subscriptions/listen needs a request id and notifications')
+    const hearsTools = body.params.notifications?.toolsListChanged === true
+    // Only what this server can honour is acknowledged; the stream itself comes from the management object.
+    return {
+      status: 200,
+      listen: { subscriptionId: body.id, notifications: hearsTools ? { toolsListChanged: true } : {} },
+    }
+  }
   if (methodName === 'tools/list') {
     return respond({
       tools: Object.entries({

@@ -2,6 +2,7 @@ import * as Alchemy from 'alchemy'
 import * as Cloudflare from 'alchemy/Cloudflare'
 import * as Test from 'alchemy/Test/Vitest'
 import * as Effect from 'effect/Effect'
+import { Schema } from 'effect'
 import * as HttpBody from 'effect/http/HttpBody'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import * as HttpClient from 'effect/http/HttpClient'
@@ -10,6 +11,7 @@ import { expect } from 'vitest'
 import Stack from '../../../alchemy.run.ts'
 import { decodeX402Header } from '@sidequest/board'
 import { deployment } from '@sidequest/sdk'
+import { pkceChallenge } from '../src/oauth-validation.ts'
 
 /**
  * Deploys the stack into local workerd (`dev: true`) and probes every binding through the Worker.
@@ -30,6 +32,32 @@ const rpcSet = (process.env.MONAD_TESTNET_RPC_URL ?? '') !== ''
 
 const postJson = (url: string, body: unknown, headers: Record<string, string> = {}) =>
   HttpClient.post(url, { body: HttpBody.text(JSON.stringify(body), 'application/json'), headers })
+
+/** One REST tool call, with an operator session when given. */
+const rest = <T>(apiUrl: string, tool: string, body: unknown, session?: string) =>
+  Effect.gen(function* () {
+    const r = yield* postJson(
+      `${apiUrl}/api/${tool}`,
+      body,
+      session === undefined ? {} : { authorization: `Bearer ${session}` },
+    )
+    return (yield* r.json) as { ok: boolean; result: T; code?: string; message?: string }
+  })
+
+/** A fresh operator wallet signed in over REST (needs an RPC to verify the signature). */
+const signIn = (apiUrl: string) =>
+  Effect.gen(function* () {
+    const account = privateKeyToAccount(generatePrivateKey())
+    const { result: challenge } = yield* rest<{ message: string }>(apiUrl, 'auth_challenge', {
+      address: account.address,
+    })
+    const signature = yield* Effect.promise(() => account.signMessage({ message: challenge.message }))
+    const login = yield* rest<{ session: string; boardId: string }>(apiUrl, 'auth_login', {
+      message: challenge.message,
+      signature,
+    })
+    return { account, login }
+  })
 
 test(
   'the real local Worker serves the testnet x402 proof challenge without calling the facilitator',
@@ -200,26 +228,12 @@ test.skipIf(!rpcSet)(
   'tenant boards: sign in over REST, create a board, use its route, get CORS on its origin, refused token',
   Effect.gen(function* () {
     const { apiUrl } = yield* stack
-    const account = privateKeyToAccount(generatePrivateKey())
-    const rest = <T>(tool: string, body: unknown, session?: string) =>
-      Effect.gen(function* () {
-        const r = yield* postJson(
-          `${apiUrl}/api/${tool}`,
-          body,
-          session === undefined ? {} : { authorization: `Bearer ${session}` },
-        )
-        return (yield* r.json) as { ok: boolean; result: T; code?: string; message?: string }
-      })
-    const { result: challenge } = yield* rest<{ message: string }>('auth_challenge', { address: account.address })
-    const signature = yield* Effect.promise(() => account.signMessage({ message: challenge.message }))
-    const login = yield* rest<{ session: string; boardId: string }>('auth_login', {
-      message: challenge.message,
-      signature,
-    })
+    const { account, login } = yield* signIn(apiUrl!)
     expect(login.ok).toBe(true)
     expect(login.result.boardId).toBe('public')
     const slug = `t-${Math.random().toString(36).slice(2, 8)}`
     const created = yield* rest<{ board: { id: string; owner: string; tokens: Array<{ symbol: string }> } }>(
+      apiUrl!,
       'create_board',
       {
         slug,
@@ -261,7 +275,7 @@ test.skipIf(!rpcSet)(
     )
     expect(refused.status).toBe(400)
     expect(((yield* refused.json) as { message: string }).message).toMatch(/pays in mUSD/)
-    const who = yield* rest<{ address: string; boardId: string }>('whoami', {}, login.result.session)
+    const who = yield* rest<{ address: string; boardId: string }>(apiUrl!, 'whoami', {}, login.result.session)
     expect(who.result.address).toBe(account.address)
   }),
 )
@@ -352,5 +366,114 @@ test(
       { origin: 'https://foreign.invalid' },
     )
     expect(foreign.status).toBe(403)
+  }),
+)
+
+/** Reads SSE frames off a live response until `count` arrive or the stream ends, as parsed JSON-RPC messages. */
+async function sseFrames(reader: ReadableStreamDefaultReader<Uint8Array>, count: number) {
+  const decoder = new TextDecoder()
+  const seen: unknown[] = []
+  let buffer = ''
+  while (seen.length < count) {
+    const chunk = await reader.read()
+    if (chunk.done) break
+    buffer += decoder.decode(chunk.value, { stream: true })
+    const blocks = buffer.split('\n\n')
+    buffer = blocks.pop() ?? ''
+    for (const block of blocks) if (block.startsWith('data: ')) seen.push(JSON.parse(block.slice('data: '.length)))
+  }
+  return seen
+}
+
+// ADR-0021: the listen stream is made in the management object and crosses Workers RPC into the Worker's response.
+test.skipIf(!rpcSet)(
+  'a 2026 setup connection listens through the real Worker and management object; revoking it ends the stream',
+  Effect.gen(function* () {
+    const { apiUrl } = yield* stack
+    const origin = new URL(apiUrl!).origin
+    const { login } = yield* signIn(apiUrl!)
+    const redirect = 'http://localhost:3333/callback'
+    const registration = yield* postJson(`${apiUrl}/oauth/register`, {
+      redirect_uris: [redirect],
+      client_name: 'Workerd listen client',
+    })
+    const { client_id } = Schema.decodeUnknownSync(Schema.Struct({ client_id: Schema.String }))(
+      yield* registration.json,
+    )
+    const verifier = 'b'.repeat(43)
+    const query = new URLSearchParams({
+      client_id,
+      redirect_uri: redirect,
+      response_type: 'code',
+      code_challenge: yield* Effect.promise(() => pkceChallenge(verifier)),
+      code_challenge_method: 'S256',
+      scope: 'sidequest:setup sidequest:read',
+      resource: `${apiUrl}/mcp`,
+      state: 'listen',
+    })
+    const authorize = yield* Effect.promise(() =>
+      fetch(`${apiUrl}/oauth/authorize?${query.toString()}`, { redirect: 'manual' }),
+    )
+    const requestId = new URL(authorize.headers.get('location')!).searchParams.get('oauth_request')!
+    const approved = yield* postJson(
+      `${apiUrl}/oauth/requests/${requestId}/approve`,
+      { setup: true, agentIds: [] },
+      { origin, authorization: `Bearer ${login.result.session}` },
+    )
+    const { result } = Schema.decodeUnknownSync(
+      Schema.Struct({ result: Schema.Struct({ redirectUrl: Schema.String }) }),
+    )(yield* approved.json)
+    const token = yield* postJson(`${apiUrl}/oauth/token`, {
+      grant_type: 'authorization_code',
+      client_id,
+      resource: `${apiUrl}/mcp`,
+      redirect_uri: redirect,
+      code: new URL(result.redirectUrl).searchParams.get('code')!,
+      code_verifier: verifier,
+    })
+    const { access_token } = Schema.decodeUnknownSync(Schema.Struct({ access_token: Schema.String }))(yield* token.json)
+    const meta = {
+      'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+      'io.modelcontextprotocol/clientCapabilities': {},
+    }
+    const discover = yield* postJson(
+      `${apiUrl}/mcp`,
+      { jsonrpc: '2.0', id: 1, method: 'server/discover', params: { _meta: meta } },
+      { authorization: `Bearer ${access_token}` },
+    )
+    expect(yield* discover.json).toMatchObject({ result: { capabilities: { tools: { listChanged: true } } } })
+    const listen = yield* Effect.promise(() =>
+      fetch(`${apiUrl}/mcp`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${access_token}`,
+          'content-type': 'application/json',
+          accept: 'application/json, text/event-stream',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 'listen-1',
+          method: 'subscriptions/listen',
+          params: { notifications: { toolsListChanged: true, resourcesListChanged: true }, _meta: meta },
+        }),
+      }),
+    )
+    expect(listen.status).toBe(200)
+    expect(listen.headers.get('content-type')).toBe('text/event-stream')
+    const reader = listen.body!.getReader()
+    const subscription = { _meta: { 'io.modelcontextprotocol/subscriptionId': 'listen-1' } }
+    expect(yield* Effect.promise(() => sseFrames(reader, 2))).toEqual([
+      {
+        jsonrpc: '2.0',
+        method: 'notifications/subscriptions/acknowledged',
+        params: { notifications: { toolsListChanged: true }, ...subscription },
+      },
+      { jsonrpc: '2.0', method: 'notifications/tools/list_changed', params: subscription },
+    ])
+    const revoked = yield* postJson(`${apiUrl}/oauth/revoke`, { token: access_token, client_id })
+    expect(revoked.status).toBe(200)
+    expect(yield* Effect.promise(() => sseFrames(reader, 2))).toEqual([
+      { jsonrpc: '2.0', id: 'listen-1', result: { resultType: 'complete', ...subscription } },
+    ])
   }),
 )

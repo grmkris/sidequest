@@ -13,6 +13,7 @@ import {
   retireFleetSchema,
   AgentStore,
   agentFailureReply,
+  errorDiagnostics,
   failureFromReply,
   type AgentRetry,
   hostedCreatorFacts,
@@ -45,6 +46,8 @@ import { permittedTool } from './mcp-policy.ts'
 import { resourceBoard } from './oauth-validation.ts'
 import { runAgent, type AgentExecuteRequest } from './agent-runtime.ts'
 import { agentManagement } from './agent-management.ts'
+import { connectionAccess } from './agent-access.ts'
+import { McpListeners, type ListenRequest } from './mcp-listen.ts'
 import { profileReader } from './profiles.ts'
 import { recordBoardEvent } from './feed-board.ts'
 import { configurePublicSite } from './telegram.ts'
@@ -263,6 +266,21 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         stateId: state.id.toString(),
       })
 
+    // 2026 subscriptions/listen streams live here, where every access change happens (ADR-0021).
+    const listeners = new McpListeners({ now: () => Date.now() })
+    let keepalive: ReturnType<typeof setInterval> | undefined
+    /** After a management call: connections whose access changed hear it, and connections that are gone end. */
+    const syncListeners = () => {
+      if (!listeners.active()) return
+      try {
+        const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
+        listeners.sync((grantId) => connectionAccess(sql, grantId))
+      } catch (error) {
+        // A failed notice must never fail the call that changed access; clients still re-list on their next turn.
+        console.error(JSON.stringify({ event: 'mcp-listen-sync-failed', ...errorDiagnostics(error) }))
+      }
+    }
+
     return Effect.succeed({
       // SAFETY: Alchemy's WorkerEnvironment is the binding record of this Worker.
       ...commonsRpcs({ state, bindings: runtimeEnv as Record<string, unknown>, host: commonsHost }),
@@ -273,6 +291,8 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               return await executeAgent(req)
             } catch (error) {
               return toJson(agentFailureReply(error, 'Hosted agent execution failed'))
+            } finally {
+              syncListeners()
             }
           })
           managementQueue = result.catch(() => undefined)
@@ -323,6 +343,8 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               return toJson({ ok: true, result: managementResult })
             } catch (error) {
               return toJson(agentFailureReply(error, 'Agent management failed'))
+            } finally {
+              syncListeners()
             }
           })
           managementQueue = result.catch(() => undefined)
@@ -383,22 +405,23 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               verify: async () => false,
             })
             const session = await desk.resolve({ bearer: req.bearer })
-            return toJson(
-              (await oauthRoute({
-                sql,
-                method: req.method,
-                path: req.path,
-                query: new URLSearchParams(req.query),
-                body: req.body,
-                origin: req.origin,
-                siteOrigin: req.origin,
-                ...(session === undefined ? {} : { owner: session.address }),
-                now: Math.floor(Date.now() / 1000),
-                revokeSubscriptions: async (principal, grantId, at) => {
-                  await terminateGrantSubscriptions(fromD1(bindings.Database as never), principal, grantId, at)
-                },
-              })) ?? null,
-            )
+            const reply = await oauthRoute({
+              sql,
+              method: req.method,
+              path: req.path,
+              query: new URLSearchParams(req.query),
+              body: req.body,
+              origin: req.origin,
+              siteOrigin: req.origin,
+              ...(session === undefined ? {} : { owner: session.address }),
+              now: Math.floor(Date.now() / 1000),
+              revokeSubscriptions: async (principal, grantId, at) => {
+                await terminateGrantSubscriptions(fromD1(bindings.Database as never), principal, grantId, at)
+              },
+            })
+            // Consent may bind a waiting setup connection to its agent; revoking ends a connection.
+            syncListeners()
+            return toJson(reply ?? null)
           })
           callQueue = result.catch(() => undefined)
           return result
@@ -422,6 +445,34 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
             }),
           ),
         ),
+      /**
+       * A 2026 connection's `subscriptions/listen` stream. The bearer is resolved here again, so the stream belongs to the
+       * connection that holds the token; it ends when that connection is disconnected, revoked or stopped.
+       */
+      mcpListen: (req: { resource: string; bearer?: string; listen: ListenRequest }) =>
+        Effect.promise(async () => {
+          // SAFETY: Alchemy's WorkerEnvironment is this Worker's binding record, and Board is its own namespace.
+          const bindings = runtimeEnv as Record<string, unknown>
+          // SAFETY: as above; only idFromName is used, to prove this is the management object.
+          const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
+          if (namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString())
+            throw new Error('management object identity mismatch')
+          const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
+          migrateAgentSchema(sql)
+          const grant = await resolveOAuth(sql, req.bearer, req.resource, Math.floor(Date.now() / 1000))
+          const access = grant?.grantId === undefined ? undefined : connectionAccess(sql, grant.grantId)
+          if (grant?.grantId === undefined || access === undefined)
+            return new Response(null, { status: 401, headers: { 'cache-control': 'no-store' } })
+          const response = listeners.open(grant.grantId, req.listen, access)
+          // Comments every 25 s keep idle streams under the platform's idle cut; the timer stops with the last stream.
+          keepalive ??= setInterval(() => {
+            listeners.keepalive()
+            if (listeners.active() || keepalive === undefined) return
+            clearInterval(keepalive)
+            keepalive = undefined
+          }, 25_000)
+          return response
+        }),
       /** Directory presence: when hosted agents last used their connection. No operator, grant or approval data. */
       managedActivity: (req: { agentIds: string[] }) =>
         Effect.sync(() => {

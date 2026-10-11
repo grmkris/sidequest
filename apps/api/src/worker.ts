@@ -700,6 +700,13 @@ export default class Api extends Cloudflare.Worker<Api>()(
               },
             }),
           )
+          // ADR-0021: a 2026 listen is answered by the management object's stream for this connection.
+          if (reply.listen !== undefined) {
+            const stream = yield* boards
+              .getByName(SPONSOR_OBJECT_NAME)
+              .mcpListen({ resource, listen: reply.listen, ...(bearer === undefined ? {} : { bearer }) })
+            return HttpServerResponse.setHeaders(HttpServerResponse.fromWeb(stream), cors)
+          }
           return reply.status === 204 || reply.status === 202
             ? HttpServerResponse.empty({ status: reply.status, headers: { ...cors, ...reply.headers } })
             : json(reply.body, reply.status, reply.headers)

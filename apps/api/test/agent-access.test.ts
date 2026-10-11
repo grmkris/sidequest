@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from 'vitest'
 import { Schema } from 'effect'
-import { agentAccess, agentConnections } from '../src/agent-access.ts'
+import { agentAccess, agentConnections, connectionAccess } from '../src/agent-access.ts'
 import { resolveOAuth } from '../src/oauth.ts'
 import { agentRoute } from '../src/routes/agents.ts'
 import { setupFixture, operator, outsider, resource } from './setup-oauth-fixture.ts'
@@ -63,6 +63,22 @@ it('lists both kinds of live connection with their client and scope, and disconn
   expect(await resolveOAuth(f.sql, f.direct.access_token, resource, f.now())).toMatchObject({ agentIds: ['quill'] })
   expect(agentConnections(f.sql, 'quill', f.now())).toHaveLength(1)
   await expect(f.access('disconnect', { familyId: setupFamily })).rejects.toMatchObject({ code: 'not-found' })
+})
+
+// ADR-0021: a listening connection is told its tools changed exactly when this value does.
+it('a connection’s access follows its agent’s roles and ends when it is disconnected', async () => {
+  const f = await fixture()
+  const direct = (await resolveOAuth(f.sql, f.direct.access_token, resource, f.now()))!.grantId!
+  const before = connectionAccess(f.sql, direct)
+  expect(before).toContain('quill')
+  await f.access('roles', { roles: ['work'] })
+  const after = connectionAccess(f.sql, direct)
+  expect(after).not.toBe(before)
+  await f.access('roles', { roles: ['work'] })
+  expect(connectionAccess(f.sql, direct)).toBe(after)
+  await f.access('disconnect', { familyId: direct })
+  expect(connectionAccess(f.sql, direct)).toBeUndefined()
+  expect(connectionAccess(f.sql, 'oauth_unknown')).toBeUndefined()
 })
 
 it('routes roles, connections and a single disconnect to the management object', () => {
