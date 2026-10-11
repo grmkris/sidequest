@@ -72,7 +72,7 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
    | `sidequest.schedule.thresholds` | uint[4] | fee tiers in whole SIDE: `[0, 1000000, 10000000, 50000000]` |
    | `sidequest.schedule.bps` | uint[4] | fee per tier: `[3000, 1000, 300, 100]` |
    | `sidequest.schedule.treasury` | address | the Safe |
-   | `sidequest.token` | address | SIDE, from §3.2: the recipe checks code, 18 decimals and the 1e9 supply |
+   | `sidequest.token` | address | SIDE, from §3.2: the recipe checks 18 decimals, the 1e9 supply, Sidequest/SIDE, and that its code is the nad.fun clone of `nadfun.tokenImplementation` on `nadfun.curve` |
 
    Then, outside `sidequest`:
    - `knownTokens` = [USDC (= `x402.usdc`), SIDE]. Leave `deployment.rewardTokens` absent: PromoteSidequest takes the
@@ -301,6 +301,14 @@ nad.fun's operator collects it (`FeeCollector.collectFee` refuses anyone else), 
 the vault holds a claimable balance for SIDE, the Safe calls `claim(SIDE)` on it; record that first claim.
 
 ### 3.9 A drained production deploy (no chain transaction)
+
+First the prod stage moves to chain 143, in one commit on `dev`: `infra/prod.json` gets `network` `monad-mainnet`,
+`chainId` 143 and the fresh mainnet `relay`. Its secret sources take the mainnet values, in both
+`~/.config/sidequest/prod.env` and the GitHub `prod` environment:
+- `MONAD_RPC_URL`: the dedicated mainnet RPC, never the public endpoint;
+- `RELAY_PRIVATE_KEY` and `ATTESTER_PRIVATE_KEY`: the fresh keys of §2.
+
+Until this commit, prod-testnet keeps its testnet values.
 
 ```
 SIDEQUEST_PROD_ARTIFACT=docs/p0-prod-artifact.json PROD_ADMISSION_DRAIN=1 bun run deploy:prod   # repo root, deploy env
