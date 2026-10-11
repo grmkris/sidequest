@@ -55,7 +55,7 @@ interface IStakeVault {
     event PoolReset(address indexed account, uint64 generation);
     event Reserved(address indexed holding, address indexed account, uint256 amount);
     event Released(address indexed holding, address indexed account, uint256 amount);
-    /// @dev The slashed SIDE is burned in the same call.
+    /// @dev The slashed SIDE moves to `SidequestConstants.SLASH_SINK` in the same call.
     event Slashed(address indexed holding, address indexed account, uint256 amount);
     /// @dev The forfeited SIDE is transferred to the supplied treasury recipient.
     event Forfeited(address indexed holding, address indexed account, address indexed to, uint256 amount);
@@ -135,8 +135,9 @@ interface IStakeVault {
     /// @return released The amount released: `min(amount, reservedBy(caller, account))`.
     function release(address account, uint256 amount) external returns (uint256 released);
 
-    /// @notice Slashes up to `amount` of the reservation the caller holds on `account` and burns it.
-    /// @return burned The amount burned: `min(amount, reservedBy(caller, account))`.
+    /// @notice Slashes up to `amount` of the reservation the caller holds on `account` and sends it to
+    ///         `SidequestConstants.SLASH_SINK`, out of circulation.
+    /// @return burned The amount slashed: `min(amount, reservedBy(caller, account))`.
     function slash(address account, uint256 amount) external returns (uint256 burned);
 
     /// @notice Removes up to `amount` from this Holding's reservation and transfers it to `to`.

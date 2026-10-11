@@ -34,14 +34,6 @@ contract Factory is ERC20, ERC20Permit, ERC20Burnable, IFactory {
         if (total != SidequestConstants.SIDE_SUPPLY) revert SupplyMismatch(total, SidequestConstants.SIDE_SUPPLY);
     }
 
-    function burn(uint256 value) public override(ERC20Burnable, IFactory) {
-        super.burn(value);
-    }
-
-    function burnFrom(address account, uint256 value) public override(ERC20Burnable, IFactory) {
-        super.burnFrom(account, value);
-    }
-
     function nonces(address owner) public view override(ERC20Permit, IERC20Permit) returns (uint256) {
         return super.nonces(owner);
     }

@@ -5,7 +5,8 @@ import {SidequestClocks} from "../../src/sidequest/SidequestClocks.sol";
 
 import {Test} from "forge-std/Test.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Factory} from "../../src/sidequest/Factory.sol";
+import {LaunchToken} from "../mocks/LaunchToken.sol";
+import {SidequestConstants} from "../../src/sidequest/interfaces/SidequestConstants.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {IStakeVault} from "../../src/sidequest/interfaces/IStakeVault.sol";
 
@@ -17,16 +18,13 @@ abstract contract StakeVaultFixture is Test {
     address holding2 = makeAddr("holding2");
     address alice = makeAddr("alice");
     address bob = makeAddr("bob");
-    Factory token;
+    LaunchToken token;
     StakeVault vault;
     uint256 t0;
 
     function setUp() public virtual {
         t0 = vm.getBlockTimestamp();
-        address[] memory to = new address[](1);
-        uint256[] memory amounts = new uint256[](1);
-        (to[0], amounts[0]) = (address(this), SUPPLY);
-        token = new Factory("Factory", "SIDE", to, amounts);
+        token = new LaunchToken(address(this));
         vault = new StakeVault(token, SidequestClocks.production());
         vault.bootstrapHolding(holding);
         vault.transferOwnership(safe);
@@ -292,7 +290,8 @@ contract StakeVaultTest is StakeVaultFixture {
         vm.expectEmit(address(vault));
         emit IStakeVault.Slashed(holding, alice, 25e18);
         assertEq(vault.slash(alice, 25e18), 25e18);
-        assertEq(token.totalSupply(), supply - 25e18, "burned, not moved");
+        assertEq(token.balanceOf(SidequestConstants.SLASH_SINK), 25e18, "sent to the sink, out of circulation");
+        assertEq(token.totalSupply(), supply, "SIDE has no burn");
         assertEq(vault.stakeOf(alice), 75e18);
         assertEq(vault.reservedOf(alice), 35e18);
         _assertConserved();
@@ -491,11 +490,11 @@ contract StakeVaultTest is StakeVaultFixture {
         }
         _assertConserved();
         uint256 amount = bound(uint256(x), 0, reserved + 1);
-        uint256 supply = token.totalSupply();
+        uint256 sunk = token.balanceOf(SidequestConstants.SLASH_SINK);
         vm.prank(holding);
         uint256 moved = slashIt ? vault.slash(alice, amount) : vault.release(alice, amount);
         assertEq(moved, amount < reserved ? amount : reserved);
-        if (slashIt) assertEq(token.totalSupply(), supply - moved);
+        assertEq(token.balanceOf(SidequestConstants.SLASH_SINK), sunk + (slashIt ? moved : 0));
         assertEq(vault.stakeOf(alice), (staked - unstake) * (staked - (slashIt ? moved : 0)) / staked);
         assertEq(vault.reservedOf(alice), reserved - moved);
         _assertConserved();

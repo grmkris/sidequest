@@ -31,6 +31,10 @@ library SidequestConstants {
     ///      triggered months later without fresh notice.
     uint48 internal constant PROPOSAL_GRACE = 7 days;
 
+    /// @notice Where slashed SIDE goes. SIDE has no `burn`, so a slash moves the bond to this address, which nobody
+    ///         controls; it leaves circulation exactly as a burn would.
+    address internal constant SLASH_SINK = 0x000000000000000000000000000000000000dEaD;
+
     /// @notice SIDE's fixed supply: 1e9 tokens with 18 decimals, minted once.
     uint256 internal constant SIDE_SUPPLY = 1_000_000_000e18;
     /// @notice Half the supply is mined: 500M SIDE.

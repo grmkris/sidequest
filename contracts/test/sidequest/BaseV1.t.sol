@@ -10,7 +10,8 @@ import {ERC8183} from "../../src/vendor/erc8183/ERC8183.sol";
 import {ERC8183WithAuthorization} from "../../src/vendor/erc8183/ERC8183WithAuthorization.sol";
 import {IERC8004Identity, IERC8004Reputation} from "../../src/vendor/erc8004/IERC8004.sol";
 import {MockPaymentToken} from "../../src/MockPaymentToken.sol";
-import {Factory} from "../../src/sidequest/Factory.sol";
+import {LaunchToken} from "../mocks/LaunchToken.sol";
+import {SidequestConstants} from "../../src/sidequest/interfaces/SidequestConstants.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {FeeSchedule} from "../../src/sidequest/FeeSchedule.sol";
 import {SidequestHolding} from "../../src/sidequest/SidequestHolding.sol";
@@ -57,7 +58,7 @@ abstract contract BaseV1 is Test {
     address public attester;
     uint256 public attesterPk;
 
-    Factory public factory;
+    LaunchToken public factory;
     MockPaymentToken public pay;
     ERC8183WithAuthorization public core;
     StakeVault public vault;
@@ -78,6 +79,12 @@ abstract contract BaseV1 is Test {
         s.treasury = treasury_;
     }
 
+    /// @dev SIDE outside the slash sink: SIDE has no `burn`, so a slash moves it to the sink and this drops instead of
+    ///      the total supply.
+    function circulating() internal view returns (uint256) {
+        return factory.totalSupply() - factory.balanceOf(SidequestConstants.SLASH_SINK);
+    }
+
     function clocks() internal pure virtual returns (SidequestClocks.Config memory) {
         return SidequestClocks.production();
     }
@@ -89,10 +96,7 @@ abstract contract BaseV1 is Test {
         (attester, attesterPk) = makeAddrAndKey("attester");
 
         vm.startPrank(deployer);
-        address[] memory to = new address[](1);
-        uint256[] memory amounts = new uint256[](1);
-        (to[0], amounts[0]) = (deployer, 1_000_000_000e18);
-        factory = new Factory("Factory", "SIDE", to, amounts);
+        factory = new LaunchToken(deployer);
         pay = new MockPaymentToken("Mock USD (testnet)", "mUSD");
         ERC8183WithAuthorization impl = new ERC8183WithAuthorization();
         bytes memory init = abi.encodeCall(ERC8183WithAuthorization.initialize, (deployer, deployer));

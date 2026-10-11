@@ -2,14 +2,15 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {Factory} from "../../src/sidequest/Factory.sol";
+import {LaunchToken} from "../mocks/LaunchToken.sol";
+import {SidequestConstants} from "../../src/sidequest/interfaces/SidequestConstants.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {IStakeVault} from "../../src/sidequest/interfaces/IStakeVault.sol";
 import {StakeVaultFixture} from "./StakeVault.t.sol";
 
 /// @dev Three owners, two backed accounts, and a Holding driving the pool's bond operations.
 contract DelegatedVaultHandler is Test {
-    Factory public immutable token;
+    LaunchToken public immutable token;
     StakeVault public immutable vault;
     address public immutable holding;
     address[3] public delegators;
@@ -19,7 +20,7 @@ contract DelegatedVaultHandler is Test {
     uint256 public burned;
 
     constructor(
-        Factory token_,
+        LaunchToken token_,
         StakeVault vault_,
         address holding_,
         address[3] memory owners,
@@ -190,7 +191,8 @@ contract StakeVaultDelegationInvariantsTest is StakeVaultFixture {
 
     function invariant_depositsOnlyReturnExistingAssets() public view {
         assertEq(handler.deposited(), handler.withdrawn() + handler.burned() + vault.totalAssets());
-        assertEq(token.totalSupply() + handler.burned(), SUPPLY);
+        assertEq(token.balanceOf(SidequestConstants.SLASH_SINK), handler.burned(), "slashed SIDE sits in the sink");
+        assertEq(token.totalSupply(), SUPPLY, "SIDE has no burn");
         uint256 ownersBalance;
         for (uint256 i; i < 3; ++i) {
             ownersBalance += token.balanceOf(delegators[i]);

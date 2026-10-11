@@ -5,14 +5,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
 /// @title IFactory
-/// @notice SIDE v2 (ADR-0011): a plain ERC-20 with 18 decimals, EIP-2612 `permit` and `burn`. The whole supply of
-///         1e9 SIDE is minted once in the constructor to the genesis allocation; there is no owner, no mint, no
-///         pause, no blocklist and no upgrade, so nobody can freeze stake or bonds. The staking vault burns slashed
-///         bonds with `burn`.
-interface IFactory is IERC20Metadata, IERC20Permit {
-    /// @notice Destroys `amount` of the caller's tokens, reducing the total supply.
-    function burn(uint256 amount) external;
-
-    /// @notice Destroys `amount` of `account`'s tokens against the caller's allowance.
-    function burnFrom(address account, uint256 amount) external;
-}
+/// @notice SIDE as the protocol uses it: a plain ERC-20 with 18 decimals and EIP-2612 `permit`, created outside the
+///         protocol (on mainnet, by the nad.fun launcher). The protocol needs nothing else from it: no `burn`, no
+///         owner, no hooks. The staking vault sends slashed bonds to `SidequestConstants.SLASH_SINK` instead of burning.
+interface IFactory is IERC20Metadata, IERC20Permit {}

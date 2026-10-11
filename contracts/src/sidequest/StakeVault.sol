@@ -9,10 +9,12 @@ import {IStakeVault} from "./interfaces/IStakeVault.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SidequestClocks} from "./SidequestClocks.sol";
+import {SidequestConstants} from "./interfaces/SidequestConstants.sol";
 
 /// @title StakeVault
 /// @notice Delegated SIDE backing and every Sidequest bond (ADR-0014; the full contract is in `IStakeVault`). A bond is a
-///         reservation of stake: no token moves when a bond is posted, a slash burns the reserved SIDE, and a Holding
+///         reservation of stake: no token moves when a bond is posted, a slash sends the reserved SIDE to
+///         `SidequestConstants.SLASH_SINK` (SIDE has no `burn`), and a Holding
 ///         can only ever release, slash or forfeit what it reserved itself. Forfeiture transfers SIDE to a recipient.
 ///         Holdings are authorized behind an immutable timelock
 ///         longer than the immutable unstake cooldown (production: 15 days > 14 days), and revoked instantly; a revoked Holding still settles its live jobs.
@@ -143,7 +145,7 @@ contract StakeVault is IStakeVault, Ownable2Step, ReentrancyGuardTransient {
         Pool storage pool = _pools[account];
         pool.assets -= uint128(burned);
         totalAssets -= burned;
-        factory.burn(burned);
+        factory.safeTransfer(SidequestConstants.SLASH_SINK, burned);
         emit Slashed(msg.sender, account, burned);
         if (pool.assets == 0) {
             pool.shares = 0;

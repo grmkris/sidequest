@@ -6,7 +6,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC8183} from "../../src/vendor/erc8183/ERC8183.sol";
 import {ERC8183WithAuthorization} from "../../src/vendor/erc8183/ERC8183WithAuthorization.sol";
 import {MockPaymentToken} from "../../src/MockPaymentToken.sol";
-import {Factory} from "../../src/sidequest/Factory.sol";
+import {LaunchToken} from "../mocks/LaunchToken.sol";
+import {SidequestConstants} from "../../src/sidequest/interfaces/SidequestConstants.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {SidequestHolding} from "../../src/sidequest/SidequestHolding.sol";
 import {SidequestEvaluator} from "../../src/sidequest/SidequestEvaluator.sol";
@@ -351,7 +352,7 @@ contract SidequestInvariantsTest is Test {
 
     function invariant_vaultBooks() public view {
         StakeVault vault = env.vault();
-        Factory factory = env.factory();
+        LaunchToken factory = env.factory();
         assertEq(factory.balanceOf(address(vault)), vault.totalAssets(), "vault balance");
         assertLe(vault.totalReserved(), vault.totalAssets(), "totalReserved <= totalStaked");
         assertLe(vault.reservedOf(env.creator()), vault.poolOf(env.creator()).assets, "creator reserved <= staked");
@@ -372,7 +373,8 @@ contract SidequestInvariantsTest is Test {
             if (l.workerBondBurned) burned += l.workerBond;
         }
         assertEq(vault.totalReserved(), open, "reservations equal open bonds");
-        assertEq(factory.totalSupply() + burned, SUPPLY, "SIDE leaves only by slashing");
+        assertEq(factory.balanceOf(SidequestConstants.SLASH_SINK), burned, "SIDE leaves only by slashing");
+        assertEq(factory.totalSupply(), SUPPLY, "SIDE has no burn");
     }
 
     /// @dev A bond burns only on a finding the evaluator recorded.

@@ -109,7 +109,7 @@ contract BondPolicyTest is BaseV1 {
         assertEq(factory.balanceOf(treasury), taken);
         assertEq(vault.stakeOf(creator), CREATOR_STAKE - taken);
         assertEq(vault.reservedOf(creator), 0);
-        assertEq(factory.totalSupply(), 1_000_000_000e18);
+        assertEq(circulating(), 1_000_000_000e18);
         assertFalse(listing(job).creatorBondBurned);
         vm.expectRevert(ISidequestHolding.NothingToSettle.selector);
         holding.settle(job);
@@ -315,6 +315,6 @@ contract BondPolicyTest is BaseV1 {
         assertEq(factory.balanceOf(treasury), taken);
         assertEq(vault.totalAssets(), CREATOR_STAKE + WORKER_STAKE - taken);
         assertEq(vault.totalReserved(), 0);
-        assertEq(factory.totalSupply(), 1_000_000_000e18);
+        assertEq(circulating(), 1_000_000_000e18);
     }
 }

@@ -380,7 +380,7 @@ contract V1LifecycleTest is BaseV1 {
         evaluator.dispute(jobId);
         uint256 payTotal = pay.balanceOf(creator) + pay.balanceOf(worker) + pay.balanceOf(contributor)
             + pay.balanceOf(treasury) + pay.balanceOf(address(holding)) + pay.balanceOf(address(core));
-        uint256 supply = factory.totalSupply();
+        uint256 supply = circulating();
         rule(jobId, forWorker, slashLoser);
         holding.settle(jobId);
         if (!forWorker && b > 0) holding.claimTopUpRefund(jobId, contributor);
@@ -392,7 +392,7 @@ contract V1LifecycleTest is BaseV1 {
         assertEq(pay.balanceOf(address(holding)), 0);
         assertEq(pay.balanceOf(address(core)), 0);
         uint256 burned = slashLoser ? (forWorker ? CREATOR_BOND : WORKER_BOND) : 0;
-        assertEq(factory.totalSupply(), supply - burned, "SIDE leaves only by the slash");
+        assertEq(circulating(), supply - burned, "SIDE leaves only by the slash");
         assertEq(vault.totalReserved(), 0);
     }
 }
