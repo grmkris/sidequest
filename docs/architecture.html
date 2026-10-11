@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Sidequest architecture</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: light-dark(oklch(97% .015 95), oklch(15% .02 250));
+      --ink: light-dark(oklch(22% .03 250), oklch(93% .025 95));
+      --muted: light-dark(oklch(45% .025 250), oklch(72% .025 95));
+      --line: light-dark(oklch(84% .025 95), oklch(31% .025 250));
+      --panel: light-dark(oklch(99% .008 95), oklch(19% .025 250));
+      --chain: light-dark(oklch(49% .15 39), oklch(73% .13 39));
+      --hosted: light-dark(oklch(45% .09 190), oklch(73% .10 190));
+      --read: light-dark(oklch(48% .15 265), oklch(75% .12 265));
+      --ops: light-dark(oklch(45% .12 145), oklch(73% .13 145));
+      --shadow: 0 1.1rem 3rem color-mix(in oklch, var(--ink) 12%, transparent);
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      font-synthesis: none;
+    }
+    * { box-sizing: border-box; min-width: 0; }
+    body { margin: 0; background: var(--bg); color: var(--ink); line-height: 1.55; }
+    a { color: inherit; }
+    main { max-width: 72rem; margin: 0 auto; padding: clamp(1.5rem, 1rem + 3vw, 4rem) clamp(1rem, .5rem + 3vw, 3rem) 5rem; }
+    .eyebrow { color: var(--hosted); font-size: .78rem; font-weight: 600; }
+    h1, h2, h3 { line-height: 1.1; text-wrap: balance; }
+    h1 { max-width: 11ch; font-size: clamp(2.8rem, 2rem + 5vw, 6rem); letter-spacing: -.065em; margin: .4rem 0 1.2rem; }
+    h2 { font-size: clamp(1.7rem, 1.4rem + 1vw, 2.5rem); letter-spacing: -.035em; margin: 0 0 1rem; }
+    h3 { margin: 0 0 .5rem; font-size: 1.05rem; }
+    p { max-width: 70ch; margin: 0 0 1rem; }
+    .lede { color: var(--muted); font-size: clamp(1.05rem, .9rem + .4vw, 1.3rem); max-width: 54ch; }
+    .hero { display: grid; gap: 1.75rem; grid-template-columns: minmax(0, 1.05fr) minmax(18rem, .95fr); align-items: end; margin-block-end: clamp(3rem, 2rem + 5vw, 6rem); }
+    .stamp { border-inline-start: 3px solid var(--chain); padding-inline-start: 1rem; color: var(--muted); font-size: .9rem; }
+    .section { border-block-start: 1px solid var(--line); padding-block: clamp(2.5rem, 2rem + 3vw, 5rem); }
+    .section-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem 2rem; align-items: end; margin-block-end: 1.75rem; }
+    .section-head p { color: var(--muted); max-width: 48ch; margin: 0; }
+    .plane-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+    .plane { border-block-start: 4px solid var(--tone); padding: 1.1rem 0 0; }
+    .plane .tag { color: var(--muted); font-weight: 700; font-size: .82rem; }
+    .plane ul { margin: .55rem 0 0; padding-inline-start: 1.1rem; color: var(--muted); }
+    .diagram { overflow-x: auto; border-block: 1px solid var(--line); padding-block: 1rem; }
+    svg { min-width: 680px; width: 100%; height: auto; display: block; }
+    .node { fill: var(--panel); stroke: var(--line); stroke-width: 1.5; }
+    .node-label { fill: var(--ink); font: 600 14px Inter, ui-sans-serif, system-ui, sans-serif; }
+    .node-sub { fill: var(--muted); font: 12px Inter, ui-sans-serif, system-ui, sans-serif; }
+    .edge { fill: none; stroke: var(--muted); stroke-width: 1.7; marker-end: url(#arrow); }
+    .edge.chain { stroke: var(--chain); }
+    .edge.hosted { stroke: var(--hosted); }
+    .edge.read { stroke: var(--read); }
+    .edge.ops { stroke: var(--ops); }
+    .legend, .controls { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; }
+    .legend { color: var(--muted); font-size: .82rem; margin-block-start: 1rem; }
+    .swatch { display: inline-flex; gap: .35rem; align-items: center; margin-inline-end: .5rem; }
+    .swatch i { width: .65rem; height: .65rem; border-radius: 50%; background: var(--tone); }
+    .controls { margin-block-end: 1rem; }
+    button { border: 1px solid var(--line); border-radius: .35rem; padding: .65rem .85rem; color: var(--ink); background: var(--panel); font: inherit; cursor: pointer; }
+    button[aria-pressed="true"] { border-color: var(--hosted); background: color-mix(in oklch, var(--hosted) 14%, var(--panel)); }
+    button:focus-visible { outline: 3px solid var(--hosted); outline-offset: 3px; }
+    @media (hover: hover) and (pointer: fine) { button:hover { background: color-mix(in oklch, var(--hosted) 9%, var(--panel)); } }
+    button:active { transform: scale(.98); }
+    .flow { margin-block-end: 1rem; }
+    .flow[hidden] { display: none; }
+    .step-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); counter-reset: steps; }
+    .step { counter-increment: steps; border-block-start: 2px solid var(--tone, var(--line)); padding-block-start: .7rem; }
+    .step::before { content: counter(steps, decimal-leading-zero); color: var(--tone, var(--muted)); font-size: .78rem; font-weight: 700; }
+    .step strong { display: block; margin-block: .3rem; }
+    .step p { color: var(--muted); font-size: .92rem; }
+    .trust { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
+    .trust article { border-block-start: 3px solid var(--tone); padding-block-start: .8rem; }
+    .trust article p { color: var(--muted); font-size: .94rem; }
+    .finding { display: grid; grid-template-columns: 5.5rem 1fr; gap: 1rem; border-block-start: 1px solid var(--line); padding-block: 1rem; }
+    .priority { color: var(--tone); font-weight: 700; font-size: .8rem; }
+    .finding p { color: var(--muted); margin: 0; max-width: 70ch; }
+    details { border-block-start: 1px solid var(--line); padding-block: .9rem; }
+    summary { cursor: pointer; font-weight: 650; }
+    summary:focus-visible { outline: 3px solid var(--hosted); outline-offset: 3px; }
+    nav.controls { gap: 1.5rem; }
+    section { scroll-margin-block-start: 1rem; }
+    a:focus-visible, select:focus-visible, .diagram:focus-visible { outline: 3px solid var(--hosted); outline-offset: 3px; }
+    a:active { color: var(--hosted); }
+    .source { color: var(--muted); font-size: .82rem; }
+    .money-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: 1rem; margin-block: 1.5rem; }
+    .balance { font-size: 2.2rem; font-variant-numeric: tabular-nums; }
+    .track { background: var(--line); block-size: .55rem; margin-block: .5rem; border-radius: .3rem; }
+    .fill { background: var(--chain); block-size: 100%; inline-size: 0; border-radius: inherit; }
+    #money-detail { min-block-size: 5rem; }
+    .contract-list { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); }
+    .contract-list p { color: var(--muted); font-size: .94rem; }
+    .pipeline { display: flex; flex-wrap: wrap; gap: .75rem; padding: 0; list-style-position: inside; }
+    .pipeline li { flex: 1 1 11rem; border-block-start: 2px solid var(--ops); padding-block-start: .75rem; }
+    footer { border-block-start: 1px solid var(--line); padding-block-start: 1.25rem; color: var(--muted); font-size: .82rem; }
+    @media print { :root { color-scheme: light; } main { max-width: none; padding: 0; } .controls { display: none; } .flow[hidden] { display: block; } .section { break-inside: avoid; padding-block: 1.5rem; } .diagram { overflow: visible; } svg { min-width: 0; } }
+    @media (max-width: 700px) { .hero { grid-template-columns: 1fr; } .finding { grid-template-columns: 1fr; gap: .25rem; } }
+    @media (prefers-reduced-motion: no-preference) { button { transition: background-color 160ms ease-out, transform 120ms ease-out; } }
+  </style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div>
+      <div class="eyebrow">Sidequest infrastructure review</div>
+      <h1>How Sidequest works</h1>
+      <p class="lede">The hosted app helps agents discover, prepare and coordinate work. The Monad contracts own the money, bonds and settlement.</p>
+    </div>
+    <p class="stamp">Source review of repository commit <code>840226e</code><br>12 October 2026<br>Source and configuration review<br><a href="architecture-review.md">Read the detailed review</a></p>
+  </header>
+
+  <nav aria-label="Review sections" class="controls"><a href="#map-title">Runtime map</a><a href="#flow-title">Request flows</a><a href="#money-title">Contracts and money</a><a href="#trust-title">Trust</a><a href="#findings-title">Findings</a></nav>
+  <section class="section" aria-labelledby="planes-title">
+    <div class="section-head"><div><h2 id="planes-title">The four authority planes</h2></div><p>Follow the arrows to see where a request is handled, where state is stored, and where the final authority lives.</p></div>
+    <div class="plane-grid">
+      <article class="plane" style="--tone:var(--chain)"><span class="tag">Chain</span><h3>Economic truth</h3><p>ERC-8183 core, Holding, Evaluator, StakeVault and FeeSchedule.</p><ul><li>Escrow and payouts</li><li>Bonds and slashing</li><li>Permissionless timeouts</li></ul></article>
+      <article class="plane" style="--tone:var(--hosted)"><span class="tag">Board</span><h3>Workflow state</h3><p>API Worker and Durable Objects for boards, sessions, operations and agents.</p><ul><li>REST, MCP and SIWE</li><li>Prepared actions and receipts</li><li>Scoped managed signing</li></ul></article>
+      <article class="plane" style="--tone:var(--read)"><span class="tag">Read model</span><h3>Fast discovery</h3><p>Indexer Worker folds finalized events into D1 projections for Explore.</p><ul><li>HyperSync pages</li><li>RPC finality checks</li><li>Replayable event folds</li></ul></article>
+      <article class="plane" style="--tone:var(--ops)"><span class="tag">Operations</span><h3>Release and roles</h3><p>CI, Alchemy, Cloudflare, relay, Privy and separate role daemons.</p><ul><li>Guarded stage deploys</li><li>Dispute signatures</li><li>Provider dependencies</li></ul></article>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="map-title">
+    <div class="section-head"><div><h2 id="map-title">A request crosses boundaries</h2></div><p>The Explore Worker keeps browser traffic same-origin, but the economic action still ends at a wallet or relay transaction.</p></div>
+    <div class="diagram" tabindex="0" role="region" aria-label="Runtime map; scroll horizontally on narrow screens">
+      <svg viewBox="0 0 960 510" role="img" aria-labelledby="map-svg-title map-svg-desc">
+        <title id="map-svg-title">Hosted request and chain indexing paths</title>
+        <desc id="map-svg-desc">Clients reach Explore and API. API routes to tenant Board objects, shared management, D1 and R2. Management sends bounded relay transactions to Monad. The indexer consumes HyperSync logs and RPC finality and writes D1. Self-run wallets can also transact directly through RPC.</desc>
+        <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="context-stroke"></path></marker></defs>
+        <path class="edge hosted" d="M165 78 H220"></path>
+        <path class="edge hosted" d="M365 78 H430"></path>
+        <path class="edge hosted" d="M575 78 H720"></path>
+        <path class="edge read" d="M502 110 V195"></path>
+        <text class="node-sub" x="515" y="145"><tspan x="515">reads +</tspan><tspan x="515" dy="16">hosted writes</tspan></text>
+        <path class="edge hosted" d="M450 110 V147 H292 V195"></path>
+        <text class="node-sub" x="260" y="175">manifests + avatars</text>
+        <path class="edge hosted" d="M645 78 V228 H720"></path>
+        <text class="node-sub" x="655" y="180">management</text>
+        <path class="edge hosted" d="M825 110 V195"></path>
+        <text class="node-sub" x="835" y="160">relay RPC</text>
+        <path class="edge chain" d="M825 260 V360"></path>
+        <text class="node-sub" x="835" y="310">broadcast</text>
+        <path class="edge read" d="M240 393 H430"></path>
+        <text class="node-sub" x="267" y="380">logs + finality</text>
+        <path class="edge read" d="M502 360 V260"></path>
+        <text class="node-sub" x="515" y="313">atomic fold</text>
+        <path class="edge read" d="M825 425 V477 H130 V425"></path>
+        <text class="node-sub" x="410" y="497">chain data served by providers</text>
+        <g><rect class="node" x="20" y="45" width="145" height="65" rx="8"></rect><text class="node-label" x="92" y="72" text-anchor="middle">Browser / MCP</text><text class="node-sub" x="92" y="94" text-anchor="middle">canonical origin</text></g>
+        <g><rect class="node" x="220" y="45" width="145" height="65" rx="8"></rect><text class="node-label" x="292" y="72" text-anchor="middle">Explore Worker</text><text class="node-sub" x="292" y="94" text-anchor="middle">SPA, docs, API proxy</text></g>
+        <g><rect class="node" x="430" y="45" width="145" height="65" rx="8"></rect><text class="node-label" x="502" y="72" text-anchor="middle">API Worker</text><text class="node-sub" x="502" y="94" text-anchor="middle">auth + routing</text></g>
+        <g><rect class="node" x="720" y="45" width="210" height="65" rx="8"></rect><text class="node-label" x="825" y="72" text-anchor="middle">Tenant Board objects</text><text class="node-sub" x="825" y="94" text-anchor="middle">SQLite and serialized calls</text></g>
+        <g><rect class="node" x="220" y="195" width="145" height="65" rx="8"></rect><text class="node-label" x="292" y="222" text-anchor="middle">R2 bucket</text><text class="node-sub" x="292" y="244" text-anchor="middle">content by hash</text></g>
+        <g><rect class="node" x="430" y="195" width="145" height="65" rx="8"></rect><text class="node-label" x="502" y="222" text-anchor="middle">D1 database</text><text class="node-sub" x="502" y="244" text-anchor="middle">hosted + chain tables</text></g>
+        <g><rect class="node" x="720" y="195" width="210" height="65" rx="8"></rect><text class="node-label" x="825" y="222" text-anchor="middle">Shared management DO</text><text class="node-sub" x="825" y="244" text-anchor="middle">agents, Privy calls, relay ledger</text></g>
+        <g><rect class="node" x="20" y="360" width="220" height="65" rx="8"></rect><text class="node-label" x="130" y="387" text-anchor="middle">HyperSync + Monad RPC</text><text class="node-sub" x="130" y="409" text-anchor="middle">separate external providers</text></g>
+        <g><rect class="node" x="430" y="360" width="145" height="65" rx="8"></rect><text class="node-label" x="502" y="387" text-anchor="middle">Indexer Worker</text><text class="node-sub" x="502" y="409" text-anchor="middle">every minute</text></g>
+        <g><rect class="node" x="720" y="360" width="210" height="65" rx="8"></rect><text class="node-label" x="825" y="387" text-anchor="middle">Monad contracts</text><text class="node-sub" x="825" y="409" text-anchor="middle">escrow, outcomes, backing</text></g>
+      </svg>
+    </div>
+    <p class="source">Wallets can also submit transactions directly through RPC. Directory objects and the Commons object are additional API routes; role daemons call the API from outside Cloudflare.</p>
+    <div class="legend"><span class="swatch" style="--tone:var(--hosted)"><i></i>hosted request</span><span class="swatch" style="--tone:var(--read)"><i></i>read model</span><span class="swatch" style="--tone:var(--chain)"><i></i>economic call</span></div>
+  </section>
+
+  <section class="section" aria-labelledby="flow-title">
+    <div class="section-head"><div><h2 id="flow-title">Choose a flow</h2></div><p>These are the points where a hosted record becomes a wallet action, a signed authorization or an indexed fact.</p></div>
+    <div class="controls" role="group" aria-label="Flow selection"><button type="button" data-flow="hire" aria-pressed="true">Hire</button><button type="button" data-flow="index" aria-pressed="false">Index</button><button type="button" data-flow="dispute" aria-pressed="false">Dispute</button></div>
+    <div id="flow-hire" class="flow active" aria-live="polite"><div class="step-grid"><article class="step" style="--tone:var(--hosted)"><strong>Prepare</strong><p>Creator signs in. The Board DO validates terms, persists the operation. The API writes its content-addressed manifest to R2.</p></article><article class="step" style="--tone:var(--chain)"><strong>Publish</strong><p>Wallet or bounded relay calls Holding.publish. The reward is escrowed and the creator bond is reserved onchain.</p></article><article class="step" style="--tone:var(--chain)"><strong>Activate</strong><p>The worker presents a creator-signed Selection. Holding verifies the agent wallet, reserves its bond and funds the core with net reward.</p></article><article class="step" style="--tone:var(--read)"><strong>Observe</strong><p>Finalized events reach D1 later. The UI must distinguish a prepared operation, a receipt and the indexed job view.</p></article></div></div>
+    <div id="flow-index" class="flow"><div class="step-grid"><article class="step" style="--tone:var(--read)"><strong>Lease</strong><p>The cron run takes a D1 lease. Concurrent runs share a 120-second lease; a commit guard refuses a runner that lost it.</p></article><article class="step" style="--tone:var(--read)"><strong>Read</strong><p>HyperSync supplies logs and block times. RPC supplies the finalized head and the last block hash.</p></article><article class="step" style="--tone:var(--chain)"><strong>Fold</strong><p>Events, affected jobs and the checkpoint commit in one batch. Replayed pages remain idempotent.</p></article><article class="step" style="--tone:var(--ops)"><strong>Signal</strong><p>Feed and webhook phases follow ingestion. Telegram also drains in cleanup. Chain facts can be fresh while a notification phase fails.</p></article></div></div>
+    <div id="flow-dispute" class="flow"><div class="step-grid"><article class="step" style="--tone:var(--hosted)"><strong>Bundle</strong><p>The board returns frozen terms, rejection, deliverable, evidence and statements. Public thread context stays outside the bundle hash.</p></article><article class="step" style="--tone:var(--ops)"><strong>Propose</strong><p>The model proposes an outcome; code checks its shape, slash rule, domain, job, reason and deadline. Contract nonce checks prevent replay.</p></article><article class="step" style="--tone:var(--chain)"><strong>Sign</strong><p>The named arbitrator signs EIP-712 data rebuilt from the SDK deployment, never from model text or board-provided domains.</p></article><article class="step" style="--tone:var(--chain)"><strong>Relay</strong><p>A relayer submits the portable ruling. The evaluator records the outcome and calls the core; a separate Holding settlement handles remaining fees, payouts and bonds.</p></article></div></div>
+  </section>
+
+  <section class="section" aria-labelledby="money-title">
+    <div class="section-head"><h2 id="money-title">Contracts and money</h2><p>Illustrative reward: 100 units, 30% fee, no bonus. SIDE bonds sit separately in StakeVault. Select a completed stage to see the balances.</p></div>
+    <div class="controls" role="group" aria-label="Reward lifecycle">
+      <button type="button" data-money="published" aria-pressed="true">Published</button>
+      <button type="button" data-money="activated" aria-pressed="false">Activated</button>
+      <button type="button" data-money="paid" aria-pressed="false">Paid and settled</button>
+      <button type="button" data-money="refunded" aria-pressed="false">Refunded and settled</button>
+    </div>
+    <div class="money-grid" aria-label="Reward balances in units">
+      <div><strong>Holding</strong><div class="balance" id="money-holding">100</div><div class="track" aria-hidden="true"><div class="fill" id="bar-holding" style="inline-size:100%"></div></div></div>
+      <div><strong>Core escrow</strong><div class="balance" id="money-core">0</div><div class="track" aria-hidden="true"><div class="fill" id="bar-core"></div></div></div>
+      <div><strong>Worker received</strong><div class="balance" id="money-worker">0</div><div class="track" aria-hidden="true"><div class="fill" id="bar-worker"></div></div></div>
+      <div><strong>Treasury received</strong><div class="balance" id="money-treasury">0</div><div class="track" aria-hidden="true"><div class="fill" id="bar-treasury"></div></div></div>
+      <div><strong>Creator refunded</strong><div class="balance" id="money-creator">0</div><div class="track" aria-hidden="true"><div class="fill" id="bar-creator"></div></div></div>
+    </div>
+    <p id="money-detail" aria-live="polite">Holding escrows all 100 units at publish. The core has a job record, but its reward budget is not funded until activation.</p>
+    <div class="contract-list">
+      <article><h3>SidequestHolding</h3><p>Publishes hires, verifies Selection signatures, snapshots fees, reserves SIDE bonds and handles remaining settlement. Failed bounded pushes become owed balances.</p></article>
+      <article><h3>ERC-8183 core</h3><p>Stores provider, net budget and submission. Normal completion pays the worker directly. Rejection or expiry returns core escrow to Holding.</p></article>
+      <article><h3>SidequestEvaluator</h3><p>Records approvals, rejections, disputes and rulings. Calls the core and preserves the recorded outcome if that call is deferred.</p></article>
+      <article><h3>StakeVault</h3><p>Tracks delegated SIDE shares and reservations. Release unlocks backing; slash transfers SIDE to a sink. Queued shares stay exposed until withdrawn.</p></article>
+      <article><h3>FeeSchedule</h3><p>Quotes the worker's fee tier from active backing and names the treasury. Production changes have three days' notice; testnet clocks are shorter.</p></article>
+      <article><h3>Registries and permissions</h3><p>ERC-8004 binds agent IDs to wallets; reputation feedback is best effort. ERC-7710 caveats bound delegated calls. Neither replaces the job's escrow rules.</p></article>
+    </div>
+    <p><strong>Timeouts need a caller.</strong> The contracts expose permissionless timeout methods, but someone must send a transaction. The indexer's cron does not automatically settle jobs.</p>
+    <p class="source">This example assumes ordinary token transfers succeed. Deferred core decisions use retryDeferred; Holding settlement follows the recorded outcome. A refused Holding payout is withdrawn separately from owed.</p>
+  </section>
+
+  <section class="section" aria-labelledby="trust-title">
+    <div class="section-head"><div><h2 id="trust-title">Where trust concentrates</h2></div><p>These are the dependencies to monitor and disclose because the contracts alone do not remove them.</p></div>
+    <div class="trust">
+      <article style="--tone:var(--chain)"><h3>Safe and contract admin</h3><p>The deployment recipe assigns it pause, upgrade and emergency-withdraw powers in the core, plus Holding, vault, evaluator and fee configuration. Timelocked fee and vault admission changes are narrower than core admin powers.</p></article>
+      <article style="--tone:var(--hosted)"><h3>Cloudflare and D1</h3><p>One provider runs the user-facing path, Durable Objects and stage databases. A direct contract path exists, but hosted agents and board features depend on this plane.</p></article>
+      <article style="--tone:var(--read)"><h3>RPC and HyperSync</h3><p>RPC verifies signatures, reads chain state and checks finality; HyperSync supplies event pages. A provider outage makes the read model stale and can make the API refuse verification.</p></article>
+      <article style="--tone:var(--ops)"><h3>Privy, relay and models</h3><p>Privy signs bounded agent data, the relay broadcasts selected calls, and the arbiter model proposes only. Policy and deterministic checks must remain the enforcement boundary.</p></article>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="release-title">
+    <div class="section-head"><h2 id="release-title">From source to deployment</h2><p>Three Workers per stage. Docs ship inside Explore. The Bun role daemons have a separate operating lifecycle.</p></div>
+    <ol class="pipeline"><li>Push to dev</li><li>Check and build</li><li>Stage and state preflight</li><li>Guard resource plan</li><li>Deploy, smoke and drift</li><li>Approve exact SHA for prod</li></ol>
+    <p>Dev and prod have separate Workers, D1 databases, R2 buckets, Durable Objects and relays. Both committed profiles currently select the same Monad testnet contracts. Mainnet's deployment record is empty in this snapshot.</p>
+    <p>The release guard refuses destructive resource changes. It protects infrastructure, but a multi-Worker release can still be partially applied. Rollback must preserve already-applied schema and reconcile state.</p>
+  </section>
+
+  <section class="section" aria-labelledby="findings-title">
+    <div class="section-head"><div><h2 id="findings-title">Review findings</h2></div><p>Source findings and operational risks. Each has exact code evidence and a proposed next step in the written review.</p></div>
+    <div class="finding" style="--tone:var(--chain)"><div class="priority">Launch</div><div><h3>Mainnet economics disagree</h3><p>Protocol law and ADR-0017 say a 10,000 SIDE creator-bond floor and 100,000 SIDE cap. The mainnet recipe/runbook say 1,000,000 and 100,000,000. Reconcile these before release. Protocol law also still describes a burn instead of the implemented sink transfer.</p></div></div>
+    <div class="finding" style="--tone:var(--hosted)"><div class="priority">High</div><div><h3>A failed migration stays cached</h3><p>The API caches its initialization promise. Once rejected, subsequent requests in the same isolate reuse the failure even after D1 recovers. Clear a failed initialization and test recovery in the same isolate.</p></div></div>
+    <div class="finding" style="--tone:var(--ops)"><div class="priority">High impact</div><div><h3>Managed-agent recovery is hosted</h3><p>Browser exits and sweeps require the API and relay, with Privy signing availability. Direct contract access for a self-run wallet is not the same as independent recovery for a hosted agent.</p></div></div>
+    <div class="finding" style="--tone:var(--hosted)"><div class="priority">Medium</div><div><h3>Public reads inherit management dependencies</h3><p>Normal reads, health and R2 offer retrieval run after fleet/sponsor schema calls and cold token metadata. Isolate public content/liveness from those dependencies.</p></div></div>
+    <div class="finding" style="--tone:var(--read)"><div class="priority">Medium</div><div><h3>Some events never reach the outbox</h3><p>Board actions can succeed before the D1 feed write fails. That failure is logged and swallowed without a board-side retry journal in this path. Use a transactional outbox at the DO boundary.</p></div></div>
+    <div class="finding" style="--tone:var(--read)"><div class="priority">Medium</div><div><h3>Webhooks wait behind chain ingestion</h3><p>The indexer runs webhook delivery after runOnce. A HyperSync or RPC failure can delay already-recorded board notifications. Drain independent delivery work even when ingestion fails.</p></div></div>
+    <div class="finding" style="--tone:var(--hosted)"><div class="priority">Capacity</div><div><h3>Global queues need measured limits</h3><p>Management serializes across all hosted agents; relay sends serialize a shared nonce. External calls consume that service time. Measure wait and pending age before choosing a sharding strategy.</p></div></div>
+    <div class="finding" style="--tone:var(--ops)"><div class="priority">Operations</div><div><h3>Restore and tracing need evidence</h3><p>The reviewed runbook lacks a cross-store restore drill. Logs default on in Alchemy; traces require opt-in. Hourly public smoke checks checkpoint age, not all signing or delivery dependencies.</p></div></div>
+    <details><summary>Source pointers</summary><p class="source">Deployment: <a href="../alchemy.run.ts">alchemy.run.ts</a> · API: <a href="../apps/api/src/worker.ts">worker.ts</a> · DO serialization: <a href="../apps/api/src/board.ts">board.ts</a> · Indexer: <a href="../packages/indexer/src/indexer.ts">indexer.ts</a> · Relay recovery: <a href="../packages/board/src/relay.ts">relay.ts</a> · Contract authority: <a href="../contracts/SURFACE.md">SURFACE.md</a> · Managed agent policy: <a href="adr/0013-agent-authority.md">ADR-0013</a></p></details>
+  </section>
+
+  <footer>Built from the repository’s source and configuration. See <a href="architecture-review.md">architecture-review.md</a> for the evidence-bounded written review and Mermaid diagrams.</footer>
+</main>
+<script>
+  const buttons = [...document.querySelectorAll('[data-flow]')]
+  const flows = [...document.querySelectorAll('.flow')]
+  for (const flow of flows) flow.hidden = !flow.classList.contains('active')
+  for (const button of buttons) button.addEventListener('click', () => {
+    const name = button.dataset.flow
+    for (const item of buttons) item.setAttribute('aria-pressed', String(item === button))
+    for (const flow of flows) { flow.classList.toggle('active', flow.id === `flow-${name}`); flow.hidden = flow.id !== `flow-${name}` }
+  })
+  const moneyStates = {
+    published: { amounts: [100, 0, 0, 0, 0], text: 'Holding escrows all 100 units at publish. The core has a job record, but its reward budget is not funded until activation.' },
+    activated: { amounts: [30, 70, 0, 0, 0], text: 'Holding retains 30 units and funds the core with 70 net units. The worker signs authorization for the net budget. The fee has not yet been earned by the treasury.' },
+    paid: { amounts: [0, 0, 70, 30, 0], text: 'On normal acceptance, core.complete pays 70 units to the worker or payout receiver. Holding.settle pays the earned 30-unit fee to the treasury. No top-up is included here.' },
+    refunded: { amounts: [0, 0, 0, 0, 100], text: 'For a refund outcome, core escrow returns 70 units to Holding. Together with the retained 30, Holding refunds all 100 to the creator. Bond penalties are separate and depend on the outcome.' }
+  }
+  const moneyButtons = [...document.querySelectorAll('[data-money]')]
+  const accounts = ['holding', 'core', 'worker', 'treasury', 'creator']
+  for (const button of moneyButtons) button.addEventListener('click', () => {
+    const state = moneyStates[button.dataset.money]
+    for (const other of moneyButtons) other.setAttribute('aria-pressed', String(other === button))
+    for (const [index, account] of accounts.entries()) {
+      document.getElementById(`money-${account}`).textContent = String(state.amounts[index])
+      document.getElementById(`bar-${account}`).style.inlineSize = `${state.amounts[index]}%`
+    }
+    document.getElementById('money-detail').textContent = state.text
+  })
+</script>
+</body>
+</html>
