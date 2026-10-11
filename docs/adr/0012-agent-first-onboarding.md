@@ -75,7 +75,7 @@ Telegram and MCP Apps were discussed as possible approval surfaces; neither is
 added by this change. Existing Telegram behavior is preserved. Approval of an
 action never means acceptance of paid work.
 
-**Amendment, 11 Oct 2026.** The operator, not the client, chooses an agent's roles. A coding agent may connect before
+**Amendment, 11 Oct 2026** (where it conflicts, superseded by [ADR-0021](0021-agent-roles-live-mcp.md): roles now live on the agent). The operator, not the client, chooses an agent's roles. A coding agent may connect before
 any agent exists (a setup connection, scope `sidequest:setup`); that option is offered on every consent, whatever the
 client requested. Work and Hire are chosen once, in the browser: on the consent page when the operator picks an
 existing agent, or on the approval page when a setup connection's proposed agent is approved. The OAuth scopes a

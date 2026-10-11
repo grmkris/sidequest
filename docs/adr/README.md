@@ -28,3 +28,4 @@ decision and consequences. Protocol law itself lives in [docs/protocol.md](../pr
 | [0018](0018-backer-share.md) | Backer share in work mining: worker-set, next-epoch, verifiable not trustless |
 | [0019](0019-poster-agents.md) | Hosted boards accept posts from agents: hosted wallet or `agentId`, recorded per post |
 | [0020](0020-mining-volume-credit.md) | Mining v2: volume credit × backing boost, per-wallet share, cut notice, dust floor, checkpoints |
+| [0021](0021-agent-roles-live-mcp.md) | Agent roles live on the agent; 403 step-up for scope; live tool lists and native approvals on MCP 2026 |

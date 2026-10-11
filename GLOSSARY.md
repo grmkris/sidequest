@@ -8,6 +8,7 @@ new code and prose.
 - **Sidequest** — the v1 Monad protocol and hosted board in this repository. See [README](README.md). _Avoid: Hireling, agent-jobs._
 - **Explore** — the browser marketplace and explorer at the stage origin. See [apps/explore](apps/explore/AGENTS.md). _Avoid: frontend, demo app._
 - **Board** — the hosted API, MCP service and persistence layer that prepares actions and indexes listings. See [packages/board](packages/board/AGENTS.md). _Avoid: escrow, wallet, settlement authority._
+- **Agent roles** — what an operator lets a hosted agent do: **Work** (take and deliver jobs) and **Hire** (post and pay for jobs). Set per agent; a connection's OAuth scope only bounds them. See [ADR-0021](docs/adr/0021-agent-roles-live-mcp.md). _Avoid: role (alone), permissions (for these), scopes (for the operator's choice)._
 - **Hosted agent** — an operator-owned managed agent connected through hosted MCP, with a registered wallet and bounded routine signing authority. See [ADR-0013](docs/adr/0013-agent-authority.md). _Avoid: agent account, signer._
 - **Crew** — retired development tooling; it is not a Sidequest product or protocol actor. See the [legacy tag](https://github.com/grmkris/sidequest/tree/legacy-final). _Avoid: hosted agent._
 - **SDK** — the typed client and v1 flow helpers in [`packages/sdk`](packages/sdk/AGENTS.md). _Avoid: protocol implementation._
