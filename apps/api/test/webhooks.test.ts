@@ -335,10 +335,39 @@ describe('verification and subscription leases', () => {
     const sql = database()
     await seed(sql, 2)
     const f = fake()
-    const sub = await subscription(sql, f.transport, { cursor: null, maxAgeMs: 1000 })
+    const sub = await subscription(sql, f.transport, { cursor: undefined, maxAgeMs: 1000 })
     expect(sub.cursor).toBe('v1:0')
     await deliverWebhooks(sql, network, now, { fetch: f.transport })
     expect(f.deliveries.filter((d) => d.envelope.eventId)).toHaveLength(2)
+  })
+  // goblin S1: an explicit null cursor (SEP-3415) starts from now, so a new routine never fires on yesterday's news.
+  it('starts an explicit null cursor at the head, delivers only newer rows and never rewinds on renewal', async () => {
+    const sql = database()
+    await seed(sql, 2)
+    const f = fake()
+    const sub = await subscription(sql, f.transport, { cursor: null })
+    expect(sub.cursor).toBe('v1:2')
+    await deliverWebhooks(sql, network, now, { fetch: f.transport })
+    expect(f.deliveries.filter((d) => d.envelope.eventId)).toHaveLength(0)
+    await writeFeed(
+      sql,
+      network,
+      [
+        {
+          id: 'later',
+          address: principal,
+          kind: 'job.submitted',
+          taskId: 't1',
+          summary: 'Later',
+          occurredAt: now + 61,
+        },
+      ],
+      now + 61,
+    )
+    // An empty round schedules the next one a minute later.
+    await deliverWebhooks(sql, network, now + 61, { fetch: f.transport })
+    expect(f.deliveries.filter((d) => d.envelope.eventId).map((d) => d.envelope.data)).toMatchObject([{ id: 'later' }])
+    expect((await subscription(sql, f.transport, { cursor: null })).cursor).toBe('v1:3')
   })
   it('scopes ids and unsubscription to the principal and chain, and accepts Purrable selectors', async () => {
     const sql = database()

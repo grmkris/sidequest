@@ -141,7 +141,10 @@ export async function eventPage(
   return { ...page, events: page.events.map((event) => occurrence(name, event)) }
 }
 
-/** Starts before the first selected row, so subscribing never consumes its backlog. */
+/**
+ * Where a subscription or poll starts. An explicit `cursor: null` means "from now" (SEP-3415): nothing older is
+ * delivered. Without a cursor it starts before the first selected row, so subscribing never consumes its backlog.
+ */
 export async function eventStart(
   sql: AsyncSql,
   network: Network,
@@ -155,12 +158,42 @@ export async function eventStart(
     'SELECT max(seq) AS seq FROM feed_events WHERE chain_id = ?',
     telegramChainId(network),
   )
+  if (params.cursor === null) return { seq: last?.seq ?? 0, truncated: false }
   const page = await eventPage(sql, network, principal, params, now, 1)
   const after = eventCursor(params.cursor)
   if (after !== undefined) return { seq: after, truncated: page.gap }
   const first = page.events[0]
   if (first !== undefined) return { seq: eventCursor(first.cursor)! - 1, truncated: false }
   return { seq: last?.seq ?? 0, truncated: false }
+}
+
+/** One poll: an explicit null cursor answers no events and the head cursor (SEP-3415), else the next page. */
+async function pollEvents(
+  sql: AsyncSql,
+  network: Network,
+  principal: string,
+  params: Record<string, unknown>,
+  now: number,
+) {
+  if (params.cursor === null) {
+    eventArguments(params.name, params.arguments)
+    const head = await eventStart(sql, network, principal, params, now)
+    return { events: [], cursor: cursorOf(head.seq), truncated: false, hasMore: false, nextPollMs: 60_000 }
+  }
+  if (
+    params.maxEvents !== undefined &&
+    (typeof params.maxEvents !== 'number' || !Number.isSafeInteger(params.maxEvents) || params.maxEvents < 1)
+  )
+    throw new EventRpcError(-32602, 'maxEvents must be a positive integer')
+  const page = await eventPage(sql, network, principal, params, now, Math.min((params.maxEvents as number) ?? 50, 100))
+  const cursor = page.cursor ?? cursorOf((await eventStart(sql, network, principal, params, now)).seq)
+  return {
+    events: page.events,
+    cursor,
+    truncated: page.gap,
+    hasMore: page.hasMore,
+    nextPollMs: page.hasMore ? 0 : 60_000,
+  }
 }
 
 export class McpEvents {
@@ -177,29 +210,7 @@ export class McpEvents {
     const now = this.options.now?.() ?? Math.floor(Date.now() / 1000)
     const principal = grant.address.toLowerCase()
     if (method === 'events/list') return { events: descriptors }
-    if (method === 'events/poll') {
-      if (
-        params.maxEvents !== undefined &&
-        (typeof params.maxEvents !== 'number' || !Number.isSafeInteger(params.maxEvents) || params.maxEvents < 1)
-      )
-        throw new EventRpcError(-32602, 'maxEvents must be a positive integer')
-      const page = await eventPage(
-        this.sql,
-        this.network,
-        principal,
-        params,
-        now,
-        Math.min((params.maxEvents as number) ?? 50, 100),
-      )
-      const cursor = page.cursor ?? cursorOf((await eventStart(this.sql, this.network, principal, params, now)).seq)
-      return {
-        events: page.events,
-        cursor,
-        truncated: page.gap,
-        hasMore: page.hasMore,
-        nextPollMs: page.hasMore ? 0 : 60_000,
-      }
-    }
+    if (method === 'events/poll') return pollEvents(this.sql, this.network, principal, params, now)
     if (method === 'events/subscribe')
       return subscribeWebhook(this.sql, this.network, principal, params, now, this.options.fetch, grant.grantId)
     if (method === 'events/unsubscribe')

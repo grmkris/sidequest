@@ -197,6 +197,22 @@ describe('MCP feed streams', () => {
     const empty = await poll('sidequest.jobs', { arguments: { taskId: 'missing' }, maxAgeMs: 0 })
     expect(empty.cursor).toMatch(/^v1:\d+$/)
   })
+  // goblin S1: SEP-3415's explicit null cursor polls from now; an omitted cursor keeps the seven-day start.
+  it('polls an explicit null cursor from now: no events, the head cursor, then only newer rows', async () => {
+    const { sql, poll } = await setup()
+    const first = await poll('sidequest.inbox', { cursor: null })
+    expect(first).toMatchObject({ events: [], hasMore: false, truncated: false, cursor: 'v1:11' })
+    expect(occurrences(await poll('sidequest.inbox', {})).length).toBeGreaterThan(0)
+    await writeFeed(
+      sql,
+      'monad-testnet',
+      [{ id: 'later', address: wallet, kind: 'job.submitted', summary: 'later', occurredAt: now + 1 }],
+      now + 1,
+    )
+    expect(occurrences(await poll('sidequest.inbox', { cursor: first.cursor })).map((event) => event.data.id)).toEqual([
+      'later',
+    ])
+  })
   it('reports a retention gap and never crosses chains', async () => {
     const { sql, poll } = await setup()
     await sql.batch([stmt('UPDATE feed_events SET created_at = ? WHERE seq <= 2', now - FEED_RETENTION_SECONDS - 1)])
