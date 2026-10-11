@@ -6,6 +6,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import type { Address } from 'viem'
 import type { SidequestContracts } from '../../sidequest.ts'
+import { refreshAfterPosition } from '../../position-refresh.ts'
 import { stakeContext } from '../../stake-context.ts'
 import { friendlyError } from '../../txErrors.ts'
 import { type VaultIntent, clearOwnedIntentDurable, withVaultIntentLock } from '../../vault-lock.ts'
@@ -89,10 +90,9 @@ export function ConfirmPosition({
             if (!(await clearOwnedIntentDurable(localStorage, key, operation.id)))
               throw new Error('A newer position action is saved in another tab; keep it for reconciliation.')
             onCleared()
-            void queryClient.invalidateQueries({ queryKey: ['delegations'] })
-            void queryClient.invalidateQueries({ queryKey: ['backing'] })
-            void queryClient.invalidateQueries({ queryKey: ['indexed-backing'] })
             toast(DONE[operation.kind])
+            const head = await stakeContext(contracts).publicClient.getBlockNumber({ cacheTime: 0 })
+            void refreshAfterPosition(queryClient, head)
           }).catch((failure) => onError(friendlyError(failure)))
         }}
       />
