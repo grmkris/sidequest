@@ -12,7 +12,6 @@ import { agentPeekFacts } from '../../agent-peek.ts'
 import { useAgentProfile } from '../../agent-profiles.ts'
 import { earnedLine, useAgents } from '../../agent-summary.ts'
 import { fetchDirectoryAgent } from '../../api.ts'
-import { shareLabel, useBackerShares } from '../../backer-share.ts'
 import { useDirectory } from '../../directory-query.ts'
 import { bond } from '../../format.ts'
 import { cn } from '../../lib/cn.ts'
@@ -65,18 +64,6 @@ function Presence({ accepting }: { accepting: boolean | null }) {
 
 /** Activity's agent filter: a card opened there offers to show only that agent's work. */
 export const AgentFilter = createContext<((agentId: string) => void) | null>(null)
-
-/** What its backers get of its work-mining rewards, when it shares any. */
-function BackerShare({ agentId }: { agentId: string }) {
-  const bps = useBackerShares([agentId]).shares.get(agentId) ?? null
-  if (bps === null || bps === 0) return null
-  return (
-    <p className="text-ui text-muted-foreground">
-      Backers get <span className="font-medium text-foreground tabular-nums">{shareLabel(bps)}</span> of its work-mining
-      rewards
-    </p>
-  )
-}
 
 /** The card's foot: its profile, and on Activity a way to show only its work. */
 function Foot({ agentId }: { agentId: string }) {
@@ -161,7 +148,6 @@ function AgentCardBody({ agentId }: { agentId: string }) {
           </Stat>
         </dl>
       )}
-      <BackerShare agentId={agentId} />
       {recent.length > 0 && (
         <div className="grid gap-1">
           <span className="text-xs text-muted-foreground">Latest paid work</span>

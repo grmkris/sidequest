@@ -2,8 +2,7 @@
  * Where logs come from. `hyperSync` is the real source (Envio HyperSync, `POST /query`); tests pass their own pages.
  * The chain RPC answers the finalized head and block hashes (the divergence guard).
  */
-import { type Address, type Hex, keccak256, stringToHex } from 'viem'
-import { BACKER_SHARE_KEY } from '@sidequest/sdk'
+import type { Address, Hex } from 'viem'
 import type { RawLog } from './events.ts'
 
 export interface LogPage {
@@ -39,31 +38,16 @@ const FIELDS = [
 /** HyperSync answers a block's timestamp as a hex string ("0x6abb771c"); a number is accepted too. */
 const toSeconds = (v: string | number) => Number(BigInt(v))
 
-export function hyperSync(url: string, token: string, identity?: string): LogSource {
+export function hyperSync(url: string, token: string): LogSource {
   return {
     async logs({ fromBlock, toBlock, addresses }) {
-      const regular = addresses.filter((address) => address.toLowerCase() !== identity?.toLowerCase())
-      const selections = regular.length === 0 ? [] : [{ address: regular }]
-      const metadata =
-        identity !== undefined && addresses.some((address) => address.toLowerCase() === identity.toLowerCase())
-          ? [
-              {
-                address: [identity],
-                topics: [
-                  [keccak256(stringToHex('MetadataSet(uint256,string,string,bytes)'))],
-                  [],
-                  [keccak256(stringToHex(BACKER_SHARE_KEY))],
-                ],
-              },
-            ]
-          : []
       const res = await fetch(`${url.replace(/\/$/, '')}/query`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify({
           from_block: fromBlock,
           to_block: toBlock,
-          logs: [...selections, ...metadata],
+          logs: [{ address: addresses }],
           field_selection: { log: FIELDS, block: ['number', 'timestamp'] },
         }),
       })

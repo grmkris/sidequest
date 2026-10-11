@@ -20,7 +20,6 @@ import {
   type SavedProfile,
 } from '../../agent-profile-api.ts'
 import { chain, deployment } from '../../wallet.ts'
-import { shareLabel, useBackerShares } from '../../backer-share.ts'
 
 const LIMITS = { name: 80, tagline: 120, description: 600 } as const
 
@@ -151,91 +150,6 @@ function PublishIdentity({
   )
 }
 
-export function BackerShareHelp({ delay }: { delay: number }) {
-  const delayDays = delay % 86400 === 0 ? `${delay / 86400} days` : `${delay} seconds`
-  return (
-    <p className="text-sm text-muted-foreground">
-      Part of this agent&apos;s work-mining reward goes to the wallets backing it, staked into their own backing. A
-      raise applies from the next mining epoch; a cut reaches backers after the {delayDays} unstake delay.
-    </p>
-  )
-}
-
-/** The owner confirms this preference from their wallet, separately from hosted profile edits. */
-function BackerShareField({ agentId }: { agentId: string }) {
-  const auth = useAuth()
-  const queries = useQueryClient()
-  const read = useBackerShares([agentId])
-  const current = read.shares.get(agentId) ?? null
-  const [percent, setPercent] = useState<string | null>(null)
-  const [sending, setSending] = useState<{ id: string; bps: number } | null>(null)
-  const value = percent ?? (current === null ? '' : String(current / 100))
-  const bps = value === '' ? NaN : Number(value) * 100
-  const valid = Number.isInteger(bps) && bps >= 0 && bps <= 10000
-  return (
-    <div className="grid gap-2 rounded-xl bg-muted/50 p-4">
-      <Label htmlFor="backer-share">Backer share</Label>
-      <BackerShareHelp delay={sdk.configuredClocks(deployment).unstakeDelay} />
-      <div className="flex items-center gap-2">
-        <Input
-          id="backer-share"
-          type="number"
-          min={0}
-          max={100}
-          step={1}
-          value={value}
-          disabled={sending !== null || current === null}
-          onChange={(event) => setPercent(event.target.value)}
-          className="w-24"
-        />
-        <span className="text-sm text-muted-foreground">%</span>
-        <span className="text-xs text-muted-foreground">
-          {current === null
-            ? read.isPending
-              ? 'Reading share…'
-              : 'Share unavailable'
-            : `On chain: ${shareLabel(current)}`}
-        </span>
-      </div>
-      {sending === null ? (
-        <Button
-          size="sm"
-          className="justify-self-start"
-          disabled={!valid || current === null || bps === current || auth.address === undefined}
-          onClick={() => setSending({ id: `backer-share:${agentId}:${Date.now()}`, bps })}
-        >
-          Save backer share
-        </Button>
-      ) : (
-        <TxSteps
-          key={sending.id}
-          taskId={sending.id}
-          txs={[
-            {
-              ...sdk.prepareBackerShare(deployment.identity, agentId, sending.bps),
-              chainId: chain.id,
-              description: 'Set this agent’s backer share',
-            },
-          ]}
-          owner={auth.address}
-          reportToBoard={false}
-          allowSponsorship={false}
-          autoStart
-          onDone={() => {
-            setSending(null)
-            setPercent(null)
-            void read.refetch()
-            void queries.invalidateQueries({ queryKey: ['readContracts'] })
-            void queries.invalidateQueries({ queryKey: ['directory-agent', agentId] })
-            void queries.invalidateQueries({ queryKey: ['data-directory'] })
-            void queries.invalidateQueries({ queryKey: ['backer-share-schedule', agentId] })
-          }}
-        />
-      )}
-    </div>
-  )
-}
-
 /** The owner's editor: avatar, name, tagline and description, saved to the hosted profile. */
 export function ProfileEditor({
   agentId,
@@ -309,7 +223,6 @@ export function ProfileEditor({
           Cancel
         </Button>
       </div>
-      <BackerShareField agentId={agentId} />
       <PublishIdentity agentId={agentId} managedId={managedId} current={tokenUri} />
     </section>
   )

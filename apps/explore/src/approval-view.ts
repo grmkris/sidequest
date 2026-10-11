@@ -80,14 +80,6 @@ export function approvalLine(approval: AgentApproval, factory: string): Approval
           amount: { value: t.amount.toString(), token: t.token },
           detail: `to ${short(t.recipient)} · ${until}`,
         }
-      if (t.type === 'sidequest:backer-share')
-        return {
-          ...base,
-          adjusted,
-          title: 'Set its backer share',
-          amount: null,
-          detail: `agent #${t.agentId.toString()} · up to ${t.calls} changes · ${until}`,
-        }
       return {
         ...base,
         adjusted,

@@ -330,14 +330,13 @@ export async function runAgent(runtime: {
   }
 }
 
-function permissionUseInput(args: Record<string, unknown>): { transfer?: { amount?: unknown }; bps?: number } {
+function permissionUseInput(args: Record<string, unknown>): { transfer?: { amount?: unknown } } {
   const transfer = Schema.decodeUnknownSync(
     Schema.UndefinedOr(
       Schema.Struct({ amount: Schema.optional(Schema.Unknown), recipient: Schema.optional(Schema.Unknown) }),
     ),
   )(args.transfer)
-  const bps = Schema.decodeUnknownSync(Schema.UndefinedOr(Schema.Number))(args.bps)
-  return { ...(transfer === undefined ? {} : { transfer }), ...(bps === undefined ? {} : { bps }) }
+  return transfer === undefined ? {} : { transfer }
 }
 
 function permissionHash(value: unknown): Hex {

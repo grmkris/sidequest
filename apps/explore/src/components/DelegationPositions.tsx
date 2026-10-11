@@ -9,7 +9,6 @@ import type { Address } from 'viem'
 import type { BackedPosition } from '../delegation-query.ts'
 import { formatNumber } from '../format.ts'
 import { percent } from '../stake.ts'
-import { shareLabel, useBackerShares } from '../backer-share.ts'
 import { Countdown, useNow } from './Time.tsx'
 import { TokenAmount } from './token/TokenAmount.tsx'
 import { deployment } from '../wallet.ts'
@@ -28,7 +27,7 @@ export const walletAgentsKey = (account: string) => [
 ]
 
 export const DELEGATION_RISK =
-  'If the agent is slashed for bad work, everyone backing it loses the same share. Your SIDE stays at risk until you withdraw. Leaving starts the configured unstake period (3 days on the fresh testnet clocks; 14 days in production); open jobs secured against the backing remain slashable during that period. Mining rewards depend on the agent’s chosen backer share.'
+  'If the agent is slashed for bad work, everyone backing it loses the same share. Your SIDE stays at risk until you withdraw. Leaving starts the configured unstake period (3 days on the fresh testnet clocks; 14 days in production); open jobs secured against the backing remain slashable during that period.'
 
 type Status = 'lost' | 'leaving' | 'bonded' | 'ready' | 'active' | 'exited'
 
@@ -71,8 +70,6 @@ export function DelegationPositions({
   onWithdraw: (account: Address) => void
 }) {
   const now = useNow()
-  const ids = positions.flatMap(({ position }) => positionLabel(position.account, sources).agentId ?? [])
-  const shares = useBackerShares(ids)
   return (
     <Section title="My positions">
       {positions.length === 0 ? (
@@ -84,22 +81,18 @@ export function DelegationPositions({
         </Empty>
       ) : (
         <ul className="m-0 flex list-none flex-col overflow-hidden rounded-xl bg-card p-0 ring-1 ring-foreground/10">
-          {positions.map((entry) => {
-            const agentId = positionLabel(entry.position.account, sources).agentId
-            return (
-              <PositionRow
-                key={entry.position.account}
-                entry={entry}
-                status={statusOf(entry, now)}
-                sources={sources}
-                backerShare={agentId === undefined ? null : (shares.shares.get(agentId) ?? null)}
-                disabled={disabled}
-                onEdit={onEdit}
-                onCancel={onCancel}
-                onWithdraw={onWithdraw}
-              />
-            )
-          })}
+          {positions.map((entry) => (
+            <PositionRow
+              key={entry.position.account}
+              entry={entry}
+              status={statusOf(entry, now)}
+              sources={sources}
+              disabled={disabled}
+              onEdit={onEdit}
+              onCancel={onCancel}
+              onWithdraw={onWithdraw}
+            />
+          ))}
         </ul>
       )}
     </Section>
@@ -110,7 +103,6 @@ function PositionRow({
   entry: { position, backing },
   status,
   sources,
-  backerShare,
   disabled,
   onEdit,
   onCancel,
@@ -119,18 +111,13 @@ function PositionRow({
   entry: BackedPosition
   status: Status
   sources: PositionLabelSources
-  backerShare: number | null
   disabled: boolean
   onEdit: (account: Address, mode: 'add' | 'leave') => void
   onCancel: (account: Address) => void
   onWithdraw: (account: Address) => void
 }) {
   const queued = position.queuedShares > 0n
-  const facts = [
-    `${percent(position.shareBps)} of its backing`,
-    `${percent(backing.tier.feeBps)} fee`,
-    backerShare !== null && backerShare > 0 ? `backers get ${shareLabel(backerShare)}` : null,
-  ].filter((fact) => fact !== null)
+  const facts = [`${percent(position.shareBps)} of its backing`, `${percent(backing.tier.feeBps)} fee`]
   return (
     <li
       aria-label={`Position in ${positionLabel(position.account, sources).name}`}

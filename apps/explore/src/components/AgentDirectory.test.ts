@@ -11,7 +11,6 @@ const agent = (agentId: string, name = `Agent ${agentId}`): DirectoryAgent => ({
   profile: { name, description: `Work from ${name}`, services: ['Research'] },
   profileSource: 'operator-supplied',
   agentURI: '',
-  backerShareBps: null,
   enrolled: true,
   ownership: 'verified',
   presence: { freshness: 'fresh', state: 'available', accepting: true, lastSeenBucket: null },

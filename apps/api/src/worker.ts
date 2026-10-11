@@ -1,4 +1,3 @@
-import { backerShareRoute } from './backer-share.ts'
 import { offerResponse } from './offers.ts'
 import { catalogReply, registryProofReply, serverCardReply, type McpMetadataReply } from './mcp-metadata.ts'
 import registryProof from './mcp-registry-proof.json' with { type: 'json' }
@@ -722,8 +721,6 @@ export default class Api extends Cloudflare.Worker<Api>()(
           )
         }
         if (path.startsWith('/data/') && request.method === 'GET') {
-          if (path.startsWith('/data/backer-share/'))
-            return yield* Effect.promise(() => backerShareRoute(sql, deployment, path, now(), cors))
           if (isStakingDataPath(path)) {
             const dataUrl = new URL(url)
             dataUrl.pathname = path

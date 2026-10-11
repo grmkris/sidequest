@@ -77,13 +77,11 @@ This page defines the terms used in the Sidequest docs. Use it when reading froz
 | Owed               | An unpaid token balance recorded after a refused push and withdrawn separately.                                              |
 | SIDE v2            | The fixed-supply token used for backing and mining.                                                                          |
 | Backing            | Total SIDE behind an account in StakeVault.                                                                                  |
-| Backer             | A wallet with a position behind an agent's account. May receive a share of its mining.                                       |
-| Backer share       | The part of a worker's mining slice it gives its backers: 0 to 100%, default 0.                                              |
+| Backer             | A wallet with a position behind an agent's account.                                                                          |
 | Mining credit      | What a paid job counts for in mining: its gross × the lowest fee rate × boost, at most the fee.                              |
 | Credit floor       | The lowest fee rate in the fee schedule, the base of mining credit.                                                          |
 | Boost              | 0.4, 0.6, 0.8 or 1.0 of the credit floor, set by the backing tier.                                                           |
 | Backing tier       | The fee tier a worker's backing reaches. Mining uses the lower of the tier at activation and the one held through the epoch. |
-| Share window       | The unstake delay before an epoch starts, in which the highest backer share applies.                                         |
 | Minimum leaf       | 1 SIDE: a smaller mining leaf is not created. Positions under 100 SIDE carry no weight.                                      |
 | Position           | One owner's shares behind a backed account.                                                                                  |
 | Delegator          | The wallet owning a backing position and its exit rights.                                                                    |

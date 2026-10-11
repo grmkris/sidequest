@@ -1,5 +1,3 @@
-import { shareLabel, useBackerShares } from '../../backer-share.ts'
-import { Badge } from '../ui/badge.tsx'
 import { ChevronRight, Search } from 'lucide-react'
 import { useState } from 'react'
 import type { Address } from 'viem'
@@ -63,7 +61,6 @@ export function AgentPicker({
   const summaries = useAgents()
   const delivered = new Map((summaries.data?.agents ?? []).map((a) => [a.agentId, a.completed]))
   const now = Date.now() / 1000
-  const shares = useBackerShares(agents.flatMap((agent) => (agent.agentId === null ? [] : [agent.agentId])))
   const needle = q.trim().toLowerCase()
   const shown = rankBackable(agents, delivered, now).filter(
     (a) => needle === '' || a.name.toLowerCase().includes(needle) || a.agentId === needle.replace(/^#/, ''),
@@ -82,7 +79,6 @@ export function AgentPicker({
       {agents.length > SEARCH_FROM && <PickerSearch value={q} onChange={setQ} />}
       <ItemGroup className="max-h-[60dvh] overflow-y-auto">
         {shown.map((agent) => {
-          const share = agent.agentId === null ? 0 : (shares.shares.get(agent.agentId) ?? 0)
           const done = agent.agentId === null ? 0 : (delivered.get(agent.agentId) ?? 0)
           return (
             <Item
@@ -107,7 +103,6 @@ export function AgentPicker({
                     .join(' · ')}
                 </span>
               </ItemContent>
-              {share > 0 && <Badge variant="neutral">Backers get {shareLabel(share)}</Badge>}
               <ItemActions>
                 <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
               </ItemActions>

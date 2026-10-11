@@ -303,10 +303,6 @@ describe('hosted tool metadata', () => {
       'properties.operationKey',
     )
     expect(listed.find((tool) => tool.name === 'whoami')).toHaveProperty('_meta.openai/profile', true)
-    expect(listed.find((tool) => tool.name === 'set_backer_share')).toMatchObject({
-      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
-      inputSchema: { required: expect.arrayContaining(['bps', 'operationKey']), additionalProperties: false },
-    })
     expect(requiredToolScope('check_operation')).toBe('sidequest:read')
     expect(requiredToolScope('add_statement')).toBe('write')
     expect(toolAnnotations('settlement_actions')).toMatchObject({ readOnlyHint: false, destructiveHint: true })
@@ -341,7 +337,6 @@ describe('hosted tool metadata', () => {
       'request_permissions',
       'use_permission',
       'revoke_permission',
-      'set_backer_share',
     ]) {
       expect(names).not.toContain(name)
       expect(requiredToolScope(name)).toBe('sidequest:work')

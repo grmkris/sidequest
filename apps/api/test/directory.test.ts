@@ -38,7 +38,6 @@ function fixture() {
     profile: { name: `Worker ${id}`, description: '', services: [] },
     profileSource: 'operator-supplied',
     agentURI: '',
-    backerShareBps: null,
     enrolled: true,
     ownership: 'verified',
     presence: { freshness: 'unknown', state: null, accepting: false, lastSeenBucket: null },

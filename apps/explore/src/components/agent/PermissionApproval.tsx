@@ -22,15 +22,11 @@ import {
 import { typedDataArgs } from '../../typed-data.ts'
 import { useTokenList } from '../../useTokens.ts'
 import { deployment } from '../../wallet.ts'
-import { readUnstakeDelay, type PermissionTerms } from '@sidequest/sdk'
-import { useQuery } from '@tanstack/react-query'
-import { stakeContext } from '../../stake-context.ts'
 
 const TYPE_WORDS: Record<string, string> = {
   'erc20-token-periodic': 'Recurring token payments',
   'erc20-token-allowance': 'One token spending limit',
   'sidequest:contract-call': 'One exact contract call',
-  'sidequest:backer-share': 'Set its backer share',
 }
 
 /** The one exact call, in full: decoded arguments when the method is known, and always the raw call data (VV2-022). */
@@ -81,13 +77,7 @@ export function PermissionApproval({
 }) {
   const request = permissionRequest(approval.request_json)
   const t = request.parsed
-  const token = 'token' in t ? t.token : null
-  const unstake = useQuery({
-    queryKey: ['permission-unstake-delay', deployment.sidequest?.vault],
-    queryFn: () => readUnstakeDelay(stakeContext()),
-    enabled: t.type === 'sidequest:backer-share',
-    staleTime: Infinity,
-  })
+  const token = t.type === 'sidequest:contract-call' ? null : t.token
   const meta = token === null ? undefined : tokenMeta(token)
   useTokenList(token === null ? [] : [token])
   const { signTypedDataAsync } = useSignTypedData()
@@ -172,14 +162,15 @@ export function PermissionApproval({
         <p className="text-xl font-semibold">{TYPE_WORDS[t.type] ?? t.type}</p>
         <Badge variant={approval.status === 'pending' ? 'warning' : 'neutral'}>{approval.status}</Badge>
       </div>
-      <PermissionBody
-        t={t}
-        agent={agent.name}
-        requested={requested}
-        shown={shown}
-        expiry={request.expiry}
-        delay={unstake.data}
-      />
+      {t.type === 'sidequest:contract-call' ? (
+        <ExactCall target={t.target} value={t.value} callData={t.callData} />
+      ) : (
+        <p className="break-words text-sm leading-relaxed text-muted-foreground">
+          Up to {tokenAmountText(shown !== undefined && 'amount' in shown ? shown.amount : requested!, t.token)}
+          {t.type === 'erc20-token-periodic' ? ` every ${Math.round(t.periodDuration / 3600)} h` : ' in total'} from
+          your wallet, only to {t.recipient}.
+        </p>
+      )}
       <p className="text-sm leading-relaxed text-muted-foreground">
         It ends {localTime(shown?.expiresAt ?? request.expiry)} ({relative(shown?.expiresAt ?? request.expiry)}). The
         chain enforces every limit.
@@ -251,73 +242,4 @@ export function PermissionApproval({
       )}
     </Section>
   )
-}
-
-export function BackerSharePermissionCopy({
-  agent,
-  agentId,
-  calls,
-  expiry,
-  delay,
-}: {
-  agent: string
-  agentId: string
-  calls: number
-  expiry: number
-  delay: number | undefined
-}) {
-  const duration = unstakeDuration(delay)
-  return (
-    <p className="text-sm leading-relaxed text-muted-foreground">
-      Lets {agent} set agent #{agentId}’s backer share: the part of its work-mining reward paid to its backers, 0–100 %.
-      At most {calls} times until {localTime(expiry)}. It cannot change other settings, its wallet or profile, or move
-      funds. A raise applies next epoch; a cut reaches backers only after the {duration} unstake delay. Revoke any time
-      under Manage.
-    </p>
-  )
-}
-
-function PermissionBody({
-  t,
-  agent,
-  requested,
-  shown,
-  expiry,
-  delay,
-}: {
-  t: PermissionTerms
-  agent: string
-  requested: bigint | null
-  shown: ReturnType<typeof reviewPermission>['description'] | undefined
-  expiry: number
-  delay: number | undefined
-}) {
-  switch (t.type) {
-    case 'sidequest:backer-share':
-      return (
-        <BackerSharePermissionCopy
-          agent={agent}
-          agentId={t.agentId.toString()}
-          calls={shown !== undefined && 'calls' in shown ? shown.calls : t.calls}
-          expiry={shown?.expiresAt ?? expiry}
-          delay={delay}
-        />
-      )
-    case 'sidequest:contract-call':
-      return <ExactCall target={t.target} value={t.value} callData={t.callData} />
-    case 'erc20-token-periodic':
-    case 'erc20-token-allowance':
-      return (
-        <p className="break-words text-sm leading-relaxed text-muted-foreground">
-          Up to {tokenAmountText(shown !== undefined && 'amount' in shown ? shown.amount : requested!, t.token)}
-          {t.type === 'erc20-token-periodic' ? ` every ${Math.round(t.periodDuration / 3600)} h` : ' in total'} from
-          your wallet, only to {t.recipient}.
-        </p>
-      )
-  }
-}
-
-function unstakeDuration(delay: number | undefined) {
-  if (delay === undefined) return 'configured'
-  return Number.isInteger(delay / 86400) ? `${delay / 86400}-day` : `${delay}-second`
 }

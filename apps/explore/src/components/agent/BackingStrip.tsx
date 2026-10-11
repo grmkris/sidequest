@@ -1,11 +1,9 @@
 /**
- * The SIDE behind an agent, for anyone, in one row: total backing, how many back it, the worker fee it pays and the
- * share of its mining its backers get, with how far it is from the next (lower) fee tier. Details unfold in place — the
+ * The SIDE behind an agent, for anyone, in one row: total backing, how many back it and the worker fee it pays, with
+ * how far it is from the next (lower) fee tier. Details unfold in place — the
  * split between active, reserved, available and leaving, the top backers, the viewer's own position and the risks.
  * Backing it is the page header's action.
  */
-import { useParams } from '@tanstack/react-router'
-import { shareLabel, useBackerShareSchedule, type BackerShareSchedule } from '../../backer-share.ts'
 import type { ReactNode } from 'react'
 import type { Address } from 'viem'
 import { tierProgress } from '../../agent-stats.ts'
@@ -58,7 +56,6 @@ export function BackingStrip({ wallet, viewer }: { wallet: Address; viewer: Addr
             <Figure value={<TokenAmount value={snapshot.backing.assets} token={factory} />} label="Total backing" />
             <Figure value={snapshot.delegatorCount} label={snapshot.delegatorCount === 1 ? 'Backer' : 'Backers'} />
             <Figure value={percent(snapshot.backing.tier.feeBps)} label="Worker fee" />
-            <BackerShareFigure />
           </dl>
           {snapshot.backing.tier.nextThreshold === null ? (
             <p className="text-xs text-muted-foreground">It pays the lowest fee.</p>
@@ -76,7 +73,6 @@ export function BackingStrip({ wallet, viewer }: { wallet: Address; viewer: Addr
           )}
           <Disclosure summary="Details" className="-mx-1">
             <div className="grid gap-4 px-1 pt-2 pb-1">
-              <MiningShare />
               <div>
                 <Line label="Active">
                   <TokenAmount value={snapshot.backing.active} token={factory} />
@@ -140,58 +136,5 @@ export function BackingStrip({ wallet, viewer }: { wallet: Address; viewer: Addr
         </div>
       )}
     </Section>
-  )
-}
-
-/** The share of its work-mining reward its backers get this epoch, and the change ahead, if any. */
-function BackerShareFigure() {
-  const { agentId } = useParams({ strict: false })
-  const read = useBackerShareSchedule(agentId)
-  const schedule = read.isError ? undefined : read.data
-  if (schedule === undefined) return null
-  const change =
-    schedule.pendingCut !== null
-      ? schedule.pendingCut.bps
-      : schedule.next.bps !== schedule.current.bps
-        ? schedule.next.bps
-        : null
-  return (
-    <div className="grid min-w-0 content-start gap-0.5">
-      <dt className="text-xs text-muted-foreground">Backers get</dt>
-      <dd className="tabular-nums text-base leading-tight font-semibold tracking-tight">
-        {shareLabel(schedule.current.bps)}
-        {change !== null && (
-          <span className="ml-1.5 text-xs font-normal text-muted-foreground">then {shareLabel(change)}</span>
-        )}
-      </dd>
-    </div>
-  )
-}
-
-function MiningShare() {
-  const { agentId } = useParams({ strict: false })
-  const read = useBackerShareSchedule(agentId)
-  return <MiningShareCopy schedule={read.isError ? undefined : read.data} />
-}
-
-export function MiningShareCopy({ schedule }: { schedule: BackerShareSchedule | undefined }) {
-  let copy = 'This agent’s mining share is unavailable right now'
-  if (schedule?.current.bps === 0) copy = "This agent doesn't share mining rewards with backers this epoch"
-  if (schedule !== undefined && schedule.current.bps > 0) {
-    copy = `Backers get ${shareLabel(schedule.current.bps)} of this agent's work-mining rewards this epoch`
-  }
-  if (schedule !== undefined) {
-    if (schedule.pendingCut !== null)
-      copy += ` · Cut to ${schedule.pendingCut.bps / 100} % from epoch ${schedule.pendingCut.appliesFromEpoch} (after the unstake delay)`
-    else if (schedule.next.bps !== schedule.current.bps)
-      copy += ` · ${schedule.next.bps / 100} % from epoch ${schedule.next.epoch}`
-  }
-  return (
-    <p className="text-xs text-muted-foreground">
-      {copy}.{' '}
-      <a href="/docs/concepts/mining" className="underline underline-offset-4">
-        How mining works
-      </a>
-    </p>
   )
 }

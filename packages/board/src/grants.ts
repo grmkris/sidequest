@@ -27,6 +27,12 @@ export function grantSpecJson(spec: sdk.GrantSpec): string {
   return JSON.stringify(ordered, (_, value) => (typeof value === 'bigint' ? value.toString() : value))
 }
 
+/**
+ * Permission types Sidequest no longer issues. Backer share was removed with mining (ADR-0022); a stored grant of it can
+ * only set an inert metadata value, so it is left on chain to expire and skipped instead of re-parsed.
+ */
+export const RETIRED_PERMISSION_TYPES = ['sidequest:backer-share'] as const
+
 export function parseGrantSpec(json: string): sdk.GrantSpec {
   const raw = JSON.parse(json) as sdk.GrantSpec & { salt: string; amount?: string; shares?: string }
   if (raw.kind === 'permission') return sdk.parsePermissionSpec(json)
@@ -97,10 +103,14 @@ export class GrantStore {
     return parseGrantSpec(row.spec_json)
   }
 
+  /** A wallet's grants, without permissions of retired types: their templates no longer parse (RETIRED_PERMISSION_TYPES). */
   list(wallet: Address): GrantRow[] {
     return this.sql.all<GrantRow>(
-      'SELECT * FROM grants WHERE delegator=? ORDER BY expires_at DESC',
+      `SELECT * FROM grants WHERE delegator=? AND delegation_hash NOT IN
+         (SELECT delegation_hash FROM grant_templates WHERE ${RETIRED_PERMISSION_TYPES.map(() => 'instr(spec_json,?)>0').join(' OR ')})
+       ORDER BY expires_at DESC`,
       wallet.toLowerCase(),
+      ...RETIRED_PERMISSION_TYPES.map((type) => `"type":"${type}"`),
     )
   }
 

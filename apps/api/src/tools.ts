@@ -11,7 +11,6 @@ import {
   type Caller,
   type DeliverableSpec,
   type NamedSponsorEntry,
-  directoryAgentId,
   TASK_ROLES,
   TASK_STATUSES,
   type TaskRole,
@@ -1038,7 +1037,7 @@ export const tools: Record<string, Tool> = {
   },
   stake: {
     description:
-      'Back an agent with SIDE; you keep ownership and can leave after the cooldown. Returns exact approval and delegation transactions for your wallet. Backing is exposed to the agent’s bond slashes. An agent may share part of its work-mining reward with its backers (its backer share, 0 by default).',
+      'Back an agent with SIDE; you keep ownership and can leave after the cooldown. Returns exact approval and delegation transactions for your wallet. Backing is exposed to the agent’s bond slashes.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1093,34 +1092,6 @@ export const tools: Record<string, Tool> = {
         ...(a.wallet === undefined ? {} : { wallet: s(a, 'wallet') }),
         ...(a.account === undefined ? {} : { account: s(a, 'account') }),
       }),
-  },
-  set_backer_share: {
-    description:
-      "Prepare a backer share metadata transaction (0–10000 basis points, default 0). Prepare-only, for self-custody: the agent's ERC-8004 owner sends it from their own wallet, and this tool never signs or sends it. A raise applies from the next mining epoch; a cut waits for the vault's unstake delay.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        agentId: str('Positive decimal ERC-8004 agent ID in this deployment registry.'),
-        bps: {
-          type: 'integer',
-          minimum: 0,
-          maximum: 10000,
-          description: 'Part of the work-mining slice shared with backers, in basis points.',
-        },
-      },
-      required: ['agentId', 'bps'],
-      additionalProperties: false,
-    },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    run: (_board, _caller, args, ctx) => ({
-      transaction: sdk.prepareBackerShare(
-        sdk.deployment(ctx.network).identity,
-        directoryAgentId(args.agentId),
-        n(args, 'bps'),
-      ),
-      requiresWalletConfirmation: true,
-      chainId: sdk.deployment(ctx.network).chainId,
-    }),
   },
   list_delegations: {
     description:

@@ -20,7 +20,6 @@ function fixture() {
   let now = 1_800_000_000
   let wallet: Address = account.address
   let unavailable = false
-  let backerShareBps: number | null = 5000
   const verify = vi.fn(async (signer: Address, record: DirectoryEnvelope, signature: Hex) =>
     verifyTypedData({ address: signer, ...directoryTypedData(record), signature }),
   )
@@ -33,7 +32,7 @@ function fixture() {
     now: () => now,
     readIdentity: async () => {
       if (unavailable) throw new Error('RPC unavailable')
-      return { wallet, agentURI: 'https://example.test/agent.json', backerShareBps }
+      return { wallet, agentURI: 'https://example.test/agent.json' }
     },
     verify,
   }
@@ -90,9 +89,6 @@ function fixture() {
     },
     rotate: (value: Address) => {
       wallet = value
-    },
-    share: (value: number | null) => {
-      backerShareBps = value
     },
     outage: (value: boolean) => {
       unavailable = value
@@ -332,36 +328,4 @@ describe('signed directory', () => {
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
     expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1)
   })
-})
-
-it('projects the backer share through the identity cache and distinguishes unreadable metadata', async () => {
-  const context = fixture()
-  await context.enroll()
-  expect((await context.service.read()).backerShareBps).toBe(5000)
-  context.share(7500)
-  expect((await context.service.read()).backerShareBps).toBe(5000)
-  context.advance(30)
-  expect((await context.service.read()).backerShareBps).toBe(7500)
-  context.share(null)
-  context.advance(30)
-  const unreadable = await context.service.read()
-  expect(unreadable.backerShareBps).toBeNull()
-  expect(unreadable.ownership).toBe('verified')
-  context.share(0)
-  context.advance(30)
-  expect((await context.service.read()).backerShareBps).toBe(0)
-  context.outage(true)
-  context.advance(30)
-  expect((await context.service.read()).backerShareBps).toBeNull()
-})
-
-it('reads legacy persisted directory JSON with an unreadable backer share', async () => {
-  const context = fixture()
-  await context.enroll()
-  const row = context.deps.sql.all<{ json: string }>('SELECT json FROM directory_state WHERE id = 1')[0]!
-  // SAFETY: the row was just persisted by this DirectoryService; remove only the newly added JSON field.
-  const state = JSON.parse(row.json) as { backerShareBps?: number }
-  delete state.backerShareBps
-  context.deps.sql.run('UPDATE directory_state SET json = ? WHERE id = 1', JSON.stringify(state))
-  expect(context.service.publicView().backerShareBps).toBeNull()
 })

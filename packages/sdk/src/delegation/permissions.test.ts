@@ -167,9 +167,10 @@ describe('buildPermission', () => {
     expect(permissionEnforcers(d).exactExecution).toBe('0x146713078D39eCC1F5338309c28405ccf85Abfbb')
     expect(supportedPermissions(d)).toEqual(
       Object.fromEntries(
-        ['erc20-token-periodic', 'erc20-token-allowance', 'sidequest:contract-call', 'sidequest:backer-share'].map(
-          (type) => [type, { chainIds: ['0x279f'], ruleTypes: ['expiry'] }],
-        ),
+        ['erc20-token-periodic', 'erc20-token-allowance', 'sidequest:contract-call'].map((type) => [
+          type,
+          { chainIds: ['0x279f'], ruleTypes: ['expiry'] },
+        ]),
       ),
     )
     // Mainnet has no recorded deployment before launch; its canonical table must still carry every enforcer used here.

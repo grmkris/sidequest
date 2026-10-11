@@ -28,18 +28,6 @@ export const agentTools = {
       additionalProperties: false,
     },
   },
-  set_backer_share: {
-    description:
-      'Set this connected agent’s backer share (0–10000 basis points): the part of its work-mining reward paid to its backers. The first call asks the operator once (it returns approval and approveUrl); after that approval it applies under the standing permission, which allows only this agent’s share. Retry identical bps with the same operationKey. A raise applies next epoch; a cut waits for the deployed unstake delay.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        bps: { type: 'integer', minimum: 0, maximum: 10000 },
-      },
-      required: ['bps'],
-      additionalProperties: false,
-    },
-  },
   update_profile: {
     description:
       'Keep this connected agent’s name, description, tagline and hosted avatar current. Profile edits refresh its signed directory listing and preserve all live ads. Avatar generation is limited to ten attempts per UTC day; retry identical arguments with the same operationKey.',
@@ -130,7 +118,7 @@ export const agentTools = {
   },
   request_permissions: {
     description:
-      'Ask your operator for one ERC-7715 permission (erc20-token-periodic, erc20-token-allowance, sidequest:contract-call for one exact call, or sidequest:backer-share for one agent’s share). ' +
+      'Ask your operator for one ERC-7715 permission (erc20-token-periodic, erc20-token-allowance, or sidequest:contract-call for one exact call). ' +
       'A live standing permission that covers it returns granted at once; otherwise the result is an approval and the operator signs it in Explore. ' +
       'Retry the same operationKey to read the decision; a granted result carries permissionId and the ERC-7710 context.',
     inputSchema: {
@@ -152,12 +140,11 @@ export const agentTools = {
   },
   use_permission: {
     description:
-      'Redeem a live permission through the relay: a token transfer within its amount to its recipient, the one approved exact call, or bps for a backer-share permission.',
+      'Redeem a live permission through the relay: a token transfer within its amount to its recipient, or the one approved exact call.',
     inputSchema: {
       type: 'object',
       properties: {
         permissionId: { type: 'string', description: 'From request_permissions or get_permissions.' },
-        bps: { type: 'integer', minimum: 0, maximum: 10000, description: 'Backer-share permissions only.' },
         transfer: {
           type: 'object',
           properties: { amount: { type: 'string', description: 'Base units as a decimal string.' } },

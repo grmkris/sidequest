@@ -80,7 +80,6 @@ describe('services', () => {
       profile: { name: '', description: '', services: [] },
       profileSource: 'operator-supplied',
       agentURI: '',
-      backerShareBps: 2000,
       enrolled: true,
       ownership: 'verified',
       presence: presence('unknown', false),
