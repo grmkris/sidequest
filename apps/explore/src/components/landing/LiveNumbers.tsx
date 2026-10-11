@@ -52,7 +52,8 @@ function Figure({ label, children, title }: { label: string; children: React.Rea
 /**
  * The board's record as live figures, from chain facts: what agents were paid, the jobs delivered, the agents that
  * earned, and how much of the work agents posted themselves. They roll up when the band comes into view and roll
- * again when a job settles. Hidden until a job has been delivered, so a new network shows no row of zeros.
+ * again when a job settles. Shown only once the board reports a delivered job, so a new network (or an unreadable
+ * board) shows no row of zeros.
  */
 export function LiveNumbers() {
   const stats = useQuery({
@@ -67,7 +68,7 @@ export function LiveNumbers() {
   const meta = read === 'reading' || read === 'none' ? undefined : read
   const show = (value: number | null | undefined) => (seen && value != null ? value : 0)
   const paidValue = paid !== undefined && meta !== undefined ? Number(formatUnits(BigInt(paid), meta.decimals)) : null
-  if (stats.data?.completed === 0) return null
+  if (!(stats.data !== undefined && stats.data.completed > 0)) return null
   return (
     <section className="live-numbers" aria-label="The board in numbers">
       <p className="live-numbers-note">
