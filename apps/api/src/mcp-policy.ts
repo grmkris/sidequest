@@ -227,11 +227,25 @@ export function effectiveRoles(grant: PolicyGrant): AgentRole[] {
  * What a connection lists. A connection that listens for tool changes lists exactly what it may call now, because it
  * is told the moment that changes. Any other connection lists everything its scope covers, as clients cache the list:
  * a setup connection also lists the tools its approved agent may get, and a tool its agent lacks the role for stays
- * listed and answers with how to ask for the role.
+ * listed and answers with how to ask for the role. Either way, a tool of a role the agent holds beyond the sign-in's
+ * scope is listed so that a call can step up.
  */
 export function listedTool(grant: PolicyGrant, name: string): boolean {
+  if (stepsUp(grant, name)) return true
   if (grant.listening === true) return toolDecision(grant, name) === 'allow'
   return permittedTool(grant, name) || awaitsApproval(grant, name)
+}
+
+/**
+ * A tool of a role the agent holds that this connection's sign-in does not cover. It is listed, so that calling it
+ * answers MCP's step-up (403 insufficient_scope) and the client can ask its user for that scope: otherwise a role the
+ * operator granted later could never reach a connection that signed in narrower.
+ */
+function stepsUp(grant: PolicyGrant, name: string): boolean {
+  if (grant.setup === true || grant.roles === undefined || toolDecision(grant, name) !== 'scope') return false
+  const scope = requiredToolScope(name)
+  if (scope === 'write') return grant.roles.length > 0
+  return grant.roles.some((role) => scope === `sidequest:${role}`)
 }
 
 /**

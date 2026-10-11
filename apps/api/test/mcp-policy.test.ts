@@ -39,6 +39,22 @@ it('lists exactly what a listening connection may call, and everything its scope
   expect(listedTool({ ...setup, listening: true }, 'create_agent')).toBe(true)
 })
 
+// A role granted after a narrower sign-in must still reach the connection: its tools are listed and step up on call.
+it('lists the tools of a role the agent holds beyond the sign-in, so a call steps up', () => {
+  const narrow = { scopes: ['sidequest:read', 'sidequest:hire'], roles: ['hire', 'work'] as const }
+  for (const listening of [false, true]) {
+    expect(listedTool({ ...narrow, listening }, 'apply')).toBe(true)
+    expect(listedTool({ ...narrow, listening }, 'submit_work')).toBe(true)
+    expect(toolRefusal({ ...narrow, listening }, 'apply')).toEqual({
+      stepUp: 'sidequest:read sidequest:hire sidequest:work',
+    })
+  }
+  expect(listedTool({ scopes: ['sidequest:read', 'sidequest:hire'], roles: ['hire'] }, 'apply')).toBe(false)
+  expect(listedTool({ scopes: ['sidequest:read'], roles: ['work'] }, 'settlement_actions')).toBe(true)
+  expect(listedTool({ scopes: ['sidequest:read'], roles: [] }, 'settlement_actions')).toBe(false)
+  expect(listedTool({ scopes: ['sidequest:setup'], setup: true, roles: [] }, 'create_task')).toBe(true)
+})
+
 it('refuses a missing role with a plain tool error that names request_role', () => {
   expect(toolRefusal({ scopes: both, roles: ['work'] }, 'create_task')).toEqual({
     result: {
