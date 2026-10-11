@@ -12,13 +12,12 @@ export type Role = 'sidequest:work' | 'sidequest:hire'
 export const setupIdentity = (privyToken: string | undefined) =>
   agentEndpoint<object>('/api/agents/setup-identity', 'POST', {}, privyToken)
 
-/** Approves a waiting OAuth request as a setup connection: no agent yet, the role scopes held for approval. */
-export const approveSetupConnection = (requestId: string, scopes: string[]) =>
+/** Approves a waiting OAuth request as a setup connection: no agent yet; its roles are chosen when it is approved. */
+export const approveSetupConnection = (requestId: string) =>
   agentEndpoint<{ redirectUrl: string }>(`/oauth/requests/${requestId}/approve`, 'POST', {
     decision: 'approve',
     setup: true,
     agentIds: [],
-    scopes,
   })
 
 export interface ApprovedAgent {

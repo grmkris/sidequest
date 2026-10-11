@@ -546,7 +546,6 @@
     "jsx-a11y(prefer-tag-over-role)": 2
   },
   "apps/explore/src/components/OAuthConsent.tsx": {
-    "anti-slop-effect(prefer-effect-match)": 1,
     "complexity(complexity)": 1,
     "eslint(max-lines-per-function)": 1
   },

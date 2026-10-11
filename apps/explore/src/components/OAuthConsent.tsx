@@ -11,7 +11,7 @@ import { AgentStake } from './AgentStake.tsx'
 
 import { useAuth } from './Wallet.tsx'
 import { OAuthClient, type OAuthClientIdentity } from './OAuthClient.tsx'
-import { SetupConnect } from './SetupConnect.tsx'
+import { HandBackNote, SetupConnect } from './SetupConnect.tsx'
 import { clientRedirect } from '../agent-setup-api.ts'
 
 export function OAuthConsent({ requestId }: { requestId: string }) {
@@ -33,22 +33,26 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
     queryFn: () => agentEndpoint<{ agents: ManagedAgent[] }>('/api/agents'),
     enabled: auth.signedIn,
   })
-  const [selected, setSelected] = useState('')
+  const [chosen, setSelected] = useState('')
   const [creating, setCreating] = useState(false)
-  const [work, setWork] = useState(true)
-  const [hire, setHire] = useState(true)
+  // The roles are the operator's choice; what the client asked for only pre-ticks them (both when it asked for none).
+  const [ticked, setTicked] = useState<{ work?: boolean; hire?: boolean }>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const asked = request.data?.request.scopes ?? []
+  const askedNone = !asked.includes('sidequest:work') && !asked.includes('sidequest:hire')
+  const work = ticked.work ?? (askedNone || asked.includes('sidequest:work'))
+  const hire = ticked.hire ?? (askedNone || asked.includes('sidequest:hire'))
+  const active = agents.data?.agents.filter((row) => row.state === 'active') ?? []
+  // One agent is the obvious answer: pick it, so connecting it is one button.
+  const selected = chosen !== '' ? chosen : active.length === 1 ? active[0]!.id : ''
   const agent = agents.data?.agents.find((row) => row.id === selected)
   async function decide(approved: boolean) {
     setBusy(true)
     setError(null)
     try {
       // An agent connection never carries setup: that scope only lets a coding agent create one.
-      const scopes =
-        request.data?.request.scopes.filter((scope) =>
-          scope === 'sidequest:work' ? work : scope === 'sidequest:hire' ? hire : scope !== 'sidequest:setup',
-        ) ?? []
+      const scopes = ['sidequest:read', ...(work ? ['sidequest:work'] : []), ...(hire ? ['sidequest:hire'] : [])]
       const response = await agentEndpoint<{ redirectUrl: string }>(`/oauth/requests/${requestId}/approve`, 'POST', {
         decision: approved ? 'approve' : 'reject',
         agentIds: [selected],
@@ -74,15 +78,12 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
     return (
       <Alert variant="destructive">
         <AlertDescription>
-          This connection request is unavailable or expired. Restart authentication from your coding client; your saved
-          agent remains registered.
+          This sign-in was already completed, maybe in another tab, or it expired. You can close this tab. If your
+          coding agent is still waiting, run its connect command again; your agents stay registered.
         </AlertDescription>
       </Alert>
     )
-  const setup =
-    request.data?.setup?.available === true ? (
-      <SetupConnect requestId={requestId} requested={request.data.request.scopes} />
-    ) : null
+  const setup = request.data?.setup?.available === true ? <SetupConnect requestId={requestId} /> : null
   // Someone without an agent yet starts with the coding agent's setup; anyone else, with their agents.
   const noAgents = agents.data !== undefined && !agents.data.agents.some((row) => row.state === 'active')
   return (
@@ -93,14 +94,12 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
         <label className="grid gap-2 text-sm">
           <span>Agent</span>
           <Select value={selected} onChange={(event) => setSelected(event.target.value)}>
-            <option value="">Choose an active agent</option>
-            {agents.data?.agents
-              .filter((row) => row.state === 'active')
-              .map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.name} · #{row.agent_id}
-                </option>
-              ))}
+            <option value="">{agents.isLoading ? 'Loading your agents…' : 'Choose an active agent'}</option>
+            {active.map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.name} · #{row.agent_id}
+              </option>
+            ))}
           </Select>
         </label>
         <Button variant="link" onClick={() => setCreating(!creating)}>
@@ -111,8 +110,7 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
             context="oauth"
             onReady={(created, role) => {
               setSelected(created.id)
-              setWork(role !== 'hire')
-              setHire(role !== 'work')
+              setTicked({ work: role !== 'hire', hire: role !== 'work' })
               setCreating(false)
               void agents.refetch()
             }}
@@ -122,20 +120,24 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
       {agent !== undefined && (
         <Section title="Connection permissions">
           <p className="font-semibold">Agent ID {agent.agent_id} is registered</p>
-          {request.data?.request.scopes.includes('sidequest:work') && (
-            <label className="flex min-h-11 items-center gap-3">
-              <input type="checkbox" checked={work} onChange={(event) => setWork(event.target.checked)} />
-              <span>
-                Work · apply, quote, activate, deliver and dispute; manage stake, earnings, permissions and payments
-              </span>
-            </label>
-          )}
-          {request.data?.request.scopes.includes('sidequest:hire') && (
-            <label className="flex min-h-11 items-center gap-3">
-              <input type="checkbox" checked={hire} onChange={(event) => setHire(event.target.checked)} />
-              <span>Hire · post, select, accept and reject</span>
-            </label>
-          )}
+          <label className="flex min-h-11 items-center gap-3">
+            <input
+              type="checkbox"
+              checked={work}
+              onChange={(event) => setTicked({ ...ticked, work: event.target.checked })}
+            />
+            <span>
+              Work · apply, quote, activate, deliver and dispute; manage stake, earnings, permissions and payments
+            </span>
+          </label>
+          <label className="flex min-h-11 items-center gap-3">
+            <input
+              type="checkbox"
+              checked={hire}
+              onChange={(event) => setTicked({ ...ticked, hire: event.target.checked })}
+            />
+            <span>Hire · post, select, accept and reject</span>
+          </label>
           <p className="text-sm text-muted-foreground">
             The weekly budget limits transfers of payment tokens. It does not limit deposits at risk: an agent can
             activate a job that requires a deposit, and a slash is immediate.
@@ -147,8 +149,9 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
           >
             Use this agent for this connection
           </Button>
+          <HandBackNote />
           <p className="text-sm text-muted-foreground">Weekly budget and SIDE backing can be added later.</p>
-          {hire && request.data?.request.scopes.includes('sidequest:hire') && (
+          {hire && (
             <details>
               <summary className="cursor-pointer text-sm font-semibold">Optional weekly budget</summary>
               <div className="pt-3">

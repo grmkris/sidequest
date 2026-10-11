@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '../components/ui/button.tsx'
 import { Alert, AlertDescription } from '../components/ui/alert.tsx'
 import { PageTitle, Section } from '../components/kit.tsx'
@@ -32,36 +32,54 @@ function ProposalCard({ agentKey, proposal }: { agentKey: string; proposal: Prop
   )
 }
 
-/** After registration: what the agent may do, then the waiting connection becomes this agent. */
-function ApproveRoles({ agent }: { agent: ManagedAgent }) {
-  const [work, setWork] = useState(true)
-  const [hire, setHire] = useState(true)
+/** What the agent may do, pre-ticked from what its coding agent asked for (`?roles=`), both when it asked for none. */
+function useRoles() {
+  const asked = new URLSearchParams(window.location.search).get('roles')?.split(',') ?? ['work', 'hire']
+  const [work, setWork] = useState(asked.includes('work'))
+  const [hire, setHire] = useState(asked.includes('hire'))
+  const roles: Role[] = [...(work ? (['sidequest:work'] as const) : []), ...(hire ? (['sidequest:hire'] as const) : [])]
+  const ticks = (
+    <div className="grid gap-1">
+      <label className="flex min-h-11 items-center gap-3 text-sm">
+        <input type="checkbox" checked={work} onChange={(event) => setWork(event.target.checked)} />
+        Get hired: quote, deliver and earn
+      </label>
+      <label className="flex min-h-11 items-center gap-3 text-sm">
+        <input type="checkbox" checked={hire} onChange={(event) => setHire(event.target.checked)} />
+        Hire other agents
+      </label>
+    </div>
+  )
+  return { roles, ticks }
+}
+
+/**
+ * The waiting connection becomes this agent with these roles. Right after registering it connects on its own, so
+ * registering and connecting are one button; for an agent already registered, this is the button.
+ */
+function ConnectAgent({ agent, roles, auto }: { agent: ManagedAgent; roles: Role[]; auto: boolean }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [approved, setApproved] = useState<ApprovedAgent | null>(null)
-  const roles: Role[] = [...(work ? (['sidequest:work'] as const) : []), ...(hire ? (['sidequest:hire'] as const) : [])]
-  async function approve() {
+  async function connect() {
     setBusy(true)
     setError(null)
     try {
       setApproved(await approveAgent(agent.id, roles))
     } catch (failure) {
-      const message = failure instanceof Error ? failure.message : 'The approval did not go through'
-      // The connection can only get the roles allowed when it was made; say which to drop instead of the API's words.
-      setError(
-        /widen/.test(message)
-          ? 'When you connected your coding agent you allowed fewer roles. Untick the one you did not allow.'
-          : message,
-      )
+      setError(failure instanceof Error ? failure.message : 'The connection did not go through')
     } finally {
       setBusy(false)
     }
   }
+  useEffect(() => {
+    if (auto && roles.length > 0) void connect()
+  }, [])
   if (approved !== null)
     return approved.connections.length > 0 ? (
       <Alert>
         <AlertDescription>
-          {agent.name} is approved, Agent ID {approved.agentId}. Go back to your coding agent: it continues as{' '}
+          {agent.name} is connected, Agent ID {approved.agentId}. Go back to your coding agent: it continues as{' '}
           {agent.name}.
         </AlertDescription>
       </Alert>
@@ -74,17 +92,8 @@ function ApproveRoles({ agent }: { agent: ManagedAgent }) {
       </div>
     )
   return (
-    <div className="grid gap-4">
-      <p className="text-sm font-medium">What may {agent.name} do?</p>
-      <label className="flex min-h-11 items-center gap-3 text-sm">
-        <input type="checkbox" checked={work} onChange={(event) => setWork(event.target.checked)} />
-        Get hired: quote, deliver and earn
-      </label>
-      <label className="flex min-h-11 items-center gap-3 text-sm">
-        <input type="checkbox" checked={hire} onChange={(event) => setHire(event.target.checked)} />
-        Hire other agents
-      </label>
-      <Button busy={busy} disabled={roles.length === 0} onClick={() => void approve()}>
+    <div className="grid gap-3">
+      <Button busy={busy} disabled={roles.length === 0} className="justify-self-start" onClick={() => void connect()}>
         Connect {agent.name}
       </Button>
       {error !== null && (
@@ -97,8 +106,8 @@ function ApproveRoles({ agent }: { agent: ManagedAgent }) {
 }
 
 /**
- * Approve an agent your coding agent proposed (`create_agent`): see it, register it with one confirmation, choose what
- * it may do. The connection that proposed it then works as it, with no second sign-in.
+ * Approve an agent your coding agent proposed (`create_agent`): see it, choose what it may do, then one button registers
+ * it and connects it. Every connection of yours still waiting in setup then works as it, with no second sign-in.
  */
 export function AgentApprovePage() {
   // SAFETY: the route is /agents/approve/$agentKey, so agentKey is always present.
@@ -107,6 +116,7 @@ export function AgentApprovePage() {
   const agents = useManagedAgents()
   const proposal = useQuery({ queryKey: ['proposal', agentKey], queryFn: () => readProposal(agentKey) })
   const agent = agents.data?.agents.find((row) => row.id === agentKey)
+  const { roles, ticks } = useRoles()
   const title = (
     <PageTitle sub="Your coding agent proposed it; approving registers it to you.">Approve your agent</PageTitle>
   )
@@ -139,14 +149,15 @@ export function AgentApprovePage() {
         {proposal.data !== undefined && proposal.data !== null && (
           <ProposalCard agentKey={agentKey} proposal={proposal.data} />
         )}
+        <Section title={`What may ${agent.name} do?`}>{ticks}</Section>
         {agent.state === 'active' ? (
-          <ApproveRoles agent={agent} />
+          <ConnectAgent agent={agent} roles={roles} auto={false} />
         ) : (
           <CreateAgent
             operator={auth.address}
             initial={agent}
-            startLabel={`Approve ${agent.name}`}
-            done={(registered) => <ApproveRoles agent={registered} />}
+            startLabel={`Register and connect ${agent.name}`}
+            done={(registered) => <ConnectAgent agent={registered} roles={roles} auto />}
           />
         )}
       </div>
