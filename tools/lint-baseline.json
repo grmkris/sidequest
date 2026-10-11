@@ -792,9 +792,6 @@
     "anti-slop(no-unknown-returns)": 3,
     "anti-slop(require-safety-comment-for-type-assertion)": 2
   },
-  "apps/explore/src/prices.ts": {
-    "complexity(complexity)": 1
-  },
   "apps/explore/src/routes/Admin.tsx": {
     "anti-slop(no-chained-type-assertions)": 3,
     "anti-slop(no-runtime-typeof)": 9,
@@ -805,7 +802,7 @@
     "eslint(max-lines-per-function)": 6,
     "jsx-a11y(label-has-associated-control)": 8,
     "jsx-a11y(prefer-tag-over-role)": 2,
-    "typescript(no-deprecated)": 2,
+    "typescript(no-deprecated)": 1,
     "typescript(no-unnecessary-type-assertion)": 5,
     "typescript(no-unnecessary-type-conversion)": 11,
     "typescript(no-unnecessary-type-parameters)": 1
