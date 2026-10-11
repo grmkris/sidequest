@@ -18,7 +18,7 @@
     },
     "relayFloorMon": 2.5,
     "fallbackAfter": 3,
-    "maxRunsPerDay": 60
+    "maxRunsPerDay": 150
   },
   "members": {
     "brand": {
