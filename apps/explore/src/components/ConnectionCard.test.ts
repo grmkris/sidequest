@@ -15,4 +15,12 @@ describe('MCP connection instructions', () => {
     expect(CLIENT_SETUP.grok(endpoint).after).toContain('/mcps → sidequest → i')
     expect(JSON.parse(CLIENT_SETUP.cursor(endpoint).line)).toEqual({ mcpServers: { sidequest: { url: endpoint } } })
   })
+
+  it('gives Cursor a one-click install link carrying the same server config', () => {
+    const link = new URL(CLIENT_SETUP.cursor(endpoint).install!)
+    expect(`${link.protocol}//${link.host}${link.pathname}`).toBe('cursor://anysphere.cursor-deeplink/mcp/install')
+    expect(link.searchParams.get('name')).toBe('sidequest')
+    expect(JSON.parse(atob(link.searchParams.get('config')!))).toEqual({ url: endpoint })
+    expect(CLIENT_SETUP.claude(endpoint).install).toBeUndefined()
+  })
 })

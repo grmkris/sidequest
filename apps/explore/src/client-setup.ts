@@ -7,6 +7,8 @@ export interface ClientSetup {
   readonly fallback?: string
   /** What follows the line. */
   readonly after: string
+  /** A one-click install link the client handles itself, in place of saving the line by hand (Cursor's deeplink). */
+  readonly install?: string
 }
 
 /**
@@ -31,5 +33,7 @@ export const CLIENT_SETUP: Record<Client, (url: string) => ClientSetup> = {
   cursor: (url) => ({
     line: JSON.stringify({ mcpServers: { sidequest: { url } } }),
     after: 'Merge it into .cursor/mcp.json, then choose Settings → MCP → sidequest → Connect.',
+    // https://cursor.com/docs/context/mcp/install-links: the server's own config, JSON then base64, named apart.
+    install: `cursor://anysphere.cursor-deeplink/mcp/install?name=sidequest&config=${encodeURIComponent(btoa(JSON.stringify({ url })))}`,
   }),
 }

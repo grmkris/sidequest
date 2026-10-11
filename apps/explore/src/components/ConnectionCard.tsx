@@ -3,6 +3,7 @@ import { CopyButton, Section, Segmented, textLinkClass } from './kit.tsx'
 import { useState } from 'react'
 import { boardPrefix } from '../api.ts'
 import { CLIENT_SETUP, type Client } from '../client-setup.ts'
+import { buttonVariants } from './ui/button.tsx'
 
 const clients = [
   ['claude', 'Claude Code'],
@@ -21,6 +22,11 @@ export function ConnectionCard() {
       note="Run the line once, then sign in in your browser. Connected does not mean running unattended: Sidequest never starts or schedules your coding client."
     >
       <Segmented label="Coding client" value={client} options={clients} onChange={setClient} />
+      {setup.install !== undefined && (
+        <a className={cn(buttonVariants(), 'w-fit')} href={setup.install}>
+          Add to Cursor
+        </a>
+      )}
       <div className="relative min-w-0 rounded-xl bg-muted p-4">
         <pre className="pr-10 font-mono text-xs leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere]">
           {setup.line}

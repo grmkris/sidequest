@@ -8,7 +8,7 @@ import { MAINNET_LIVE } from './src/release.ts'
 import { startGuide } from './start-guide-plugin.ts'
 import { docsSite, docsDev } from './docs-site-plugin.ts'
 import { stageProfile } from '../../infra/stage.ts'
-import { NotDeployedError, deployment } from '../../packages/sdk/src/deployment.ts'
+import { NotDeployedError, deployment, networkMeta } from '../../packages/sdk/src/deployment.ts'
 
 const profile = stageProfile()
 const network = profile?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet'
@@ -88,6 +88,34 @@ function release() {
 }
 
 /**
+ * Link previews (X, Slack, iMessage): `og:image` absolute from the stage's origin, as X requires (relative in a local
+ * build, which has none), and `twitter:site` from the network config's X profile (`links.x`).
+ */
+function social() {
+  // SAFETY: `network` is a stage profile's network or SIDEQUEST_NETWORK, and networkMeta throws on any other name.
+  const x = networkMeta(network as 'monad-testnet' | 'monad-mainnet').links.x
+  return {
+    name: 'sidequest-social',
+    transformIndexHtml: () => [
+      {
+        tag: 'meta',
+        attrs: { property: 'og:image', content: `${profile?.origin ?? ''}/og.png` },
+        injectTo: 'head' as const,
+      },
+      ...(x === undefined
+        ? []
+        : [
+            {
+              tag: 'meta',
+              attrs: { name: 'twitter:site', content: `@${new URL(x).pathname.slice(1)}` },
+              injectTo: 'head' as const,
+            },
+          ]),
+    ],
+  }
+}
+
+/**
  * The agent skills (the repo's `skill/<role>/SKILL.md`) at `/skills/<role>/SKILL.md`, so an operator can `curl` the
  * skill that matches this deploy (the Run your agent page shows how). Emitted into the build; served from the repo in
  * dev.
@@ -121,7 +149,7 @@ function skills() {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), manifest(), skills(), startGuide(), docsSite(), docsDev(), release()],
+  plugins: [react(), tailwindcss(), manifest(), skills(), startGuide(), docsSite(), docsDev(), release(), social()],
   // The network is fixed per deploy stage (SIDEQUEST_NETWORK, the same variable the API and indexer read).
   // PRIVY_APP_ID is public (it identifies the app to Privy's login modal); the app secret never reaches the browser.
   define: {
