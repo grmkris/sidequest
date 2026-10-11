@@ -194,7 +194,7 @@ export class AgentSetup {
       return {
         state: 'ready',
         agentId: agent.agent_id,
-        message: 'Re-list MCP tools, then call whoami to verify this agent before continuing.',
+        message: 'Call whoami to verify this agent before continuing; its tools now work on this connection.',
       }
     if (family.agent_id !== null)
       return { state: 'failed', message: 'This connection already acts as another agent. Call whoami.' }

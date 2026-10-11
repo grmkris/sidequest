@@ -1,6 +1,6 @@
 import { agentFailureReply } from '@sidequest/board'
 import type { OAuthGrant } from './oauth.ts'
-import { permittedTool, requiredToolScope, toolAnnotations } from './mcp-policy.ts'
+import { listedTool, requiredToolScope, toolAnnotations, toolRefusal } from './mcp-policy.ts'
 import { ROLE_GUIDES, connectorInstructions, renderSkill } from './mcp-instructions.ts'
 import type { McpEvents } from './mcp-events.ts'
 import { EventRpcError } from './webhooks.ts'
@@ -295,7 +295,7 @@ export async function mcpRoute(input: {
           outputSchema: { type: 'object', additionalProperties: true },
         },
       })
-        .filter(([name]) => permittedTool(grant, name))
+        .filter(([name]) => listedTool(grant, name))
         .map(([name, tool]) => {
           const schema = tool.inputSchema ?? { type: 'object', properties: {} }
           const write = requiredToolScope(name) !== 'sidequest:read'
@@ -413,17 +413,8 @@ export async function mcpRoute(input: {
       typeof params.arguments === 'object' && params.arguments !== null
         ? (params.arguments as Record<string, unknown>)
         : {}
-    if (!permittedTool(grant, name))
-      return respond({
-        content: [{ type: 'text', text: 'forbidden: this connection does not grant this tool' }],
-        isError: true,
-        _meta: {
-          'mcp/www_authenticate': {
-            error: 'insufficient_scope',
-            error_description: 'This connection does not grant the requested tool',
-          },
-        },
-      })
+    const refusal = toolRefusal(grant, name)
+    if (refusal !== undefined) return respond(refusal)
     if (name === 'get_instructions') {
       const role = typeof args.role === 'string' ? args.role : 'connector'
       return respond(

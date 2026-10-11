@@ -182,6 +182,50 @@ export function requiredToolScope(
   return undefined
 }
 
+/**
+ * What a connection lists. A setup connection also lists the tools an approved agent may get, because clients cache the
+ * list (listChanged is false) and the same chat must act once the operator approves; until then a call to one of them
+ * is refused with a wait. Every other connection lists exactly what it may call.
+ */
+export function listedTool(grant: Pick<OAuthGrant, 'scopes' | 'setup' | 'setupFamilyId'>, name: string): boolean {
+  return permittedTool(grant, name) || awaitsApproval(grant, name)
+}
+
+/**
+ * Why a connection may not call a tool, as an MCP tool result, or undefined when it may. A setup connection asking for
+ * a tool its agent gets once approved is told to wait, never insufficient_scope: that would send the client to sign in
+ * again, and reconnecting is never the fix while the operator approves.
+ */
+export function toolRefusal(grant: Pick<OAuthGrant, 'scopes' | 'setup' | 'setupFamilyId'>, name: string) {
+  if (permittedTool(grant, name)) return undefined
+  if (awaitsApproval(grant, name))
+    return {
+      content: [
+        {
+          type: 'text',
+          text: 'waiting: your operator has not approved this agent yet. Poll setup_status; this tool works on this connection once it reports ready.',
+        },
+      ],
+      isError: true,
+    }
+  return {
+    content: [{ type: 'text', text: 'forbidden: this connection does not grant this tool' }],
+    isError: true,
+    _meta: {
+      'mcp/www_authenticate': {
+        error: 'insufficient_scope',
+        error_description: 'This connection does not grant the requested tool',
+      },
+    },
+  }
+}
+
+/** A setup connection's call to a tool it gets only once its operator approves the agent. */
+function awaitsApproval(grant: Pick<OAuthGrant, 'scopes' | 'setup' | 'setupFamilyId'>, name: string): boolean {
+  const scope = requiredToolScope(name)
+  return grant.setup === true && !permittedTool(grant, name) && scope !== undefined && scope !== 'sidequest:setup'
+}
+
 export function permittedTool(
   grant: Pick<OAuthGrant, 'scopes' | 'setup' | 'setupFamilyId'>,
   name: string,

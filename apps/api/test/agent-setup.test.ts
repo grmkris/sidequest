@@ -157,7 +157,7 @@ it('the same bearer becomes the approved agent, with the approved role scopes an
   expect(f.boot().status(bound, { agentKey: created.agentKey })).toMatchObject({
     state: 'ready',
     agentId: '41',
-    message: expect.stringContaining('Re-list'),
+    message: expect.stringContaining('whoami'),
   })
   expect(permittedTool(bound, 'apply')).toBe(true)
   expect(permittedTool(bound, 'create_task')).toBe(false)
@@ -245,7 +245,8 @@ it('does not expose other agents or scopes through setup status and stops bound 
   ).toBe(400)
 })
 
-it('MCP setup tools work without an agent selector, and tool listing changes after owner approval', async () => {
+// Clients cache tools/list, so a setup chat lists the agent's tools up front and can use them once approved.
+it('MCP setup tools work without an agent selector; future tools are listed up front and wait for approval', async () => {
   const f = await fixture(),
     created = await f.boot().create(f.grant, args)
   const call = vi.fn(async () => ({ ok: true, result: f.boot().whoami(f.grant) }))
@@ -271,7 +272,21 @@ it('MCP setup tools work without an agent selector, and tool listing changes aft
     }),
   })
   const listed = Schema.decodeUnknownSync(List)((await route(f.grant, 'tools/list')).body).result.tools
-  expect(listed.map((tool) => tool.name).toSorted()).toEqual(['create_agent', 'setup_status', 'whoami'])
+  expect(listed.map((tool) => tool.name)).toEqual(
+    expect.arrayContaining(['create_agent', 'setup_status', 'whoami', 'apply', 'create_task']),
+  )
+  const Call = Schema.Struct({
+    result: Schema.Struct({
+      isError: Schema.optionalKey(Schema.Boolean),
+      content: Schema.Array(Schema.Struct({ text: Schema.String })),
+      _meta: Schema.optionalKey(Schema.Unknown),
+    }),
+  })
+  const early = Schema.decodeUnknownSync(Call)((await route(f.grant, 'tools/call', { name: 'apply' })).body).result
+  expect(early).toMatchObject({ isError: true, content: [{ text: expect.stringContaining('setup_status') }] })
+  // A wait, never insufficient_scope: that would send the client to sign in again.
+  expect(early._meta).toBeUndefined()
+  expect(call).not.toHaveBeenCalledWith('apply', expect.anything(), expect.anything())
   expect(listed.find((tool) => tool.name === 'create_agent')?.inputSchema.required).toEqual(['name', 'operationKey'])
   expect(listed.find((tool) => tool.name === 'setup_status')?.inputSchema.required).toEqual(['agentKey'])
   const whoami = async (grant: typeof f.grant) =>
@@ -291,6 +306,10 @@ it('MCP setup tools work without an agent selector, and tool listing changes aft
   expect(names).toContain('setup_status')
   expect(names).not.toContain('create_agent')
   expect(names).not.toContain('create_task')
+  expect(f.boot().status(bound, { agentKey: created.agentKey })).toMatchObject({
+    state: 'ready',
+    message: expect.stringContaining('tools now work'),
+  })
 })
 
 it('keeps approved scopes on refresh and leaves expired setup families unbound', async () => {
