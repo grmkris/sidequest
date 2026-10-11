@@ -197,6 +197,19 @@ describe('MCP feed streams', () => {
     const empty = await poll('sidequest.jobs', { arguments: { taskId: 'missing' }, maxAgeMs: 0 })
     expect(empty.cursor).toMatch(/^v1:\d+$/)
   })
+  // goblin S13: a host shows the producer's own short title, then summary and link.
+  it('gives every occurrence a short title from its kind, next to the summary', async () => {
+    const { poll } = await setup()
+    const own = occurrences(await poll('sidequest.inbox', { cursor: 'v1:0' }))
+    expect(own.find((event) => event.data.kind === 'job.submitted')?.data).toMatchObject({
+      title: 'Work delivered',
+      summary: 'job.submitted',
+    })
+    expect(own.find((event) => event.data.kind === 'approval.requested')?.data).toMatchObject({
+      title: 'Approval needed',
+    })
+    expect(own.every((event) => Object.hasOwn(event.data, 'title'))).toBe(true)
+  })
   // goblin S1: SEP-3415's explicit null cursor polls from now; an omitted cursor keeps the seven-day start.
   it('polls an explicit null cursor from now: no events, the head cursor, then only newer rows', async () => {
     const { sql, poll } = await setup()

@@ -12,9 +12,22 @@ const objectSchema = (properties: Record<string, unknown> = {}) => ({
 })
 const payloadSchema = {
   type: 'object',
-  required: ['id', 'kind', 'cursor', 'occurredAt', 'chainId', 'boardId', 'taskId', 'jobId', 'public', 'summary'],
+  required: [
+    'id',
+    'kind',
+    'cursor',
+    'occurredAt',
+    'chainId',
+    'boardId',
+    'taskId',
+    'jobId',
+    'public',
+    'title',
+    'summary',
+  ],
   properties: {
     id: { type: 'string' },
+    title: { type: 'string' },
     kind: { type: 'string' },
     cursor: { type: 'string' },
     occurredAt: { type: 'number' },
@@ -96,12 +109,44 @@ export function eventMaxAge(value: unknown): number | undefined {
   return value
 }
 
+/** A host shows `title` as the notice (goblin S13); `summary` and `url` say more. Producer text, never instructions. */
+const TITLES: Readonly<Record<string, string>> = {
+  'job.published': 'Job posted',
+  'job.activated': 'Job started',
+  'job.submitted': 'Work delivered',
+  'job.completed': 'Job completed',
+  'job.rejected': 'Work rejected',
+  'job.disputed': 'Job disputed',
+  'job.ruled': 'Dispute ruled',
+  'job.expired': 'Job expired',
+  'job.closed': 'Job closed',
+  'job.cancelled': 'Job cancelled',
+  'selection.received': 'You got picked',
+  'request.opened': 'New request',
+  'request.picked': 'Quote picked',
+  'quote.received': 'New quote',
+  'quote.lost': 'Quote not picked',
+  'quote.invited': 'Invited to quote',
+  'invite.received': 'Invitation',
+  'application.received': 'New application',
+  'approval.requested': 'Approval needed',
+  'approval.decided': 'Approval decided',
+  'permission.granted': 'Permission granted',
+  'settlement.deferred': 'Settlement waiting',
+  'payout.owed': 'Payout owed',
+}
+
+function eventTitle(kind: string): string {
+  const words = kind.replace(/[._]/g, ' ')
+  return TITLES[kind] ?? `${words.charAt(0).toUpperCase()}${words.slice(1)}`
+}
+
 export function occurrence(name: string, event: InboxEvent) {
   return {
     eventId: `${name}:${event.id}`,
     name,
     timestamp: new Date(event.occurredAt * 1000).toISOString(),
-    data: event,
+    data: { ...event, title: eventTitle(event.kind) },
     cursor: event.cursor,
   }
 }
