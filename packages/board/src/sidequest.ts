@@ -69,13 +69,15 @@ export function transaction(ctx: sdk.Ctx, description: string, to: Address, data
 
 /**
  * A bond needs that much backing still available behind the account. Short, say who and by how much, as a refusal the
- * caller can act on (the SDK's plain error would reach the caller only as an internal failure).
+ * caller can act on (the SDK's plain error would reach the caller only as an internal failure). With `ask`, a hosted
+ * agent is also told how to get it: request_backing, or the operator's link to its backing with the shortfall filled in.
  */
 export async function requireBacking(
   ctx: sdk.Ctx,
   account: Address,
   bond: bigint,
   role: 'creator' | 'worker',
+  ask?: { origin: string; agentId: string },
 ): Promise<void> {
   if (bond === 0n || ctx.deployment.sidequest === null) return sdk.requireStake(ctx, account, bond)
   const available = await ctx.publicClient.readContract({
@@ -85,9 +87,14 @@ export async function requireBacking(
     args: [account],
   })
   if (available >= bond) return
+  const short = formatEther(bond - available)
+  const how =
+    ask === undefined
+      ? ''
+      : `. Call request_backing, or send your operator ${ask.origin}/agent/${encodeURIComponent(ask.agentId)}?back=${short} to back it with ${short} SIDE from their wallet`
   throw new AgentFailure(
     'conflict',
-    `The ${role} bond is ${formatEther(bond)} SIDE but only ${formatEther(available)} SIDE of backing is available behind ${account}; back it with more SIDE, then retry`,
+    `The ${role} bond is ${formatEther(bond)} SIDE but only ${formatEther(available)} SIDE of backing is available behind ${account}; back it with more SIDE, then retry${how}`,
     'insufficient-backing',
     'after-operator',
   )

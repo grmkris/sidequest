@@ -34,11 +34,12 @@ const chainReads: Record<string, unknown> = {
   MIN_ARBITRATION_WINDOW: 300,
 }
 
-function fixture(options: { require: boolean; lookup?: 'ok' | 'down' }) {
+function fixture(options: { require: boolean; lookup?: 'ok' | 'down'; available?: bigint }) {
   const base = sdk.context('monad-testnet', 'main', 'http://127.0.0.1:1')
   const read = vi.fn(
     async ({ functionName, args }: { functionName: string; args?: readonly unknown[] | undefined }) => {
       if (functionName === 'getAgentWallet') return args?.[0] === 2081n ? selfRun : zeroAddress
+      if (functionName === 'availableOf' && options.available !== undefined) return options.available
       if (functionName in chainReads) return chainReads[functionName]
       if (functionName.startsWith('MAX_')) return sdk.MAX_SIDEQUEST_WINDOW
       throw new Error(`unexpected chain read: ${functionName}`)
@@ -138,4 +139,28 @@ it('is unavailable, not a refusal, when the hosted agent lookup does not answer'
   expect(await fixture({ require: false, lookup: 'down' }).request(wallet)).toMatchObject({
     requestId: expect.any(String),
   })
+})
+
+it('refuses a hosted agent short of backing before any quote, with the operator link to fill it', async () => {
+  const f = fixture({ require: true, available: 0n })
+  for (const post of [() => f.request(hosted), () => f.create(hosted)]) {
+    const refusal = await post().catch((error: unknown) => error)
+    expect(refusal).toBeInstanceOf(BoardError)
+    expect(refusal).toMatchObject({
+      code: 'conflict',
+      reason: 'insufficient-backing',
+      retry: 'after-operator',
+      message: expect.stringContaining(
+        'Call request_backing, or send your operator https://poster.test/agent/2029?back=1 to back it with 1 SIDE',
+      ),
+    })
+  }
+  expect(await f.board.listQuoteRequests({})).toEqual([])
+})
+
+it('leaves a wallet that is not a hosted agent to stake in its own publish batch', async () => {
+  const f = fixture({ require: false, available: 0n })
+  await f.request(wallet)
+  await f.request(selfRun, { agentId: '2081' })
+  expect(Object.keys(await f.agents())).toHaveLength(2)
 })

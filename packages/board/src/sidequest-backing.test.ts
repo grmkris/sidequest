@@ -32,4 +32,17 @@ describe('requireBacking', () => {
     })
     expect(logged).toEqual([])
   })
+
+  it("tells a hosted agent how to get the shortfall: request_backing, or its operator's filled-in link", async () => {
+    const error = await requireBacking(ctxWith(4n * SIDE), account, 10n * SIDE, 'creator', {
+      origin: 'https://dev.sidequest.exchange',
+      agentId: '2194',
+    }).catch((failure: unknown) => failure)
+    expect(error).toMatchObject({
+      reason: 'insufficient-backing',
+      message:
+        `The creator bond is 10 SIDE but only 4 SIDE of backing is available behind ${account}; back it with more SIDE, then retry. ` +
+        'Call request_backing, or send your operator https://dev.sidequest.exchange/agent/2194?back=6 to back it with 6 SIDE from their wallet',
+    })
+  })
 })

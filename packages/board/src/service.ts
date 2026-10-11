@@ -740,9 +740,15 @@ export class Board {
   /**
    * ADR-0019: the ERC-8004 agent posting as `creator`: the one the caller names, when that agent's wallet is the
    * caller's, else the hosted agent behind the wallet. Null when neither resolves; a board that requires poster agents
-   * then refuses the post. A failed hosted lookup is unavailable there, never a refusal.
+   * then refuses the post. A failed hosted lookup is unavailable there, never a refusal. `hosted` says the agent
+   * publishes through the executor, which cannot add backing on the way, so its post is refused at once when the
+   * backing behind it is short (a browser or self-run wallet can still stake in its own publish batch).
    */
-  async #posterAgent(ctx: sdk.Ctx, creator: Address, agentId: string | undefined): Promise<string | null> {
+  async #poster(
+    ctx: sdk.Ctx,
+    creator: Address,
+    agentId: string | undefined,
+  ): Promise<{ agentId: string | null; hosted: boolean }> {
     if (agentId !== undefined) {
       if (!/^\d{1,78}$/.test(agentId)) throw new BoardError('invalid', 'agentId must be a decimal ERC-8004 agent ID')
       const wallet = await ctx.publicClient.readContract({
@@ -756,9 +762,9 @@ export class Board {
           'forbidden',
           `agent ${agentId}'s wallet is not the signed-in wallet: sign in with the agent's wallet to post as it`,
         )
-      return agentId
+      return { agentId, hosted: false }
     }
-    if (this.#config.hostedCreators === undefined) return this.#noPosterAgent()
+    if (this.#config.hostedCreators === undefined) return { agentId: this.#noPosterAgent(), hosted: false }
     const facts = await settleWithin(
       this.#config.hostedCreators({ addresses: [creator], allowances: [] }),
       POSTER_READ_MS,
@@ -766,9 +772,21 @@ export class Board {
     if (facts === undefined) {
       if (this.#config.requirePosterAgent === true)
         throw new BoardError('unavailable', 'the hosted agent lookup did not answer; retry the same call')
-      return null
+      return { agentId: null, hosted: false }
     }
-    return facts.agents.find((a) => eq(a.address, creator))?.agentId ?? this.#noPosterAgent()
+    const hosted = facts.agents.find((a) => eq(a.address, creator))?.agentId
+    return hosted === undefined ? { agentId: this.#noPosterAgent(), hosted: false } : { agentId: hosted, hosted: true }
+  }
+
+  /** A hosted poster's post needs the bond's backing free behind it now; anyone else's is checked at publish. */
+  async #requireHostedBacking(
+    ctx: sdk.Ctx,
+    creator: Address,
+    poster: { agentId: string | null; hosted: boolean },
+    bond: bigint,
+  ): Promise<void> {
+    if (!poster.hosted || poster.agentId === null) return
+    await sidequest.requireBacking(ctx, creator, bond, 'creator', { origin: this.#config.uri, agentId: poster.agentId })
   }
 
   /** A post from a wallet no agent resolves to: refused where the board requires poster agents, else unattributed. */
@@ -959,18 +977,24 @@ export class Board {
     const stack = input.stack ?? 'main'
     const ctx = this.#ctx(stack)
     await this.#requireUnpaused(stack)
-    // A picked hire inherits the agent its request was admitted as.
-    const posterAgent =
+    // A picked hire inherits the agent its request was admitted as; the executor checks its backing at publish.
+    const poster =
       quote === null
-        ? await this.#posterAgent(ctx, creator, input.agentId)
-        : (this.#sql.all<{ creator_agent_id: string | null }>(
-            'SELECT creator_agent_id FROM quote_requests WHERE request_hash = ?',
-            quote.requestHash,
-          )[0]?.creator_agent_id ?? null)
+        ? await this.#poster(ctx, creator, input.agentId)
+        : {
+            agentId:
+              this.#sql.all<{ creator_agent_id: string | null }>(
+                'SELECT creator_agent_id FROM quote_requests WHERE request_hash = ?',
+                quote.requestHash,
+              )[0]?.creator_agent_id ?? null,
+            hosted: false,
+          }
+    const posterAgent = poster.agentId
     const bondPolicy = await sdk.readBondPolicy(ctx)
     const creatorBond = input.creatorBond ?? formatUnits(bondPolicy.minimumCreatorBond, 18)
     const workerBond = input.workerBond ?? '0'
     await sidequest.requireCreatorBond(ctx, parseUnits(creatorBond, 18))
+    await this.#requireHostedBacking(ctx, creator, poster, parseUnits(creatorBond, 18))
     const token = await this.#resolveToken(ctx, input.token)
     const decimals = await ctx.publicClient.readContract({ address: token, abi: erc20Abi, functionName: 'decimals' })
     const [windows, arbitrator, block] = await Promise.all([
@@ -1719,11 +1743,13 @@ export class Board {
     const tags = input.tags === undefined ? [] : normalizeTags(input.tags)
     const stack = input.stack ?? 'main'
     const ctx = this.#ctx(stack)
-    const posterAgent = await this.#posterAgent(ctx, creator, input.agentId)
+    const poster = await this.#poster(ctx, creator, input.agentId)
+    const posterAgent = poster.agentId
     const bondPolicy = await sdk.readBondPolicy(ctx)
     const creatorBond = input.creatorBond ?? formatUnits(bondPolicy.minimumCreatorBond, 18)
     const workerBond = input.workerBond ?? '0'
     await sidequest.requireCreatorBond(ctx, parseUnits(creatorBond, 18))
+    await this.#requireHostedBacking(ctx, creator, poster, parseUnits(creatorBond, 18))
     const budget = input.budget === undefined ? undefined : await this.#requestBudget(ctx, input.budget)
     if (budget !== undefined && input.tokens.length > 0) {
       const named = await Promise.all(input.tokens.map((t) => this.#resolveToken(ctx, t)))
