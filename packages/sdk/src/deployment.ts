@@ -209,6 +209,10 @@ export interface DeploymentConfig {
   x402?: { usdc: string; facilitator: string }
   /** See `NetworkMeta`. */
   links?: { testnet?: string; mainnet?: string; x?: string }
+  /** The launcher SIDE trades on (mainnet): its app's origin; the token's page is `<app>/tokens/<SIDE>`. */
+  nadfun?: { app?: string; [key: string]: unknown }
+  /** The deploy recipe's input; `token` is the existing SIDE it deploys against (contracts/script/SidequestRecipe.sol). */
+  sidequest?: { token?: string; [key: string]: unknown }
   usdPegged?: string[]
   mining?: { creditRule?: { fromEpoch: string | number | bigint } }
   deployment: {
@@ -291,10 +295,13 @@ export function deployment(network: Network): Deployment {
  * - `links.testnet` / `links.mainnet`: the other network's Explore origin, which the network switch opens. Mainnet's
  *   config names testnet; testnet's names mainnet only once mainnet is live (the launch commit adds it).
  * - `links.x`: the project's X profile.
+ * - `getSide`: SIDE's page on its launcher, where people get it while it has no market of ours: `nadfun.app` and the
+ *   SIDE address (`sidequest.token`, then the deployed `factory`). Absent until both are known.
  * - `usdPegged`: tokens Explore values at one US dollar each in its estimates. Anything else needs a live price.
  */
 export interface NetworkMeta {
   readonly links: { readonly testnet?: string; readonly mainnet?: string; readonly x?: string }
+  readonly getSide?: string
   readonly usdPegged: readonly Address[]
 }
 
@@ -302,24 +309,39 @@ export function networkMeta(network: Network): NetworkMeta {
   return networkMetaFromConfig(files[network])
 }
 
+const HTTPS_ORIGIN = /^https:\/\/[a-z0-9.-]+$/
+
+/** An optional https origin from the network config, refused with `name` when it is anything else. */
+function originAt(name: string, origin: string | undefined): string | undefined {
+  if (origin !== undefined && !HTTPS_ORIGIN.test(origin))
+    throw new Error(`Network config ${name} must be an https origin`)
+  return origin
+}
+
+/** SIDE's page on its launcher: `nadfun.app` and the SIDE address (the recipe's input, then the deployed one). */
+function getSideFromConfig(c: DeploymentConfig): string | undefined {
+  const app = originAt('nadfun.app', c.nadfun?.app)
+  const side = c.sidequest?.token ?? c.deployment.factory
+  if (side !== undefined && !validAddress(side)) throw new Error('Network config SIDE must be a token address')
+  return app === undefined || side === undefined ? undefined : `${app}/tokens/${side}`
+}
+
 export function networkMetaFromConfig(c: DeploymentConfig): NetworkMeta {
-  const { testnet: testnetOrigin, mainnet: mainnetOrigin, x: xProfile } = c.links ?? {}
-  for (const [name, origin] of [
-    ['testnet', testnetOrigin],
-    ['mainnet', mainnetOrigin],
-  ] as const)
-    if (origin !== undefined && !/^https:\/\/[a-z0-9.-]+$/.test(origin))
-      throw new Error(`Network config links.${name} must be an https origin`)
-  if (xProfile !== undefined && !/^https:\/\/x\.com\/[A-Za-z0-9_]{1,15}$/.test(xProfile))
+  const testnetOrigin = originAt('links.testnet', c.links?.testnet)
+  const mainnetOrigin = originAt('links.mainnet', c.links?.mainnet)
+  const x = c.links?.x
+  if (x !== undefined && !/^https:\/\/x\.com\/[A-Za-z0-9_]{1,15}$/.test(x))
     throw new Error('Network config links.x must be an https://x.com/<handle> profile')
   const usdPegged = c.usdPegged ?? []
   if (!usdPegged.every(validAddress)) throw new Error('Network config usdPegged must list token addresses')
+  const getSide = getSideFromConfig(c)
   return {
-    links: {
-      ...(testnetOrigin === undefined ? {} : { testnet: testnetOrigin }),
-      ...(mainnetOrigin === undefined ? {} : { mainnet: mainnetOrigin }),
-      ...(xProfile === undefined ? {} : { x: xProfile }),
-    },
+    ...(getSide === undefined ? {} : { getSide }),
+    links: Object.fromEntries(
+      Object.entries({ testnet: testnetOrigin, mainnet: mainnetOrigin, x }).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined,
+      ),
+    ),
     usdPegged,
   }
 }

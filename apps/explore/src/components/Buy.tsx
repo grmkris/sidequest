@@ -1,3 +1,4 @@
+import { cn } from '../lib/cn.ts'
 import { erc20Abi } from 'viem'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as sdk from '@sidequest/sdk'
@@ -7,26 +8,36 @@ import { useBalance, useReadContracts } from 'wagmi'
 import { formatNumber, tokenInfo } from '../format.ts'
 import { stakeContext } from '../stake-context.ts'
 import { friendlyError } from '../txErrors.ts'
-import { chain, deployment } from '../wallet.ts'
+import { chain, deployment, getSideLink } from '../wallet.ts'
 import { useToast } from './Sheet.tsx'
 import { GasWarning, SWAP_GAS } from './GasWarning.tsx'
 import { TxSteps } from './TxSteps.tsx'
 import type { WalletStep } from './txOperation.ts'
 import { Alert, AlertDescription } from './ui/alert.tsx'
-import { Button } from './ui/button.tsx'
+import { Button, buttonVariants } from './ui/button.tsx'
 import { Input } from './ui/input.tsx'
 
 type Want = 'side' | 'quote'
 
 /**
  * Buy SIDE with the market's quote token, or the quote token with SIDE, on the Uniswap v4 SIDE pool
- * (`deployment.market`): an exact-input swap at the live quote less 1% slippage, with a 10-minute deadline. Renders
- * nothing where no market is configured.
+ * (`deployment.market`): an exact-input swap at the live quote less 1% slippage, with a 10-minute deadline. Without a
+ * market, a link to SIDE on its launcher (mainnet's nad.fun) where the config names one; otherwise nothing.
  */
 export function BuyButtons({ address }: { address: `0x${string}` }) {
   const [want, setWant] = useState<Want | null>(null)
   const m = deployment.market
-  if (m === null) return null
+  if (m === null)
+    return getSideLink === null ? null : (
+      <a
+        href={getSideLink}
+        target="_blank"
+        rel="noreferrer"
+        className={cn(buttonVariants({ variant: 'outline' }), 'w-fit')}
+      >
+        Get SIDE on nad.fun
+      </a>
+    )
   const quote = tokenInfo(m.quote)
   return (
     <div className="grid gap-3">

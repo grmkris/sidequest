@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { cn } from '../lib/cn.ts'
-import { deployed, deployment, explorer, xLink } from '../wallet.ts'
+import { deployed, deployment, explorer, getSideLink, xLink } from '../wallet.ts'
 import { CopyButton, shortAddress } from './kit.tsx'
 import { LaunchBanner } from './LaunchGate.tsx'
 import { NetworkSwitch, TestnetEdge, TestnetTag } from './NetworkCue.tsx'
@@ -9,9 +9,14 @@ import { Mark } from './Shell.tsx'
 import { buttonVariants } from './ui/button.tsx'
 
 /** The SIDE contract address, linked to the explorer and copyable: what a visitor checks before buying. */
-function SideAddress({ address }: { address: string }) {
+function SideAddress({ address, className }: { address: string; className?: string }) {
   return (
-    <span className="hidden items-center gap-1.5 rounded-full border py-0.5 pr-0.5 pl-3 font-mono text-xs text-muted-foreground md:inline-flex">
+    <span
+      className={cn(
+        'items-center gap-1.5 rounded-full border py-0.5 pr-0.5 pl-3 font-mono text-xs text-muted-foreground',
+        className,
+      )}
+    >
       <span className="font-sans font-semibold text-foreground">SIDE</span>
       <a
         href={explorer('address', address)}
@@ -28,8 +33,9 @@ function SideAddress({ address }: { address: string }) {
 }
 
 /**
- * The public front door: a translucent bar with the brand, the SIDE contract address, Buy and "Open app"; the page; and
- * a footer of links (the documentation, the protocol and its risks, the source).
+ * The public front door: a translucent bar with the brand, the SIDE contract address, Buy (or "Get SIDE" on its
+ * launcher) and "Open app"; the page; and a footer of links (the documentation, the protocol and its risks, the source,
+ * X), SIDE's address again on a phone, and the network switch.
  */
 export function LandingShell({ children }: { children: ReactNode }) {
   return (
@@ -45,10 +51,21 @@ export function LandingShell({ children }: { children: ReactNode }) {
             <TestnetTag />
           </span>
           <span className="flex items-center gap-2">
-            {deployed && <SideAddress address={deployment.factory} />}
-            <Link to="/account" className={cn(buttonVariants({ variant: 'outline' }), 'hidden sm:inline-flex')}>
-              Buy SIDE
-            </Link>
+            {deployed && <SideAddress address={deployment.factory} className="hidden md:inline-flex" />}
+            {getSideLink !== null ? (
+              <a
+                href={getSideLink}
+                target="_blank"
+                rel="noreferrer"
+                className={cn(buttonVariants({ variant: 'outline' }), 'hidden sm:inline-flex')}
+              >
+                Get SIDE
+              </a>
+            ) : (
+              <Link to="/account" className={cn(buttonVariants({ variant: 'outline' }), 'hidden sm:inline-flex')}>
+                Buy SIDE
+              </Link>
+            )}
             <Link to="/jobs" className={buttonVariants()}>
               Open app
             </Link>
@@ -84,6 +101,7 @@ export function LandingShell({ children }: { children: ReactNode }) {
               </a>
             )}
           </nav>
+          {deployed && <SideAddress address={deployment.factory} className="inline-flex md:hidden" />}
           <NetworkSwitch />
         </footer>
       </main>

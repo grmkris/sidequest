@@ -55,6 +55,7 @@
     "positionOwner": "0x0000000000000000000000000000000000000000"
   },
   "nadfun": {
+    "app": "https://nad.fun",
     "router": "0x8986C8fD44eb85294A725a7e61AF35E76bA26F91",
     "curve": "0x9f3832732923252A21044F21eE6bd87F09514ae4",
     "tokenImplementation": "0x4f44eAFa383FE5f97a0d6CfF97fC5d605D026Fbd",

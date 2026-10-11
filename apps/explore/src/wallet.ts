@@ -36,6 +36,8 @@ export const otherNetwork: { readonly label: 'Mainnet' | 'Testnet'; readonly hre
 export const testnetLink: string | null = isMainnet ? (links.testnet ?? null) : null
 /** The project's X profile (`links.x`), or null. */
 export const xLink: string | null = links.x ?? null
+/** SIDE's page on its launcher (nad.fun on mainnet), where people get SIDE while it has no market of ours; or null. */
+export const getSideLink: string | null = sdk.networkMeta(network).getSide ?? null
 /** The deploy's chain; testnet with the explorer overridden (the chain's default testnet explorer entry is stale). */
 export const chain: Chain = isMainnet
   ? monad
