@@ -48,6 +48,7 @@ import {
   previousPriceOf,
   previousSignedPrice,
   type CheckpointPointer,
+  type CheckpointReplayInput,
 } from './checkpoint.ts'
 import { buildTree, proofOf } from './tree.ts'
 import { encodeFunctionData, type Address, type Hex } from './viem.ts'
@@ -71,6 +72,7 @@ export interface EpochOptions {
   checkpointDir?: string
   fromGenesis?: boolean
   checkpointPrevious?: CheckpointPointer | null
+  published?: CheckpointReplayInput['published']
 }
 const s = (value: bigint | number) => value.toString()
 /** Shared read-only window/price/budget work; v1 normal runs retain their verbatim implementation. */
@@ -375,6 +377,7 @@ async function replayV2(context: EpochContext, delay: bigint, rule: ReturnType<t
     checkpointDir: context.checkpointDir ?? '.',
     ...(context.fromGenesis === undefined ? {} : { fromGenesis: context.fromGenesis }),
     ...(context.checkpointPrevious === undefined ? {} : { previous: context.checkpointPrevious }),
+    ...(context.published === undefined ? {} : { published: context.published }),
     reader: {
       readRoot: (epoch) =>
         c.readContract({
@@ -484,6 +487,11 @@ export async function buildEpochV2(context: EpochContext) {
   return (await buildEpochV2WithState(context)).artifact
 }
 
+export const epochBytes = (artifact: Awaited<ReturnType<typeof buildEpochV2>>) =>
+  new TextEncoder().encode(`${JSON.stringify(artifact, null, 2)}\n`)
+export const stateBytes = (state: Awaited<ReturnType<typeof buildEpochV2WithState>>['state']) =>
+  new TextEncoder().encode(`${JSON.stringify(state, null, 2)}\n`)
+
 export async function runEpochV2(options: EpochOptions, outDir: string) {
   const flags = checkpointFlags(process.argv.slice(2), outDir)
   const { artifact, state } = await buildEpochV2WithState(
@@ -495,8 +503,8 @@ export async function runEpochV2(options: EpochOptions, outDir: string) {
   )
   mkdirSync(outDir, { recursive: true })
   const path = join(outDir, `epoch-${options.epoch}.json`)
-  writeFileSync(path, `${JSON.stringify(artifact, null, 2)}\n`)
-  writeFileSync(join(outDir, `state-${options.epoch}.json`), `${JSON.stringify(state, null, 2)}\n`)
+  writeFileSync(path, epochBytes(artifact))
+  writeFileSync(join(outDir, `state-${options.epoch}.json`), stateBytes(state))
   console.log(
     `epoch ${options.epoch} rule 2: fee USD ${artifact.feeUsd}, credit USD ${artifact.creditUsd}, emission ${artifact.emission}, total ${artifact.total}`,
   )

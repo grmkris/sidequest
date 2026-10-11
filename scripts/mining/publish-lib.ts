@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { Schema } from 'effect'
 import { validateStageProfile, stageProfile } from '../../infra/stage.ts'
 import { deploymentFromConfig, type DeploymentConfig, type Network } from '../../packages/sdk/src/deployment.ts'
 import { dataHashOf } from './compute.ts'
@@ -199,6 +200,10 @@ export interface ManifestsStore {
   put(bucket: string, key: string, bytes: Uint8Array): Promise<void>
   get(bucket: string, key: string): Promise<Uint8Array>
 }
+export interface ManifestsIndex {
+  list(bucket: string, prefix: string): Promise<string[]>
+  find(bucket: string, key: string): Promise<Uint8Array | null>
+}
 
 /** No chain writes. Upload the captured input bytes only after all stage, contract and artifact checks. */
 export async function publishEpoch(
@@ -286,7 +291,7 @@ export function publishArgs(argv: readonly string[]) {
 }
 
 /** Plain REST only: never initialize Alchemy state or allow a guessed bucket suffix. */
-export class CloudflareManifests implements ManifestsStore {
+export class CloudflareManifests implements ManifestsStore, ManifestsIndex {
   #base: string
   #headers: Record<string, string>
   constructor(
@@ -302,7 +307,7 @@ export class CloudflareManifests implements ManifestsStore {
     this.#base = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}`
     this.#headers = { authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}` }
   }
-  async #fetch(path: string, options: RequestInit = {}) {
+  async #fetch(path: string, options: RequestInit = {}, missing = false) {
     try {
       const response = await this.request(`${this.#base}${path}`, {
         ...options,
@@ -310,7 +315,7 @@ export class CloudflareManifests implements ManifestsStore {
         redirect: 'error',
         signal: AbortSignal.timeout(30_000),
       })
-      if (!response.ok) return refuse('cloudflare-unavailable')
+      if (!response.ok && !(missing && response.status === 404)) return refuse('cloudflare-unavailable')
       return response
     } catch {
       return refuse('cloudflare-unavailable')
@@ -321,7 +326,7 @@ export class CloudflareManifests implements ManifestsStore {
       const body = (await (await this.#fetch(path)).json()) as {
         success?: boolean
         result?: unknown
-        result_info?: { total_count?: number }
+        result_info?: { total_count?: number; cursor?: string }
       }
       if (body.success !== true) return refuse('cloudflare-unavailable')
       return body
@@ -386,5 +391,43 @@ export class CloudflareManifests implements ManifestsStore {
   }
   async get(bucket: string, key: string) {
     return new Uint8Array(await (await this.#fetch(`/r2/buckets/${bucket}/objects/${key}`)).arrayBuffer())
+  }
+  async find(bucket: string, key: string) {
+    const response = await this.#fetch(`/r2/buckets/${bucket}/objects/${key}`, {}, true)
+    return response.status === 404 ? null : new Uint8Array(await response.arrayBuffer())
+  }
+  async list(bucket: string, prefix: string) {
+    const keys: string[] = [],
+      seen = new Set<string>()
+    let cursor: string | undefined
+    for (;;) {
+      const query = new URLSearchParams({ prefix, per_page: '1000' })
+      if (cursor !== undefined) query.set('cursor', cursor)
+      const body = await this.#json(`/r2/buckets/${bucket}/objects?${query.toString()}`)
+      const page = objectPage(body.result, body.result_info?.cursor)
+      keys.push(...page.keys)
+      if (!page.cursor) return keys
+      if (seen.has(page.cursor)) return refuse('cloudflare-unavailable')
+      seen.add(page.cursor)
+      cursor = page.cursor
+    }
+  }
+}
+
+const objectRows = Schema.Array(Schema.Struct({ key: Schema.String }))
+const objectListing = Schema.Struct({
+  objects: objectRows,
+  cursor: Schema.optional(Schema.String),
+  truncated: Schema.optional(Schema.Boolean),
+})
+function objectPage(result: unknown, cursor: string | undefined) {
+  try {
+    if (Array.isArray(result))
+      return { keys: Schema.decodeUnknownSync(objectRows)(result).map((row) => row.key), cursor }
+    const page = Schema.decodeUnknownSync(objectListing)(result)
+    if (page.truncated === true && !page.cursor) return refuse('cloudflare-unavailable')
+    return { keys: page.objects.map((row) => row.key), cursor: page.truncated === false ? undefined : page.cursor }
+  } catch {
+    return refuse('cloudflare-unavailable')
   }
 }
