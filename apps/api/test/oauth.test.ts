@@ -55,14 +55,18 @@ function fixture() {
   return { db, sql, d1, agents, route }
 }
 
-async function connection(f: ReturnType<typeof fixture>, scopes?: string[]) {
+async function connection(
+  f: ReturnType<typeof fixture>,
+  scopes?: string[],
+  requested = 'sidequest:read sidequest:work sidequest:hire',
+) {
   const registered = await f.route('/oauth/register', { redirect_uris: [redirectUri], client_name: 'SQLite client' })
   const clientId = (registered.body as { client_id: string }).client_id
   const query = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'sidequest:read sidequest:work sidequest:hire',
+    scope: requested,
     resource,
     code_challenge_method: 'S256',
     code_challenge: await pkceChallenge(verifier),
@@ -216,6 +220,26 @@ test('operator consent narrows the token scopes and cannot widen the requested a
       (await f.route(`/oauth/requests/${requestId}/approve`, { agentIds: ['one'], scopes: ['arbitrary:write'] }))
         .status,
     ).toBe(400)
+  } finally {
+    f.db.close()
+  }
+})
+
+// Every documented client requests setup; picking an existing agent on that consent page must still connect it.
+test('a client that requested setup can connect an existing agent', async () => {
+  const f = fixture()
+  try {
+    const c = await connection(
+      f,
+      ['sidequest:setup', 'sidequest:read', 'sidequest:hire'],
+      'sidequest:setup sidequest:read sidequest:hire',
+    )
+    const reply = await f.route('/oauth/token', c.tokenBody)
+    expect(reply.status).toBe(200)
+    // SAFETY: a 200 token reply always carries the issued token pair.
+    const grant = await resolveOAuth(f.sql, (reply.body as Tokens).access_token, resource, 1000)
+    expect(grant).toMatchObject({ agentIds: ['one'], scopes: ['sidequest:read', 'sidequest:hire'] })
+    expect(grant?.setup).toBeUndefined()
   } finally {
     f.db.close()
   }

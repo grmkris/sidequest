@@ -292,7 +292,13 @@ export async function oauthRoute(input: {
     const requested = Schema.decodeUnknownSync(Schema.Array(Schema.String))(JSON.parse(request.scopes_json)).filter(
       (scope) => scope !== 'sidequest:setup',
     )
-    const selectedScopes = body.scopes === undefined ? requested : body.scopes
+    // Choosing an existing agent answers a setup request too: setup is not an agent scope, so drop it, never refuse it.
+    const selectedScopes =
+      body.scopes === undefined
+        ? requested
+        : Array.isArray(body.scopes)
+          ? body.scopes.filter((scope) => scope !== 'sidequest:setup')
+          : body.scopes
     if (
       !Array.isArray(selectedScopes) ||
       selectedScopes.length === 0 ||
