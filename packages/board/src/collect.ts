@@ -2,18 +2,15 @@
 import * as sdk from '@sidequest/sdk'
 import { type Address, encodeFunctionData } from 'viem'
 import { holdingAbi, settleSidequest, transaction } from './sidequest.ts'
-import { miningProof, type MiningSource } from './mining.ts'
 
 export interface CollectSnapshot {
   jobs: Array<{ jobId: string; holding: string }>
   tokens: Array<{ holding: string; token: string }>
-  epochs?: string[]
   positions?: sdk.DelegationCandidate[]
 }
 export interface CollectAction {
-  kind: 'settle' | 'claimTopUpRefund' | 'withdraw' | 'claimRefund' | 'stakeWithdraw' | 'miningClaim'
+  kind: 'settle' | 'claimTopUpRefund' | 'withdraw' | 'claimRefund' | 'stakeWithdraw'
   jobId?: string | null
-  epoch?: string | null
   token?: string | null
   amount?: string | null
   account?: Address
@@ -26,7 +23,6 @@ export async function collectActions(
   base: sdk.Ctx,
   wallet: Address,
   snapshot: CollectSnapshot,
-  mining?: MiningSource,
 ): Promise<CollectAction[]> {
   const block = await base.publicClient.getBlock()
   const now = Number(block.timestamp)
@@ -182,19 +178,6 @@ export async function collectActions(
           ],
         })
       }
-    }
-    for (const epoch of new Set(snapshot.epochs ?? [])) {
-      if (mining === undefined) throw new Error('mining artifacts are unavailable for Collect')
-      const claim = await miningProof(base, wallet, epoch, mining)
-      if (claim.transactions.length > 0)
-        out.push({
-          kind: 'miningClaim',
-          epoch,
-          token: claim.token,
-          amount: claim.amount,
-          description: 'Claim work mining into your SIDE stake.',
-          transactions: claim.transactions,
-        })
     }
   }
   return out

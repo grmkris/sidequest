@@ -39,16 +39,12 @@
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(no-runtime-typeof)": 3,
     "anti-slop(no-unknown-returns)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 56,
+    "anti-slop(require-safety-comment-for-type-assertion)": 54,
     "complexity(complexity)": 3,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
     "eslint(max-params)": 1,
     "typescript(no-base-to-string)": 3
-  },
-  "apps/api/src/collect-index.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1,
-    "typescript(no-unnecessary-type-conversion)": 1
   },
   "apps/api/src/deadlines.ts": {
     "anti-slop(no-runtime-typeof)": 6,
@@ -122,9 +118,6 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 16,
     "complexity(complexity)": 1,
     "eslint(max-lines-per-function)": 1
-  },
-  "apps/api/src/mining.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "apps/api/src/oauth-validation.ts": {
     "anti-slop(no-runtime-typeof)": 2,
@@ -229,12 +222,11 @@
     "typescript(no-unnecessary-type-assertion)": 2
   },
   "apps/api/test/collect-index.test.ts": {
-    "anti-slop(no-chained-type-assertions)": 2,
-    "anti-slop(require-safety-comment-for-type-assertion)": 4,
-    "typescript(no-unnecessary-type-assertion)": 1
+    "anti-slop(no-chained-type-assertions)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2
   },
   "apps/api/test/collect.fork.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
     "typescript(no-unnecessary-type-assertion)": 5,
     "typescript(no-unnecessary-type-conversion)": 2
   },
@@ -292,13 +284,6 @@
   },
   "apps/api/test/mcp-protocol.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 10
-  },
-  "apps/api/test/mining-worker.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 5,
-    "typescript(no-unnecessary-type-assertion)": 1
-  },
-  "apps/api/test/mining.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 2
   },
   "apps/api/test/oauth.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 15,
@@ -447,15 +432,14 @@
   },
   "apps/explore/src/admin.test.ts": {
     "anti-slop(no-chained-type-assertions)": 3,
-    "anti-slop(require-safety-comment-for-type-assertion)": 21,
-    "typescript(no-unnecessary-type-assertion)": 12
+    "anti-slop(require-safety-comment-for-type-assertion)": 16,
+    "typescript(no-unnecessary-type-assertion)": 8
   },
   "apps/explore/src/admin.ts": {
-    "anti-slop(no-runtime-typeof)": 12,
-    "anti-slop(require-safety-comment-for-type-assertion)": 17,
-    "complexity(complexity)": 3,
-    "eslint(max-lines-per-function)": 2,
-    "typescript(no-unnecessary-type-assertion)": 2
+    "anti-slop(no-runtime-typeof)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 7,
+    "complexity(complexity)": 2,
+    "eslint(max-lines-per-function)": 1
   },
   "apps/explore/src/agent-grant.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
@@ -477,15 +461,6 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 2,
     "complexity(complexity)": 1,
     "typescript(no-unnecessary-type-parameters)": 1
-  },
-  "apps/explore/src/collect.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 3,
-    "typescript(no-unnecessary-type-assertion)": 2
-  },
-  "apps/explore/src/collect.ts": {
-    "anti-slop(no-runtime-typeof)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 2,
-    "typescript(no-unnecessary-type-assertion)": 1
   },
   "apps/explore/src/components/AgentStake.tsx": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2
@@ -785,23 +760,17 @@
   "apps/explore/src/permission-review.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
-  "apps/explore/src/prices.test.ts": {
-    "anti-slop(no-runtime-typeof)": 2,
-    "anti-slop(no-unknown-returns)": 3,
-    "anti-slop(require-safety-comment-for-type-assertion)": 2
-  },
   "apps/explore/src/routes/Admin.tsx": {
     "anti-slop(no-chained-type-assertions)": 3,
-    "anti-slop(no-runtime-typeof)": 9,
-    "anti-slop(require-safety-comment-for-type-assertion)": 15,
+    "anti-slop(no-runtime-typeof)": 3,
+    "anti-slop(require-safety-comment-for-type-assertion)": 12,
     "anti-slop-effect(prefer-effect-match)": 1,
-    "complexity(complexity)": 6,
+    "complexity(complexity)": 4,
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 6,
-    "jsx-a11y(label-has-associated-control)": 8,
+    "eslint(max-lines-per-function)": 4,
+    "jsx-a11y(label-has-associated-control)": 4,
     "jsx-a11y(prefer-tag-over-role)": 2,
-    "typescript(no-deprecated)": 1,
-    "typescript(no-unnecessary-type-assertion)": 5,
+    "typescript(no-unnecessary-type-assertion)": 4,
     "typescript(no-unnecessary-type-conversion)": 11,
     "typescript(no-unnecessary-type-parameters)": 1
   },
@@ -960,29 +929,6 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 6,
     "eslint(max-lines-per-function)": 1,
     "typescript(no-unnecessary-type-assertion)": 3
-  },
-  "contracts/script/epoch0-transactions.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 6,
-    "typescript(no-unnecessary-type-assertion)": 10
-  },
-  "contracts/script/epoch0-transactions.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1,
-    "complexity(complexity)": 1,
-    "eslint(max-params)": 3
-  },
-  "contracts/script/mine-epoch0-testnet.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 4,
-    "complexity(complexity)": 1,
-    "typescript(no-unnecessary-type-assertion)": 1
-  },
-  "contracts/script/testnet-mining-binding.test.ts": {
-    "anti-slop(no-runtime-typeof)": 2
-  },
-  "contracts/script/testnet-mining-options.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 2
-  },
-  "contracts/script/testnet-mining-options.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "crew/bin/crew.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 3,
@@ -1177,20 +1123,6 @@
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 6
   },
-  "packages/board/src/mining.test.ts": {
-    "anti-slop(no-chained-type-assertions)": 1,
-    "anti-slop(no-unknown-returns)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 6,
-    "typescript(no-unnecessary-type-assertion)": 2
-  },
-  "packages/board/src/mining.ts": {
-    "anti-slop(no-runtime-typeof)": 4,
-    "anti-slop(no-unknown-returns)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 2,
-    "complexity(complexity)": 1,
-    "eslint(max-lines-per-function)": 1,
-    "typescript(no-redundant-type-constituents)": 1
-  },
   "packages/board/src/model.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 3
   },
@@ -1236,7 +1168,7 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 6
   },
   "packages/board/src/service.ts": {
-    "anti-slop(no-runtime-typeof)": 18,
+    "anti-slop(no-runtime-typeof)": 17,
     "anti-slop(require-safety-comment-for-type-assertion)": 63,
     "anti-slop-effect(prefer-effect-match)": 1,
     "complexity(complexity)": 11,
@@ -1335,9 +1267,9 @@
   },
   "packages/indexer/src/events.ts": {
     "anti-slop(no-runtime-typeof)": 4,
-    "anti-slop(require-safety-comment-for-type-assertion)": 10,
+    "anti-slop(require-safety-comment-for-type-assertion)": 8,
     "typescript(no-base-to-string)": 2,
-    "typescript(no-unnecessary-type-assertion)": 7
+    "typescript(no-unnecessary-type-assertion)": 5
   },
   "packages/indexer/src/feed.ts": {
     "anti-slop(no-runtime-typeof)": 6,
@@ -1376,9 +1308,9 @@
     "eslint(max-lines-per-function)": 1
   },
   "packages/indexer/src/sidequest.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 19,
+    "anti-slop(require-safety-comment-for-type-assertion)": 13,
     "eslint(max-params)": 1,
-    "typescript(no-unnecessary-type-assertion)": 16,
+    "typescript(no-unnecessary-type-assertion)": 10,
     "typescript(unbound-method)": 1
   },
   "packages/indexer/src/source.ts": {
@@ -1882,75 +1814,6 @@
   },
   "scripts/gen-skills.mjs": {
     "anti-slop(no-runtime-typeof)": 2
-  },
-  "scripts/mining/chain.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 3,
-    "eslint(max-params)": 1,
-    "typescript(no-unnecessary-type-assertion)": 2
-  },
-  "scripts/mining/compute.ts": {
-    "complexity(complexity)": 1
-  },
-  "scripts/mining/contributors.fork.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 4
-  },
-  "scripts/mining/contributors.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 2,
-    "typescript(no-unnecessary-type-assertion)": 2
-  },
-  "scripts/mining/epoch-v1.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 5,
-    "complexity(complexity)": 1,
-    "eslint(max-lines-per-function)": 1,
-    "typescript(no-unnecessary-type-assertion)": 3
-  },
-  "scripts/mining/lots.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 4,
-    "typescript(no-unnecessary-type-assertion)": 4
-  },
-  "scripts/mining/lots.ts": {
-    "complexity(complexity)": 1
-  },
-  "scripts/mining/mining.test.ts": {
-    "anti-slop(no-chained-type-assertions)": 3,
-    "anti-slop(require-safety-comment-for-type-assertion)": 13,
-    "eslint(max-params)": 1,
-    "typescript(await-thenable)": 3,
-    "typescript(no-unnecessary-type-assertion)": 9
-  },
-  "scripts/mining/pool-chain.ts": {
-    "anti-slop(no-runtime-typeof)": 5,
-    "anti-slop(require-safety-comment-for-type-assertion)": 4,
-    "complexity(complexity)": 1,
-    "eslint(max-lines-per-function)": 1,
-    "typescript(no-unnecessary-type-assertion)": 1
-  },
-  "scripts/mining/pool.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1,
-    "typescript(await-thenable)": 4,
-    "typescript(no-unnecessary-type-assertion)": 1
-  },
-  "scripts/mining/prices.ts": {
-    "anti-slop(no-runtime-typeof)": 4,
-    "anti-slop(require-safety-comment-for-type-assertion)": 3
-  },
-  "scripts/mining/publish-lib.ts": {
-    "anti-slop(no-runtime-typeof)": 5,
-    "anti-slop(require-safety-comment-for-type-assertion)": 8,
-    "complexity(complexity)": 2,
-    "typescript(no-misused-spread)": 1
-  },
-  "scripts/mining/publish.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 8,
-    "typescript(await-thenable)": 12,
-    "typescript(no-base-to-string)": 1,
-    "typescript(no-unnecessary-type-assertion)": 11
-  },
-  "scripts/mining/publish.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1
-  },
-  "scripts/mining/sign-prices.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 4
   },
   "scripts/p0-drills.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 4

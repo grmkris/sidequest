@@ -78,9 +78,9 @@
   },
   "type": "module",
   "scripts": {
-    "check": "bun run format:check && bun run agents:check && bun run graph && bun run migrations:check && bun run dupes && bun run typecheck && bun run lint:gate && bun run test && bun run test:scripts && bun run mining",
+    "check": "bun run format:check && bun run agents:check && bun run graph && bun run migrations:check && bun run dupes && bun run typecheck && bun run lint:gate && bun run test && bun run test:scripts",
     "check:fast": "bun run typecheck && bun run lint",
-    "typecheck": "tsc -p scripts/mining/tsconfig.json && tsc -p scripts/ci/tsconfig.json && turbo run typecheck",
+    "typecheck": "tsc -p scripts/ci/tsconfig.json && turbo run typecheck",
     "test": "turbo run test --concurrency=2",
     "lint": "oxlint -c oxlint.config.ts .",
     "lint:fix": "oxlint -c oxlint.config.ts --fix .",
@@ -96,10 +96,6 @@
     "alchemy": "alchemy",
     "reality-check": "bun scripts/reality-check.ts",
     "p0:drills": "bun scripts/p0-drills.ts",
-    "mining:epoch": "bun scripts/mining/epoch.ts",
-    "mining:publish": "bun scripts/mining/publish.ts",
-    "mining:pipeline": "bun --no-env-file scripts/mining/pipeline.ts",
-    "mining:test": "bun test scripts/mining",
     "db:generate": "node scripts/db-generate.mjs",
     "testnet:v1:flows": "bun packages/sdk/scripts/v1-flows.ts",
     "live:deployed": "bun packages/sdk/scripts/live/deployed/acceptance.ts",
@@ -114,8 +110,7 @@
     "check:files": "bun scripts/check-files.ts",
     "migrations:check": "bun scripts/migrations-lock.ts check",
     "migrations:record": "bun scripts/migrations-lock.ts record",
-    "test:scripts": "bun tools/test-scripts.ts && bun test scripts/ci",
-    "mining": "bun test scripts/mining"
+    "test:scripts": "bun tools/test-scripts.ts && bun test scripts/ci"
   },
   "devDependencies": {
     "@effect/platform-bun": "catalog:",

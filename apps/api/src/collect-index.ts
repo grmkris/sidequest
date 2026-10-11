@@ -53,15 +53,6 @@ export async function collectSnapshot(
     ctx.deployment.chainId,
     wallet,
   )
-  const roots =
-    ctx.deployment.sidequest === null
-      ? []
-      : await sql.all<{ args_json: string }>(
-          "SELECT args_json FROM protocol_events WHERE chain_id=? AND lower(contract)=lower(?) AND name='RootSet' ORDER BY block,log_index",
-          ctx.deployment.chainId,
-          ctx.deployment.sidequest.distributor,
-        )
-  const epochs = [...new Set(roots.map((r) => String((JSON.parse(r.args_json) as { epoch: string }).epoch)))]
   const positions =
     ctx.deployment.sidequest === null
       ? []
@@ -73,6 +64,6 @@ export async function collectSnapshot(
   return {
     jobs: jobs.filter((job) => configured(job.holding)),
     tokens: tokens.filter((token) => configured(token.holding)),
-    ...(ctx.deployment.sidequest === null ? {} : { epochs, positions }),
+    ...(ctx.deployment.sidequest === null ? {} : { positions }),
   }
 }

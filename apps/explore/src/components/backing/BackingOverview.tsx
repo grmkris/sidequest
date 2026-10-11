@@ -70,8 +70,7 @@ export function BackingOverview({
         </Button>
       </div>
       <p className="text-xs text-pretty text-muted-foreground">
-        SIDE behind an agent covers its deposits, lowers its fee and earns any mining share it gives backers; bad work
-        is slashed from it.{' '}
+        SIDE behind an agent covers its deposits and lowers its fee; bad work is slashed from it.{' '}
         <a href="/docs/concepts/bonds-and-staking" className={textLinkClass}>
           How backing works
         </a>

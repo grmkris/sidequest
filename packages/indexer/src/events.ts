@@ -23,7 +23,7 @@ export interface IndexedEvent {
   readonly block: number
   readonly logIndex: number
   readonly txHash: string
-  /** Null for protocol events emitted by the vault, fee schedule, reserve or distributor. */
+  /** Null for protocol events emitted by the vault or fee schedule. */
   readonly jobId: string | null
   readonly name: string
   readonly args: Record<string, JsonValue>
@@ -31,7 +31,7 @@ export interface IndexedEvent {
 
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
 
-export type Role = 'core' | 'holding' | 'evaluator' | 'vault' | 'feeSchedule' | 'miningReserve' | 'distributor'
+export type Role = 'core' | 'holding' | 'evaluator' | 'vault' | 'feeSchedule'
 
 /** Which ABI decodes which address, and which stack a Holding or evaluator belongs to. */
 export interface Contracts {
@@ -56,8 +56,6 @@ export function contractsFromDeployment(d: sdk.Deployment): Contracts {
   if (d.sidequest !== null) {
     roles.set(d.sidequest.vault.toLowerCase(), { role: 'vault', stack: null, kind: 'sidequest-v1' })
     roles.set(d.sidequest.feeSchedule.toLowerCase(), { role: 'feeSchedule', stack: null, kind: 'sidequest-v1' })
-    roles.set(d.sidequest.miningReserve.toLowerCase(), { role: 'miningReserve', stack: null, kind: 'sidequest-v1' })
-    roles.set(d.sidequest.distributor.toLowerCase(), { role: 'distributor', stack: null, kind: 'sidequest-v1' })
   }
   return { chainId: d.chainId, core: d.core.toLowerCase(), roles }
 }
@@ -68,8 +66,6 @@ const v1Abis: Partial<Record<Role, Abi>> = {
   evaluator: sdk.sidequestEvaluatorAbi as Abi,
   vault: sdk.stakeVaultAbi as Abi,
   feeSchedule: sdk.feeScheduleAbi as Abi,
-  miningReserve: sdk.miningReserveAbi as Abi,
-  distributor: sdk.epochDistributorAbi as Abi,
 }
 
 const jsonSafe = (v: unknown): JsonValue => {

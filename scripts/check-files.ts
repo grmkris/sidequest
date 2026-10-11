@@ -106,8 +106,7 @@ const lint = async (files: readonly string[], heavy: boolean): Promise<StepResul
 const rootChecks = async (files: readonly string[]): Promise<StepResult[]> => {
   const configs = new Set<string>()
   for (const file of files.filter((file) => TYPED.test(file) && workspaceOf(file) === ROOT_WORKSPACE)) {
-    if (file.startsWith('scripts/mining/')) configs.add('scripts/mining/tsconfig.json')
-    else if (file.startsWith('scripts/ci/')) configs.add('scripts/ci/tsconfig.json')
+    if (file.startsWith('scripts/ci/')) configs.add('scripts/ci/tsconfig.json')
     else if (['scripts/check-files.ts', 'scripts/migrations-lock.ts'].includes(file)) configs.add('tools/tsconfig.json')
     else if (/\.[cm]?[jt]sx?$/u.test(file)) configs.add('tsconfig.json')
   }

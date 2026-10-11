@@ -11,33 +11,13 @@ import {
   stmt,
   type IndexedEvent,
 } from '@sidequest/indexer'
-import {
-  type Address,
-  decodeFunctionData,
-  encodeFunctionData,
-  encodeAbiParameters,
-  concat,
-  keccak256,
-  stringToHex,
-  parseAbi,
-  parseEther,
-} from 'viem'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { tmpdir } from 'node:os'
-import type { MiningSource } from '@sidequest/board'
+import { type Address, decodeFunctionData, encodeFunctionData, parseAbi, parseEther } from 'viem'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { forkEnabled, forkSetupTimeout, startSidequestFork } from '../../../packages/sdk/test/sidequest-fixture.ts'
 import { collectSnapshot } from '../src/collect-index.ts'
 
 const fork = forkEnabled ? describe : describe.skip
 const actor = (w: sdk.Wallet) => ({ address: w.account.address })
-const miningLeaf = (account: Address, value: bigint) =>
-  keccak256(
-    keccak256(
-      encodeAbiParameters([{ type: 'uint256' }, { type: 'address' }, { type: 'uint256' }], [0n, account, value]),
-    ),
-  )
 fork('B4 wallet tools and all-pair Collect on a real local Monad fork', () => {
   let f: Awaited<ReturnType<typeof startSidequestFork>>,
     board: Board,
@@ -47,7 +27,6 @@ fork('B4 wallet tools and all-pair Collect on a real local Monad fork', () => {
     agentId: bigint
   let ctx: sdk.Ctx
   let boardNow: number
-  let miningSource: MiningSource | undefined
   const boot = () =>
     new Board(boardSql(db), {
       network: 'monad-testnet',
@@ -58,7 +37,6 @@ fork('B4 wallet tools and all-pair Collect on a real local Monad fork', () => {
       now: () => boardNow,
       collectSnapshot: async (wallet) =>
         collectSnapshot(fromNodeSqlite(index), ctx, wallet, Number((await ctx.publicClient.getBlock()).timestamp)),
-      ...(miningSource === undefined ? {} : { miningSource }),
     })
   beforeAll(async () => {
     f = await startSidequestFork()
@@ -441,63 +419,4 @@ fork('B4 wallet tools and all-pair Collect on a real local Monad fork', () => {
     index.prepare('DELETE FROM checkpoint').run()
     await expect(board.collectActions({}, { wallet: f.worker.account.address })).rejects.toThrow('unavailable')
   })
-  it('loads the epoch file, discovers its indexed root and claims real SIDE directly into the account’s stake', async () => {
-    const epoch = '0',
-      amount = parseEther('2'),
-      creatorAmount = parseEther('1')
-    const workerLeaf = miningLeaf(f.worker.account.address, amount),
-      creatorLeaf = miningLeaf(f.creator.account.address, creatorAmount)
-    const root = keccak256(
-      workerLeaf < creatorLeaf ? concat([workerLeaf, creatorLeaf]) : concat([creatorLeaf, workerLeaf]),
-    )
-    const inputs = { chainId: ctx.deployment.chainId, epoch, fees: [] }
-    const dataHash = keccak256(stringToHex(JSON.stringify(inputs))),
-      total = amount + creatorAmount
-    const file = {
-      chainId: ctx.deployment.chainId,
-      epoch,
-      total: total.toString(),
-      root,
-      dataHash,
-      inputs,
-      claims: {
-        [f.worker.account.address.toLowerCase()]: { amount: amount.toString(), proof: [creatorLeaf] },
-        [f.creator.account.address.toLowerCase()]: { amount: creatorAmount.toString(), proof: [workerLeaf] },
-      },
-    }
-    const path = await mkdtemp(join(tmpdir(), 'sidequest-epoch-fork-'))
-    try {
-      await writeFile(join(path, 'epoch-0.json'), JSON.stringify(file))
-      miningSource = { load: async (n) => JSON.parse(await readFile(join(path, `epoch-${n}.json`), 'utf8')) as unknown }
-      board = boot()
-      const h = ctx.deployment.sidequest!
-      await f.send(h.factory, sdk.factoryV2Abi, 'transfer', [h.distributor, total])
-      await f.send(h.distributor, sdk.epochDistributorAbi, 'setRoot', [0n, file.root, total, dataHash])
-      await indexNow()
-      const proof = await board.miningProof({}, { wallet: f.worker.account.address, epoch })
-      expect(proof).toMatchObject({ amount: amount.toString(), eligible: true, claimed: false })
-      const action = (await board.collectActions({}, { wallet: f.worker.account.address })).find(
-        (a) => a.kind === 'miningClaim' && a.epoch === epoch,
-      )!
-      expect(action.amount).toBe(amount.toString())
-      expect(action.transactions).toEqual(proof.transactions)
-      const before = await sdk.getBacking(ctx, f.worker.account.address)
-      // Claims are permissionless, but the account in the verified leaf is the only beneficiary.
-      await sdk.sendAll(f.contributor, ctx.publicClient, action.transactions)
-      await indexNow()
-      expect((await sdk.getBacking(ctx, f.worker.account.address)).assets).toBe(before.assets + amount)
-      expect(await board.miningProof({}, { wallet: f.worker.account.address, epoch })).toMatchObject({
-        claimed: true,
-        transactions: [],
-      })
-      expect(
-        (await board.collectActions({}, { wallet: f.worker.account.address })).some((a) => a.kind === 'miningClaim'),
-      ).toBe(false)
-      expect(
-        (await board.collectActions({}, { wallet: f.creator.account.address })).some((a) => a.kind === 'miningClaim'),
-      ).toBe(true)
-    } finally {
-      await rm(path, { recursive: true })
-    }
-  }, 180_000)
 })

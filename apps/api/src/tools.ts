@@ -37,8 +37,6 @@ export interface ToolContext {
   readonly network: sdk.Network
   readonly mcpSession: string | undefined
   readonly commons?: CommonsHost
-  /** The board's configured RPC, for tools that read chain state (fee_quote's mining fields). */
-  readonly rpcUrl?: string
 }
 
 const str = (description: string) => ({ type: 'string', description })
@@ -1111,17 +1109,13 @@ export const tools: Record<string, Tool> = {
   },
   fee_quote: {
     description:
-      'Read quoteActivation for a worker and v1 job: feeBps, fee and net in reward-token base units, plus mining floor, tier, boost and credited gross-volume bps at activation. Held backing can lower the mining credit. Re-quote before signing activation.',
+      'Read quoteActivation for a worker and v1 job: feeBps, fee and net in reward-token base units. Re-quote before signing activation.',
     inputSchema: {
       type: 'object',
       properties: { ...taskId, worker: str('Worker wallet address.') },
       required: ['taskId', 'worker'],
     },
-    run: async (board, caller, a, ctx) => {
-      const quote = await board.feeQuote(caller, { taskId: s(a, 'taskId'), worker: s(a, 'worker') })
-      const { quotedMining } = await import('./fee-quote.ts')
-      return { ...quote, mining: await quotedMining(ctx.network, quote.feeBps, ctx) }
-    },
+    run: (board, caller, a) => board.feeQuote(caller, { taskId: s(a, 'taskId'), worker: s(a, 'worker') }),
   },
   collect_actions: {
     description:
@@ -1142,16 +1136,6 @@ export const tools: Record<string, Tool> = {
         operationId: s(a, 'operationId'),
         ...(a.txHash === undefined ? {} : { txHash: s(a, 'txHash') }),
       }),
-  },
-  mining_proof: {
-    description:
-      'Read a work-mining epoch proof from the published artifact, checked against the current distributor root and claim state. Unclaimed rewards return a transaction that stakes SIDE for the named wallet, whether it is a worker, creator or backer.',
-    inputSchema: {
-      type: 'object',
-      properties: { wallet: str('Reward account address.'), epoch: str('Canonical decimal epoch number, e.g. "0".') },
-      required: ['wallet', 'epoch'],
-    },
-    run: (board, caller, a) => board.miningProof(caller, { wallet: s(a, 'wallet'), epoch: s(a, 'epoch') }),
   },
   ...commonsTools,
 }

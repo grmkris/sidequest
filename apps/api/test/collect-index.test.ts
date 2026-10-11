@@ -32,32 +32,12 @@ async function fixture() {
 const wallet = `0x${'b'.repeat(40)}` as const
 it('a canonical recent complete index may return an empty list', async () => {
   const f = await fixture()
-  expect(await collectSnapshot(f.sql, f.ctx, wallet, 1000)).toEqual({ jobs: [], tokens: [], epochs: [], positions: [] })
+  expect(await collectSnapshot(f.sql, f.ctx, wallet, 1000)).toEqual({ jobs: [], tokens: [], positions: [] })
 })
 it('a partial RPC read fails the entire snapshot', async () => {
   const f = await fixture()
   f.getBlock.mockRejectedValueOnce(new Error('RPC unavailable'))
   await expect(collectSnapshot(f.sql, f.ctx, wallet, 1000)).rejects.toThrow('RPC unavailable')
-})
-it('discovers unique mining epochs only from the configured distributor on this chain', async () => {
-  const f = await fixture(),
-    distributor = `0x${'c'.repeat(40)}` as const
-  f.ctx = {
-    ...f.ctx,
-    deployment: { ...f.ctx.deployment, sidequest: { ...f.ctx.deployment.sidequest!, distributor } },
-  } as unknown as sdk.Ctx
-  const insert = f.db.prepare('INSERT INTO protocol_events VALUES (?,?,?,?,?,?,?)')
-  insert.run(10143, distributor, 2, 0, 'tx1', 'RootSet', '{"epoch":"0"}')
-  insert.run(10143, distributor, 3, 0, 'tx2', 'RootSet', '{"epoch":"0"}')
-  insert.run(10143, distributor, 4, 0, 'tx3', 'RootSet', '{"epoch":"1"}')
-  insert.run(143, distributor, 4, 0, 'tx4', 'RootSet', '{"epoch":"2"}')
-  insert.run(10143, wallet, 4, 0, 'tx5', 'RootSet', '{"epoch":"3"}')
-  expect(await collectSnapshot(f.sql, f.ctx, wallet, 1000)).toEqual({
-    jobs: [],
-    tokens: [],
-    epochs: ['0', '1'],
-    positions: [],
-  })
 })
 it('a changing checkpoint or a lagging finalized block refuses discovery', async () => {
   const f = await fixture()
@@ -98,7 +78,6 @@ it('excludes retired Holding jobs and owed tokens without deleting their histori
   expect(await collectSnapshot(f.sql, f.ctx, wallet, 1000)).toEqual({
     jobs: [{ jobId: '80', holding }],
     tokens: [{ holding, token: wallet }],
-    epochs: [],
     positions: [],
   })
   expect(f.db.prepare('SELECT COUNT(*) AS n FROM jobs').get()).toEqual({ n: 2 })

@@ -186,7 +186,7 @@ describe('authenticated search_docs', () => {
       ['connect', 'quickstart'],
       ['dispute', 'guides/work'],
       ['admin powers', 'trust'],
-      ['mining', 'concepts/mining'],
+      ['backing', 'concepts/bonds-and-staking'],
     ] as const) {
       expect(searchDocs({ query, limit: 1 }, origin).results[0]?.slug).toBe(slug)
     }

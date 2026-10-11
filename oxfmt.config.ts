@@ -9,7 +9,6 @@ export default defineConfig({
     'contracts/**',
     'docs/**',
     'skill/**',
-    'scripts/mining/README.md',
     '**/generated/**',
     'packages/sdk/src/abi/**',
     '**/__snapshots__/**',

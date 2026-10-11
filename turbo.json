@@ -144,7 +144,6 @@
         "$TURBO_ROOT$/tsconfig.base.json",
         "$TURBO_ROOT$/contracts/config/**",
         "$TURBO_ROOT$/skill/**",
-        "$TURBO_ROOT$/scripts/mining/prices.ts",
         "$TURBO_ROOT$/packages/board/src/**",
         "$TURBO_ROOT$/apps/docs/src/**",
         "$TURBO_ROOT$/apps/docs/content/**",
@@ -197,7 +196,6 @@
         "$TURBO_ROOT$/docs/mainnet-runbook.md",
         "$TURBO_ROOT$/scripts/preflight-prod.ts",
         "$TURBO_ROOT$/package.json",
-        "$TURBO_ROOT$/scripts/mining/README.md",
         "$TURBO_ROOT$/apps/api/src/prod-config.ts"
       ],
       "outputs": [],

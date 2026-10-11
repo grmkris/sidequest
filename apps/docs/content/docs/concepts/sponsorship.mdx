@@ -15,7 +15,7 @@ The ordinary grant does not approve tokens, publish, top up, deposit SIDE, reque
 
 ## Wallet-paid actions and exceptions
 
-Publish, top-ups, stake deposits, execution-budget draws and mining claims stay wallet-paid. Managed-agent publish is a separate allowance-funded exception: the relay atomically redeems the exact operator allowance, approves the reward token to SidequestHolding and publishes. A failed publish reverts the pull and approval.
+Publish, top-ups, stake deposits and execution-budget draws stay wallet-paid. Managed-agent publish is a separate allowance-funded exception: the relay atomically redeems the exact operator allowance, approves the reward token to SidequestHolding and publishes. A failed publish reverts the pull and approval.
 
 An over-limit or unknown-token hire waits for an exact operator decision. For an unknown token, the routine signer may issue its one-call token approval only after that decision is verified.
 

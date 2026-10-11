@@ -146,16 +146,6 @@ const paidLogs = [
     1,
   ),
   log(sdk.stakeVaultAbi as Abi, addr(4), 'Reserved', { holding: addr(2), account: worker, amount: 200n }, 101, 1),
-  log(sdk.miningReserveAbi as Abi, addr(7), 'EpochFunded', { epoch: 0n, amount: 500n, totalFunded: 500n }, 105),
-  log(
-    sdk.epochDistributorAbi as Abi,
-    addr(6),
-    'RootSet',
-    { epoch: 0n, root: hash(9), total: 500n, dataHash: hash(10) },
-    105,
-    1,
-  ),
-  log(sdk.epochDistributorAbi as Abi, addr(6), 'Claimed', { epoch: 0n, account: worker, amount: 500n }, 106),
   log(
     sdk.feeScheduleAbi as Abi,
     addr(5),
@@ -314,24 +304,16 @@ describe('Sidequest event indexing', () => {
       { side: 'worker', outcome: 'returned', recipient: worker },
     ])
     const protocol = await protocolEvents(sql, contracts.chainId)
-    expect(protocol.map((e) => e.name)).toEqual([
-      'Delegated',
-      'Reserved',
-      'EpochFunded',
-      'RootSet',
-      'Claimed',
-      'ScheduleExecuted',
-    ])
+    expect(protocol.map((e) => e.name)).toEqual(['Delegated', 'Reserved', 'ScheduleExecuted'])
     expect(protocol.every((e) => e.at === 10_000 + e.block)).toBe(true)
     expect(protocol.at(-1)?.args.thresholds).toEqual(['0', '10000', '100000', '1000000'])
     expect(
-      (await protocolEvents(sql, contracts.chainId, { contract: addr(6), fromBlock: 106 })).map((e) => e.name),
-    ).toEqual(['Claimed'])
+      (await protocolEvents(sql, contracts.chainId, { contract: addr(4), fromBlock: 101 })).map((e) => e.name),
+    ).toEqual(['Reserved'])
   })
 
-  it('keeps fast per-job windows and emitted epoch ids without deriving epochs from wall-clock constants', async () => {
-    const sql = await db(),
-      epoch = 17n
+  it('keeps fast per-job windows without deriving them from wall-clock constants', async () => {
+    const sql = await db()
     const logs = [
       log(
         holding,
@@ -340,16 +322,6 @@ describe('Sidequest event indexing', () => {
         { ...decode(contracts, published())!.args, reviewWindow: 120, disputeWindow: 120, arbitrationWindow: 300 },
         100,
       ),
-      log(sdk.miningReserveAbi as Abi, addr(7), 'EpochFunded', { epoch, amount: 500n, totalFunded: 500n }, 101),
-      log(
-        sdk.epochDistributorAbi as Abi,
-        addr(6),
-        'RootSet',
-        { epoch, root: hash(9), total: 500n, dataHash: hash(10) },
-        101,
-        1,
-      ),
-      log(sdk.epochDistributorAbi as Abi, addr(6), 'Claimed', { epoch, account: worker, amount: 500n }, 102),
     ]
     await runOnce(sql, cfg(logs))
     expect((await jobDetail(sql, contracts.chainId, '1000', 0))?.job).toMatchObject({
@@ -357,8 +329,6 @@ describe('Sidequest event indexing', () => {
       dispute_window: 120,
       arbitration_window: 300,
     })
-    const events = await protocolEvents(sql, contracts.chainId)
-    expect(events.map((event) => event.args.epoch)).toEqual(['17', '17', '17'])
   })
 
   it('records creator refunds, top-up claims and permissionless outcomes separately', async () => {
@@ -492,7 +462,7 @@ describe('Sidequest event indexing', () => {
     for (const table of ['events', 'protocol_events', 'jobs', 'checkpoint'])
       expect(await sql.all(`SELECT * FROM ${table}`)).toEqual([])
     await runOnce(sql, cfg(paidLogs))
-    expect((await protocolEvents(sql, contracts.chainId)).length).toBe(6)
+    expect((await protocolEvents(sql, contracts.chainId)).length).toBe(3)
   })
 
   it('rewinds both paths and restores a pre-ruling job from retained events', async () => {

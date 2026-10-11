@@ -37,7 +37,6 @@ import { confirmOperationEvent, consumedOperationEvents, receiptTimestamp } from
 import { RelaySender, type RelayRequest } from './relay.ts'
 import { collectActions, type CollectSnapshot } from './collect.ts'
 import * as v1Tools from './v1-tools.ts'
-import { miningEpoch, miningProof, type MiningSource } from './mining.ts'
 import { type DisputeBundle, type ViolationName, bundleHash, rulingRefusal } from './arbitration.ts'
 import { type DisputeBundleReply, type DisputeThreadReader, withDisputeThread } from './dispute-thread.ts'
 import { type GitHubApp, checkRuns, installationToken, repoSlug } from './github.ts'
@@ -129,7 +128,6 @@ export interface BoardConfig {
   /** Checked, read-only discovery across every hosted board and pair; absent means Collect is unavailable. */
   readonly collectSnapshot?: (wallet: Address) => Promise<CollectSnapshot>
   readonly delegationSnapshot?: (filters: PositionFilters) => Promise<DelegationSnapshot>
-  readonly miningSource?: MiningSource
   /** Used for the one-time submission check of a deliverable (ADR-0006); defaults to the global fetch. */
   readonly fetch?: typeof fetch
   /**
@@ -601,23 +599,7 @@ export class Board {
       throw new BoardError('invalid', 'wallet must be an address')
     if (this.#config.collectSnapshot === undefined) throw new BoardError('chain', 'the collect index is unavailable')
     const wallet = getAddress(input.wallet)
-    return collectActions(
-      this.#ctx('main'),
-      wallet,
-      await this.#config.collectSnapshot(wallet),
-      this.#config.miningSource,
-    )
-  }
-  async miningProof(_caller: Caller, input: { wallet: string; epoch: string }) {
-    if (typeof input.wallet !== 'string' || !isAddress(input.wallet))
-      throw new BoardError('invalid', 'wallet must be an address')
-    try {
-      miningEpoch(input.epoch)
-    } catch {
-      throw new BoardError('invalid', 'epoch must be a canonical uint256 decimal string')
-    }
-    if (this.#config.miningSource === undefined) throw new BoardError('chain', 'mining artifacts are unavailable')
-    return miningProof(this.#ctx('main'), getAddress(input.wallet), input.epoch, this.#config.miningSource)
+    return collectActions(this.#ctx('main'), wallet, await this.#config.collectSnapshot(wallet))
   }
 
   /**

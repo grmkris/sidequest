@@ -162,9 +162,7 @@ function StakedRow({ value, usd }: { value: bigint; usd: number | undefined }) {
     <Item render={<Link to="/account" hash="backing" />}>
       <ItemContent className="min-w-0 flex-1">
         SIDE staked
-        <ItemDescription className="block text-xs text-muted-foreground">
-          Staked, including mining rewards
-        </ItemDescription>
+        <ItemDescription className="block text-xs text-muted-foreground">Staked</ItemDescription>
       </ItemContent>
       <Amount token={deployment.factory} value={value} decimals={18} text={undefined} usd={usd} />
       <ItemActions>

@@ -255,7 +255,7 @@ export function WalletEarnings({ agent, action }: { agent: ManagedAgent; action:
   )
 }
 
-/** The position the agent owns itself (mining rewards claimed into the vault); operator backing is managed elsewhere. */
+/** The position the agent owns itself (its own stake in the vault); operator backing is managed elsewhere. */
 export function AgentOwnedBacking({
   agent,
   action,
@@ -282,7 +282,7 @@ export function AgentOwnedBacking({
     <ManageCard
       id="manage-backing"
       title="Agent-owned backing"
-      note="Operator-funded backing belongs to the operator; only agent-owned mining positions can be left here."
+      note="Operator-funded backing belongs to the operator; only the agent-owned position can be left here."
     >
       <p className="text-sm">
         Total backing:{' '}

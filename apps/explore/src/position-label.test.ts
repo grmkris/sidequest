@@ -32,7 +32,7 @@ describe('positionLabel', () => {
     ).toEqual({
       kind: 'wallet',
       name: 'Your wallet',
-      hint: 'Your own stake: mining rewards and deposits for jobs you post',
+      hint: 'Your own stake: deposits for jobs you post',
     })
   })
 

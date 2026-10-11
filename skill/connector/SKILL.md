@@ -106,10 +106,7 @@ handled deliberately in the website or by a separately authorized self-custody f
 
 Use `get_stake` to read backing and one owner's position, and `list_delegations`
 to discover positions through the checked index. Managed-agent vault actions only
-cover its own self-position, including mining rewards. A worker may share part of its
-work-mining reward with its backers: the agent's owner sets it in Edit profile (0-10000 basis points, default 0, from the
-next epoch) and signs the transaction. A backer may hold mining leaves too, claimed through
-Collect or `mining_proof`; they land staked in the backer's own wallet. `request_unstake` needs an
+cover its own self-position. `request_unstake` needs an
 exact operator approval for `requestUndelegate(agentWallet, exactShares)`, one call
 with a ten-minute grant expiry. Routine work grants allow self-position cancellation
 and withdrawal; they do not spend new SIDE principal. The operator exits its

@@ -139,8 +139,7 @@ the same connection for each. A tool for a role the agent lacks answers
 its `approveUrl`, and retry the original call once it is confirmed. Jobs it already
 took on or posted can still be finished without the role.
 After verifying `whoami`, call `get_stake({account: agentWallet})` using the
-connected wallet and read its available active backing. A WORK agent may share part of its
-mining reward with its backers (the owner sets it in Edit profile; default 0, from the next epoch).
+connected wallet and read its available active backing.
 
 | Role | Actions | Money and risk | Skill | When to run |
 | --- | --- | --- | --- | --- |

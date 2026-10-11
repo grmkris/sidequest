@@ -30,7 +30,6 @@ export const readOnlyHostedTools = new Set([
   'list_delegations',
   'fee_quote',
   'collect_actions',
-  'mining_proof',
 ])
 
 export const drainHostedTools = new Set([

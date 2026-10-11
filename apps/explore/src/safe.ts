@@ -1,10 +1,8 @@
 /**
  * Acting as the Safe that owns Sidequest v1 (threshold 1): an owner calls `execTransaction` itself with a pre-validated
  * signature (`r` = the owner, `s` = 0, `v` = 1), which the Safe accepts because the caller is that owner. No Safe
- * transaction service. A pre-validated signature commits to nothing but the caller, so `MiningReserve.fund`, which is
- * additive, instead carries the owner's EIP-712 signature of the Safe transaction at one nonce (D18): any other Safe
- * transaction first, and it is refused on chain (GS026). Every call is decoded back from the exact calldata before it
- * is signed (`describe`), so what the page shows is what goes out. Pure, so it is unit-tested (safe.test.ts).
+ * transaction service. Every call is decoded back from the exact calldata before it is signed (`describe`), so what
+ * the page shows is what goes out. Pure, so it is unit-tested (safe.test.ts).
  */
 import {
   type Abi,
@@ -106,58 +104,6 @@ export function unpackMultiSend(data: Hex): Array<{ operation: number; to: Addre
 export const preValidated = (owner: Address): Hex =>
   concat([pad(owner, { size: 32 }), pad('0x00', { size: 32 }), '0x01'])
 
-/** The Safe's EIP-712 transaction type (v1.3 and v1.4): what an owner's signature over one Safe transaction covers. */
-const SAFE_TX_TYPES = {
-  SafeTx: [
-    { name: 'to', type: 'address' },
-    { name: 'value', type: 'uint256' },
-    { name: 'data', type: 'bytes' },
-    { name: 'operation', type: 'uint8' },
-    { name: 'safeTxGas', type: 'uint256' },
-    { name: 'baseGas', type: 'uint256' },
-    { name: 'gasPrice', type: 'uint256' },
-    { name: 'gasToken', type: 'address' },
-    { name: 'refundReceiver', type: 'address' },
-    { name: 'nonce', type: 'uint256' },
-  ],
-} as const
-
-/** The typed data an owner signs for a plain call as `safe` at `nonce`: no value, refund or gas price, as `execTransaction` sends it. */
-export const safeTxTypedData = (chainId: number, safe: Address, inner: { to: Address; data: Hex }, nonce: bigint) => ({
-  domain: { chainId, verifyingContract: getAddress(safe) },
-  types: SAFE_TX_TYPES,
-  primaryType: 'SafeTx' as const,
-  message: {
-    to: getAddress(inner.to),
-    value: 0n,
-    data: inner.data,
-    operation: 0,
-    safeTxGas: 0n,
-    baseGas: 0n,
-    gasPrice: 0n,
-    gasToken: zeroAddress,
-    refundReceiver: zeroAddress,
-    nonce,
-  },
-})
-
-/**
- * A 65-byte ECDSA signature as the Safe reads it (`v` 27 or 28); null for anything else. A pre-validated signature
- * (`v` 1) and a contract signature (`v` 0) are not ECDSA, so `v` is never normalised here.
- */
-export function ecdsaSignature(signature: Hex): Hex | null {
-  if (size(signature) !== 65) return null
-  const v = hexToNumber(slice(signature, 64, 65))
-  return v === 27 || v === 28 ? signature : null
-}
-
-/** A typed-data signature as the wallet answered it, with `v` 0 or 1 (some wallets) written as 27 or 28. */
-export function walletSignature(signature: Hex): Hex | null {
-  if (size(signature) !== 65) return null
-  const v = hexToNumber(slice(signature, 64, 65))
-  return v === 0 || v === 1 ? concat([slice(signature, 0, 64), v === 0 ? '0x1b' : '0x1c']) : ecdsaSignature(signature)
-}
-
 /** A contract call before it is wrapped: which contract (by name, for people), the ABI and the function with args. */
 export interface Call {
   contract: string
@@ -176,15 +122,10 @@ export const calldata = (c: Call): Hex =>
  * used only to DELEGATECALL MultiSendCallOnly (`atomically`).
  */
 export function execTransaction(owner: Address, inner: { to: Address; data: Hex; operation?: 0 | 1 }): Hex {
-  return execSigned(preValidated(owner), inner)
-}
-
-/** `execTransaction` for `inner` carrying `signatures` as they are: an owner's ECDSA signature of the SafeTx at one nonce. */
-export function execSigned(signatures: Hex, inner: { to: Address; data: Hex; operation?: 0 | 1 }): Hex {
   return encodeFunctionData({
     abi: safeAbi,
     functionName: 'execTransaction',
-    args: [inner.to, 0n, inner.data, inner.operation ?? 0, 0n, 0n, 0n, zeroAddress, zeroAddress, signatures],
+    args: [inner.to, 0n, inner.data, inner.operation ?? 0, 0n, 0n, 0n, zeroAddress, zeroAddress, preValidated(owner)],
   })
 }
 

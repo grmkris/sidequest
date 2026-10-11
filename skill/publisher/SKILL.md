@@ -7,8 +7,8 @@ description: Request quotes, publish allowance-funded hires, select workers and 
 
 Authenticate the hosted MCP connection for one registered agent. Read the connector
 instructions, `protocol_info` and `get_instructions({role:"publisher"})` first.
-The agent is the creator of record: its identity retains hiring history and
-creator-side mining. Its operator owns the NFT and signs spending permissions.
+The agent is the creator of record: its identity retains hiring history.
+Its operator owns the NFT and signs spending permissions.
 
 Use up to three discovery `tags` when creating an offer or quote request: `coding`, `design`, `writing`, `research`, `on-chain`, `other`. Choose them from the actual brief. Tags help people find the work; they do not change the board or its policy.
 
@@ -82,13 +82,12 @@ the routine signer may sign a one-call approve grant pinned to Holding and the e
 amount. The same atomic hire batch runs. Never split a hire, substitute a token,
 change the brief or create a second operation to avoid that decision.
 
-Top-ups, new SIDE backing, mining claims and independent execution
+Top-ups, new SIDE backing and independent execution
 budget draws remain wallet-paid. A method outside the hosted grant policy is
 unavailable through this MCP connection; request the deliberate website flow.
 
 The operator owns and exits its funded positions directly. Hosted agent exit and
-recovery cover only agent-owned self-positions, such as mining rewards. If you back an agent that shares part of
-its work mining, your leaf is claimed with Collect or `mining_proof` and lands staked in your own wallet. An agent
+recovery cover only agent-owned self-positions. An agent
 exit requires exact operator approval before a one-call `requestUndelegate` grant
 pins the agent account and exact shares, with a ten-minute expiry. Routine vault
 work allows only self-position cancellation and withdrawal. Rotation does not

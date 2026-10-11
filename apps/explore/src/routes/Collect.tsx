@@ -6,7 +6,7 @@ import { LoadingRows, Section, textLinkClass } from '../components/kit.tsx'
 import { Badge } from '../components/ui/badge.tsx'
 import { LaunchNotice } from '../components/LaunchGate.tsx'
 import { useQueryClient } from '@tanstack/react-query'
-import { Coins, Gem, Hourglass, type LucideIcon, ReceiptText, RotateCcw, Scale } from 'lucide-react'
+import { Coins, Hourglass, type LucideIcon, ReceiptText, RotateCcw, Scale } from 'lucide-react'
 import { Fragment, useState } from 'react'
 import { BoardLink, boardRoutes } from '../components/BoardLink.tsx'
 import { SignIn } from '../components/SignIn.tsx'
@@ -15,9 +15,8 @@ import { TokenAmount } from '../components/token/TokenAmount.tsx'
 import { TxSteps } from '../components/TxSteps.tsx'
 
 import { useAuth } from '../components/Wallet.tsx'
-import { type CollectAction, type CollectKind, readMiningClaim, useCollectActions } from '../collect.ts'
-import { sidequest } from '../sidequest.ts'
-import { chain, deployment, writesOpen } from '../wallet.ts'
+import { type CollectAction, type CollectKind, useCollectActions } from '../collect.ts'
+import { writesOpen } from '../wallet.ts'
 
 const KIND: Record<CollectKind, { icon: LucideIcon; title: (a: CollectAction) => string; done: string }> = {
   settle: { icon: Scale, title: (a) => `Settle job #${a.jobId ?? '?'}`, done: 'Settled' },
@@ -29,15 +28,10 @@ const KIND: Record<CollectKind, { icon: LucideIcon; title: (a: CollectAction) =>
   withdraw: { icon: Coins, title: () => 'A payment held for you', done: 'Withdrawn to your wallet' },
   claimRefund: { icon: ReceiptText, title: (a) => `Refund from job #${a.jobId ?? '?'}`, done: 'Refunded' },
   stakeWithdraw: { icon: Hourglass, title: () => 'SIDE ready to withdraw', done: 'Withdrawn to your wallet' },
-  miningClaim: {
-    icon: Gem,
-    title: (a) => `Mining reward${a.epoch == null ? '' : `, epoch ${a.epoch}`}`,
-    done: 'Staked into your own backing',
-  },
 }
 
 const keyOf = (a: CollectAction) =>
-  `${a.kind}:${a.jobId ?? ''}:${a.epoch ?? ''}:${a.token ?? ''}:${a.transactions.map((t) => t.data).join()}`
+  `${a.kind}:${a.jobId ?? ''}:${a.token ?? ''}:${a.transactions.map((t) => t.data).join()}`
 
 /**
  * Collect (U3): everything the signed-in wallet can close or claim, one tap each (the tap opens the wallet, or sends it
@@ -61,7 +55,6 @@ export function CollectSection() {
       </Section>
     )
   }
-  const wallet = auth.address
   const list = actions.data ?? []
   return (
     <Section
@@ -90,8 +83,7 @@ export function CollectSection() {
           <EmptyHeader>
             <EmptyTitle>Nothing to collect</EmptyTitle>
             <EmptyDescription>
-              Settlements, refunds, backing ready to withdraw and mining rewards show up here when they are yours to
-              claim.
+              Settlements, refunds and backing ready to withdraw show up here when they are yours to claim.
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -101,12 +93,6 @@ export function CollectSection() {
             const k = KIND[a.kind]
             const Icon = k?.icon ?? Coins
             const key = keyOf(a)
-            // A mining claim is read back from its calldata (B8b): offered only as the distributor's claim for this wallet.
-            const mining =
-              a.kind === 'miningClaim'
-                ? readMiningClaim(a, { chainId: chain.id, distributor: sidequest.distributor, wallet })
-                : null
-            const refused = mining !== null && !mining.ok ? mining.problem : null
             return (
               // Siblings in the Group, so its hairlines fall between the rows.
               <Fragment key={key}>
@@ -117,29 +103,13 @@ export function CollectSection() {
                     </span>
                   </ItemMedia>
                   <ItemContent className="min-w-0 flex-1">
-                    {mining?.ok === true ? (
-                      <span className="block font-medium">
-                        Mining reward, epoch {String(mining.epoch)} · staked into your own backing when collected
-                        <span className="block text-sm text-muted-foreground">
-                          <TokenAmount value={mining.amount} token={deployment.factory} className="font-semibold" />
-                        </span>
-                      </span>
-                    ) : (
-                      <>
-                        <span className="block font-medium">{k?.title(a) ?? a.kind}</span>
+                    <span className="block font-medium">{k?.title(a) ?? a.kind}</span>
 
-                        {a.amount != null && a.token != null && (
-                          <TokenAmount value={a.amount} token={a.token} className="block w-fit font-semibold" />
-                        )}
+                    {a.amount != null && a.token != null && (
+                      <TokenAmount value={a.amount} token={a.token} className="block w-fit font-semibold" />
+                    )}
 
-                        <span className="block text-ui leading-snug text-muted-foreground">{a.description}</span>
-                      </>
-                    )}
-                    {refused !== null && (
-                      <span role="alert" className="mt-1 block text-ui leading-snug text-destructive-text">
-                        Not offered: {refused}
-                      </span>
-                    )}
+                    <span className="block text-ui leading-snug text-muted-foreground">{a.description}</span>
                     {a.jobId != null && (
                       <BoardLink target={boardRoutes().job(a.jobId)} className={cn(textLinkClass, 'text-ui')}>
                         Open the job
@@ -150,7 +120,7 @@ export function CollectSection() {
                     <Button
                       size="sm"
                       className="shrink-0"
-                      disabled={open !== null || a.transactions.length === 0 || refused !== null}
+                      disabled={open !== null || a.transactions.length === 0}
                       onClick={() => setOpen(key)}
                     >
                       Collect

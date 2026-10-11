@@ -24,7 +24,6 @@ export function addressNode(network: Network): Table | Root['children'][number] 
       entries.push(
         ['Stake vault', d.sidequest.vault],
         ['Fee schedule', d.sidequest.feeSchedule],
-        ['Mining distributor', d.sidequest.distributor],
         ['Owner Safe', d.sidequest.safe],
       )
     return {

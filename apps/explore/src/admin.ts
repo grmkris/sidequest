@@ -1,12 +1,10 @@
 /**
  * The admin page's checks, before anything is signed: a fee schedule proposal against the rules `FeeSchedule.propose`
- * enforces (so the Safe never sends one that reverts), and the epoch file whose root `EpochDistributor.setRoot` posts.
- * Pure, so they are unit-tested (admin.test.ts).
+ * enforces (so the Safe never sends one that reverts), and every admin transaction read back from its calldata. Pure,
+ * so they are unit-tested (admin.test.ts).
  */
-import * as sdk from '@sidequest/sdk'
 import { type Abi, type Address, type Hex, decodeFunctionData, getAddress, isAddress, isHex, zeroAddress } from 'viem'
-import { formatNumber } from './format.ts'
-import { MULTI_SEND_CALL_ONLY, describe, ecdsaSignature, preValidated, safeAbi, unpackMultiSend } from './safe.ts'
+import { MULTI_SEND_CALL_ONLY, describe, preValidated, safeAbi, unpackMultiSend } from './safe.ts'
 import { factoryAmount } from './stake.ts'
 
 export interface ScheduleDraft {
@@ -51,226 +49,6 @@ export function scheduleProposal(
   return { thresholds, bps, treasury: d.treasury.trim() as Address }
 }
 
-const BYTES32 = /^0x[0-9a-fA-F]{64}$/
-
-/** What the admin page takes from `bun run mining:epoch`'s `epoch-<n>.json` (B8, scripts/mining/README.md). */
-export interface EpochFile {
-  epoch: bigint
-  root: Hex
-  /** Base units: the sum of the tree's leaves, what `setRoot` posts. */
-  total: bigint
-  dataHash: Hex
-  emission: bigint
-  budget: bigint | null
-  leaves: number | null
-  /** Who signed the epoch's price list, when the file names them. */
-  priceSigner: string | null
-  /**
-   * What is left to fund, as the run read it: `fund(epoch, amount)`, right only while `MiningReserve.totalFunded()`
-   * is still `expectTotalFunded` (fund is additive). Null when the epoch was fully funded at the run.
-   */
-  fund: { amount: bigint; expectTotalFunded: bigint; fundedForEpoch: bigint } | null
-}
-
-/** The configured contracts an epoch file's calls must go to. */
-export interface EpochFileContext {
-  chainId: number
-  reserve: string
-  distributor: string
-}
-
-const dec = (x: unknown): bigint | null => (typeof x === 'string' && /^\d+$/.test(x) ? BigInt(x) : null)
-
-/**
- * Reads an epoch file in the shape B8 pins: `chainId` (this chain), `epoch`, `total` and `emission` as decimal strings,
- * `root` and `dataHash`, and `calls`. `calls.setRoot` must be the distributor's `setRoot` with exactly the file's
- * epoch, root, total and data hash; `calls.fund`, when there is one, the reserve's `fund` for this epoch and the
- * remainder `total - expect.fundedForEpoch`. A file whose epoch counted no fees has no root and nothing to do.
- */
-export function readEpochFile(
-  text: string,
-  ctx: EpochFileContext,
-): { ok: true; file: EpochFile } | { ok: false; problem: string } {
-  let j: unknown
-  try {
-    j = JSON.parse(text)
-  } catch {
-    return no('The file is not JSON.')
-  }
-  if (j === null || typeof j !== 'object' || Array.isArray(j)) return no('The file is not an epoch file.')
-  const f = j as Record<string, unknown>
-  if (typeof f.chainId !== 'number') return no('It names no chain.')
-  if (f.chainId !== ctx.chainId) return no(`It is for chain ${f.chainId}, not this network (${ctx.chainId}).`)
-  const epoch = dec(f.epoch)
-  if (epoch === null) return no('It has no epoch number.')
-  if (f.root === null) return no(`No fee counted in epoch ${epoch}: there is no root to post and nothing to fund.`)
-  if (typeof f.root !== 'string' || !BYTES32.test(f.root)) return no('Its root is not 0x and 64 hex digits.')
-  const root = f.root as Hex
-  const total = dec(f.total)
-  if (total === null || total === 0n) return no('Its total is not a positive whole number of base units.')
-  if (typeof f.dataHash !== 'string' || !BYTES32.test(f.dataHash))
-    return no('Its data hash is not 0x and 64 hex digits.')
-  const dataHash = f.dataHash as Hex
-  const emission = dec(f.emission)
-  if (emission === null) return no('It has no emission.')
-  if (total > emission) return no('Its total is more than its emission.')
-
-  const calls = (f.calls ?? null) as Record<
-    string,
-    { to?: unknown; data?: unknown; expect?: Record<string, unknown> }
-  > | null
-  if (calls === null || typeof calls !== 'object') return no('It has no calls for the Safe.')
-  const decoded = (call: { to?: unknown; data?: unknown } | undefined, to: string, abi: Abi) => {
-    if (
-      call === undefined ||
-      typeof call.to !== 'string' ||
-      typeof call.data !== 'string' ||
-      !isHex(call.data) ||
-      !same(call.to, to)
-    )
-      return null
-    try {
-      return decodeFunctionData({ abi, data: call.data })
-    } catch {
-      return null
-    }
-  }
-  const setRoot = decoded(calls.setRoot, ctx.distributor, sdk.epochDistributorAbi as Abi)
-  const [rEpoch, rRoot, rTotal, rHash] = (setRoot?.args ?? []) as readonly [bigint, Hex, bigint, Hex]
-  if (
-    setRoot?.functionName !== 'setRoot' ||
-    rEpoch !== epoch ||
-    !same(rRoot, root) ||
-    rTotal !== total ||
-    !same(rHash, dataHash)
-  ) {
-    return no('Its setRoot call is not the distributor’s, for this epoch, root, total and data hash.')
-  }
-  let fund: EpochFile['fund'] = null
-  if (calls.fund !== undefined) {
-    const call = decoded(calls.fund, ctx.reserve, sdk.miningReserveAbi as Abi)
-    const [fEpoch, amount] = (call?.args ?? []) as readonly [bigint, bigint]
-    const expectTotalFunded = dec(calls.fund.expect?.totalFunded)
-    const fundedForEpoch = dec(calls.fund.expect?.fundedForEpoch)
-    if (call?.functionName !== 'fund' || fEpoch !== epoch)
-      return no('Its fund call is not the reserve’s, for this epoch.')
-    if (expectTotalFunded === null || fundedForEpoch === null)
-      return no('Its fund call does not say what was funded when it was made.')
-    if (amount === 0n || amount > total || amount !== total - fundedForEpoch)
-      return no('Its fund amount is not what is left of the total.')
-    fund = { amount, expectTotalFunded, fundedForEpoch }
-  }
-  const tree = f.tree as { values?: unknown } | undefined
-  const priceList = f.priceList as { signer?: unknown } | undefined
-  return {
-    ok: true,
-    file: {
-      epoch,
-      root,
-      total,
-      dataHash,
-      emission,
-      budget: dec(f.budget),
-      leaves: Array.isArray(tree?.values) ? tree.values.length : null,
-      priceSigner: typeof priceList?.signer === 'string' ? priceList.signer : null,
-      fund,
-    },
-  }
-}
-
-export type EpochStatus =
-  | 'waiting-prices'
-  | 'pending'
-  | 'empty'
-  | 'funded'
-  | 'rooted'
-  | 'published'
-  | 'abandoned'
-  | `failed:${string}`
-
-export interface EpochStatusInput {
-  prices: boolean
-  pending: { root: string | null; dataHash?: string } | null
-  root: { root: string; dataHash?: string } | null
-  funding: 'due' | 'done' | 'stale' | null
-  published: boolean
-  failure?: string | null
-}
-
-const postedRoot = (input: EpochStatusInput): { status: EpochStatus; next: string } | null => {
-  if (input.root === null || input.root.root === `0x${'0'.repeat(64)}`) return null
-  const wrongRoot = input.pending !== null && input.pending.root !== input.root.root
-  const wrongHash = input.pending?.dataHash !== undefined && input.pending.dataHash !== input.root.dataHash
-  if (wrongRoot || wrongHash)
-    return {
-      status: 'failed:root-mismatch',
-      next: 'The pending file differs from the posted root; check the mining workflow',
-    }
-  return { status: 'rooted', next: 'Publishing runs automatically within the hour' }
-}
-
-/** The owner's next action for one epoch, from signed prices, the workflow artifact and chain state. */
-export function epochStatus(input: EpochStatusInput): { status: EpochStatus; next: string } {
-  if (input.failure)
-    return { status: `failed:${input.failure}`, next: 'Reload the epoch status or check the mining workflow' }
-  if (input.published) return { status: 'published', next: 'Published' }
-  const posted = postedRoot(input)
-  if (posted !== null) return posted
-  if (!input.prices && input.pending === null) return { status: 'waiting-prices', next: 'Sign and upload prices' }
-  if (input.pending === null) return { status: 'pending', next: 'Computing: the mining workflow runs hourly at :41' }
-  if (input.pending.root === null) return { status: 'empty', next: 'Empty epoch: nothing to fund' }
-  if (input.funding === 'stale')
-    return { status: 'abandoned', next: 'The epoch changed; load the latest computed file' }
-  if (input.funding === 'done') return { status: 'funded', next: 'Set the root' }
-  return { status: 'pending', next: 'Fund the epoch' }
-}
-
-/** The existing additive-funding comparison, shared by the status and transaction display. */
-export function epochFunding(file: EpochFile | null, totalFunded: bigint | undefined) {
-  if (file?.fund == null || totalFunded === undefined) return null
-  if (totalFunded === file.fund.expectTotalFunded) return 'due'
-  return totalFunded - file.fund.expectTotalFunded === file.fund.amount ? 'done' : 'stale'
-}
-
-export interface EmptyEpochFile {
-  epoch: bigint
-  root: null
-}
-
-/** Empty workflow artifacts are displayable; only readEpochFile can admit transaction-bearing files. */
-export function readEpochArtifact(
-  text: string,
-  ctx: EpochFileContext,
-): { ok: true; file: EpochFile | EmptyEpochFile } | { ok: false; problem: string } {
-  const read = readEpochFile(text, ctx)
-  if (read.ok) return read
-  try {
-    const value: unknown = JSON.parse(text)
-    if (!isRecord(value) || value.chainId !== ctx.chainId || value.root !== null) return read
-    const epoch = dec(value.epoch)
-    if (epoch === null || dec(value.total) !== 0n || !isRecord(value.calls) || Object.keys(value.calls).length !== 0)
-      return read
-    return { ok: true, file: { epoch, root: null } }
-  } catch {
-    return read
-  }
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-/**
- * A new total for a posted root (`resizeRoot`), or why not. Only shrinking is offered here, to the leaf sum when the
- * posted total overstated it; the contract never lets a total drop below what is already claimed.
- */
-export function resizeProblem(text: string, root: { total: bigint; claimed: bigint }): string | null {
-  const total = /^0*\.?0*$/.test(text.trim()) && text.trim() !== '' && text.trim() !== '.' ? 0n : factoryAmount(text)
-  if (total === null) return 'Enter the new total in SIDE: the sum of the root’s leaves.'
-  if (total >= root.total) return 'The new total must be below the posted one.'
-  if (total < root.claimed) return 'The total cannot drop below what has already been claimed.'
-  return null
-}
-
 /** A contract the console may call, with the functions it may call on it as the Safe, and directly (anyone may). */
 interface AdminTarget {
   name: string
@@ -303,8 +81,6 @@ export type AdminTx =
       via: 'safe' | 'atomic' | 'direct'
       calls: InnerCall[]
       outer: Array<[string, string]> | null
-      /** An owner's ECDSA signature of this Safe transaction at one nonce (D18): it holds only while that nonce is current. */
-      signature?: Hex
     }
   | { ok: false; problem: string }
 
@@ -318,11 +94,6 @@ const ATOMIC = [
 /** The core's pause and unpause go out only inside that pair, never alone (U5-SEC-002); a lone notePause is fine. */
 const pairedOnly = (call: InnerCall) =>
   call.contract === ATOMIC[0][0] && (ATOMIC[0][1] as readonly string[]).includes(call.functionName)
-/**
- * `MiningReserve.fund` is additive, so it goes out signed for one Safe nonce (D18): a pre-validated signature commits
- * to nothing but the caller, and two drafts could both land. Every other call keeps the pre-validated signature.
- */
-const nonceBound = (call: InnerCall) => call.contract === 'MiningReserve' && call.functionName === 'fund'
 
 /**
  * Reads an admin transaction back from its calldata alone, and refuses it unless it is one this console builds for
@@ -386,9 +157,7 @@ export function readAdminTx(
   ) {
     return no('It moves value or pays a refund from the Safe.')
   }
-  const prevalidated = signatures.toLowerCase() === preValidated(ctx.owner).toLowerCase()
-  const ecdsa = ecdsaSignature(signatures)
-  if (!prevalidated && (ecdsa === null || operation !== 0))
+  if (signatures.toLowerCase() !== preValidated(ctx.owner).toLowerCase())
     return no('It is not signed as you, the signed-in Safe owner.')
   const outer: Array<[string, string]> = [
     ['to', to],
@@ -408,14 +177,7 @@ export function readAdminTx(
       return no(
         `${inner.contract}.${inner.functionName} goes out only with the Evaluator’s notePause, as one MultiSend transaction.`,
       )
-    if (nonceBound(inner) && prevalidated)
-      return no(
-        'MiningReserve.fund goes out only signed for one Safe nonce, so a stale funding cannot land (D18). Review the funding again.',
-      )
-    if (!nonceBound(inner) && !prevalidated) return no('It is not signed as you, the signed-in Safe owner.')
-    return ecdsa !== null && !prevalidated
-      ? { ok: true, via: 'safe', calls: [inner], outer, signature: ecdsa }
-      : { ok: true, via: 'safe', calls: [inner], outer }
+    return { ok: true, via: 'safe', calls: [inner], outer }
   }
   if (operation !== 1) return no('It uses an unknown Safe operation.')
   if (!same(to, MULTI_SEND_CALL_ONLY)) return no('Its delegatecall is not to MultiSendCallOnly.')
@@ -448,33 +210,3 @@ export function readAdminOp(txs: ReadonlyArray<Parameters<typeof readAdminTx>[0]
 }
 
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
-
-/** What a nonce-bound funding was signed against (D18), kept beside its transaction: the Safe's nonce and the reserve's total. */
-export interface FundGuard {
-  nonce: string
-  totalFunded: string
-}
-
-/**
- * Whether a funding signed for one Safe nonce may still be offered: refused when no snapshot was kept with it, when any
- * Safe transaction has gone through since (the nonce moved: the Safe would refuse it), when the reserve's total moved,
- * or when its signature does not recover to this owner at the current nonce. `signer` is that recovery.
- */
-export function fundProblem(
-  guard: FundGuard | undefined,
-  live: { nonce: bigint; totalFunded: bigint },
-  signer: string,
-  owner: string,
-  epoch: string,
-): string | null {
-  const rerun = `Run bun run mining:epoch ${epoch} again, load the new file and review the funding again.`
-  if (guard === undefined || !/^\d+$/.test(guard.nonce) || !/^\d+$/.test(guard.totalFunded))
-    return `It was saved without the Safe nonce and funding it was signed against. ${rerun}`
-  if (BigInt(guard.nonce) !== live.nonce)
-    return `A Safe transaction has gone through since this funding was signed (Safe nonce ${guard.nonce}, now ${live.nonce}), so the Safe would refuse it. ${rerun}`
-  if (BigInt(guard.totalFunded) !== live.totalFunded)
-    return `The reserve has funded ${formatNumber(live.totalFunded, 18)} SIDE in all; this funding was signed when it had funded ${formatNumber(BigInt(guard.totalFunded), 18)}. ${rerun}`
-  if (!same(signer, owner))
-    return `It is not signed as you for the Safe’s nonce ${live.nonce}, so the Safe would refuse it. ${rerun}`
-  return null
-}

@@ -38,7 +38,6 @@ import {
 } from './admission-rate.ts'
 import { collectSnapshot } from './collect-index.ts'
 import { stakingSnapshot } from './staking-index.ts'
-import { r2MiningSource, type EpochBucket } from './mining.ts'
 import { oauthRoute, resolveOAuth } from './oauth.ts'
 import { terminateGrantSubscriptions } from './webhooks.ts'
 import type { OAuthGrant } from './oauth.ts'
@@ -158,7 +157,6 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               filters,
               Math.floor(Date.now() / 1000),
             ),
-          miningSource: r2MiningSource((runtimeEnv as Record<string, unknown>).Manifests as EpochBucket | undefined),
           ...(env.screening.apiKey === '' ? {} : { screening: env.screening }),
           ...(key32(env.relayKey)
             ? { relay: { account: privateKeyToAccount(env.relayKey as `0x${string}`), rpcUrl: env.rpcUrl } }
@@ -731,7 +729,6 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               const ctx: ToolContext = {
                 network: req.env.network,
                 mcpSession: req.mcpSession,
-                rpcUrl: req.env.rpcUrl,
                 ...(commonsToolNames.has(req.tool) ? { commons: commonsHost(req.env) } : {}),
               }
               const toolResult = await tool.run(board, caller, req.args, ctx)

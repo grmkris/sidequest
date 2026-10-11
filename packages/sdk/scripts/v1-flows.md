@@ -59,7 +59,6 @@ journal keeps its original terms and signed bytes through a code update; a redep
 | Execution budget with worker bond                        | `budget-advance`, `budget-call`                                                                                                                           |
 | Sponsorship rate/call cap refuses                        | `sponsor-caps` (at most 20 harmless calls before the hourly rate refuses)                                                                                 |
 | Canonical cross-board Collect                            | `collect` (requires a real pending claim/settlement, refuses an empty result)                                                                             |
-| Epoch compute/root/fund/claim/stake                      | Contracts' `bun run mining:epoch`, Safe root/fund, then `mining`                                                                                          |
 | Telegram notifications                                   | `telegram` (linked creator/worker; produces a real hire; human DM/channel receipt is recorded separately)                                                 |
 | Safe ownership, fee delay, vault delay, pause            | `admin-ownership`, `admin-fees`, `admin-vault-refusal`, `admin-pause`                                                                                     |
 

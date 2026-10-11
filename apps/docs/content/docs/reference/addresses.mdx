@@ -17,10 +17,9 @@ This page is for developers checking contract roles and addresses. The table com
 ## What each contract does
 
 - **Core:** records listing, funding and terminal job state.
-- **SIDE:** the fixed-supply token used for backing, reservations and mining claims.
+- **SIDE:** the fixed-supply token used for backing and reservations.
 - **Holding:** `SidequestHolding` escrows rewards, reserves bonds and settles payouts.
 - **Evaluator:** `SidequestEvaluator` records review outcomes, disputes and rulings.
 - **Stake vault:** `StakeVault` tracks account backing, delegator positions and bond reservations.
 - **Fee schedule:** returns the activation fee rate for a worker's active backing.
-- **Mining distributor:** stores funded epoch roots and verifies claims into the vault.
 - **Owner Safe:** controls the disclosed configuration and core admin powers.

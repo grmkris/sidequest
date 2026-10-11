@@ -12,7 +12,6 @@ Prod currently runs on Monad testnet. Every mainnet transaction needs a separate
 | `deploy-dev` | push to dev, after verify | stage-env guarded release, smoke, drift | GitHub `dev` environment; serialized |
 | `deploy-prod` | push to prod, after verify | stage-env guarded release, smoke, drift | GitHub `prod` environment and `SIDEQUEST_ALLOW_PROD=1` |
 | `smoke` | hourly at minute 17, or workflow dispatch | public dev and prod health/discovery/auth-refusal checks and indexer freshness | read-only public checks |
-| `mining` | hourly at minute 41, or workflow dispatch | dev Action reads signed prices and chain roots; writes pending and published Manifests objects | GitHub `dev` environment; no transaction or signing key |
 
 The workflow lives in [ci.yml](../.github/workflows/ci.yml); scheduled checks live in
 [smoke.yml](../.github/workflows/smoke.yml). Promotion is manual:

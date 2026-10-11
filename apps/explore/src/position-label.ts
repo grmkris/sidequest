@@ -35,7 +35,7 @@ export function positionLabel(account: string, sources: PositionLabelSources = {
     return {
       kind: 'wallet',
       name: 'Your wallet',
-      hint: 'Your own stake: mining rewards and deposits for jobs you post',
+      hint: 'Your own stake: deposits for jobs you post',
     }
 
   const managed = sources.managed?.find((agent) => same(agent.address ?? undefined, account))

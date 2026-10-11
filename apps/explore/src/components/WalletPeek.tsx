@@ -113,7 +113,7 @@ function Balances({ address, close }: { address: Address; close: () => void }) {
             />
             {row.role === 'bond' && staked.value !== undefined && (
               <Line
-                label={<span className="pl-6">staked, including mining rewards</span>}
+                label={<span className="pl-6">staked</span>}
                 amount={formatNumber(staked.value, 18)}
                 usd={staked.usd}
                 known

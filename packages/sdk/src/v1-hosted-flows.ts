@@ -10,13 +10,11 @@ export const V1_HOSTED_FLOWS = [
   'budget-call',
   'sponsor-caps',
   'collect',
-  'mining',
   'telegram',
 ] as const
 export type V1HostedFlow = (typeof V1_HOSTED_FLOWS)[number]
 export interface V1HostedDeps extends V1FlowDeps {
   call: <T = any>(wallet: sdk.Wallet, tool: string, input: Record<string, unknown>) => Promise<T>
-  epoch?: string
 }
 type Prepared = { operationId?: string; transactions: sdk.TxRequest[]; sign?: { typedData: string } }
 type Created = Prepared & { taskId: string; applicationId: string }
@@ -108,26 +106,15 @@ export async function runV1HostedFlow(d: V1HostedDeps, flow: V1HostedFlow) {
     await runV1HostedFlow(d, 'direct-hire')
     // A bot API result proves transport success. Human DM/channel receipt is coordinator evidence, never inferred here.
     d.log('Telegram links and notification-producing hire verified; coordinator must record actual DM/channel delivery')
-  } else if (flow === 'collect' || flow === 'mining') {
+  } else if (flow === 'collect') {
     const saved = await once('actions', async () => {
-      const actions = await d.call<
-        Array<{ kind: string; epoch?: string; amount?: string; transactions: sdk.TxRequest[] }>
-      >(worker, 'collect_actions', { wallet: worker.account.address })
-      const selected = actions.filter((a) =>
-        flow === 'mining' ? a.kind === 'miningClaim' && a.epoch === (d.epoch ?? '0') : a.kind !== 'miningClaim',
-      )
-      check(selected.length > 0, `no ${flow} action is ready; do not count an empty read as live evidence`)
-      return selected
+      const actions = await d.call<Array<{ kind: string; transactions: sdk.TxRequest[] }>>(worker, 'collect_actions', {
+        wallet: worker.account.address,
+      })
+      check(actions.length > 0, 'no collect action is ready; do not count an empty read as live evidence')
+      return actions
     })
-    const before = await once('stake-before', () => sdk.getBacking(ctx, worker.account.address))
     for (const [i, action] of saved.entries()) await send(`action-${i}`, worker, action)
-    if (flow === 'mining') {
-      check(
-        (await sdk.getBacking(ctx, worker.account.address)).assets - before.assets ===
-          saved.reduce((sum, a) => sum + BigInt(a.amount!), 0n),
-        'mining claim did not stake the exact leaf amount',
-      )
-    }
   } else if (flow === 'sponsor-caps') {
     await enableSponsor(worker)
     const status = await d.call<{ callsUsed: number; delegationHash: Hex }>(worker, 'sponsor_status', {

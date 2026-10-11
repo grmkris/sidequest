@@ -40,7 +40,6 @@ export {
 export * from './sponsor.ts'
 export * from './collect.ts'
 export * from './staking.ts'
-export * from './mining.ts'
 export * from './relay.ts'
 export * from './deliverable.ts'
 export * from './tenant.ts'

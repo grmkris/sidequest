@@ -7,55 +7,22 @@ import { ItemGroup, Item, ItemContent, ItemActions, ItemDescription } from '../c
 import { Address as AddressText, LoadingRows, PageTitle, Section } from '../components/kit.tsx'
 import * as sdk from '@sidequest/sdk'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { type ReactNode, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { type Abi, type Address, type Hex, erc20Abi, isAddress, recoverTypedDataAddress, zeroAddress } from 'viem'
-import { useReadContracts, useSignTypedData } from 'wagmi'
-import { getBlockNumber, getBytecode, readContracts } from 'wagmi/actions'
-import { ApiError, miningFile, uploadPrices, type TxRequest } from '../api.ts'
+import { type ReactNode, useMemo, useState } from 'react'
+import { type Abi, type Address, type Hex, isAddress, zeroAddress } from 'viem'
+import { useReadContracts } from 'wagmi'
+import { getBytecode } from 'wagmi/actions'
+import { type TxRequest } from '../api.ts'
 import { PrivyLogin } from '../components/Privy.tsx'
 import { useToast } from '../components/Sheet.tsx'
 import { Countdown, When, useNow } from '../components/Time.tsx'
 import { TxSteps } from '../components/TxSteps.tsx'
-import { walletRefused } from '../components/txOperation.ts'
 
 import { useAuth } from '../components/Wallet.tsx'
-import { formatNumber, rewardTokenList, subscribeTokens, tokenMeta, tokenRegistryVersion } from '../format.ts'
-import {
-  type AdminContext,
-  type AdminTx,
-  type EpochFile,
-  type EpochFileContext,
-  type FundGuard,
-  fundProblem,
-  readAdminOp,
-  epochStatus,
-  epochFunding,
-  readEpochArtifact,
-  resizeProblem,
-  scheduleProposal,
-} from '../admin.ts'
+import { formatNumber } from '../format.ts'
+import { type AdminContext, type AdminTx, readAdminOp, scheduleProposal } from '../admin.ts'
 import { type SidequestContracts, sidequest } from '../sidequest.ts'
-import {
-  miningPoolConfigured,
-  previousPricesOf,
-  type PriceDraft,
-  priceListFile,
-  priceListOf,
-  priceTypedData,
-} from '../prices.ts'
-import {
-  MULTI_SEND_CALL_ONLY,
-  type Call,
-  atomically,
-  calldata,
-  execSigned,
-  execTransaction,
-  safeAbi,
-  safeTxTypedData,
-  walletSignature,
-} from '../safe.ts'
-import { factoryAmount, percent, proposalState } from '../stake.ts'
-import { friendlyError } from '../txErrors.ts'
+import { MULTI_SEND_CALL_ONLY, type Call, atomically, calldata, execTransaction, safeAbi } from '../safe.ts'
+import { percent, proposalState } from '../stake.ts'
 import { chain, deployed, deployment, wagmiConfig } from '../wallet.ts'
 import { duration } from '../duration.ts'
 
@@ -82,25 +49,18 @@ export function useSafeOwner(address: string | undefined): boolean | null {
 type Via = 'safe' | 'direct'
 /**
  * What the page will send: its transactions, kept until they are done. Every call shown or sent is decoded from their
- * calldata and checked again (`readAdminOp`), so a stored draft is never trusted. A nonce-bound funding (D18) also
- * keeps the Safe nonce and reserve total it was signed against; they can only make the page refuse it, never accept it.
+ * calldata and checked again (`readAdminOp`), so a stored draft is never trusted.
  */
 interface Op {
   title: string
   txs: TxRequest[]
-  guard?: FundGuard
 }
 const opKey = (me: string) => `sidequest.admin-op:${me.toLowerCase()}`
 function loadOp(me: string): Omit<Op, 'title'> | null {
   try {
-    const saved = JSON.parse(localStorage.getItem(opKey(me)) ?? 'null') as { txs?: unknown; guard?: unknown } | null
+    const saved = JSON.parse(localStorage.getItem(opKey(me)) ?? 'null') as { txs?: unknown } | null
     if (saved === null || !Array.isArray(saved.txs)) return null
-    const g = saved.guard as Partial<FundGuard> | undefined
-    const guard =
-      g !== undefined && typeof g.nonce === 'string' && typeof g.totalFunded === 'string'
-        ? { nonce: g.nonce, totalFunded: g.totalFunded }
-        : undefined
-    return { txs: saved.txs as TxRequest[], ...(guard === undefined ? {} : { guard }) }
+    return { txs: saved.txs as TxRequest[] }
   } catch {
     return null
   }
@@ -108,11 +68,7 @@ function loadOp(me: string): Omit<Op, 'title'> | null {
 function saveOp(me: string, op: Op | null) {
   try {
     if (op === null) localStorage.removeItem(opKey(me))
-    else
-      localStorage.setItem(
-        opKey(me),
-        JSON.stringify(op.guard === undefined ? { txs: op.txs } : { txs: op.txs, guard: op.guard }),
-      )
+    else localStorage.setItem(opKey(me), JSON.stringify({ txs: op.txs }))
   } catch {
     // storage blocked: the operation lasts as long as the page
   }
@@ -148,8 +104,8 @@ function adminContext(c: SidequestContracts, safe: Address, me: Address): AdminC
         ['notePause'],
         ['notePause'],
       ),
-      [c.miningReserve.toLowerCase()]: target('MiningReserve', sdk.miningReserveAbi, ['fund']),
-      [c.distributor.toLowerCase()]: target('EpochDistributor', sdk.epochDistributorAbi, ['setRoot', 'resizeRoot']),
+      [c.miningReserve.toLowerCase()]: target('MiningReserve', sdk.miningReserveAbi, []),
+      [c.distributor.toLowerCase()]: target('EpochDistributor', sdk.epochDistributorAbi, []),
       [deployment.core.toLowerCase()]: {
         name: 'Core',
         abi: sdk.coreAbi as unknown as Abi,
@@ -171,17 +127,10 @@ const titleOf = (reads: AdminTx[]) =>
  * (D13), whatever the wallet; there is no sequential fallback.
  */
 type Act = (title: string, call: Call | readonly Call[], via: Via) => void
-/**
- * `fund(epoch, amount, expectTotalFunded)`: snapshot the Safe's nonce and the reserve's total at one block, and unless
- * the total is what the epoch file read, have the owner sign `MiningReserve.fund` for that nonce (D18) and show it for
- * review. Resolves to why it was not prepared, or null.
- */
-type Fund = (epoch: bigint, amount: bigint, expectTotalFunded: bigint) => Promise<string | null>
 
 /**
  * The Safe's console (ADR-0011). Shown only to an owner of the Safe that owns Sidequest v1; the Safe's threshold is 1,
- * so the owner's wallet calls `execTransaction` itself with a pre-validated signature, or, to fund an epoch, with its
- * signature of that Safe transaction at the current nonce (D18). Every action shows the exact
+ * so the owner's wallet calls `execTransaction` itself with a pre-validated signature. Every action shows the exact
  * call, decoded from the calldata that will be sent, before the wallet opens. Permissionless steps (executing a fee
  * schedule, accepting a Holding after its delay) go straight from the wallet.
  */
@@ -281,7 +230,6 @@ function Admin({ c, safe, me }: { c: SidequestContracts; safe: Address; me: Addr
     saveOp(me, next)
     setOpState(next)
   }
-  const { signTypedDataAsync } = useSignTypedData()
   // MultiSendCallOnly must have code here before a pause pair is sent through it (D13).
   const multiSendCode = useQuery({
     queryKey: ['bytecode', chain.id, MULTI_SEND_CALL_ONLY],
@@ -318,113 +266,18 @@ function Admin({ c, safe, me }: { c: SidequestContracts; safe: Address; me: Addr
     setOp({ title, txs: [tx] })
     window.scrollTo({ top: 0 })
   }
-  const fund: Fund = async (epoch, amount, expectTotalFunded) => {
-    const call = {
-      to: c.miningReserve,
-      data: calldata({
-        contract: 'MiningReserve',
-        to: c.miningReserve,
-        abi: sdk.miningReserveAbi as Abi,
-        functionName: 'fund',
-        args: [epoch, amount],
-      }),
-    }
-    // One block for both reads, so the nonce signed for is the one at which the reserve had funded this much.
-    const blockNumber = await getBlockNumber(wagmiConfig, { chainId: chain.id })
-    const [nonce, totalFunded] = await readContracts(wagmiConfig, {
-      contracts: [
-        { address: safe, abi: safeAbi, functionName: 'nonce', chainId: chain.id },
-        { address: c.miningReserve, abi: sdk.miningReserveAbi, functionName: 'totalFunded', chainId: chain.id },
-      ],
-      blockNumber,
-      allowFailure: false,
-    })
-    if (totalFunded !== expectTotalFunded)
-      return `The reserve has funded ${fmt(totalFunded)} in all; the file expected ${fmt(expectTotalFunded)}. Run bun run mining:epoch ${epoch} again and load the new file.`
-    const typed = safeTxTypedData(chain.id, safe, call, nonce)
-    let signature: Hex | null
-    try {
-      signature = walletSignature(await signTypedDataAsync({ ...typed, account: me }))
-    } catch (failure) {
-      return walletRefused(failure) ? 'You declined to sign. Nothing was signed.' : friendlyError(failure)
-    }
-    if (signature === null || !same(await recoverTypedDataAddress({ ...typed, signature }), me)) {
-      return 'Your wallet’s signature does not recover to your address, so the Safe would refuse it. Funding needs a plain wallet (EOA) signature from a Safe owner.'
-    }
-    setOp({
-      title: `Fund epoch ${epoch}`,
-      txs: [
-        {
-          description: `MiningReserve.fund as the Safe, signed for Safe nonce ${nonce}`,
-          chainId: chain.id,
-          to: safe,
-          data: execSigned(signature, call),
-          value: '0',
-        },
-      ],
-      guard: { nonce: nonce.toString(), totalFunded: totalFunded.toString() },
-    })
-    window.scrollTo({ top: 0 })
-    return null
-  }
   // What is shown and sent is read back from the calldata on every render, the same for a fresh and a restored op.
   const reads = op === null ? [] : readAdminOp(op.txs, ctx)
-  // A funding signed for one Safe nonce (D18) is checked against the chain before it is offered, and again after any
-  // failure: any Safe transaction since, or any change to the reserve's total, and it is refused. Not while it is being
-  // sent: its own transaction moves the nonce.
-  const bound = reads.find((r): r is Extract<AdminTx, { ok: true }> => r.ok && r.signature !== undefined)
-  const boundCall = bound?.calls[0]
-  const live = useReadContracts({
-    contracts: [
-      { address: safe, abi: safeAbi, functionName: 'nonce', chainId: chain.id },
-      { address: c.miningReserve, abi: sdk.miningReserveAbi, functionName: 'totalFunded', chainId: chain.id },
-    ],
-    query: { enabled: bound !== undefined, refetchInterval: 10_000 },
-  })
-  const liveNonce = result<bigint>(live.data, 0)
-  const liveFunded = result<bigint>(live.data, 1)
-  const signer = useQuery({
-    queryKey: ['safe-signer', boundCall?.data, bound?.signature, liveNonce?.toString()],
-    queryFn: () =>
-      recoverTypedDataAddress({
-        ...safeTxTypedData(
-          chain.id,
-          safe,
-          { to: boundCall?.to ?? zeroAddress, data: boundCall?.data ?? '0x' },
-          liveNonce ?? 0n,
-        ),
-        signature: bound?.signature ?? '0x',
-      }),
-    enabled: bound !== undefined && liveNonce !== undefined,
-    staleTime: Infinity,
-  })
-  const epochOf = boundCall?.args.find(([name]) => name === 'epoch')?.[1] ?? '<n>'
-  const stale =
-    bound === undefined ||
-    !dismissable ||
-    liveNonce === undefined ||
-    liveFunded === undefined ||
-    signer.data === undefined
-      ? null
-      : fundProblem(op?.guard, { nonce: liveNonce, totalFunded: liveFunded }, signer.data, me, epochOf)
-  const refused = reads.find((r) => !r.ok) ?? (stale === null ? undefined : { ok: false as const, problem: stale })
+  const refused = reads.find((r) => !r.ok)
   const atomic = reads.some((r) => r.ok && r.via === 'atomic')
-  const checking =
-    bound !== undefined &&
-    dismissable &&
-    (liveNonce === undefined || liveFunded === undefined || signer.data === undefined)
   const blocked =
     refused !== undefined
       ? null
-      : checking
-        ? live.isError
-          ? 'The Safe’s nonce cannot be read right now, so this funding is not offered. Try again in a moment.'
-          : 'Checking the Safe’s nonce…'
-        : atomic && !atomicReady
-          ? multiSendCode.isLoading
-            ? 'Checking MultiSendCallOnly on this network…'
-            : `MultiSendCallOnly has no code at ${MULTI_SEND_CALL_ONLY} on this network, so these calls cannot go as one transaction. Nothing is sent.`
-          : null
+      : atomic && !atomicReady
+        ? multiSendCode.isLoading
+          ? 'Checking MultiSendCallOnly on this network…'
+          : `MultiSendCallOnly has no code at ${MULTI_SEND_CALL_ONLY} on this network, so these calls cannot go as one transaction. Nothing is sent.`
+        : null
   const busy = op !== null
   return (
     <>
@@ -442,9 +295,7 @@ function Admin({ c, safe, me }: { c: SidequestContracts; safe: Address; me: Addr
         <Section title="Saved operation refused">
           <div role="alert" className="grid gap-2 rounded-xl bg-destructive/12 p-4 text-sm text-destructive-text">
             <p>
-              {reads.every((r) => r.ok)
-                ? 'This funding can no longer be sent:'
-                : 'A saved admin operation does not read as one this console sends for this Safe and wallet:'}{' '}
+              A saved admin operation does not read as one this console sends for this Safe and wallet:{' '}
               {refused.problem} It was not sent.
             </p>
             <Button variant="destructive" onClick={() => setOp(null)}>
@@ -494,10 +345,6 @@ function Admin({ c, safe, me }: { c: SidequestContracts; safe: Address; me: Addr
       <Fees c={c} act={act} busy={busy} />
 
       <Holdings c={c} act={act} busy={busy} />
-
-      <Prices c={c} me={me} />
-
-      <Mining c={c} act={act} fund={fund} busy={busy} />
     </>
   )
 }
@@ -548,19 +395,10 @@ function TxReview({ read, safe }: { read: Extract<AdminTx, { ok: true }>; safe: 
       ))}
       {read.outer !== null ? (
         <>
-          {read.signature !== undefined ? (
-            <p className="text-sm text-muted-foreground">
-              Sent as the Safe <AddressText value={safe} />: your wallet calls its{' '}
-              <code className="font-mono">execTransaction</code> with the signature you made for this exact transaction
-              at the Safe’s current nonce. If any other Safe transaction goes first, the Safe refuses this one, so it
-              can never land twice.
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Sent as the Safe <AddressText value={safe} />: your wallet calls its{' '}
-              <code className="font-mono">execTransaction</code> with your owner signature (r = you, s = 0, v = 1).
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            Sent as the Safe <AddressText value={safe} />: your wallet calls its{' '}
+            <code className="font-mono">execTransaction</code> with your owner signature (r = you, s = 0, v = 1).
+          </p>
 
           <ItemGroup className="bg-background">
             {read.outer.map(([name, value]) => (
@@ -1183,731 +1021,6 @@ function Holdings({ c, act, busy }: { c: SidequestContracts; act: Act; busy: boo
               Review the revocation
             </Button>
           </form>
-        </div>
-      )}
-    </Section>
-  )
-}
-
-// ---------------------------------------------------------------------------------------------------------------
-// Mining: after an epoch ends, the Safe posts its Merkle root and funds it from the reserve.
-// ---------------------------------------------------------------------------------------------------------------
-
-type EpochRoot = { root: Hex; total: bigint; claimed: bigint; dataHash: Hex }
-
-type MiningUpload =
-  | { name: string; file: EpochFile }
-  | { name: string; empty: true; epoch: bigint }
-  | { name: string; problem: string }
-
-function miningUpload(text: string, context: EpochFileContext, name: string, expected?: bigint): MiningUpload {
-  const read = readEpochArtifact(text, context)
-  if (!read.ok) return { name, problem: read.problem }
-  if (expected !== undefined && read.file.epoch !== expected) return { name, problem: 'The file names another epoch.' }
-  return read.file.root === null ? { name, empty: true, epoch: read.file.epoch } : { name, file: read.file }
-}
-
-function miningProgress(input: {
-  epoch: bigint
-  root: EpochRoot | undefined
-  totalFunded: bigint | undefined
-  context: EpochFileContext
-  files: { prices: string | null; pending: string | null; published: string | null } | undefined
-  unavailable: boolean
-}) {
-  const { files, root, context, epoch, totalFunded } = input
-  if (input.unavailable) return { status: 'failed:unavailable', next: 'Reload the epoch status' }
-  if (files === undefined || root === undefined) return null
-  const read = files.pending === null ? null : readEpochArtifact(files.pending, context)
-  if (read !== null && (!read.ok || read.file.epoch !== epoch))
-    return { status: 'failed:invalid-epoch', next: 'The computed epoch file could not be read' }
-  const pending = read?.ok ? read.file : null
-  const file = pending?.root === null ? null : pending
-  const funding = file?.fund === null ? 'done' : epochFunding(file, totalFunded)
-  return epochStatus({ prices: files.prices !== null, pending, root, funding, published: files.published !== null })
-}
-
-async function signPriceFile(
-  list: sdk.PriceList,
-  distributor: Address,
-  owner: Address,
-  sign: (typed: ReturnType<typeof priceTypedData>) => Promise<Hex>,
-) {
-  const typed = priceTypedData(chain.id, distributor, list)
-  const signature = await sign(typed)
-  const signer = await sdk.recoverPriceListSigner(list, signature, chain.id, distributor)
-  if (!same(signer, owner)) throw new Error('The price signature did not recover to this wallet')
-  return priceListFile(chain.id, distributor, list, signer, signature)
-}
-
-/**
- * The epoch's price list (B8, U5-PRICES). A Safe owner signs, with their own wallet, exactly the typed data
- * `bun run mining:epoch --prices` verifies, and downloads the file it reads. Decimals are read from each token on chain,
- * as the tool checks them; a signature is offered only once it recovers to this owner, since the tool takes only an
- * EOA signature from a Safe owner.
- */
-function Prices({ c, me }: { c: SidequestContracts; me: Address }) {
-  useSyncExternalStore(subscribeTokens, tokenRegistryVersion, tokenRegistryVersion)
-  const reserve = useReadContracts({
-    contracts: [
-      { address: c.miningReserve, abi: sdk.miningReserveAbi, functionName: 'currentEpoch', chainId: chain.id },
-    ],
-  })
-  const currentEpoch = result<bigint>(reserve.data, 0)
-  const [picked, setPicked] = useState<string | null>(null)
-  // Prices are signed when an epoch has ended: the last one that has.
-  const epochText = picked ?? (currentEpoch === undefined ? '' : String(currentEpoch > 0n ? currentEpoch - 1n : 0n))
-  const [usd, setUsd] = useState<Record<string, string>>({})
-  const [factoryUsd, setFactoryUsd] = useState('')
-
-  const [added, setAdded] = useState<string[]>([])
-  const [adding, setAdding] = useState('')
-  // The deployment's reward tokens, every board's, and any added here.
-  const tokens = [
-    ...new Set([
-      ...deployment.rewardTokens.map((a) => a.toLowerCase()),
-      ...rewardTokenList().map(([a]) => a),
-      ...added,
-    ]),
-  ]
-  const decimals = useReadContracts({
-    contracts: tokens.map(
-      (t) => ({ address: t as Address, abi: erc20Abi, functionName: 'decimals', chainId: chain.id }) as const,
-    ),
-    query: { enabled: tokens.length > 0, staleTime: Infinity, retry: 1 },
-  })
-  const draft: PriceDraft = {
-    epoch: epochText,
-    factoryUsd,
-    tokens: tokens.map((t, i) => ({ token: t, decimals: result<number>(decimals.data, i) ?? null, usd: usd[t] ?? '' })),
-  }
-  const list = priceListOf(draft)
-  const listKey =
-    typeof list === 'string' ? null : JSON.stringify(priceListFile(chain.id, c.distributor, list, me, '0x'))
-  const previousPrices = useQuery({
-    queryKey: ['mining-previous-prices', deployment.network, epochText],
-    queryFn: () => previousPricesOf(BigInt(epochText.trim()), miningFile),
-    enabled: /^\d+$/.test(epochText.trim()),
-    staleTime: 30_000,
-  })
-  const needsPrevious = previousPrices.data?.missing === true && !miningPoolConfigured(deployment.network)
-  const { mutateAsync: signTypedDataAsync } = useSignTypedData()
-  const [signing, setSigning] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [problem, setProblem] = useState<string | null>(null)
-  const [signed, setSigned] = useState<{
-    key: string
-    json: string
-    name: string
-    file: ReturnType<typeof priceListFile>
-    previous?: ReturnType<typeof priceListFile> | undefined
-  } | null>(null)
-  const [uploaded, setUploaded] = useState<string | null>(null)
-  useEffect(() => {
-    const previousFactoryUsd = previousPrices.data?.factoryUsd
-    if (previousFactoryUsd != null) setFactoryUsd((current) => (current === '' ? previousFactoryUsd : current))
-  }, [previousPrices.data])
-  // A signature stands only for the list it signed: any change asks for a new one.
-  const shown = signed !== null && signed.key === listKey ? signed : null
-  const json = shown?.json ?? null
-  const href = useMemo(
-    () => (json === null ? null : URL.createObjectURL(new Blob([json], { type: 'application/json' }))),
-    [json],
-  )
-  useEffect(
-    () => () => {
-      if (href !== null) URL.revokeObjectURL(href)
-    },
-    [href],
-  )
-  const addProblem =
-    adding.trim() === ''
-      ? null
-      : !isAddress(adding.trim(), { strict: false })
-        ? 'Not a token address.'
-        : tokens.includes(adding.trim().toLowerCase())
-          ? 'Already listed.'
-          : null
-  const sign = async () => {
-    if (typeof list === 'string' || listKey === null || previousPrices.data === undefined || previousPrices.isError)
-      return
-    setProblem(null)
-    setSigning(true)
-    try {
-      let saved = shown
-      if (saved === null) {
-        const file = await signPriceFile(list, c.distributor, me, (typed) =>
-          signTypedDataAsync({ ...typed, account: me }),
-        )
-        const previous = needsPrevious
-          ? await signPriceFile({ ...list, epoch: list.epoch - 1n }, c.distributor, me, (typed) =>
-              signTypedDataAsync({ ...typed, account: me }),
-            )
-          : undefined
-        saved = {
-          key: listKey,
-          json: `${JSON.stringify(file, null, 2)}\n`,
-          name: `prices-epoch-${list.epoch}.json`,
-          file,
-          previous,
-        }
-        setSigned(saved)
-      }
-      setSigning(false)
-      setUploading(true)
-      await uploadPrices(saved.file, saved.previous)
-      setUploaded(listKey)
-      void previousPrices.refetch()
-    } catch (failure) {
-      setProblem(
-        failure instanceof ApiError
-          ? `${failure.code}: ${failure.message}`
-          : walletRefused(failure)
-            ? 'You declined to sign. The upload was not sent.'
-            : friendlyError(failure),
-      )
-    } finally {
-      setSigning(false)
-      setUploading(false)
-    }
-  }
-
-  return (
-    <Section
-      title="Mining prices"
-      note="Sign and upload prices for an ended epoch. Sidequest computes the epoch automatically; fees in unpriced tokens do not count. SIDE uses its reference price."
-    >
-      {reserve.isError || decimals.isError ? (
-        <Unavailable retry={() => void Promise.all([reserve.refetch(), decimals.refetch()])} />
-      ) : currentEpoch === undefined ? (
-        <LoadingRows rows={2} />
-      ) : (
-        <div className="grid gap-3 rounded-xl bg-card px-4 py-3.5">
-          <label className="grid gap-1">
-            <span className="text-ui font-semibold">Epoch</span>
-            <Input
-              aria-label="Price list epoch"
-              value={epochText}
-              inputMode="numeric"
-              className="tabular-nums w-28"
-              onChange={(e) => setPicked(e.target.value)}
-            />
-          </label>
-          <div className="grid gap-2">
-            <p className="text-ui font-semibold">USD per whole token</p>
-            {tokens.map((t, i) => {
-              const read = decimals.data?.[i]
-              return (
-                <label key={t} className="grid grid-cols-[1fr_8rem] items-center gap-2">
-                  <span className="min-w-0 text-ui">
-                    <span className="font-semibold">{tokenMeta(t)?.symbol ?? 'Token'}</span> <AddressText value={t} />
-                    <span className="block text-xs text-muted-foreground">
-                      {read === undefined
-                        ? 'Reading decimals…'
-                        : read.status === 'success'
-                          ? `${String(read.result)} decimals`
-                          : 'No decimals on chain: not a token?'}
-                    </span>
-                  </span>
-                  <Input
-                    aria-label={`USD price of ${tokenMeta(t)?.symbol ?? t}`}
-                    value={usd[t] ?? ''}
-                    placeholder="Not priced"
-                    inputMode="decimal"
-                    className="tabular-nums"
-                    onChange={(e) => setUsd({ ...usd, [t]: e.target.value })}
-                  />
-                </label>
-              )
-            })}
-            <div className="grid grid-cols-[1fr_auto] gap-2">
-              <Input
-                aria-label="Another token"
-                value={adding}
-                placeholder="Another token, 0x…"
-                className="font-mono "
-                onChange={(e) => setAdding(e.target.value)}
-              />
-              <Button
-                variant="secondary"
-                disabled={adding.trim() === '' || addProblem !== null}
-                onClick={() => {
-                  setAdded([...added, adding.trim().toLowerCase()])
-                  setAdding('')
-                }}
-              >
-                Add
-              </Button>
-            </div>
-            {addProblem !== null && (
-              <Alert variant="destructive">
-                <AlertDescription>{addProblem}</AlertDescription>
-              </Alert>
-            )}
-          </div>
-          <label className="grid gap-1">
-            <span className="text-ui font-semibold">SIDE, USD</span>
-            <Input
-              aria-label="SIDE price in USD"
-              value={factoryUsd}
-              placeholder="0.0001"
-              inputMode="decimal"
-              className="tabular-nums w-40"
-              onChange={(e) => setFactoryUsd(e.target.value)}
-            />
-            <span className="text-xs text-muted-foreground">Below $0.0001 the tool counts $0.0001.</span>
-          </label>
-          {typeof list === 'string' &&
-            (picked !== null || factoryUsd !== '' || Object.values(usd).some((v) => v !== '')) && (
-              <Alert variant="destructive">
-                <AlertDescription>{list}</AlertDescription>
-              </Alert>
-            )}
-          {problem !== null && (
-            <Alert variant="destructive">
-              <AlertDescription>{problem}</AlertDescription>
-            </Alert>
-          )}
-          {needsPrevious && shown === null && (
-            <p className="text-ui text-muted-foreground">
-              No previous list is stored. You will see two wallet prompts: this epoch and the preceding epoch, with the
-              same prices.
-            </p>
-          )}
-          {previousPrices.isError && (
-            <Alert variant="destructive">
-              <AlertDescription>The previous prices could not be read. Retry before signing.</AlertDescription>
-            </Alert>
-          )}
-          <Button
-            disabled={
-              typeof list === 'string' ||
-              signing ||
-              uploading ||
-              previousPrices.data === undefined ||
-              previousPrices.isError
-            }
-            onClick={() => void sign()}
-          >
-            {signing
-              ? 'Waiting for your wallet…'
-              : uploading
-                ? 'Uploading…'
-                : shown !== null && uploaded !== listKey
-                  ? 'Retry upload'
-                  : 'Sign and upload'}
-          </Button>
-          {previousPrices.isError && (
-            <Button variant="secondary" onClick={() => void previousPrices.refetch()}>
-              Retry previous prices
-            </Button>
-          )}
-          {shown !== null && (
-            <>
-              <p className="text-ui text-muted-foreground">
-                {uploaded === listKey
-                  ? `Uploaded prices for epoch ${epochText.trim()}. Computing runs hourly at :41.`
-                  : 'Signed. Download the file below if upload is unavailable.'}
-              </p>
-              {href !== null && (
-                <a
-                  href={href}
-                  download={shown.name}
-                  className="transition-transform duration-(--dur-fast) ease-(--ease-out-strong) active:scale-[0.96] flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"
-                >
-                  Download {shown.name}
-                </a>
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </Section>
-  )
-}
-
-function Mining({ c, act, fund, busy }: { c: SidequestContracts; act: Act; fund: Fund; busy: boolean }) {
-  const now = useNow()
-  const base = useReadContracts({
-    contracts: [
-      { address: c.miningReserve, abi: sdk.miningReserveAbi, functionName: 'currentEpoch', chainId: chain.id },
-      { address: c.miningReserve, abi: sdk.miningReserveAbi, functionName: 'totalFunded', chainId: chain.id },
-      { address: c.distributor, abi: sdk.epochDistributorAbi, functionName: 'available', chainId: chain.id },
-      { address: c.distributor, abi: sdk.epochDistributorAbi, functionName: 'outstanding', chainId: chain.id },
-    ],
-    query: { refetchInterval: 30_000 },
-  })
-  const currentEpoch = result<bigint>(base.data, 0)
-  const [picked, setPicked] = useState<string | null>(null)
-  // The epoch to close: the last one that has ended.
-  const epochText = picked ?? (currentEpoch === undefined ? '' : String(currentEpoch > 0n ? currentEpoch - 1n : 0n))
-  const epoch = /^\d+$/.test(epochText) ? BigInt(epochText) : null
-  const artifacts = useQuery({
-    queryKey: ['mining-artifacts', deployment.network, epochText],
-    queryFn: async () => {
-      const [prices, pending, published] = await Promise.all([
-        miningFile(`prices-${epoch}.json`),
-        miningFile(`pending-epoch-${epoch}.json`),
-        miningFile(`epoch-${epoch}.json`),
-      ])
-      return { prices, pending, published }
-    },
-    enabled: epoch !== null,
-    refetchInterval: 30_000,
-  })
-  const detail = useReadContracts({
-    contracts: [
-      {
-        address: c.miningReserve,
-        abi: sdk.miningReserveAbi,
-        functionName: 'budget',
-        args: [epoch ?? 0n],
-        chainId: chain.id,
-      },
-      {
-        address: c.miningReserve,
-        abi: sdk.miningReserveAbi,
-        functionName: 'cumulativeBudget',
-        args: [epoch ?? 0n],
-        chainId: chain.id,
-      },
-      {
-        address: c.miningReserve,
-        abi: sdk.miningReserveAbi,
-        functionName: 'epochEnd',
-        args: [epoch ?? 0n],
-        chainId: chain.id,
-      },
-      {
-        address: c.distributor,
-        abi: sdk.epochDistributorAbi,
-        functionName: 'rootOf',
-        args: [epoch ?? 0n],
-        chainId: chain.id,
-      },
-    ],
-    query: { enabled: epoch !== null },
-  })
-  const budget = result<bigint>(detail.data, 0)
-  const cumulative = result<bigint>(detail.data, 1)
-  const end = result<bigint>(detail.data, 2)
-  const root = result<EpochRoot>(detail.data, 3)
-  const [form, setForm] = useState({ resize: '' })
-  const [preparing, setPreparing] = useState(false)
-  const [fundError, setFundError] = useState<string | null>(null)
-  // The epoch's mining output (D17): setRoot and fund take their arguments from it, never from typed fields.
-  const [upload, setUpload] = useState<MiningUpload | null>(null)
-  const [loading, setLoading] = useState(false)
-  const loaded = upload !== null && 'file' in upload ? upload.file : null
-  const empty = upload !== null && 'empty' in upload ? upload : null
-  const forThisEpoch = loaded !== null && epoch !== null && loaded.epoch === epoch
-  const context = { chainId: chain.id, reserve: c.miningReserve, distributor: c.distributor }
-  const choose = async (chosen: File | undefined) => {
-    if (chosen === undefined) return
-    const parsedUpload = miningUpload(await chosen.text(), context, chosen.name)
-    setUpload(parsedUpload)
-    if ('file' in parsedUpload) setPicked(String(parsedUpload.file.epoch))
-    if ('empty' in parsedUpload) setPicked(String(parsedUpload.epoch))
-  }
-  const load = async () => {
-    if (epoch === null) return
-    const name = `pending-epoch-${epoch}.json`
-    setLoading(true)
-    try {
-      const text = await miningFile(name)
-      setUpload(
-        text === null ? { name, problem: 'No pending epoch is stored yet.' } : miningUpload(text, context, name, epoch),
-      )
-      void artifacts.refetch()
-    } catch (error) {
-      setUpload({ name, problem: error instanceof ApiError ? error.message : 'The pending epoch is unavailable.' })
-    } finally {
-      setLoading(false)
-    }
-  }
-  const ended = end !== undefined && Number(end) <= now
-  const hasRoot = root !== undefined && root.root !== `0x${'0'.repeat(64)}`
-  // fund is additive (U-DOC-SEC-001): the file's remainder holds only while MiningReserve.totalFunded() is what the run
-  // read. Any funding since moves it; exactly the remainder means this file's funding already went in.
-  const totalFunded = result<bigint>(base.data, 1)
-  const spare = result<bigint>(base.data, 2)
-  const funding = epochFunding(loaded, totalFunded)
-  const progress =
-    epoch === null
-      ? null
-      : miningProgress({
-          epoch,
-          root,
-          totalFunded,
-          context,
-          files: artifacts.data,
-          unavailable: artifacts.isError,
-        })
-
-  return (
-    <Section
-      title="Mining"
-      note="After an epoch ends, the Safe funds it from the reserve and posts its Merkle root, both from the epoch file; then anyone claims, and claims are staked."
-    >
-      {base.isError || detail.isError ? (
-        <Unavailable retry={() => void Promise.all([base.refetch(), detail.refetch()])} />
-      ) : currentEpoch === undefined ? (
-        <LoadingRows rows={2} />
-      ) : (
-        <div className="grid gap-3">
-          <ItemGroup>
-            <KV k="Current epoch">{String(currentEpoch)}</KV>
-            <KV k="Funded so far">{fmt(result<bigint>(base.data, 1) ?? 0n)}</KV>
-            <KV k="Owed, unclaimed">{fmt(result<bigint>(base.data, 3) ?? 0n)}</KV>
-            <KV k="Spare in the distributor">{fmt(result<bigint>(base.data, 2) ?? 0n)}</KV>
-          </ItemGroup>
-          <div className="grid gap-3 rounded-xl bg-card px-4 py-3.5">
-            <label className="grid gap-1">
-              <span className="text-ui font-semibold">Epoch</span>
-              <Input
-                aria-label="Epoch"
-                value={epochText}
-                inputMode="numeric"
-                className="tabular-nums w-28"
-                onChange={(e) => setPicked(e.target.value)}
-              />
-            </label>
-            {epoch !== null && (
-              <ItemGroup className="bg-background">
-                <KV k="Ends">{end === undefined ? '—' : <When at={Number(end)} />}</KV>
-                <KV k="Budget">{budget === undefined ? '—' : fmt(budget)}</KV>
-                <KV k="Budget so far">
-                  {cumulative === undefined ? '—' : fmt(cumulative)}
-                  <span className="block text-xs text-muted-foreground">Unspent budget rolls over</span>
-                </KV>
-                {hasRoot ? (
-                  <KV k="Root" stack>
-                    <code className="font-mono text-xs break-all">{root.root}</code>
-                  </KV>
-                ) : (
-                  <KV k="Root">{root === undefined ? '—' : 'Not posted'}</KV>
-                )}
-                {hasRoot && <KV k="Claimed">{`${fmt(root.claimed)} of ${fmt(root.total)}`}</KV>}
-              </ItemGroup>
-            )}
-            {epoch !== null && (
-              <output className="rounded-lg bg-muted px-3 py-2 text-ui">
-                {progress === null ? 'Loading epoch status…' : `${progress.status}: ${progress.next}`}
-              </output>
-            )}
-            {epoch !== null && hasRoot && (
-              <div className="grid gap-2 rounded-lg bg-muted px-3 py-2.5">
-                <p className="text-ui font-semibold">Correct the total</p>
-                <p className="text-ui text-muted-foreground">
-                  If the posted total is more than the root’s leaves add up to, the difference stays locked. Shrink it
-                  to the leaf sum from the epoch’s data; it can never go below what is already claimed.
-                </p>
-                <Input
-                  aria-label="New epoch total"
-                  value={form.resize}
-                  placeholder="Leaf sum, SIDE"
-                  inputMode="decimal"
-                  className="tabular-nums"
-                  onChange={(e) => setForm({ ...form, resize: e.target.value })}
-                />
-                {form.resize !== '' && resizeProblem(form.resize, root) !== null && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{resizeProblem(form.resize, root)}</AlertDescription>
-                  </Alert>
-                )}
-                <Button
-                  variant="secondary"
-                  disabled={busy || resizeProblem(form.resize, root) !== null}
-                  onClick={() => {
-                    const total = factoryAmount(form.resize) ?? 0n
-                    if (resizeProblem(form.resize, root) !== null) return
-                    act(
-                      `Shrink the total of epoch ${epoch}`,
-                      {
-                        contract: 'EpochDistributor',
-                        to: c.distributor,
-                        abi: sdk.epochDistributorAbi,
-                        functionName: 'resizeRoot',
-                        args: [epoch, total],
-                      },
-                      'safe',
-                    )
-                  }}
-                >
-                  Review the new total
-                </Button>
-              </div>
-            )}
-            <div className="grid gap-2 rounded-lg bg-muted px-3 py-2.5">
-              <p className="text-ui font-semibold">Epoch file</p>
-              <p className="text-ui text-muted-foreground">
-                The root, total and data hash come from <code className="font-mono">bun run mining:epoch</code>: choose
-                the <code className="font-mono">epoch-&lt;n&gt;.json</code> it wrote. Nothing is typed by hand.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <label className="flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-xl bg-primary/14 px-4 text-sm font-semibold text-primary focus-within:ring-2 focus-within:ring-primary/40">
-                  {upload === null ? 'Choose epoch file' : 'Choose another file'}
-                  <input
-                    type="file"
-                    accept="application/json,.json"
-                    aria-label="Epoch file"
-                    className="sr-only"
-                    onChange={(e) => void choose(e.target.files?.[0])}
-                  />
-                </label>
-                <Button variant="secondary" disabled={epoch === null || loading} onClick={() => void load()}>
-                  {loading ? 'Loading…' : 'Load from Sidequest'}
-                </Button>
-              </div>
-              {upload !== null && 'problem' in upload && (
-                <Alert variant="destructive">
-                  <AlertDescription>
-                    {upload.name}: {upload.problem}
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-            {loaded !== null && (
-              <ItemGroup className="bg-background">
-                <KV k="File">{upload?.name}</KV>
-                <KV k="Epoch">{String(loaded.epoch)}</KV>
-                <KV k="Total">{fmt(loaded.total)}</KV>
-                <KV k="Emission">{fmt(loaded.emission)}</KV>
-                {loaded.leaves !== null && <KV k="Accounts">{String(loaded.leaves)}</KV>}
-                {loaded.priceSigner !== null && (
-                  <KV k="Prices signed by">
-                    <AddressText value={loaded.priceSigner} />
-                  </KV>
-                )}
-                <KV k="Root" stack>
-                  <code className="font-mono text-xs break-all">{loaded.root}</code>
-                </KV>
-                <KV k="Data hash" stack>
-                  <code className="font-mono text-xs break-all">{loaded.dataHash}</code>
-                </KV>
-              </ItemGroup>
-            )}
-            {empty !== null && empty.epoch === epoch && (
-              <p className="rounded-lg bg-muted px-3 py-2 text-ui">Empty epoch: nothing to fund</p>
-            )}
-            {loaded !== null && !forThisEpoch && (
-              <p className="text-ui text-muted-foreground">
-                The file is for epoch {String(loaded.epoch)}; choose that epoch above to use it.
-              </p>
-            )}
-            {loaded !== null && forThisEpoch && (
-              <>
-                {hasRoot && root.root.toLowerCase() !== loaded.root.toLowerCase() && (
-                  <p role="alert" className="rounded-lg bg-warning/14 px-3 py-2 text-ui text-warning-text">
-                    A different root is already posted for this epoch. The file is not the one on chain.
-                  </p>
-                )}
-
-                {!ended && end !== undefined && (
-                  <p className="text-ui text-muted-foreground">
-                    This epoch has not ended: the reserve refuses its funding and the distributor its root until it
-                    does.
-                  </p>
-                )}
-
-                <p className="text-ui font-semibold">1. Fund the epoch</p>
-
-                {loaded.fund === null ? (
-                  <p className="text-ui text-muted-foreground">Fully funded when the file was made: nothing to send.</p>
-                ) : funding === null ? (
-                  <LoadingRows rows={1} />
-                ) : funding === 'stale' ? (
-                  <p role="alert" className="rounded-lg bg-destructive/12 px-3 py-2 text-ui text-destructive-text">
-                    The reserve has funded {fmt(totalFunded ?? 0n)} in all; the file expected{' '}
-                    {fmt(loaded.fund.expectTotalFunded)}. Something was funded since it was made, so its amount may be
-                    wrong. Run <code className="font-mono">bun run mining:epoch {String(loaded.epoch)}</code> again and
-                    load the new file. Nothing is offered from this one.
-                  </p>
-                ) : funding === 'done' ? (
-                  <p className="text-ui text-muted-foreground">
-                    Funded: the remaining {fmt(loaded.fund.amount)} has gone in since the file was made.
-                  </p>
-                ) : (
-                  <>
-                    <ItemGroup className="bg-background">
-                      <KV k="Funded for it">{fmt(loaded.fund.fundedForEpoch)}</KV>
-                      <KV k="Still to fund">{fmt(loaded.fund.amount)}</KV>
-                    </ItemGroup>
-
-                    <Button
-                      variant="secondary"
-                      disabled={busy || preparing}
-                      busy={preparing}
-                      onClick={() => {
-                        const due = loaded.fund
-                        if (due === null) return
-                        setPreparing(true)
-                        setFundError(null)
-                        fund(loaded.epoch, due.amount, due.expectTotalFunded)
-                          .then(setFundError, (failure: unknown) => setFundError(friendlyError(failure)))
-                          .finally(() => setPreparing(false))
-                      }}
-                    >
-                      Review funding · {fmt(loaded.fund.amount)}
-                    </Button>
-
-                    <p className="text-ui text-muted-foreground">
-                      Your wallet signs this funding for the Safe’s current nonce, then sends it: if any other Safe
-                      transaction goes first, the Safe refuses it.
-                    </p>
-
-                    {fundError !== null && (
-                      <Alert variant="destructive">
-                        <AlertDescription>{fundError}</AlertDescription>
-                      </Alert>
-                    )}
-                  </>
-                )}
-
-                <p className="text-ui font-semibold">2. Post the root</p>
-
-                {hasRoot ? (
-                  <p className="text-ui text-muted-foreground">
-                    Posted. Publishing runs automatically within the hour{' '}
-                    <a
-                      className="text-primary underline"
-                      href="https://github.com/grmkris/sidequest/actions/workflows/mining.yml"
-                    >
-                      View workflow
-                    </a>
-                  </p>
-                ) : (
-                  <>
-                    {spare !== undefined && spare < loaded.total && (
-                      <p className="text-ui text-muted-foreground">
-                        Fund it first: the root needs {fmt(loaded.total)} in the distributor, which has {fmt(spare)}{' '}
-                        spare.
-                      </p>
-                    )}
-
-                    <Button
-                      disabled={busy || spare === undefined || spare < loaded.total}
-                      onClick={() =>
-                        act(
-                          `Post the root of epoch ${loaded.epoch}`,
-                          {
-                            contract: 'EpochDistributor',
-                            to: c.distributor,
-                            abi: sdk.epochDistributorAbi,
-                            functionName: 'setRoot',
-                            args: [loaded.epoch, loaded.root, loaded.total, loaded.dataHash],
-                          },
-                          'safe',
-                        )
-                      }
-                    >
-                      Review the root
-                    </Button>
-                  </>
-                )}
-              </>
-            )}
-          </div>
         </div>
       )}
     </Section>
