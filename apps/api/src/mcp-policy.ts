@@ -33,6 +33,8 @@ const READ_TOOLS = new Set([
   'show_hiring_dashboard',
   'show_task',
   'update_profile',
+  // ADR-0021: any connection may ask for a role; only its operator's approval adds one.
+  'request_role',
 ])
 /** Hiring is publishing only: a host connection with hire alone cannot pay, move earnings or stake, or ask for wallet authority. */
 const HIRE_TOOLS = new Set([
@@ -132,6 +134,7 @@ const REVIEW: Readonly<Record<string, readonly [boolean, boolean, boolean]>> = {
   advertise_service: [false, false, true],
   withdraw_service: [false, true, true],
   update_profile: [false, false, true],
+  request_role: [false, false, true],
   settlement_actions: [false, true, true],
   request_unstake: [false, true, true],
   cancel_unstake: [false, true, true],

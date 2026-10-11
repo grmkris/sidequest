@@ -107,6 +107,7 @@ const PUBLISHER_OUTPUT_SCHEMAS: Readonly<Record<string, Record<string, unknown>>
   reject_work: hostedOutput,
   cancel_task: hostedOutput,
   settlement_actions: hostedOutput,
+  request_role: hostedOutput,
 }
 
 /** What tools/list says about a tool beyond its input: title, annotations, output schema and OAuth schemes. */

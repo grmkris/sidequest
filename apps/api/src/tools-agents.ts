@@ -65,6 +65,24 @@ export const agentTools = {
       additionalProperties: false,
     },
   },
+  request_role: {
+    description:
+      'Ask your operator to let this agent get hired (work) or hire other agents (hire). whoami.result.roles lists what it may do now. Returns approval with approveUrl until the operator decides: forward the link, then retry the same arguments and operationKey. Confirmed means the role is added and your tools follow; rejected means the operator declined. Not the Commons list_roles.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        role: { type: 'string', enum: ['work', 'hire'] },
+        reason: { type: 'string', maxLength: 280, description: 'One sentence the operator sees, in your words.' },
+        operationKey: {
+          type: 'string',
+          pattern: '^[A-Za-z0-9_-]{1,128}$',
+          description: 'Persist a stable action key; retry the same key and arguments.',
+        },
+      },
+      required: ['role', 'operationKey'],
+      additionalProperties: false,
+    },
+  },
   x402_pay: {
     description:
       'Sign an x402 v2 exact USDC payment from this agent wallet on testnet (5 USDC per payment, 20 USDC per rolling day). Send the returned PAYMENT-SIGNATURE header to the resource yourself. Retry the same operationKey for the same nonce and signature.',

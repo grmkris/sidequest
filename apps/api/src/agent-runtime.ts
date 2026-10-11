@@ -6,7 +6,10 @@ import {
   AgentExecutor,
   AgentLifecycle,
   AgentPermissions,
+  AgentRoles,
   BoardError,
+  type AgentExecuteResult,
+  type AgentRow,
   SponsorDesk,
   failureFromReply,
   migrateAgentSchema,
@@ -33,6 +36,37 @@ import { runSetupTool } from './agent-setup.ts'
 import { objectFor } from './commons/route.ts'
 
 const key32 = (key: string) => /^0x[0-9a-fA-F]{64}$/.test(key)
+
+const RoleRequestInput = Schema.Struct({
+  role: Schema.Literals(['work', 'hire']),
+  reason: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(280))),
+})
+
+/**
+ * An executed action's answer: inbox rows for the agent and its operator (never failing the action), and for an
+ * approval the operator's signing link, so the agent can forward it instead of asking how.
+ */
+async function answered(
+  input: { network: sdk.Network; bindings: Record<string, unknown>; agent: AgentRow; tool: string; key: string },
+  result: AgentExecuteResult,
+) {
+  const { network, bindings, agent, tool, key } = input
+  const now = Math.floor(Date.now() / 1000)
+  await recordAgentEvents(
+    bindings.Database === undefined ? undefined : fromD1(bindings.Database as never),
+    network,
+    agent.operator,
+    agentFeedEvents({ network, agent, tool, operationKey: key, result, now }),
+    now,
+  )
+  return toJson({
+    ok: true,
+    result:
+      result.status === 'approval'
+        ? { ...result, approveUrl: approvalUrl(network, agent, result.approval.id) }
+        : result,
+  })
+}
 
 export interface AgentExecuteRequest {
   env: BoardCall['env']
@@ -156,6 +190,14 @@ export async function runAgent(runtime: {
       result: await updates.update(agent.id, key, args, req.operator === undefined ? 'agent' : 'owner'),
     })
   }
+  // ADR-0021: an agent asks its operator for a role; only the operator's approval adds it.
+  if (req.tool === 'request_role') {
+    if (!Schema.is(Schema.String)(operationKey))
+      throw new BoardError('invalid', 'request_role requires a stable operationKey; retry with the same key')
+    const request = Schema.decodeUnknownSync(RoleRequestInput)(args, { onExcessProperty: 'error' })
+    const result = new AgentRoles(agents).request(agent, req.env.boardId, operationKey, request)
+    return await answered({ network: req.env.network, bindings, agent, tool: req.tool, key: operationKey }, result)
+  }
   if (requiredToolScope(req.tool) === 'sidequest:read') return tenant.call(prepare(req.tool, args))
   const signerKey = typeof bindings.PRIVY_SIGNER_KEY === 'string' ? bindings.PRIVY_SIGNER_KEY : ''
   const appSecret = typeof bindings.PRIVY_APP_SECRET === 'string' ? bindings.PRIVY_APP_SECRET : ''
@@ -267,23 +309,7 @@ export async function runAgent(runtime: {
       args,
       operationKey: key,
     })
-    // Inbox rows for the agent and its operator, plus the operator's signing link; never fails the action.
-    const now = Math.floor(Date.now() / 1000)
-    await recordAgentEvents(
-      bindings.Database === undefined ? undefined : fromD1(bindings.Database as never),
-      req.env.network,
-      agent.operator,
-      agentFeedEvents({ network: req.env.network, agent, tool: req.tool, operationKey: key, result, now }),
-      now,
-    )
-    // An approval tells the agent where its operator signs, so it can forward the link instead of asking how.
-    return toJson({
-      ok: true,
-      result:
-        result.status === 'approval'
-          ? { ...result, approveUrl: approvalUrl(req.env.network, agent, result.approval.id) }
-          : result,
-    })
+    return await answered({ network: req.env.network, bindings, agent, tool: req.tool, key }, result)
   } catch (error) {
     // A floor refusal sent nothing; alert the owners now instead of waiting for the indexer's next balance check.
     if ((error as { reason?: unknown }).reason === 'floor' && bindings.Database !== undefined) {
