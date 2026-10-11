@@ -4,7 +4,9 @@ import { type ReactNode, createContext, useContext, useEffect, useRef, useState 
 import { Link } from '@tanstack/react-router'
 import { useAccount, useDisconnect, useSignMessage } from 'wagmi'
 import { session, setSession, tool } from '../api.ts'
-import { PrivyLogin, usePrivyLogout, usePrivyModalOpen } from './Privy.tsx'
+import { askedKey, isRefusal, silentSignable } from '../sign-in.ts'
+import { chain } from '../wallet.ts'
+import { PrivyLogin, usePrivyLogout, usePrivyModalOpen, usePrivySilentSigner } from './Privy.tsx'
 
 /** Which address the stored session belongs to, and until when (seconds): a session outlives the tab now. */
 const OWNER_KEY = 'sidequest.session-owner'
@@ -34,10 +36,15 @@ export function useSignedIn() {
   const [token, setToken] = useState(session())
   const [owner, setOwner] = useState(readOwner())
   const { signMessageAsync } = useSignMessage()
-  const signIn = async () => {
+  const silentSigner = usePrivySilentSigner()
+  /** `silent` signs a checked sign-in message without the wallet's screen (the automatic sign-in after a login). */
+  const signIn = async ({ silent = false }: { silent?: boolean } = {}) => {
     if (address === undefined) throw new Error('log in first')
     const { message } = await tool<{ message: string }>('auth_challenge', { address })
-    const signature = await signMessageAsync({ message })
+    const signature =
+      silent && silentSigner !== null && silentSignable(message, { address, host: location.host, chainId: chain.id })
+        ? await silentSigner(address, message)
+        : await signMessageAsync({ message })
     const r = await tool<{ session: string; address: string; expiresAt: number }>('auth_login', { message, signature })
     setSession(r.session)
     setToken(r.session)
@@ -80,32 +87,42 @@ export function useAuth() {
 export function useAutoSignIn(auth: ReturnType<typeof useSignedIn>) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const signIn = async () => {
+  /** Whether the sign-in ran to an answer: signed, or refused by the person (a fault leaves it to ask again). */
+  const signIn = async (silent = false): Promise<boolean> => {
     setBusy(true)
     setError(null)
     try {
-      await auth.signIn()
+      await auth.signIn({ silent })
+      return true
     } catch (e) {
       setError((e as Error).message.split('\n')[0] ?? 'sign-in failed')
+      return isRefusal(e)
     } finally {
       setBusy(false)
     }
   }
   const asked = useRef(new Set<string>())
-  // A new user's wallet appears while Privy still shows its "wallet created" screen; asking for the signature then
-  // replaces that screen's data and Privy throws, blanking the page. Ask once Privy's modal has closed.
+  // A new user's wallet appears while Privy still shows its "wallet created" screen, and that screen stays mounted
+  // while it closes. So the automatic sign-in waits for the modal and then signs without Privy's screen, which would
+  // otherwise replace the closing screen's data and crash it.
   const privyModal = usePrivyModalOpen()
   useEffect(() => {
     const a = auth.address?.toLowerCase()
     if (a === undefined || auth.signedIn || privyModal || asked.current.has(a)) return
     asked.current.add(a)
     try {
-      if (sessionStorage.getItem(`sidequest.asked:${a}`) !== null) return
-      sessionStorage.setItem(`sidequest.asked:${a}`, '1')
+      if (sessionStorage.getItem(askedKey(a)) !== null) return
     } catch {
       // no sessionStorage: ask once per page load
     }
-    void signIn()
+    // Remembered only once answered, so a crash or a dropped request mid-way asks again after a reload.
+    void signIn(true).then((answered) => {
+      try {
+        if (answered) sessionStorage.setItem(askedKey(a), '1')
+      } catch {
+        // no sessionStorage: the page-load memory above still applies
+      }
+    })
   }, [auth.address, auth.signedIn, privyModal])
   return { busy, error, signIn }
 }
