@@ -90,11 +90,7 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
         const indexer = {
           contracts: contractsOf(network),
           deployBlock: Number(sdk.deployment(network).deployBlock),
-          source: hyperSync(hyper, token, sdk.deployment(network).identity),
-          backerShareHistory: {
-            identity: sdk.deployment(network).identity,
-            fromBlock: Number(sdk.deployment(network).sidequest?.block ?? sdk.deployment(network).deployBlock),
-          },
+          source: hyperSync(hyper, token),
           head: rpcHead(rpcUrl),
           runner: `cron:${crypto.randomUUID()}`,
           maxPages: 5,

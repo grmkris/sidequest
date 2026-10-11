@@ -48,12 +48,6 @@ function parseTerms(json: string): sdk.PermissionTerms {
 /** Whether a live standing permission already allows everything the request asks for. */
 function covers(have: sdk.PermissionTerms, want: sdk.PermissionTerms): boolean {
   if (have.type !== want.type) return false
-  if (have.type === 'sidequest:backer-share' && want.type === 'sidequest:backer-share')
-    return (
-      have.registry.toLowerCase() === want.registry.toLowerCase() &&
-      have.agentId === want.agentId &&
-      want.calls <= have.calls
-    )
   if (have.type === 'sidequest:contract-call' && want.type === 'sidequest:contract-call') {
     return (
       have.target.toLowerCase() === want.target.toLowerCase() &&
@@ -174,8 +168,7 @@ export class AgentPermissions {
     const hash = row.delegation_hash
     if (await sdk.isDisabled(ctx, hash)) return false
     if (sdk.grantHasCallLimit(spec)) {
-      const needed = want.type === 'sidequest:backer-share' ? want.calls : 1
-      return (await sdk.callsMade(ctx, hash)) + BigInt(needed) <= BigInt(sdk.grantCallLimit(spec))
+      return (await sdk.callsMade(ctx, hash)) + 1n <= BigInt(sdk.grantCallLimit(spec))
     }
     if (want.type === 'erc20-token-allowance' && spec.terms.type === 'erc20-token-allowance')
       return (await sdk.drawn(ctx, hash)) + want.amount <= spec.terms.amount
@@ -231,7 +224,7 @@ export class AgentPermissions {
    * The operator's signing request for a pending permission approval. An adjustment may only shorten the expiry or
    * lower the amount, and only when the agent allowed it; each distinct adjustment freezes its own template.
    */
-  prepare(approval: ApprovalRow, operator: Address, adjust: { expiry?: number; amount?: bigint; calls?: number } = {}) {
+  prepare(approval: ApprovalRow, operator: Address, adjust: { expiry?: number; amount?: bigint } = {}) {
     const agent = this.agents.owned(approval.agent_id, operator)
     if (
       approval.kind !== 'permission' ||
@@ -248,7 +241,6 @@ export class AgentPermissions {
       justification: request.justification,
     }
     const adjustment = {
-      ...(adjust.calls === undefined ? {} : { calls: adjust.calls }),
       ...(adjust.expiry === undefined ? {} : { expiry: adjust.expiry }),
       ...(adjust.amount === undefined
         ? {}
@@ -335,11 +327,7 @@ export class AgentPermissions {
   }
 
   /** The agent's redemption of a live permission: one manager call through its own work grant, sponsored like any. */
-  use(
-    agent: AgentRow,
-    permissionId: string,
-    input: { transfer?: { recipient?: unknown; amount?: unknown }; bps?: number },
-  ) {
+  use(agent: AgentRow, permissionId: string, input: { transfer?: { recipient?: unknown; amount?: unknown } }) {
     const row = this.#rows(agent).find((item) => item.delegation_hash.toLowerCase() === permissionId.toLowerCase())
     if (row === undefined)
       throw new AgentFailure('not-found', 'No such permission for this agent', 'permission-missing', 'none')
@@ -386,17 +374,8 @@ export class AgentPermissions {
 
 function permissionExecution(
   t: sdk.PermissionTerms,
-  input: { transfer?: { recipient?: unknown; amount?: unknown }; bps?: number },
+  input: { transfer?: { recipient?: unknown; amount?: unknown } },
 ): sdk.Execution {
-  if (t.type === 'sidequest:backer-share') {
-    if (input.transfer !== undefined || input.bps === undefined)
-      throw new AgentFailure('invalid', 'A backer-share permission requires bps only', 'permission-request', 'new-key')
-    return {
-      target: t.registry,
-      value: 0n,
-      callData: sdk.prepareBackerShare(t.registry, t.agentId, input.bps).data,
-    }
-  }
   if (t.type === 'sidequest:contract-call') {
     if (input.transfer !== undefined)
       throw new AgentFailure(

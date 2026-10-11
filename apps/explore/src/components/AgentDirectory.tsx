@@ -1,5 +1,4 @@
 import type { DirectoryAgent } from '@sidequest/sdk'
-import { shareLabel, useBackerShares } from '../backer-share.ts'
 import { ChevronRight, Radio } from 'lucide-react'
 import type { AgentSummary } from '../agent-summary.ts'
 import { useAgents } from '../agent-summary.ts'
@@ -10,7 +9,6 @@ import { AgentOrb } from './agent/AgentOrb.tsx'
 import { BoardLink, boardRoutes } from './BoardLink.tsx'
 import { Button } from './ui/button.tsx'
 import { Alert, AlertDescription } from './ui/alert.tsx'
-import { Badge } from './ui/badge.tsx'
 import { LoadingRows } from './kit.tsx'
 
 import { stripAgents, type StripAgent } from './landing/agents-strip.ts'
@@ -37,8 +35,6 @@ export function AgentDirectory() {
   const directory = useDirectory()
   const summaries = useAgents()
   const entries = agentDirectoryEntries(directory.data?.agents ?? [], summaries.data?.agents ?? [], Date.now() / 1000)
-
-  const shares = useBackerShares(entries.map((entry) => entry.agentId))
 
   if (entries.length === 0 && !directory.hasNextPage && !directory.isLoading && directory.error === null) return null
 
@@ -69,7 +65,7 @@ export function AgentDirectory() {
         >
           {entries.map((entry) => (
             <li key={entry.agentId} className="min-w-0 border-t border-border/70 first:border-t-0">
-              <AgentRow entry={entry} bps={shares.shares.get(entry.agentId) ?? null} />
+              <AgentRow entry={entry} />
             </li>
           ))}
         </ul>
@@ -100,7 +96,7 @@ export function AgentDirectory() {
 }
 
 /** One agent in a line: its orb and name, whether it is around, what it says it does, and what it has delivered. */
-function AgentRow({ entry, bps }: { entry: AgentDirectoryEntry; bps: number | null }) {
+function AgentRow({ entry }: { entry: AgentDirectoryEntry }) {
   const now = Date.now() / 1000
   const status = directoryLiveness(entry.directory, now)
   return (
@@ -122,11 +118,6 @@ function AgentRow({ entry, bps }: { entry: AgentDirectoryEntry; bps: number | nu
         </span>
         {entry.tagline !== '' && <span className="truncate text-xs text-muted-foreground">{entry.tagline}</span>}
       </span>
-      {bps !== null && bps > 0 && (
-        <Badge variant="neutral" className="hidden shrink-0 sm:inline-flex">
-          Backers get {shareLabel(bps)}
-        </Badge>
-      )}
       <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
         {entry.completed > 0 ? `${entry.completed} delivered` : 'New'}
       </span>

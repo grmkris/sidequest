@@ -29,8 +29,6 @@ export interface IndexerConfig {
   readonly backfillBlocks?: number
   /** Optional host discovery, run under this chain lease after folding finalized jobs. */
   readonly offers?: OfferHydrationConfig
-  /** One-time metadata backfill for an existing index checkpoint. */
-  readonly backerShareHistory?: { readonly identity: string; readonly fromBlock: number }
 }
 
 export interface RunResult {
@@ -197,7 +195,6 @@ export async function runOnce(sql: AsyncSql, cfg: IndexerConfig): Promise<RunRes
   if (stale) return { ...idleRun(true, cp?.next_block ?? null), reason: 'stale-generation' }
   let next = cp?.next_block ?? cfg.deployBlock
   const finalized = await cfg.head.finalizedBlock()
-  await backfillBackerShares(sql, cfg, finalized)
   let pages = 0
   let events = 0
   let protocolEvents = 0
@@ -257,65 +254,6 @@ export async function runOnce(sql: AsyncSql, cfg: IndexerConfig): Promise<RunRes
   }
 }
 
-/** Resume the one-time history scan; every page commits its events, times and progress under the chain lease. */
-async function backfillBackerShares(sql: AsyncSql, cfg: IndexerConfig, finalized: number) {
-  const history = cfg.backerShareHistory
-  if (history === undefined) return true
-  const key = [cfg.contracts.chainId, history.identity.toLowerCase(), history.fromBlock]
-  await sql.batch([
-    leaseGuard(cfg),
-    stmt(
-      'INSERT OR IGNORE INTO backer_share_checkpoint VALUES (?, ?, ?, ?, ?)',
-      ...key,
-      history.fromBlock,
-      finalized + 1,
-    ),
-  ])
-  const [cp] = await sql.all<{ next_block: number; target_block: number }>(
-    'SELECT next_block, target_block FROM backer_share_checkpoint WHERE chain_id=? AND identity=? AND deployment_block=?',
-    ...key,
-  )
-  if (cp === undefined) throw new Error('missing backer share checkpoint')
-  let next = cp.next_block
-  const end = Math.min(cp.target_block, finalized + 1)
-  for (let page = 0; page < (cfg.maxPages ?? 5) && next < end; page++) {
-    const found = await cfg.source.logs({ fromBlock: next, toBlock: end, addresses: [history.identity] })
-    const events = found.logs
-      .filter(
-        (log) =>
-          log.address.toLowerCase() === history.identity.toLowerCase() &&
-          log.block_number >= next &&
-          log.block_number < end,
-      )
-      .map((log) => decode(cfg.contracts, log))
-      .filter((event): event is IndexedEvent => event !== undefined && event.name === 'MetadataSet')
-    const upTo = Math.min(Math.max(found.nextBlock, next), end)
-    const blocks = new Set(events.map((event) => event.block))
-    await sql.batch([
-      leaseGuard(cfg),
-      ...events.map(eventStatement),
-      ...(found.blockTimes ?? [])
-        .filter((block) => blocks.has(block.block))
-        .map((block) =>
-          stmt(
-            'INSERT OR IGNORE INTO block_times VALUES (?, ?, ?)',
-            cfg.contracts.chainId,
-            block.block,
-            block.timestamp,
-          ),
-        ),
-      stmt(
-        'UPDATE backer_share_checkpoint SET next_block=? WHERE chain_id=? AND identity=? AND deployment_block=?',
-        upTo,
-        ...key,
-      ),
-    ])
-    if (upTo === next) break
-    next = upTo
-  }
-  return next >= cp.target_block
-}
-
 /** Looks up the times of a few event blocks that have none (indexed before block times were stored), newest first. */
 async function backfillBlockTimes(sql: AsyncSql, cfg: IndexerConfig): Promise<number> {
   const lookup = cfg.head.blockTimestamp?.bind(cfg.head)
@@ -357,7 +295,6 @@ export async function resetIndex(
     ...DERIVED_TABLES.map((t) => stmt(`DELETE FROM ${t} WHERE chain_id = ?`, cfg.contracts.chainId)),
     stmt('DELETE FROM events WHERE chain_id = ?', cfg.contracts.chainId),
     stmt('DELETE FROM protocol_events WHERE chain_id = ?', cfg.contracts.chainId),
-    stmt('DELETE FROM backer_share_checkpoint WHERE chain_id = ?', cfg.contracts.chainId),
     stmt('DELETE FROM checkpoint WHERE chain_id = ?', chainId),
     ...(generation === undefined
       ? []

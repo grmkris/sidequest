@@ -31,7 +31,6 @@ const agent = (agentId: string, overrides: Partial<DirectoryAgent> = {}): Direct
   agentURI: '',
   enrolled: true,
   ownership: 'verified',
-  backerShareBps: null,
   presence: { freshness: 'unknown', state: null, accepting: false, lastSeenBucket: null },
   ads: [],
   observedAt: 0,

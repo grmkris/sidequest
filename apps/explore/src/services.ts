@@ -18,7 +18,6 @@ export interface ServiceListing extends Ad {
   presence: DirectoryAgent['presence']
   /** A Sidequest-hosted agent's last MCP call, to five minutes. */
   lastMcpCallAt: number | null
-  backerShareBps: number | null
   /** Jobs the agent delivered and was paid for: ever, and in the last seven days. */
   delivered: number
   delivered7d: number
@@ -47,7 +46,6 @@ export function agentListings(agent: DirectoryAgent, now: number, delivered = 0)
       wallet: agent.wallet,
       presence: agent.presence,
       lastMcpCallAt: agent.activity?.lastMcpCallAt ?? null,
-      backerShareBps: agent.backerShareBps,
       delivered,
       delivered7d: 0,
     }))

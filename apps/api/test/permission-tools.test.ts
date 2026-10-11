@@ -6,7 +6,7 @@ it('permission tools read with the read scope, write with work only, and stay of
   expect([...PERMISSION_TOOLS].every((name) => Object.hasOwn(agentTools, name))).toBe(true)
   expect(requiredToolScope('get_permissions')).toBe('sidequest:read')
   expect(requiredToolScope('get_supported_permissions')).toBe('sidequest:read')
-  for (const name of ['request_permissions', 'use_permission', 'revoke_permission', 'set_backer_share']) {
+  for (const name of ['request_permissions', 'use_permission', 'revoke_permission']) {
     expect(requiredToolScope(name)).toBe('sidequest:work')
     expect(permittedTool({ scopes: ['sidequest:read', 'sidequest:work'] }, name)).toBe(true)
     expect(permittedTool({ scopes: ['sidequest:read', 'sidequest:hire'] }, name)).toBe(false)

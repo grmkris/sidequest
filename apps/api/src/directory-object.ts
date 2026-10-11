@@ -106,7 +106,7 @@ export default class DirectoryObject extends Cloudflare.DurableObject<DirectoryO
           now: () => Math.floor(Date.now() / 1000),
           readIdentity: async (id) => {
             if (reads === undefined) throw new Error('identity RPC unavailable')
-            const [wallet, agentURI, backerShareBps] = await Promise.all([
+            const [wallet, agentURI] = await Promise.all([
               reads.readContract({
                 address: config.identity,
                 abi: sdk.identityAbi,
@@ -119,10 +119,9 @@ export default class DirectoryObject extends Cloudflare.DurableObject<DirectoryO
                 functionName: 'tokenURI',
                 args: [BigInt(id)],
               }),
-              sdk.readBackerShare(reads, config.identity, id).catch(() => null),
             ])
             if (agentURI.length > 16384) throw new Error('identity profile reference is too large')
-            return { wallet, agentURI, backerShareBps }
+            return { wallet, agentURI }
           },
           verify: async (address, record, signature) =>
             reads === undefined

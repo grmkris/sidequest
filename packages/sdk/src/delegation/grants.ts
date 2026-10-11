@@ -14,10 +14,9 @@ import {
   toFunctionSelector,
 } from 'viem'
 import { coreAbi, sidequestEvaluatorAbi, sidequestHoldingAbi, identityAbi, stakeVaultAbi } from '../abi/index.ts'
-import { BACKER_SHARE_CALLDATA_LAYOUT } from '../backer-share.ts'
 import type { Deployment, Stack } from '../deployment.ts'
 import { type Caveat, type Delegation, ROOT_AUTHORITY, delegationHash, delegationManagerAbi } from './index.ts'
-import { PermissionError, type PermissionTerms, buildPermission } from './permissions.ts'
+import { type PermissionTerms, buildPermission } from './permissions.ts'
 
 export type GrantKind =
   | 'operator'
@@ -167,8 +166,6 @@ export function grantTargets(ctx: GrantContext, spec: GrantSpec): readonly Grant
       return [{ address: d.sidequest.vault, abi: stakeVaultAbi, methods: ['requestUndelegate'] }]
     case 'permission':
       // An exact call names its target only; checkPermissionExecution, not a method list, decides what it may do.
-      if (spec.terms.type === 'sidequest:backer-share')
-        return [{ address: spec.terms.registry, abi: identityAbi, methods: ['setMetadata'] }]
       return spec.terms.type === 'sidequest:contract-call'
         ? [{ address: spec.terms.target, abi: [], methods: [] }]
         : [{ address: spec.terms.token, abi: erc20Abi, methods: ['transfer'] }]
@@ -209,7 +206,6 @@ export function grantExpiry(spec: GrantSpec): number {
 
 export function grantCallLimit(spec: GrantSpec): number {
   if (spec.kind === 'permission') {
-    if (spec.terms.type === 'sidequest:backer-share') return spec.terms.calls
     return spec.terms.type === 'sidequest:contract-call' ? 1 : GRANT_CALLS
   }
   return spec.kind === 'registration'
@@ -221,12 +217,7 @@ export function grantCallLimit(spec: GrantSpec): number {
 
 /** Whether the delegation carries a LimitedCalls caveat (token permissions are bounded by amount, not by calls). */
 export function grantHasCallLimit(spec: GrantSpec): boolean {
-  return (
-    spec.kind !== 'allowance' &&
-    (spec.kind !== 'permission' ||
-      spec.terms.type === 'sidequest:contract-call' ||
-      spec.terms.type === 'sidequest:backer-share')
-  )
+  return spec.kind !== 'allowance' && (spec.kind !== 'permission' || spec.terms.type === 'sidequest:contract-call')
 }
 
 export function buildGrant(ctx: GrantContext, spec: GrantSpec): Delegation {
@@ -333,8 +324,6 @@ export function describeGrant(ctx: GrantContext, spec: GrantSpec, grant: Delegat
 
 function permissionGrantFields(terms: PermissionTerms) {
   switch (terms.type) {
-    case 'sidequest:backer-share':
-      return { targets: [{ address: terms.registry, methods: ['setMetadata'] }], calls: terms.calls }
     case 'sidequest:contract-call':
       return {
         targets: [{ address: terms.target, methods: [terms.callData.slice(0, 10)] }],
@@ -375,27 +364,8 @@ function describePermissionGrant(
     ...permissionGrantFields(spec.terms),
   }
 }
-export function backerShareCaveats(d: Deployment, terms: Extract<PermissionTerms, { type: 'sidequest:backer-share' }>) {
-  if (!isAddress(terms.registry) || terms.agentId < 0n || terms.agentId >= 2n ** 256n)
-    throw new PermissionError('Invalid backer-share registry or agent ID')
-  const calls = terms.calls
-  if (!Number.isSafeInteger(calls) || calls < 1 || calls > 20) throw new PermissionError('calls must be 1 to 20')
-  const e = d.delegation.enforcers
-  const layout = BACKER_SHARE_CALLDATA_LAYOUT
-  return [
-    caveat(e.allowedTargets, concat([terms.registry])),
-    caveat(e.allowedMethods, toFunctionSelector('function setMetadata(uint256,string,bytes)')),
-    caveat(e.valueLte, uint(0n)),
-    caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [BigInt(layout.agentIdOffset), uint(terms.agentId)])),
-    caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [BigInt(layout.fixedOffset), layout.fixedBytes])),
-    caveat(e.limitedCalls, uint(BigInt(calls))),
-  ]
-}
-
 export function permissionDescription(t: PermissionTerms) {
   switch (t.type) {
-    case 'sidequest:backer-share':
-      return { registry: t.registry, agentId: t.agentId.toString(), calls: t.calls }
     case 'sidequest:contract-call':
       return { target: t.target, value: t.value.toString(), callData: t.callData, calls: 1 }
     case 'erc20-token-periodic':

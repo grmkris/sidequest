@@ -20,17 +20,11 @@ import {
   pad,
   toFunctionSelector,
 } from 'viem'
-import { backerShareCalls, checkBackerShareExecution } from '../backer-share.ts'
 import type { Deployment } from '../deployment.ts'
-import { backerShareCaveats, permissionDescription, type GrantSpec } from './grants.ts'
+import { permissionDescription, type GrantSpec } from './grants.ts'
 import { type Caveat, type Delegation, type Execution, ROOT_AUTHORITY, delegationHash } from './index.ts'
 
-export const PERMISSION_TYPES = [
-  'erc20-token-periodic',
-  'erc20-token-allowance',
-  'sidequest:contract-call',
-  'sidequest:backer-share',
-] as const
+export const PERMISSION_TYPES = ['erc20-token-periodic', 'erc20-token-allowance', 'sidequest:contract-call'] as const
 export type PermissionType = (typeof PERMISSION_TYPES)[number]
 
 /** The longest expiry an agent may propose; the operator may shorten it, never extend it past this. */
@@ -38,10 +32,7 @@ export const PERMISSION_MAX_EXPIRY: Readonly<Record<PermissionType, number>> = {
   'erc20-token-periodic': 30 * 86_400,
   'erc20-token-allowance': 30 * 86_400,
   'sidequest:contract-call': 86_400,
-  'sidequest:backer-share': 30 * 86_400,
 }
-export const BACKER_SHARE_DEFAULT_CALLS = 10
-export const BACKER_SHARE_MAX_CALLS = 20
 export const PERMISSION_MIN_PERIOD = 3600
 
 /** ERC-7715 `wallet_requestExecutionPermissions` request entry, as an agent sends it through MCP. */
@@ -58,12 +49,6 @@ export interface PermissionRequest {
 }
 
 export type PermissionTerms =
-  | {
-      readonly type: 'sidequest:backer-share'
-      readonly registry: Address
-      readonly agentId: bigint
-      readonly calls: number
-    }
   | {
       readonly type: 'erc20-token-periodic'
       readonly token: Address
@@ -214,14 +199,6 @@ export function parsePermissionRequest(
       amount: amount(data.allowanceAmount, 'allowanceAmount'),
       recipient: address(data.recipient, 'recipient'),
     }
-  } else if (type === 'sidequest:backer-share') {
-    known(['registry', 'agentId', 'calls'])
-    terms = {
-      type,
-      registry: address(data.registry, 'registry'),
-      agentId: amount(data.agentId, 'agentId', true),
-      calls: permissionCalls(data.calls ?? BACKER_SHARE_DEFAULT_CALLS),
-    }
   } else {
     known(['target', 'value', 'calldata'])
     const callData = data.calldata
@@ -252,7 +229,7 @@ export function parsePermissionRequest(
  */
 export function adjustPermission(
   requested: ParsedPermissionRequest,
-  adjusted: { expiry?: number; periodAmount?: bigint; amount?: bigint; calls?: number },
+  adjusted: { expiry?: number; periodAmount?: bigint; amount?: bigint },
 ): ParsedPermissionRequest {
   if (!requested.adjustable && Object.keys(adjusted).length > 0)
     throw new PermissionError('this request does not allow adjustment')
@@ -260,8 +237,6 @@ export function adjustPermission(
   if (!Number.isSafeInteger(expiry) || expiry > requested.expiry)
     throw new PermissionError('an adjustment may only shorten the expiry')
   const t = requested.terms
-  if (t.type !== 'sidequest:backer-share' && adjusted.calls !== undefined)
-    throw new PermissionError('only a backer-share permission has calls to adjust')
   if (t.type === 'erc20-token-periodic') {
     const periodAmount = adjusted.periodAmount ?? t.periodAmount
     if (adjusted.amount !== undefined || periodAmount <= 0n || periodAmount > t.periodAmount)
@@ -274,23 +249,9 @@ export function adjustPermission(
       throw new PermissionError('an adjustment may only lower the amount')
     return { ...requested, expiry, terms: { ...t, amount: value } }
   }
-  if (t.type === 'sidequest:backer-share') {
-    const calls = permissionCalls(adjusted.calls ?? t.calls)
-    if (adjusted.amount !== undefined || adjusted.periodAmount !== undefined || calls > t.calls)
-      throw new PermissionError('an adjustment may only lower calls')
-    return { ...requested, expiry, terms: { ...t, calls } }
-  }
   if (adjusted.amount !== undefined || adjusted.periodAmount !== undefined)
     throw new PermissionError('an exact call has no amount to adjust')
   return { ...requested, expiry }
-}
-
-function permissionCalls(value: unknown) {
-  try {
-    return backerShareCalls(value)
-  } catch {
-    throw new PermissionError(`calls must be 1 to ${BACKER_SHARE_MAX_CALLS}`)
-  }
 }
 
 function uint(value: bigint): Hex {
@@ -322,9 +283,7 @@ export function buildPermission(d: Deployment, spec: PermissionSpec): Delegation
   const e = permissionEnforcers(d)
   const t = spec.terms
   const caveats: Caveat[] = [caveat(e.timestamp, encodePacked(['uint128', 'uint128'], [0n, BigInt(spec.expiry)]))]
-  if (t.type === 'sidequest:backer-share') {
-    caveats.push(...backerShareCaveats(d, t))
-  } else if (t.type === 'sidequest:contract-call') {
+  if (t.type === 'sidequest:contract-call') {
     caveats.push(
       caveat(e.exactExecution, encodePacked(['address', 'uint256', 'bytes'], [t.target, t.value, t.callData])),
     )
@@ -376,13 +335,6 @@ export function assertPermission(d: Deployment, spec: PermissionSpec, delegation
 export function checkPermissionExecution(spec: PermissionSpec, execution: Execution, now?: number): void {
   if (now !== undefined && now >= spec.expiry) throw new PermissionError('the permission has expired')
   const t = spec.terms
-  if (t.type === 'sidequest:backer-share') {
-    try {
-      return checkBackerShareExecution(t, execution)
-    } catch {
-      throw new PermissionError('the call is outside the permitted backer share')
-    }
-  }
   if (t.type === 'sidequest:contract-call') {
     if (
       execution.target.toLowerCase() !== t.target.toLowerCase() ||
@@ -480,7 +432,7 @@ export function permissionRisks(
       risks.push({ level: 'high', code: 'self-call', message: 'The call targets your own account.' })
     if (facts.knownTargets !== undefined && !listed(facts.knownTargets, t.target))
       risks.push({ level: 'high', code: 'unknown-target', message: 'The target is not a known contract.' })
-  } else if (t.type !== 'sidequest:backer-share') {
+  } else {
     const limit = t.type === 'erc20-token-periodic' ? t.periodAmount : t.amount
     if (facts.balance !== undefined && limit * 2n > facts.balance)
       risks.push({
@@ -522,13 +474,6 @@ export function parsePermissionSpec(json: string): PermissionSpec {
 
 function storedTerms(t: Record<string, unknown>): PermissionTerms {
   switch (t.type) {
-    case 'sidequest:backer-share':
-      return {
-        type: t.type,
-        registry: address(t.registry, 'registry'),
-        agentId: amount(t.agentId, 'agentId', true),
-        calls: permissionCalls(t.calls),
-      }
     case 'sidequest:contract-call':
       // SAFETY: stored exact calldata is hex validated when the request was parsed; build/assert verify the frozen bytes.
       return {

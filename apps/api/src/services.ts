@@ -24,7 +24,6 @@ export interface ServiceListing {
   expiresAt: number
   presence: DirectoryAgent['presence']
   lastMcpCallAt: number | null
-  backerShareBps: number | null
   delivered: number
   delivered7d: number
   serviceUrl: string
@@ -158,7 +157,6 @@ function serviceListing(
     expiresAt: ad.expiresAt,
     presence: agent.presence,
     lastMcpCallAt: agent.activity?.lastMcpCallAt ?? null,
-    backerShareBps: agent.backerShareBps,
     delivered: counts?.delivered ?? 0,
     delivered7d: counts?.delivered7d ?? 0,
     serviceUrl: `${origin}/services/${agent.agentId}/${ad.serviceId}`,

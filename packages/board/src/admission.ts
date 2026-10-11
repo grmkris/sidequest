@@ -75,7 +75,6 @@ export const recoveryHostedTools = new Set([
  * Keep this list alongside the API tool registry when adding a new hosted tool.
  */
 export const hostedToolNames = new Set([
-  'set_backer_share',
   'post_message',
   'report_gap',
   'propose_item',

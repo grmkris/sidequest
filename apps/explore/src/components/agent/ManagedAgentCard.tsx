@@ -167,13 +167,7 @@ type ManagedPermission = {
   status: string
   expiresAt: number
   standing: boolean
-  permission: { type: string; agentId?: string; calls?: number }
-}
-
-export function managedPermissionLabel(permission: ManagedPermission['permission']): string {
-  return permission.type === 'sidequest:backer-share'
-    ? `Set agent #${permission.agentId}’s backer share · at most ${permission.calls} calls`
-    : permission.type
+  permission: { type: string }
 }
 
 function PermissionList({
@@ -198,7 +192,7 @@ function PermissionList({
         permissions.map((row) => (
           <div key={row.permissionId} className="flex flex-wrap items-center justify-between gap-3">
             <div className="grid gap-1 text-sm">
-              <p>{managedPermissionLabel(row.permission)}</p>
+              <p>{row.permission.type}</p>
               <p>
                 {row.status} · until {localTime(row.expiresAt)}
                 {row.standing ? ' · standing permission' : ''}

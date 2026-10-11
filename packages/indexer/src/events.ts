@@ -3,7 +3,7 @@
  * job-less events (including stake and epoch claims) follow the same atomic checkpoint as job events.
  */
 import * as sdk from '@sidequest/sdk'
-import { type Abi, type Address, type Hex, decodeEventLog, keccak256, stringToHex } from 'viem'
+import { type Abi, type Address, type Hex, decodeEventLog } from 'viem'
 
 export interface RawLog {
   readonly block_number: number
@@ -31,15 +31,7 @@ export interface IndexedEvent {
 
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
 
-export type Role =
-  | 'core'
-  | 'holding'
-  | 'evaluator'
-  | 'vault'
-  | 'feeSchedule'
-  | 'miningReserve'
-  | 'distributor'
-  | 'identity'
+export type Role = 'core' | 'holding' | 'evaluator' | 'vault' | 'feeSchedule' | 'miningReserve' | 'distributor'
 
 /** Which ABI decodes which address, and which stack a Holding or evaluator belongs to. */
 export interface Contracts {
@@ -67,7 +59,6 @@ export function contractsFromDeployment(d: sdk.Deployment): Contracts {
     roles.set(d.sidequest.miningReserve.toLowerCase(), { role: 'miningReserve', stack: null, kind: 'sidequest-v1' })
     roles.set(d.sidequest.distributor.toLowerCase(), { role: 'distributor', stack: null, kind: 'sidequest-v1' })
   }
-  roles.set(d.identity.toLowerCase(), { role: 'identity', stack: null, kind: null })
   return { chainId: d.chainId, core: d.core.toLowerCase(), roles }
 }
 
@@ -79,7 +70,6 @@ const v1Abis: Partial<Record<Role, Abi>> = {
   feeSchedule: sdk.feeScheduleAbi as Abi,
   miningReserve: sdk.miningReserveAbi as Abi,
   distributor: sdk.epochDistributorAbi as Abi,
-  identity: sdk.identityAbi,
 }
 
 const jsonSafe = (v: unknown): JsonValue => {
@@ -93,11 +83,6 @@ const jsonSafe = (v: unknown): JsonValue => {
 export function decode(contracts: Contracts, log: RawLog): IndexedEvent | undefined {
   const who = contracts.roles.get(log.address.toLowerCase())
   if (who === undefined) return undefined
-  if (
-    who.role === 'identity' &&
-    log.topic2?.toLowerCase() !== keccak256(stringToHex(sdk.BACKER_SHARE_KEY)).toLowerCase()
-  )
-    return undefined
   const topics = [log.topic0, log.topic1, log.topic2, log.topic3].filter((t): t is Hex => typeof t === 'string')
   if (topics.length === 0) return undefined
   let decoded: { eventName: string; args: unknown }
@@ -109,8 +94,6 @@ export function decode(contracts: Contracts, log: RawLog): IndexedEvent | undefi
     return undefined
   }
   const raw = (decoded.args ?? {}) as Record<string, unknown>
-  if (who.role === 'identity' && (decoded.eventName !== 'MetadataSet' || raw.metadataKey !== sdk.BACKER_SHARE_KEY))
-    return undefined
   const args: Record<string, JsonValue> = {}
   for (const [k, v] of Object.entries(raw)) args[k] = jsonSafe(v)
   return {

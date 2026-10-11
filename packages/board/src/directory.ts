@@ -28,7 +28,7 @@ export interface DirectoryDeps {
   audience: string
   agentId: string
   now: () => number
-  readIdentity: (agentId: string) => Promise<{ wallet: Address; agentURI: string; backerShareBps?: number | null }>
+  readIdentity: (agentId: string) => Promise<{ wallet: Address; agentURI: string }>
   verify: (address: Address, record: DirectoryEnvelope, signature: Hex) => Promise<boolean>
 }
 
@@ -44,7 +44,6 @@ interface DirectoryState {
   wallet: Address
   profile: DirectoryProfile
   agentURI: string
-  backerShareBps: number | null
   delegate: Address
   adDelegate: boolean
   grantExpiresAt: number
@@ -64,7 +63,6 @@ const initial = (): DirectoryState => ({
   wallet: zeroAddress,
   profile: { name: '', description: '', services: [] },
   agentURI: '',
-  backerShareBps: null,
   delegate: zeroAddress,
   adDelegate: false,
   grantExpiresAt: 0,
@@ -190,10 +188,8 @@ export class DirectoryService {
       return {
         wallet: getAddress(result.wallet),
         agentURI: result.agentURI,
-        backerShareBps: result.backerShareBps ?? null,
       }
     } catch {
-      state.backerShareBps = null
       state.ownership = 'unknown'
       state.checkedAt = this.deps.now()
       if (state.revision > 0) this.save(state, state.revision)
@@ -380,7 +376,6 @@ export class DirectoryService {
     const projectedState = state.heartbeat?.state
     state.wallet = identity.wallet
     state.agentURI = identity.agentURI
-    state.backerShareBps = identity.backerShareBps
     state.checkedAt = now
     state.ownership = 'verified'
     state.accepted[record.kind] = { nonce: record.nonce, hash }
@@ -449,7 +444,6 @@ export class DirectoryService {
       profile: state.profile,
       profileSource: 'operator-supplied',
       agentURI: state.agentURI,
-      backerShareBps: ownership === 'unknown' ? null : (state.backerShareBps ?? null),
       enrolled: state.enrolled,
       ownership,
       presence: {
@@ -477,7 +471,6 @@ export class DirectoryService {
           state.checkedAt = this.deps.now()
           state.ownership = state.wallet.toLowerCase() === identity.wallet.toLowerCase() ? 'verified' : 'changed'
           state.agentURI = identity.agentURI
-          state.backerShareBps = identity.backerShareBps
           this.save(state, state.revision)
         }
       } catch (error) {
