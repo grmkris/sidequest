@@ -1,21 +1,21 @@
 # Tests and check floors
 
-This is the W4-DOCS snapshot on 7 October 2026, based on source `b8034a4`. Floors count passing tests only, with skipped
-counts shown separately. They are unit/local-binding evidence, not live or authenticated acceptance. Turbo's unchanged
-local-cache results were accepted; API, indexer and indexer Worker tests executed in this run.
+Re-recorded on 11 October 2026 from `heavy bunx turbo run test` at `61dc4464`, after mining and backer share were
+removed with their tests (ADR-0022). Floors count passing tests only, with skipped counts shown separately. They are
+unit/local-binding evidence, not live or authenticated acceptance.
 
 ## Workspace floors
 
 | Workspace | Passing tests | Skipped | Command filter |
 | :-- | --: | --: | :-- |
-| `apps/api` | 471 | 15 | `@sidequest/api` |
+| `apps/api` | 663 | 17 | `@sidequest/api` |
 | `apps/indexer` | 9 | 0 | `@sidequest/indexer-worker` |
-| `apps/explore` | 241 | 0 | `@sidequest/explore` |
-| `apps/arbiter` | 15 | 0 | `@sidequest/arbiter` |
-| `apps/docs` | 52 | 0 | `@sidequest/docs` |
-| `packages/sdk` | 254 | 33 | `@sidequest/sdk` |
-| `packages/board` | 363 | 52 | `@sidequest/board` |
-| `packages/indexer` | 22 | 1 | `@sidequest/indexer` |
+| `apps/explore` | 399 | 0 | `@sidequest/explore` |
+| `apps/arbiter` | 46 | 0 | `@sidequest/arbiter` |
+| `apps/docs` | 58 | 0 | `@sidequest/docs` |
+| `packages/sdk` | 319 | 33 | `@sidequest/sdk` |
+| `packages/board` | 454 | 52 | `@sidequest/board` |
+| `packages/indexer` | 53 | 1 | `@sidequest/indexer` |
 | `packages/react` | 6 | 0 | `@sidequest/react` |
 | `tools` | 53 | 0 | `tools` |
 

@@ -3,7 +3,7 @@
 `@sidequest/board` owns board domain and persistence contracts and runs as the `shared` runtime class declared in [tools/graph.ts](../../tools/graph.ts).
 
 - **Check**: `bun run check:files packages/board`; `bun run --cwd packages/board typecheck`; `bun run --cwd packages/board test`.
-- **Test floor**: 57 files (49 passed, 8 skipped) / 460 passed (52 skipped) — recorded from `heavy bun --no-env-file run --cwd packages/board test` on 11 October 2026 (ADR-0021 role approvals; the backer-share removal 52294b6e deleted `backer-share-permission.test.ts` and trimmed `directory.test.ts`, which is why this is below the earlier 461). Do not set an RPC variable for this unit suite.
+- **Test floor**: 56 files (48 passed, 8 skipped) / 454 passed (52 skipped) — recorded from `heavy bunx turbo run test` on 11 October 2026 (mining and backer share removed, ADR-0022: their tests went with the code). Do not set an RPC variable for this unit suite.
 - **Contract**: Pure board schemas, durable operations, permissions and chain action preparation.
 - **Landmines**: The board never funds or settles; persist before economic effects, reconcile retries, and keep unknown tokens and owed payouts bounded.
 - **Read**: [protocol](../../docs/protocol.md), [migrations rule](../../.claude/rules/databases-and-migrations.md).
