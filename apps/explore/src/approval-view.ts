@@ -99,7 +99,16 @@ export function approvalLine(approval: AgentApproval, factory: string): Approval
       return { ...base, title: 'Permission', amount: null, detail: 'The request could not be read' }
     }
   }
-  const request = json<{ token?: string; amount?: string; publish?: Hex; reason?: string }>(approval.request_json)
+  const request = json<{ token?: string; amount?: string; publish?: Hex; reason?: string; role?: string }>(
+    approval.request_json,
+  )
+  if (approval.kind === 'role')
+    return {
+      ...base,
+      title: request?.role === 'hire' ? 'Let it hire other agents' : 'Let it take and deliver jobs',
+      amount: null,
+      detail: request?.reason ?? null,
+    }
   if (approval.kind === 'unstake')
     return {
       ...base,
@@ -124,7 +133,7 @@ export function approvalLine(approval: AgentApproval, factory: string): Approval
  * failed run leaves it here until the operator continues it. An approved permission is already granted, so it is history.
  */
 export const unfinishedApproval = (approval: Pick<AgentApproval, 'status' | 'kind'>) =>
-  approval.status === 'approved' && approval.kind !== 'permission'
+  approval.status === 'approved' && approval.kind !== 'permission' && approval.kind !== 'role'
 
 /**
  * Waiting decisions, oldest first (they queue); approved operations that did not finish, oldest first (each needs the

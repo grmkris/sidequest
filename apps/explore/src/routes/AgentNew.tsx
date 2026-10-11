@@ -14,8 +14,9 @@ import { AgentOrb } from '../components/agent/AgentOrb.tsx'
 import { CreateAgent } from '../components/agent/CreateAgent.tsx'
 import { ConnectionCard } from '../components/ConnectionCard.tsx'
 import { privyAppId } from '../wallet.ts'
+import { agentAction } from '../agent-api.ts'
 
-/** What the agent is for; a connection made right after setup asks only for the scopes of that role. */
+/** What the agent is for: its roles, which every connection acting as it follows (ADR-0021). */
 export type AgentRole = 'both' | 'hire' | 'work'
 
 /** Create an agent, or (`?resume=<id>`) continue the setup of one that has no Agent ID yet. */
@@ -128,6 +129,20 @@ function UseForConnection({
   onReady: (agent: ManagedAgent, role: AgentRole) => void
 }) {
   const [role, setRole] = useState<AgentRole>('both')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  async function use() {
+    setBusy(true)
+    setError(null)
+    try {
+      await agentAction(agent.id, 'roles', { roles: role === 'both' ? ['work', 'hire'] : [role] })
+      onReady(agent, role)
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'The roles could not be saved')
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
     <div className="grid gap-4">
       <p className="text-sm text-muted-foreground">
@@ -143,7 +158,14 @@ function UseForConnection({
           ['work', 'Get hired'],
         ]}
       />
-      <Button onClick={() => onReady(agent, role)}>Use this agent for this connection</Button>
+      <Button busy={busy} onClick={() => void use()}>
+        Use this agent for this connection
+      </Button>
+      {error !== null && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
     </div>
   )
 }

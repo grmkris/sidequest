@@ -11,15 +11,27 @@ import type { AgentApproval } from '../../agent-api.ts'
 import { reviewAgentGrant, type PreparedGrant } from '../../agent-grant.ts'
 import { AgentGrantReview } from '../AgentGrantReview.tsx'
 import { PermissionApproval } from './PermissionApproval.tsx'
+import { RoleApproval } from './RoleApproval.tsx'
 import { TokenAmount } from '../token/TokenAmount.tsx'
 
 import { useTokenList } from '../../useTokens.ts'
 import { typedDataArgs } from '../../typed-data.ts'
 import { deployment } from '../../wallet.ts'
 
-/** One decision a managed agent waits on; a requested permission has its own card. */
+/** One decision a managed agent waits on; a requested permission and a requested role have their own cards. */
 export function Approval(props: Parameters<typeof OperationApproval>[0]) {
-  return props.approval.kind === 'permission' ? <PermissionApproval {...props} /> : <OperationApproval {...props} />
+  if (props.approval.kind === 'permission') return <PermissionApproval {...props} />
+  if (props.approval.kind === 'role')
+    return (
+      <RoleApproval
+        approval={props.approval}
+        agent={props.agent}
+        refresh={async () => {
+          await props.refresh()
+        }}
+      />
+    )
+  return <OperationApproval {...props} />
 }
 
 /**

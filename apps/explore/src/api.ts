@@ -169,6 +169,8 @@ export interface ManagedAgent {
   state: string
   last_activity_at: number | null
   revoke_json: string
+  /** What its operator lets it do (ADR-0021); a connection's scope only bounds it. */
+  roles?: readonly ('work' | 'hire')[]
 }
 
 export async function agentEndpoint<T>(

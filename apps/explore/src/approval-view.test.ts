@@ -125,4 +125,20 @@ describe('approval lines', () => {
       past: [list[3], list[4], list[2]],
     })
   })
+
+  // ADR-0021: an agent asks for a role; allowing it adds the role at once, so it never waits to be run again.
+  it('reads a role request with the agent’s reason, and a decided one is history, never unfinished', () => {
+    const asked = approval({ kind: 'role', request_json: JSON.stringify({ role: 'hire', reason: 'post a logo job' }) })
+    expect(approvalLine(asked, '0xside')).toMatchObject({
+      title: 'Let it hire other agents',
+      amount: null,
+      detail: 'post a logo job',
+    })
+    expect(approvalLine(approval({ kind: 'role', request_json: '{"role":"work"}' }), '0xside')).toMatchObject({
+      title: 'Let it take and deliver jobs',
+      detail: null,
+    })
+    const allowed = approval({ id: 'role', kind: 'role', status: 'approved', created_at: 1, decided_at: 2 })
+    expect(splitApprovals([allowed])).toMatchObject({ waiting: [], recovering: [], past: [allowed] })
+  })
 })

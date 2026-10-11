@@ -14,6 +14,14 @@ import { OAuthClient, type OAuthClientIdentity } from './OAuthClient.tsx'
 import { HandBackNote, SetupConnect } from './SetupConnect.tsx'
 import { clientRedirect } from '../agent-setup-api.ts'
 
+function rolesText(roles: readonly ('work' | 'hire')[]): string {
+  const words = [
+    ...(roles.includes('work') ? ['work (quote, deliver and earn)'] : []),
+    ...(roles.includes('hire') ? ['hire (post and pay for jobs)'] : []),
+  ]
+  return words.length === 0 ? 'neither work nor hire yet' : words.join(' and ')
+}
+
 export function OAuthConsent({ requestId }: { requestId: string }) {
   const auth = useAuth()
   const request = useQuery({
@@ -35,14 +43,8 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
   })
   const [chosen, setSelected] = useState('')
   const [creating, setCreating] = useState(false)
-  // The roles are the operator's choice; what the client asked for only pre-ticks them (both when it asked for none).
-  const [ticked, setTicked] = useState<{ work?: boolean; hire?: boolean }>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const asked = request.data?.request.scopes ?? []
-  const askedNone = !asked.includes('sidequest:work') && !asked.includes('sidequest:hire')
-  const work = ticked.work ?? (askedNone || asked.includes('sidequest:work'))
-  const hire = ticked.hire ?? (askedNone || asked.includes('sidequest:hire'))
   const active = agents.data?.agents.filter((row) => row.state === 'active') ?? []
   // One agent is the obvious answer: pick it, so connecting it is one button.
   const selected = chosen !== '' ? chosen : active.length === 1 ? active[0]!.id : ''
@@ -51,12 +53,10 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
     setBusy(true)
     setError(null)
     try {
-      // An agent connection never carries setup: that scope only lets a coding agent create one.
-      const scopes = ['sidequest:read', ...(work ? ['sidequest:work'] : []), ...(hire ? ['sidequest:hire'] : [])]
+      // The connection gets what its client asked for; the agent's own roles decide within that (ADR-0021).
       const response = await agentEndpoint<{ redirectUrl: string }>(`/oauth/requests/${requestId}/approve`, 'POST', {
         decision: approved ? 'approve' : 'reject',
         agentIds: [selected],
-        scopes,
       })
       window.location.assign(clientRedirect(response.redirectUrl))
     } catch (failure) {
@@ -108,9 +108,8 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
         {creating && (
           <AgentNew
             context="oauth"
-            onReady={(created, role) => {
+            onReady={(created) => {
               setSelected(created.id)
-              setTicked({ work: role !== 'hire', hire: role !== 'work' })
               setCreating(false)
               void agents.refetch()
             }}
@@ -120,24 +119,9 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
       {agent !== undefined && (
         <Section title="Connection permissions">
           <p className="font-semibold">Agent ID {agent.agent_id} is registered</p>
-          <label className="flex min-h-11 items-center gap-3">
-            <input
-              type="checkbox"
-              checked={work}
-              onChange={(event) => setTicked({ ...ticked, work: event.target.checked })}
-            />
-            <span>
-              Work · apply, quote, activate, deliver and dispute; manage stake, earnings, permissions and payments
-            </span>
-          </label>
-          <label className="flex min-h-11 items-center gap-3">
-            <input
-              type="checkbox"
-              checked={hire}
-              onChange={(event) => setTicked({ ...ticked, hire: event.target.checked })}
-            />
-            <span>Hire · post, select, accept and reject</span>
-          </label>
+          <p className="text-sm">
+            {agent.name} may {rolesText(agent.roles ?? [])}. You change that on its page; this connection follows.
+          </p>
           <p className="text-sm text-muted-foreground">
             The weekly budget limits transfers of payment tokens. It does not limit deposits at risk: an agent can
             activate a job that requires a deposit, and a slash is immediate.
@@ -151,7 +135,7 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
           </Button>
           <HandBackNote />
           <p className="text-sm text-muted-foreground">Weekly budget and SIDE backing can be added later.</p>
-          {hire && (
+          {(agent.roles ?? []).includes('hire') && (
             <details>
               <summary className="cursor-pointer text-sm font-semibold">Optional weekly budget</summary>
               <div className="pt-3">
