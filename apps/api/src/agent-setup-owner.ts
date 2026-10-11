@@ -131,14 +131,11 @@ export async function approveAgentSetup(input: {
   return { agentKey: id, agentId: agent.agent_id, state: 'ready', connections: result }
 }
 
+/** The operator chooses the roles here; what the client requested only pre-ticked them, so approval may widen it. */
 function approvalBinding(family: Candidate, id: string, origin: string, approved: readonly string[]) {
-  const requested = strings(JSON.parse(family.requested_scopes_json))
-  if (
-    resourceBoard(family.resource, origin) !== family.board_id ||
-    !approved.every((scope) => requested.includes(scope))
-  )
-    throw new BoardError('forbidden', 'Approval cannot widen the requested scopes or change the resource')
-  const scopes = [...(requested.includes('sidequest:read') ? ['sidequest:read'] : []), ...approved].toSorted()
+  if (resourceBoard(family.resource, origin) !== family.board_id)
+    throw new BoardError('forbidden', 'Approval cannot change the connection resource')
+  const scopes = ['sidequest:read', ...approved].toSorted()
   if (
     family.agent_id !== null &&
     (family.agent_id !== id ||

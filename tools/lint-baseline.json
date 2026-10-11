@@ -132,7 +132,7 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "apps/api/src/oauth.ts": {
-    "anti-slop(no-runtime-typeof)": 10,
+    "anti-slop(no-runtime-typeof)": 9,
     "anti-slop(require-safety-comment-for-type-assertion)": 4,
     "complexity(complexity)": 1,
     "eslint(max-lines-per-function)": 1,

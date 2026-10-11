@@ -2,7 +2,13 @@
 import { AgentStore, type Sql } from '@sidequest/board'
 import { Schema } from 'effect'
 import type { OAuthGrant, OAuthReply, oauthRoute } from './oauth.ts'
-import { pkceChallenge, randomToken, resourceBoard, tokenHash } from './oauth-validation.ts'
+import {
+  OAUTH_SCOPES as AGENT_SCOPES,
+  pkceChallenge,
+  randomToken,
+  resourceBoard,
+  tokenHash,
+} from './oauth-validation.ts'
 
 const headers = { 'cache-control': 'no-store' }
 const failure = (description: string): OAuthReply => ({
@@ -88,20 +94,21 @@ async function approve(input: Input, requestId: string): Promise<OAuthReply> {
     now,
   )[0]
   if (request === undefined) return failure('Consent expired or already used')
+  // Any client may connect for setup. Its requested roles are kept only to pre-tick the approval page; the operator
+  // chooses the roles there, so a role choice sent with this consent is ignored.
   const requested = scopes(request.scopes_json)
-  if (!requested.includes('sidequest:setup')) return failure('The client did not request setup')
   if (
     body.agentIds !== undefined &&
     (!Schema.is(Schema.Array(Schema.String))(body.agentIds) || body.agentIds.length !== 0)
   )
     return failure('Setup consent cannot select an agent')
-  const selected = body.scopes === undefined ? requested : body.scopes
   if (
-    !Schema.is(Schema.Array(Schema.String))(selected) ||
-    !selected.includes('sidequest:setup') ||
-    !selected.every((scope) => requested.includes(scope))
+    body.scopes !== undefined &&
+    (!Schema.is(Schema.Array(Schema.String))(body.scopes) ||
+      !body.scopes.every((scope) => scope === 'sidequest:setup' || AGENT_SCOPES.some((known) => known === scope)))
   )
-    return failure('Setup scopes must be a subset of the client request')
+    return failure('Unknown scope in the setup consent')
+  const selected = ['sidequest:setup', ...requested]
   const code = randomToken()
   const hash = await tokenHash(code)
   const approved = sql.atomic!(() => {

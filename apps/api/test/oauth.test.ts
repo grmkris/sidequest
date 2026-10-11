@@ -208,7 +208,8 @@ test('revoked agents cannot use or refresh an OAuth token and consent cannot gra
   }
 })
 
-test('operator consent narrows the token scopes and cannot widen the requested authority', async () => {
+// The operator chooses the roles; the client's request only pre-ticks them.
+test('operator consent sets the token scopes, narrower or wider than the request, never unknown ones', async () => {
   const f = fixture()
   try {
     const c = await connection(f, ['sidequest:read'])
@@ -220,6 +221,13 @@ test('operator consent narrows the token scopes and cannot widen the requested a
       (await f.route(`/oauth/requests/${requestId}/approve`, { agentIds: ['one'], scopes: ['arbitrary:write'] }))
         .status,
     ).toBe(400)
+    const wider = await connection(f, ['sidequest:work'], 'sidequest:read')
+    // SAFETY: a token reply for an approved consent carries the issued token pair.
+    const widened = (await f.route('/oauth/token', wider.tokenBody)).body as Tokens
+    expect((await resolveOAuth(f.sql, widened.access_token, resource, 1000))?.scopes).toEqual([
+      'sidequest:read',
+      'sidequest:work',
+    ])
   } finally {
     f.db.close()
   }

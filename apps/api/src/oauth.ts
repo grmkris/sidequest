@@ -268,12 +268,8 @@ export async function oauthRoute(input: {
             expiresAt: request.expires_at,
           },
           agents,
-          setup: {
-            available: Schema.decodeUnknownSync(Schema.Array(Schema.String))(JSON.parse(request.scopes_json)).includes(
-              'sidequest:setup',
-            ),
-            scope: 'sidequest:setup',
-          },
+          // Any client may connect before an agent exists; the operator decides at consent, not the client.
+          setup: { available: true, scope: 'sidequest:setup' },
         },
       })
     if (method !== 'POST' || consent[2] === undefined)
@@ -292,19 +288,17 @@ export async function oauthRoute(input: {
     const requested = Schema.decodeUnknownSync(Schema.Array(Schema.String))(JSON.parse(request.scopes_json)).filter(
       (scope) => scope !== 'sidequest:setup',
     )
+    // The operator chooses the roles; the client's request only pre-ticks them, so consent may narrow or widen it.
     // Choosing an existing agent answers a setup request too: setup is not an agent scope, so drop it, never refuse it.
-    const selectedScopes =
+    const chosen =
       body.scopes === undefined
         ? requested
         : Array.isArray(body.scopes)
           ? body.scopes.filter((scope) => scope !== 'sidequest:setup')
           : body.scopes
-    if (
-      !Array.isArray(selectedScopes) ||
-      selectedScopes.length === 0 ||
-      !selectedScopes.every((scope) => typeof scope === 'string' && requested.includes(scope))
-    )
-      return failure('invalid_request', 'Consent scopes must be a subset of the client request')
+    if (!Array.isArray(chosen) || !chosen.every((scope) => AGENT_SCOPES.some((known) => known === scope)))
+      return failure('invalid_request', 'Consent scopes are sidequest:read, sidequest:work and sidequest:hire')
+    const selectedScopes = ['sidequest:read', ...chosen]
     const code = randomToken()
     const codeHash = await tokenHash(code)
     let consumed = false

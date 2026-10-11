@@ -71,8 +71,9 @@ export class AgentSetup {
       board_id: string
       resource: string
       agent_id: string | null
+      requested_scopes_json: string
     }>(
-      'SELECT id,operator,board_id,resource,agent_id FROM agent_oauth_setup_families WHERE id=? AND revoked_at IS NULL',
+      'SELECT id,operator,board_id,resource,agent_id,requested_scopes_json FROM agent_oauth_setup_families WHERE id=? AND revoked_at IS NULL',
       grant.setupFamilyId ?? '',
     )[0]
     if (
@@ -165,7 +166,7 @@ export class AgentSetup {
       const summary = await this.deps.profiles.update(id, 'setup-profile', profile, 'agent')
       return this.agents.freezeStep(operation.id, 'setup-result', {
         agentKey: id,
-        approveUrl: `${this.origin}/agents/approve/${id}`,
+        approveUrl: approveUrl(this.origin, id, family.requested_scopes_json),
         profile: summary,
       })
     } catch (error) {
@@ -210,6 +211,13 @@ export class AgentSetup {
       }
     return { state: 'awaiting-approval', message: 'Your operator must register the agent and approve this connection.' }
   }
+}
+
+/** The approval page pre-ticks the roles the client asked for; the operator still chooses there. */
+function approveUrl(origin: string, id: string, requestedScopes: string) {
+  const requested = Schema.decodeUnknownSync(Schema.Array(Schema.String))(JSON.parse(requestedScopes))
+  const roles = ['work', 'hire'].filter((role) => requested.includes(`sidequest:${role}`))
+  return `${origin}/agents/approve/${id}${roles.length === 0 ? '' : `?roles=${roles.join(',')}`}`
 }
 
 function managedAgentSetup(input: {

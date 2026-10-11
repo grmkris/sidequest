@@ -28,7 +28,7 @@ it('advertises setup and approves an agentless resource-bound grant with setup a
   expect(f.agents.list(operator)).toEqual([])
 })
 
-it('consent data offers setup and declines selecting an agent or widening future scopes', async () => {
+it('consent data offers setup and declines selecting an agent or naming an unknown scope', async () => {
   const f = fixture(),
     r = await f.request()
   expect((await f.route(`/oauth/requests/${r.requestId}`, {}, undefined, 'GET'))?.body).toMatchObject({
@@ -36,8 +36,8 @@ it('consent data offers setup and declines selecting an agent or widening future
   })
   for (const body of [
     { setup: true, agentIds: ['quill'] },
-    { setup: true, scopes: ['sidequest:setup', 'sidequest:hire'] },
-    { setup: true, scopes: ['sidequest:work'] },
+    { setup: true, scopes: ['sidequest:setup', 'arbitrary:write'] },
+    { setup: true, scopes: 'sidequest:work' },
   ])
     expect((await f.route(`/oauth/requests/${r.requestId}/approve`, body))?.status).toBe(400)
   expect(
@@ -45,10 +45,17 @@ it('consent data offers setup and declines selecting an agent or widening future
   ).toBe(401)
 })
 
-it('rejects setup approval unless the client explicitly requested it', async () => {
+it('offers setup to a client that did not request it and keeps its requested roles only to pre-tick approval', async () => {
   const f = fixture(),
-    r = await f.request('sidequest:read')
-  expect((await f.route(`/oauth/requests/${r.requestId}/approve`, { setup: true }))?.status).toBe(400)
+    c = await f.connection('sidequest:read sidequest:hire')
+  expect(c.tokens.scope).toBe('sidequest:setup')
+  expect(await resolveOAuth(f.sql, c.tokens.access_token, resource, 1000)).toMatchObject({
+    setup: true,
+    scopes: ['sidequest:setup'],
+  })
+  expect(f.sql.all('SELECT requested_scopes_json FROM agent_oauth_setup_families')).toEqual([
+    { requested_scopes_json: JSON.stringify(['sidequest:setup', 'sidequest:read', 'sidequest:hire']) },
+  ])
 })
 
 it('binds setup codes to PKCE, client, redirect and resource and consumes them once', async () => {

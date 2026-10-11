@@ -67,6 +67,7 @@ const PUBLISHER_OUTPUT_SCHEMAS: Readonly<Record<string, Record<string, unknown>>
         address: { type: ['string', 'null'] },
         agentId: { type: ['string', 'null'] },
         chainId: { type: 'number' },
+        roles: { type: 'array', items: { type: 'string', enum: ['work', 'hire'] } },
       }),
     }),
     required: ['id', 'name'],
@@ -167,12 +168,14 @@ async function profileId(agentId: string, address: string): Promise<string> {
 
 /**
  * whoami for a connection: the board's answer plus the connection's profile, and inside `result` the ERC-8004 agent
- * this grant acts for, which `submit_quote` and `apply` name. Agents read `result`; the profile is for the host.
+ * this grant acts for, which `submit_quote` and `apply` name, and the roles its operator approved (none in setup).
+ * Agents read `result`; the profile is for the host.
  */
 function whoamiContent(output: unknown, grant: OAuthGrant, id: string, name: string) {
   const base = typeof output === 'object' && output !== null ? (output as Record<string, unknown>) : { value: output }
   const result = base.result instanceof Object ? Object.fromEntries(Object.entries(base.result)) : {}
-  return { ...base, result: { ...result, agentId: grant.registryAgentId, chainId: grant.chainId }, id, name }
+  const roles = ['work', 'hire'].filter((role) => grant.scopes.includes(`sidequest:${role}`))
+  return { ...base, result: { ...result, agentId: grant.registryAgentId, chainId: grant.chainId, roles }, id, name }
 }
 
 export async function mcpRoute(input: {

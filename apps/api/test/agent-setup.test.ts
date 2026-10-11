@@ -82,7 +82,7 @@ it('answers setup whoami, creates its managed wallet/profile/avatar once, and re
   const first = await f.boot().create(f.grant, args)
   expect(first).toMatchObject({
     agentKey: expect.stringMatching(/^setup_/),
-    approveUrl: `${origin}/agents/approve/${first.agentKey}`,
+    approveUrl: `${origin}/agents/approve/${first.agentKey}?roles=work`,
     profile: { name: 'Quill', description: 'Careful code reviews', image: expect.stringContaining('/avatars/') },
   })
   expect(await f.boot().create(f.grant, args)).toEqual(first)
@@ -135,7 +135,7 @@ it('recovers an interrupted provider call under the same creation identity and s
   expect(f.boot().status(f.grant, { agentKey: id })).toMatchObject({ state: 'awaiting-approval' })
 })
 
-it('the same bearer becomes the approved agent, with only the requested role scopes and a re-list instruction', async () => {
+it('the same bearer becomes the approved agent, with the approved role scopes and a re-list instruction', async () => {
   const f = await fixture(),
     created = await f.boot().create(f.grant, args)
   await expect(f.approve(created.agentKey)).rejects.toMatchObject({ code: 'conflict' })
@@ -159,8 +159,21 @@ it('the same bearer becomes the approved agent, with only the requested role sco
   expect(permittedTool(bound, 'apply')).toBe(true)
   expect(permittedTool(bound, 'create_task')).toBe(false)
   expect(permittedTool(bound, 'create_agent')).toBe(false)
-  await expect(f.approve(created.agentKey, ['sidequest:hire'])).rejects.toMatchObject({ code: 'forbidden' })
+  // Approved once, the connection keeps its roles: a different choice is a conflict, the same one is idempotent.
+  await expect(f.approve(created.agentKey, ['sidequest:hire'])).rejects.toMatchObject({ code: 'conflict' })
   expect(await f.approve(created.agentKey)).toMatchObject({ agentKey: created.agentKey, state: 'ready' })
+})
+
+it('approval may grant a role the client did not request: the operator chooses roles, the client only pre-ticks', async () => {
+  const f = await fixture(),
+    created = await f.boot().create(f.grant, args)
+  f.registered(created.agentKey)
+  await f.approve(created.agentKey, ['sidequest:work', 'sidequest:hire'])
+  expect((await resolveOAuth(f.sql, f.connection.tokens.access_token, resource, f.now()))?.scopes).toEqual([
+    'sidequest:hire',
+    'sidequest:read',
+    'sidequest:work',
+  ])
 })
 
 it('approval refuses a foreign owner or a changed live wallet, and ignores revoked and expired connections', async () => {
@@ -229,11 +242,16 @@ it('MCP setup tools work without an agent selector, and tool listing changes aft
   expect(listed.map((tool) => tool.name).toSorted()).toEqual(['create_agent', 'setup_status', 'whoami'])
   expect(listed.find((tool) => tool.name === 'create_agent')?.inputSchema.required).toEqual(['name', 'operationKey'])
   expect(listed.find((tool) => tool.name === 'setup_status')?.inputSchema.required).toEqual(['agentKey'])
-  expect((await route(f.grant, 'tools/call', { name: 'whoami' })).status).toBe(200)
+  const whoami = async (grant: typeof f.grant) =>
+    Schema.decodeUnknownSync(
+      Schema.Struct({ result: Schema.Struct({ structuredContent: Schema.Struct({ result: Schema.Unknown }) }) }),
+    )((await route(grant, 'tools/call', { name: 'whoami' })).body).result.structuredContent.result
+  expect(await whoami(f.grant)).toMatchObject({ setup: true, roles: [] })
   expect(call).toHaveBeenCalledWith('whoami', {}, '')
   f.registered(created.agentKey)
   await f.approve(created.agentKey)
   const bound = (await resolveOAuth(f.sql, f.connection.tokens.access_token, resource, f.now()))!
+  expect(await whoami(bound)).toMatchObject({ roles: ['work'] })
   const names = Schema.decodeUnknownSync(List)((await route(bound, 'tools/list')).body).result.tools.map(
     (tool) => tool.name,
   )
