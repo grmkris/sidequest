@@ -13,6 +13,8 @@ import { MCP_LEGACY_PROTOCOL_VERSIONS, MCP_PROTOCOL_VERSION, MCP_SERVER_INFO } f
 const PROTOCOLS = MCP_LEGACY_PROTOCOL_VERSIONS
 export const MODERN_LANE = true
 const MODERN_VERSION = MCP_PROTOCOL_VERSION
+/** Skills change only on deploy and read the same for every caller, so clients may cache them for an hour. */
+const SKILLS_CACHE = { ttlMs: 3_600_000, cacheScope: 'public' }
 
 export interface McpReply {
   readonly status: number
@@ -111,9 +113,9 @@ export async function mcpRoute(input: {
       id: id ?? null,
       result: modern
         ? {
+            ...(methodName.endsWith('/list') ? { ttlMs: 0, cacheScope: 'private' } : {}),
             ...result,
             resultType: 'complete',
-            ...(methodName.endsWith('/list') ? { ttlMs: 0, cacheScope: 'private' } : {}),
           }
         : result,
     })
@@ -124,7 +126,8 @@ export async function mcpRoute(input: {
     prompts: {},
     resources: {},
     events: {},
-    extensions: { 'io.modelcontextprotocol/skills': {} },
+    // SEP-3415 names Events as an extension; the top-level `events` stays for the clients that already read it.
+    extensions: { 'io.modelcontextprotocol/skills': {}, 'io.modelcontextprotocol/events': {} },
   }
   if (modern && methodName === 'server/discover')
     return respond({
@@ -239,13 +242,14 @@ export async function mcpRoute(input: {
     return respond({
       skills: page,
       ...(after + page.length < skillManifests.length ? { nextCursor: `skills:${after + page.length}` } : {}),
+      ...SKILLS_CACHE,
     })
   }
   if (methodName === 'skills/get') {
     const skill = skillManifests.find((entry) => entry.uri === params.uri)
     if (skill === undefined) return rpcError(-32602, 'Unknown skill URI')
     const { raw: _raw, ...entry } = skill
-    return respond({ skill: entry })
+    return respond({ skill: entry, ...SKILLS_CACHE })
   }
   if (methodName.startsWith('events/') && input.events !== undefined) {
     try {

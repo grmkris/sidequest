@@ -64,7 +64,7 @@ describe('2026-07-28 MCP lane', () => {
         prompts: {},
         resources: {},
         events: {},
-        extensions: { 'io.modelcontextprotocol/skills': {} },
+        extensions: { 'io.modelcontextprotocol/skills': {}, 'io.modelcontextprotocol/events': {} },
       },
       instructions: connectorInstructions(origin),
       ttlMs: 0,
@@ -396,7 +396,13 @@ it('serves authenticated static skills with pagination and matching resource byt
   expect(last.skills).toHaveLength(1)
   expect(last).not.toHaveProperty('nextCursor')
   for (const entry of [...(first.skills as { uri: string }[]), ...(last.skills as { uri: string }[])]) {
-    expect(result(await route('skills/get', { uri: entry.uri }))).toEqual({ skill: entry })
+    // goblin S3: skills change only on deploy, so both reads carry an honest one-hour cache.
+    expect(result(await route('skills/get', { uri: entry.uri }))).toEqual({
+      skill: entry,
+      ttlMs: 3_600_000,
+      cacheScope: 'public',
+    })
+    expect(first).toMatchObject({ ttlMs: 3_600_000, cacheScope: 'public' })
     const read = result(await route('resources/read', { uri: entry.uri })).contents as { uri: string; text: string }[]
     expect(read).toHaveLength(1)
     expect(read[0]!.uri).toBe(entry.uri)
