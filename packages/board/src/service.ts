@@ -1117,6 +1117,8 @@ export class Board {
     if (!eq(task.creator, me)) throw new BoardError('forbidden', 'only the creator publishes')
     if (task.job_id !== null || (await this.#recoverPublish(task)) !== null)
       throw new BoardError('conflict', `already published as job ${task.job_id}`)
+    if (this.#withdrawnTasks().has(task.id))
+      throw new BoardError('conflict', 'this pick was withdrawn; pick a quote again with a new key')
     return {
       transactions: await this.#publishTransactions(
         this.#taskCtx(task),
@@ -2422,6 +2424,48 @@ export class Board {
     })
   }
 
+  /**
+   * Creator: withdraws a pick that never reached the chain, so its quote request opens for a new pick. The hosted
+   * executor calls it when the operator declines the pick's over-budget hire. A published task is never released, and
+   * calling again is harmless.
+   */
+  async releasePick(caller: Caller, input: { requestId: string; taskId: string }) {
+    const me = this.#requireCaller(caller)
+    const req = this.#quoteRequest(input.requestId)
+    const task = this.#task(input.taskId)
+    if (!eq(req.creator, me) || !eq(task.creator, me))
+      throw new BoardError('forbidden', 'only the requester releases its pick')
+    const ids = { requestId: req.id, taskId: task.id }
+    if (req.task_id !== task.id) return { released: this.#withdrawnTasks().has(task.id), ...ids }
+    const jobId = task.job_id ?? (await this.#recoverPublish(task))
+    if (jobId !== null) return { released: false, ...ids, jobId }
+    // Listed on chain but its job not found yet still counts as published.
+    if (await this.#policyListed(task)) return { released: false, ...ids }
+    return this.#persist(() => {
+      this.#sql.run('UPDATE quote_requests SET task_id = NULL WHERE id = ? AND task_id = ?', req.id, task.id)
+      if (!this.#withdrawnTasks().has(task.id))
+        this.#sql.run(
+          "INSERT INTO operations (id, task_id, kind, actor, status, tx_hash, detail, created_at, updated_at) VALUES (?, ?, 'withdraw', ?, 'withdrawn', NULL, ?, ?, ?)",
+          randomId(),
+          task.id,
+          me,
+          JSON.stringify({ requestId: req.id }),
+          this.#now(),
+          this.#now(),
+        )
+      return { released: true, ...ids, next: 'list_quotes, then pick_quote with a new idempotency key.' }
+    })
+  }
+
+  /** Tasks whose pick was withdrawn before they reached the chain: never published, listed or picked again. */
+  #withdrawnTasks(): Set<string> {
+    return new Set(
+      this.#sql
+        .all<{ task_id: string }>("SELECT task_id FROM operations WHERE kind = 'withdraw'")
+        .map((row) => row.task_id),
+    )
+  }
+
   // -----------------------------------------------------------------------------------------------
   // Worker
   // -----------------------------------------------------------------------------------------------
@@ -3433,13 +3477,15 @@ export class Board {
   taskIndex(_caller: Caller, input: TaskIndexInput & { compact?: boolean } = {}) {
     const limit = Math.min(Math.max(Math.floor(input.limit ?? 500), 1), 500)
     const after = input.cursor === undefined ? undefined : indexCursor(input.cursor)
+    const withdrawn = this.#withdrawnTasks()
     return this.#sql
       .all<TaskRow>('SELECT * FROM tasks ORDER BY created_at DESC, id DESC')
       .filter(
         (t) =>
-          after === undefined ||
-          t.created_at < after.createdAt ||
-          (t.created_at === after.createdAt && t.id < after.id),
+          !(t.job_id === null && withdrawn.has(t.id)) &&
+          (after === undefined ||
+            t.created_at < after.createdAt ||
+            (t.created_at === after.createdAt && t.id < after.id)),
       )
       .flatMap((t) => {
         const ctx = this.#findTaskCtx(t)
@@ -3458,9 +3504,10 @@ export class Board {
    */
   async listTasks(caller: Caller, input: { limit?: number; role?: TaskRole; status?: readonly TaskStatus[] }) {
     const limit = Math.min(input.limit ?? 20, 50)
+    const withdrawn = this.#withdrawnTasks()
     let rows = this.#sql
       .all<TaskRow>('SELECT * FROM tasks ORDER BY created_at DESC')
-      .filter((t) => this.#findTaskCtx(t) !== undefined)
+      .filter((t) => this.#findTaskCtx(t) !== undefined && !(t.job_id === null && withdrawn.has(t.id)))
     if (input.role !== undefined) {
       if (!TASK_ROLES.includes(input.role))
         throw new BoardError('invalid', `role must be one of ${TASK_ROLES.join(', ')}`)
@@ -3748,15 +3795,20 @@ export class Board {
    * `report_transaction`): the offer's `termsHash` is listed on-chain, so the listing is found among the newest jobs
    * and recorded, and a retry is never needed (a second publish of the same terms would revert on `PolicyHashUsed`).
    */
-  async #recoverPublish(task: TaskRow): Promise<string | null> {
+  /** Whether Holding lists this frozen offer: published, even when its job id is not found yet. */
+  async #policyListed(task: TaskRow): Promise<boolean> {
     const ctx = this.#taskCtx(task)
-    const listed = await ctx.publicClient.readContract({
+    return ctx.publicClient.readContract({
       address: ctx.stack.holding,
       abi: sdk.sidequestHoldingAbi,
       functionName: 'policyListed',
       args: [getAddress(task.creator), task.terms_hash as Hex],
     })
-    if (!listed) return null
+  }
+
+  async #recoverPublish(task: TaskRow): Promise<string | null> {
+    const ctx = this.#taskCtx(task)
+    if (!(await this.#policyListed(task))) return null
     const counter = await ctx.publicClient.readContract({
       address: ctx.deployment.core,
       abi: sdk.coreAbi,
