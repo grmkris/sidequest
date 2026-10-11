@@ -26,6 +26,7 @@ contract DeploySidequest is Script {
         string memory json = vm.readFile(SidequestRecipe.path(vm, network));
         SidequestRecipe.guardChain(vm, json, true);
         SidequestRecipe.Config memory c = SidequestRecipe.load(vm, network);
+        SidequestRecipe.checkLaunchToken(c);
         // Refuse before broadcasting anything if the record could not be written afterwards.
         SidequestOutput.preflight(vm, json);
         vm.startBroadcast();

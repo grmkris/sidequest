@@ -99,7 +99,7 @@ interface IStakeVault {
     function delegateWithPermit(address account, uint256 amount, uint256 deadline, uint8 v, bytes32 r, bytes32 s)
         external;
 
-    /// @notice The caller pays; `delegator` owns the shares backing `account`. Mining uses `(account, account)`.
+    /// @notice The caller pays; `delegator` owns the shares backing `account`. The Safe backs agents with `(agent, safe)`.
     function delegateFor(address account, address delegator, uint256 amount) external;
 
     /// @notice Queues `shares` from the caller's position, even while bonded, and restarts the entire queue's cooldown.
@@ -122,10 +122,9 @@ interface IStakeVault {
     ///         Refused for a Holding the account has denied.
     function reserve(address account, uint256 amount) external;
 
-    /// @notice The caller vetoes (or re-allows) `holding` taking new bonds from its stake (C9 ACL-1). The 15-day delay
+    /// @notice The caller vetoes (or re-allows) `holding` taking new bonds from its stake (C9 ACL-1). The 21-day delay
     ///         lets free stake leave before a new Holding goes live; this protects stake that is still bonded when
-    ///         the Holding arrives and is released later, and mining rewards claimed for the caller. Existing
-    ///         reservations still release and slash.
+    ///         the Holding arrives and is released later. Existing reservations still release and slash.
     function setHoldingDenied(address holding, bool denied) external;
 
     /// @notice Whether `account` has denied `holding`.

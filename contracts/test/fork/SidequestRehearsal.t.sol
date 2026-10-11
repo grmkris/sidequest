@@ -12,6 +12,7 @@ import {SidequestRecipe} from "../../script/SidequestRecipe.sol";
 import {SidequestVerify} from "../../script/SidequestVerify.sol";
 import {IFactory} from "../../src/sidequest/interfaces/IFactory.sol";
 import {LaunchToken} from "../mocks/LaunchToken.sol";
+import {INadFunRouter} from "../helpers/NadFun.sol";
 import {RecipeDriver} from "../sidequest/Recipe.t.sol";
 
 /// @dev The C8 rehearsal on a local fork of Monad (nothing is sent). The recipe runs step by step from the configured
@@ -44,8 +45,39 @@ contract SidequestRehearsalForkTest is Test {
         c.thresholds = [uint256(0), 10_000, 100_000, 1_000_000];
         c.bps = [uint16(3000), 1000, 300, 100];
         c.feeTreasury = safe;
-        // SIDE exists before the recipe; a launcher-like token on the fork stands in for it (R7 creates the real one).
-        c.token = IFactory(address(new LaunchToken(c.admin)));
+        // The shipped mainnet roles.attester is a retired 1 Oct key until the launch replaces it (R2).
+        c.attester = makeAddr("rehearsal-attester");
+        // SIDE exists before the recipe: on mainnet the real nad.fun token, created on the fork with the 5% dev buy
+        // (the deployer holds it); on testnet a launcher-like token.
+        c.token = c.chainId == 143 ? _createNadSide(network, c.admin) : IFactory(address(new LaunchToken(c.admin)));
+    }
+
+    /// @dev SIDE through the real nad.fun router on the fork, as Kris creates it: the dev buy bundled into the creation,
+    ///      the creator fee paid to the Safe.
+    function _createNadSide(string memory network, address creator) internal returns (IFactory) {
+        string memory json = vm.readFile(SidequestRecipe.path(vm, network));
+        INadFunRouter.VaultAllocation[] memory vaults = new INadFunRouter.VaultAllocation[](1);
+        vaults[0] = INadFunRouter.VaultAllocation(
+            vm.parseJsonAddress(json, ".nadfun.creatorFeeVault"), 10_000, abi.encode(safe)
+        );
+        INadFunRouter.CreateParams memory p = INadFunRouter.CreateParams({
+            name: "Sidequest",
+            symbol: "SIDE",
+            tokenURI: "https://sidequest.exchange/token.json",
+            quoteToken: vm.parseJsonAddress(json, ".nadfun.wmon"),
+            creatorFeeRate: 100,
+            vaults: vaults,
+            salt: keccak256(abi.encode("fork-rehearsal", block.timestamp)),
+            dexType: 0,
+            buyQuoteAmount: 3_600 ether,
+            deadline: block.timestamp + 600
+        });
+        vm.deal(creator, 10_000 ether);
+        vm.prank(creator);
+        (address token, uint256 bought) =
+            INadFunRouter(vm.parseJsonAddress(json, ".nadfun.router")).createWithNative{value: 3_700 ether}(p);
+        assertGt(bought, 45_000_000e18, "the dev buy is about 5% of the supply");
+        return IFactory(token);
     }
 
     function _deploy(SidequestRecipe.Config memory c) internal returns (SidequestRecipe.Deployed memory d) {

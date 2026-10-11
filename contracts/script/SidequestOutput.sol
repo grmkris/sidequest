@@ -19,12 +19,13 @@ import {SidequestEvaluator} from "../src/sidequest/SidequestEvaluator.sol";
 ///         (`kind: "sidequest-v1"`). A fresh core is recorded from its creation receipt. An unknown deployment key,
 ///         or a config that already records a v1 deployment, refuses. On mainnet
 ///         (LAUNCH-AUDIT-004) `rewardTokens` is kept or, when absent, taken from `knownTokens` (USDC and SIDE), and must
-///         contain `x402.usdc`: the SDK and Explore read their reward tokens from it.
+///         contain `x402.usdc` and `sidequest.token`: the SDK and Explore read their reward tokens from it, and
+///         Sidequest's own tasks pay in SIDE.
 library SidequestOutput {
     error UnknownKey(string where, string key);
     error AlreadyDeployed();
     error ClockMismatch();
-    /// @dev Mainnet: no `rewardTokens` and no `knownTokens`, or a reward list without `x402.usdc`.
+    /// @dev Mainnet: no `rewardTokens` and no `knownTokens`, or a reward list without `x402.usdc` or `sidequest.token`.
     error MainnetRewardTokens();
 
     uint256 private constant MAINNET = 143;
@@ -62,7 +63,8 @@ library SidequestOutput {
     }
 
     /// @notice The reward tokens the record will carry: `.deployment.rewardTokens` if present, else on mainnet the
-    ///         `knownTokens` list (USDC, and SIDE for Sidequest's own spending). On mainnet the list must contain `x402.usdc`.
+    ///         `knownTokens` list (USDC, and SIDE for Sidequest's own spending). On mainnet the list must contain `x402.usdc`
+    ///         and `sidequest.token`.
     function rewardTokens(Vm vm, string memory json) internal view returns (address[] memory tokens) {
         bool mainnet = _mainnet(vm, json);
         if (vm.keyExistsJson(json, ".deployment.rewardTokens")) {
@@ -73,10 +75,14 @@ library SidequestOutput {
         }
         if (!mainnet) return tokens;
         address usdc = vm.parseJsonAddress(json, ".x402.usdc");
+        address side = vm.parseJsonAddress(json, ".sidequest.token");
+        bool hasUsdc;
+        bool hasSide;
         for (uint256 i; i < tokens.length; ++i) {
-            if (tokens[i] == usdc) return tokens;
+            if (tokens[i] == usdc) hasUsdc = true;
+            if (tokens[i] == side) hasSide = true;
         }
-        revert MainnetRewardTokens();
+        if (!hasUsdc || !hasSide) revert MainnetRewardTokens();
     }
 
     function _mainnet(Vm vm, string memory json) private view returns (bool) {
@@ -125,7 +131,9 @@ library SidequestOutput {
         vm.serializeUint(clockKey, "holdingDelay", clocks.holdingDelay);
         vm.serializeUint(clockKey, "feeDelay", clocks.feeDelay);
         vm.serializeString(
-            o, "sidequest", vm.serializeString(h, "clocks", vm.serializeUint(clockKey, "proposalGrace", clocks.proposalGrace))
+            o,
+            "sidequest",
+            vm.serializeString(h, "clocks", vm.serializeUint(clockKey, "proposalGrace", clocks.proposalGrace))
         );
 
         string memory m = "deployment.main";

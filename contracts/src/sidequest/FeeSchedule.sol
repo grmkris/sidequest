@@ -20,7 +20,7 @@ contract FeeSchedule is IFeeSchedule, NoRenounce {
     Schedule internal _pending;
     uint48 internal _eta;
 
-    /// @param initial The deploy-time schedule from config (0 / 10k / 100k / 1M SIDE at 30 / 10 / 3 / 1 %, the
+    /// @param initial The deploy-time schedule from config (mainnet: 0 / 1M / 10M / 50M SIDE at 30 / 10 / 3 / 1 %, the
     ///        treasury Safe), held to the same bounds as any proposal.
     constructor(Schedule memory initial, SidequestClocks.Config memory clocks) Ownable(msg.sender) {
         SidequestClocks.validate(clocks);

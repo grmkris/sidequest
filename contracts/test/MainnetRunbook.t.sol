@@ -33,14 +33,14 @@ contract MainnetRunbookTest is Test {
     function test_runbookSequenceWithGates() public view {
         string memory live = "bun scripts/preflight-prod.ts docs/p0-prod-artifact.json --live";
         string[] memory s = new string[](18);
-        s[0] = "### 3.2 SIDE on nad.fun";
-        s[1] = "MAINNET_GO=yes forge script script/DeploySidequest.s.sol";
-        s[2] = "forge script script/PromoteSidequest.s.sol";
-        s[3] = live;
-        s[4] = "production launch gate refused";
-        // Before the Safe takes ownership: no module and no guard, which would act outside the owners' signatures.
-        s[5] = "getModulesPaginated(address,uint256)(address[],address)";
-        s[6] = GUARD_SLOT;
+        // Before any SIDE reaches the Safe: no module and no guard, which would act outside the owners' signatures.
+        s[0] = "getModulesPaginated(address,uint256)(address[],address)";
+        s[1] = GUARD_SLOT;
+        s[2] = "### 3.2 SIDE on nad.fun";
+        s[3] = "MAINNET_GO=yes forge script script/DeploySidequest.s.sol";
+        s[4] = "forge script script/PromoteSidequest.s.sol";
+        s[5] = live;
+        s[6] = "production launch gate refused";
         s[7] = "MAINNET_GO=yes forge script script/SafeAccept.s.sol";
         s[8] = "forge script script/SafeAccept.s.sol --sig \"check()\"";
         s[9] = live;

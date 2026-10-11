@@ -11,8 +11,8 @@ pragma solidity ^0.8.28;
 ///         Each job snapshots its rate at activation (`ISidequestHolding.Listing.feeBps`), so a schedule change never
 ///         affects a live job. The treasury is read when a fee is paid out.
 ///
-///         The implementation is `Ownable2Step`; `owner`, `pendingOwner`, `transferOwnership`, `acceptOwnership`
-///         and `renounceOwnership` come from OpenZeppelin and are not repeated here.
+///         The implementation is `Ownable2Step` through `NoRenounce`; `owner`, `pendingOwner`, `transferOwnership` and
+///         `acceptOwnership` come from OpenZeppelin and are not repeated here. `renounceOwnership` always reverts.
 interface IFeeSchedule {
     /// @notice A complete fee schedule. Tier `i` applies to a stake of at least `thresholds[i]` (SIDE wei) and
     ///         below `thresholds[i + 1]`; the last tier has no upper bound.

@@ -15,6 +15,11 @@ import {IFeeSchedule} from "../src/sidequest/interfaces/IFeeSchedule.sol";
 import {SidequestConstants} from "../src/sidequest/interfaces/SidequestConstants.sol";
 import {SidequestClocks} from "../src/sidequest/SidequestClocks.sol";
 
+/// @dev The one nad.fun token function the mainnet pin reads.
+interface INadToken {
+    function bondingCurve() external view returns (address);
+}
+
 /// @title SidequestRecipe
 /// @notice The Sidequest v1 deployment (ADR-0011), from `config/<network>.json` (`sidequest` input block; no address in
 ///         code). Each `step*` is one broadcast transaction or a few, in the plan's order, so the fork rehearsal can put
@@ -56,6 +61,10 @@ library SidequestRecipe {
         /// @dev SIDE, created outside the protocol (on mainnet by the nad.fun launcher). The recipe deploys against it
         ///      and mints nothing.
         IFactory token;
+        /// @dev Mainnet only (`nadfun` in the config): the launcher's bonding curve and token implementation, which SIDE
+        ///      must be an EIP-1167 clone of (`checkLaunchToken`).
+        address launchCurve;
+        address launchImplementation;
         SidequestClocks.Config clocks;
     }
 
@@ -121,6 +130,10 @@ library SidequestRecipe {
         c.minimumCreatorBond = vm.parseJsonUint(json, ".sidequest.minimumCreatorBond");
         c.maxMinimumCreatorBond = vm.parseJsonUint(json, ".sidequest.maxMinimumCreatorBond");
         c.unfilledForfeitBps = SafeCast.toUint16(vm.parseJsonUint(json, ".sidequest.unfilledForfeitBps"));
+        if (vm.keyExistsJson(json, ".nadfun")) {
+            c.launchCurve = vm.parseJsonAddress(json, ".nadfun.curve");
+            c.launchImplementation = vm.parseJsonAddress(json, ".nadfun.tokenImplementation");
+        }
     }
 
     /// @notice The full input: `loadBase` plus the `sidequest` block (schema in `contracts/SURFACE.md`).
@@ -181,6 +194,10 @@ library SidequestRecipe {
         if (address(c.token).code.length == 0) revert BadConfig("SIDE has no code");
         if (c.token.decimals() != 18) revert BadConfig("SIDE decimals");
         if (c.token.totalSupply() != SidequestConstants.SIDE_SUPPLY) revert BadConfig("SIDE supply");
+        if (
+            keccak256(bytes(c.token.name())) != keccak256("Sidequest")
+                || keccak256(bytes(c.token.symbol())) != keccak256("SIDE")
+        ) revert BadConfig("SIDE name or symbol");
         if (address(c.identity).code.length == 0 || address(c.reputation).code.length == 0) {
             revert BadConfig("ERC-8004 registries missing");
         }
@@ -190,6 +207,8 @@ library SidequestRecipe {
         if (c.chainId == MAINNET) {
             if (retired(c.defaultArbitrator)) revert BadConfig("defaultArbitrator is a retired 1 Oct key");
             if (c.defaultArbitrator != c.arbitrator) revert BadConfig("defaultArbitrator is not roles.arbitrator");
+            // The exposed attester would become an Evaluator verifier if `roles.attester` were never replaced.
+            if (retired(c.attester)) revert BadConfig("attester is a retired 1 Oct key");
         }
         // A fresh core's admin roles move to the Safe in one irreversible step (C9 ACL-6): it must exist here.
         if (c.safe.code.length == 0) revert BadConfig("safe has no code");
@@ -204,6 +223,22 @@ library SidequestRecipe {
             uint256(c.clocks.minReviewWindow) + c.clocks.minDisputeWindow + c.clocks.minArbitrationWindow + c.margin
                     + 1 hours > c.clocks.unstakeDelay
         ) revert BadConfig("clocks leave no bonded hire inside the unstake delay");
+    }
+
+    /// @notice On mainnet SIDE is the nad.fun launch token: an EIP-1167 clone of the launcher's token implementation, on
+    ///         its bonding curve. A same-ticker look-alike (nad.fun does not enforce unique tickers) refuses, which matters
+    ///         because the vault's token is immutable. DeploySidequest and the promotion check it; off mainnet it passes.
+    function checkLaunchToken(Config memory c) internal view {
+        if (c.chainId != MAINNET) return;
+        if (c.launchCurve == address(0) || c.launchImplementation == address(0)) {
+            revert BadConfig("nad.fun pin missing");
+        }
+        bytes memory clone =
+            abi.encodePacked(hex"363d3d373d3d3d363d73", c.launchImplementation, hex"5af43d82803e903d91602b57fd5bf3");
+        if (keccak256(address(c.token).code) != keccak256(clone)) revert BadConfig("SIDE is not a nad.fun token");
+        if (INadToken(address(c.token)).bondingCurve() != c.launchCurve) {
+            revert BadConfig("SIDE is not on the nad.fun curve");
+        }
     }
 
     /// @dev Every step, in order, from the caller's context (under `vm.startBroadcast(admin)`).

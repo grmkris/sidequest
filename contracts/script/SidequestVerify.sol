@@ -87,6 +87,7 @@ library SidequestVerify {
         _require(address(d.factory) == address(c.token), "SIDE token");
         _require(d.factory.decimals() == 18, "SIDE decimals");
         _require(d.factory.totalSupply() == SidequestConstants.SIDE_SUPPLY, "SIDE supply");
+        SidequestRecipe.checkLaunchToken(c);
         // Ownership: the Safe owns, or the handover to it is pending (the deployer still owns).
         _owned(address(d.vault), c, "vault owner");
         _owned(address(d.fees), c, "feeSchedule owner");

@@ -12,7 +12,8 @@
 #   5. the Safe goes to 2-of-3 (changeThreshold through execTransaction); the gate refuses the old pin, passes the new;
 #   6. two hires paid in SIDE: one delivered, accepted and settled; one never delivered, slashed after its deadline, the
 #      worker bond landing in the sink;
-#   7. a small buy and sell of SIDE through the router.
+#   7. a small buy and sell of SIDE through the router;
+#   8. the creator-fee vault names the Safe as SIDE's recipient.
 # Every step's gas (the limits actually sent, which Monad charges, and gasUsed) is printed as the launch budget.
 # Sends nothing to a real chain: anvil's public dev keys sign everything, against a local fork. Holds the launch lock
 # (script/launch-lock.sh), so it refuses while another launch or rehearsal runs in this checkout. Writes only its own
@@ -33,14 +34,14 @@ LOCAL="http://127.0.0.1:$PORT"
 CHAIN=143
 BUDGET="$(mktemp)"
 GATE_TS="$(mktemp --suffix=.ts)"
-MINING="$(mktemp -d)"
 REPO="$(cd .. && pwd)"
 
-# nad.fun V2 on chain 143 (github.com/Naddotfun/nadfun-v2-intergration): the router, the wrapped-MON quote token and the
-# creator-fee vault, whose setupData `abi.encode(recipient)` names who claims the 1% creator fee.
-NADFUN_ROUTER=0x8986C8fD44eb85294A725a7e61AF35E76bA26F91
-WMON=0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A
-CREATOR_FEE_VAULT=0x687f9172D5F4798694811333C5C5696afCF4F6f4
+# nad.fun V2 on chain 143, from the config's `nadfun` block: the router, the wrapped-MON quote token and the creator-fee
+# vault, whose setupData `abi.encode(recipient)` names who claims the 1% creator fee.
+NADFUN_ROUTER=$(jq -r .nadfun.router config/monad-mainnet.json)
+WMON=$(jq -r .nadfun.wmon config/monad-mainnet.json)
+CREATOR_FEE_VAULT=$(jq -r .nadfun.creatorFeeVault config/monad-mainnet.json)
+# SidequestConstants.SLASH_SINK: where a slash sends SIDE, which has no burn.
 SINK=0x000000000000000000000000000000000000dEaD
 
 # Canonical Safe v1.4.1 on chain 143.
@@ -48,7 +49,6 @@ SAFE_SIDE=0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67
 SAFE_L2=0x29fcB43b46531BcA003ddC8FCB67FFE91900C762
 FALLBACK_HANDLER=0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99
 ZERO=0x0000000000000000000000000000000000000000
-USDC=$(jq -r .liquidity.quote config/monad-mainnet.json)
 
 # anvil's public development keys, derived from its well-known mnemonic; never real funds.
 MNEMONIC="test test test test test test test test test test test junk"
@@ -65,7 +65,6 @@ cleanup() {
   owned_file "$CONFIG" .sidequest.safe "$SAFE"
   owned_run_dirs
   rm -f "$GATE_TS" "$BUDGET"
-  rm -rf "$MINING"
 }
 trap cleanup EXIT
 rehearsal_run
@@ -268,6 +267,13 @@ TX3=$(cast send --rpc-url "$LOCAL" --private-key $K_KRIS --json $NADFUN_ROUTER \
 [[ "$(cast receipt --rpc-url "$LOCAL" "$TX3" status)" =~ ^(1|true|1\ \(success\))$ ]] || fail "the sell reverted"
 budget_hashes "7. Small buy and sell on nad.fun" "$TX" "$TX2" "$TX3"
 ok "bought $GOT SIDE wei for 1 MON and sold it back (MON before the sell: $MON_BEFORE)"
+
+# 8. The creator fee goes to the Safe: the vault names it as SIDE's recipient. The claim itself is not rehearsable here:
+#    nad.fun credits the vault only when its operator runs FeeCollector.collectFee (anyone else gets NotAuthorized), so
+#    the Safe's claim(token) is checked live after the first collection.
+RECIPIENT=$(cast call --rpc-url "$LOCAL" $CREATOR_FEE_VAULT "getCreator(address)(address)" "$SIDE")
+[[ "${RECIPIENT,,}" == "${SAFE,,}" ]] || fail "the creator-fee vault names $RECIPIENT, not the Safe, as SIDE's recipient"
+ok "the creator-fee vault names the Safe as SIDE's recipient"
 
 echo
 echo "LAUNCH BUDGET (Monad charges the gas limit; MON at 102 gwei now, and at forge's 203 gwei max fee)"

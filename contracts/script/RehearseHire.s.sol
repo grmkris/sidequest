@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import {ERC8183WithAuthorization} from "../src/vendor/erc8183/ERC8183WithAuthorization.sol";
 import {IERC8004Identity} from "../src/vendor/erc8004/IERC8004.sol";
 import {ISidequestHolding} from "../src/sidequest/interfaces/ISidequestHolding.sol";
@@ -59,11 +60,13 @@ contract RehearseHire is RehearsalScript {
         side.transfer(creator, creatorBond + 2 * REWARD);
         vm.stopBroadcast();
 
+        // The worker stakes with one EIP-2612 permit signature: the launcher's token supports it.
+        (uint8 pv, bytes32 pr, bytes32 ps, uint256 permitDeadline) = _permit(workerKey, address(vault), WORKER_STAKE);
         vm.startBroadcast(workerKey);
         uint256 agentId = identity.register();
-        side.approve(address(vault), WORKER_STAKE);
-        vault.delegate(worker, WORKER_STAKE);
+        vault.delegateWithPermit(worker, WORKER_STAKE, permitDeadline, pv, pr, ps);
         vm.stopBroadcast();
+        require(vault.stakeOf(worker) == WORKER_STAKE, "the permit stake did not land");
 
         vm.startBroadcast(creatorKey);
         side.approve(address(vault), creatorBond);
@@ -128,6 +131,27 @@ contract RehearseHire is RehearsalScript {
         vm.startBroadcast(workerKey);
         holding.activate(sel, abi.encodePacked(r, s, v), auth);
         vm.stopBroadcast();
+    }
+
+    function _permit(uint256 key, address spender, uint256 amount)
+        internal
+        view
+        returns (uint8 v, bytes32 r, bytes32 s, uint256 deadline)
+    {
+        IERC20Permit side = IERC20Permit(_addr(".deployment.sidequest.factory"));
+        address owner = vm.addr(key);
+        deadline = block.timestamp + 1 hours;
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                owner,
+                spender,
+                amount,
+                side.nonces(owner),
+                deadline
+            )
+        );
+        (v, r, s) = vm.sign(key, keccak256(abi.encodePacked("\x19\x01", side.DOMAIN_SEPARATOR(), structHash)));
     }
 
     function _budgetAuth(

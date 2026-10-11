@@ -24,7 +24,7 @@ import {IFeeSchedule} from "./IFeeSchedule.sol";
 ///         | Rejected/Expired otherwise              | —                      | —              | reward to creator; each top-up refundable to its contributor |
 ///         | Cancelled or expired before activation  | —                      | —              | reward to creator (no fee)      |
 ///
-///         Bonds are reservations in the `IStakeVault`: a bond is slashed (burned) when the evaluator says its penalty
+///         Bonds are reservations in the `IStakeVault`: a bond is slashed (sent to the slash sink) when the evaluator says its penalty
 ///         is due, and released otherwise. `burnBond` and `returnBonds` are the evaluator's; `settle` handles whatever
 ///         the evaluator did not. A nonzero bond's slash requested at or after the listing's `expiredAt` instead
 ///         releases it, leaves its `*BondBurned` flag false, and emits `BondReleased`. A never-activated listing instead
@@ -38,7 +38,8 @@ import {IFeeSchedule} from "./IFeeSchedule.sol";
 ///         The EIP-712 domain is ("SidequestHolding", "1") and `Selection` keeps the legacy type string; the
 ///         `verifyingContract` separates this pair from the legacy ones.
 ///
-///         The implementation is `Ownable2Step` (owner: the Safe); the ownership functions come from OpenZeppelin.
+///         The implementation is `Ownable2Step` through `NoRenounce` (owner: the Safe); the ownership functions come from
+///         OpenZeppelin, and `renounceOwnership` always reverts.
 interface ISidequestHolding {
     /// @dev A bonded listing cannot outlive the unstaking cooldown that protects its backers.
     error BondOutlastsUnbonding(uint256 expiredAt, uint256 latest);
@@ -187,7 +188,6 @@ interface ISidequestHolding {
     /// @dev `amount` is what this settlement sent (or owed) to `to` from the reward and the bonus.
     event RewardSettled(uint256 indexed jobId, address indexed to, Outcome outcome, uint256 amount);
     /// @notice The fee a paid job charged: `amount = fee + bonusFee`, of which `bonusPart = bonusFee` came from top-ups.
-    ///         The input to work mining.
     event FeeCharged(
         uint256 indexed jobId,
         address indexed token,

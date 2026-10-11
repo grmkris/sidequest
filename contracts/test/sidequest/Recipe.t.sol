@@ -21,6 +21,8 @@ import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {MockIdentity} from "../mocks/MockIdentity.sol";
 import {MockReputation} from "../mocks/MockReputation.sol";
 import {LaunchToken} from "../mocks/LaunchToken.sol";
+import {MockNadToken} from "../mocks/MockNadToken.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {UnpromotedTestnet} from "../helpers/UnpromotedTestnet.sol";
 
 /// @dev Calls the recipe's steps one at a time under the deployer, so the test can act as a third party between them.
@@ -324,6 +326,10 @@ contract RecipeTest is Test {
         vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "SIDE supply"));
         driver.configure(bad);
         vm.clearMockedCalls();
+        vm.mockCall(address(side), abi.encodeWithSignature("symbol()"), abi.encode("SIDEQ"));
+        vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "SIDE name or symbol"));
+        driver.configure(bad);
+        vm.clearMockedCalls();
         bad = c;
         bad.defaultArbitrator = admin;
         vm.expectRevert(
@@ -394,6 +400,14 @@ contract RecipeTest is Test {
 
         m.arbitrator = fresh;
         m.defaultArbitrator = fresh;
+        for (uint256 i; i < 3; ++i) {
+            m.attester = old[i];
+            vm.expectRevert(
+                abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "attester is a retired 1 Oct key")
+            );
+            driver.configure(m);
+        }
+        m.attester = attester;
         RecipeDriver mainnet = new RecipeDriver();
         mainnet.configure(m);
         for (uint256 i; i < 8; ++i) {
@@ -409,6 +423,43 @@ contract RecipeTest is Test {
         driver.configure(t);
         t.defaultArbitrator = SidequestRecipe.retiredKeys()[2];
         driver.configure(t);
+    }
+
+    function checkLaunchTokenExternal(SidequestRecipe.Config memory cc) external view {
+        SidequestRecipe.checkLaunchToken(cc);
+    }
+
+    /// @dev Review 12 Oct #2: on mainnet SIDE must be a clone of the launcher's token implementation on its curve; a
+    ///      look-alike with the same name, symbol, decimals and supply refuses. Off mainnet the pin is not required.
+    function test_recipe_mainnetPinsTheNadFunToken() public {
+        address curve = makeAddr("nad-curve");
+        address impl = address(new MockNadToken(curve));
+        SidequestRecipe.Config memory m = c;
+        m.chainId = 143;
+        m.token = IFactory(Clones.clone(impl));
+        m.launchCurve = curve;
+        m.launchImplementation = impl;
+        this.checkLaunchTokenExternal(m);
+
+        IFactory clone = m.token;
+
+        // `m` is one memory struct: each case mutates it and puts the field back.
+        m.launchImplementation = address(0);
+        vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "nad.fun pin missing"));
+        this.checkLaunchTokenExternal(m);
+        m.launchImplementation = impl;
+        m.token = side; // a same-ticker token that is not the launcher's clone
+        vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "SIDE is not a nad.fun token"));
+        this.checkLaunchTokenExternal(m);
+        m.token = clone;
+        m.launchCurve = makeAddr("another-curve");
+        vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "SIDE is not on the nad.fun curve"));
+        this.checkLaunchTokenExternal(m);
+
+        m.chainId = block.chainid; // testnet keeps its own SIDE and needs no pin
+        m.token = side;
+        m.launchCurve = address(0);
+        this.checkLaunchTokenExternal(m);
     }
 
     /// @dev The recipe's retired keys are the API preflight's RETIRED_ROLE_ADDRESSES, and there are three of each.
@@ -444,10 +495,16 @@ contract RecipeTest is Test {
         path = _temp(name, vm.readFile(string.concat(vm.projectRoot(), "/config/monad-mainnet.json")));
         vm.writeJson("{}", path, ".deployment");
         vm.writeJson(
-            '{"maxMinimumCreatorBond":100000000000000000000000,"unfilledForfeitBps":2500,"minimumCreatorBond":10000000000000000000000}',
+            string.concat(
+                '{"maxMinimumCreatorBond":100000000000000000000000,"unfilledForfeitBps":2500,"minimumCreatorBond":10000000000000000000000,"token":"',
+                vm.toString(address(side)),
+                '"}'
+            ),
             path,
             ".sidequest"
         );
+        string memory usdc = vm.toString(vm.parseJsonAddress(vm.readFile(path), ".x402.usdc"));
+        vm.writeJson(string.concat('["', usdc, '","', vm.toString(address(side)), '"]'), path, ".knownTokens");
     }
 
     function test_output_testnetShape_recordsFreshCoreAndPair() public {
@@ -514,11 +571,11 @@ contract RecipeTest is Test {
         assertEq(vm.parseJsonKeys(out, ".deployment").length, 7, "only v1 deployment metadata");
         assertEq(vm.parseJsonString(out, ".deployment.network"), "monad-mainnet");
         _assertOutputClocks(out, SidequestClocks.production());
-        // LAUNCH-AUDIT-004: an unpromoted config has knownTokens only; the record carries USDC as its reward token.
+        // LAUNCH-AUDIT-004: an unpromoted config has knownTokens only; the record carries USDC and SIDE as reward tokens.
         address[] memory rewards = vm.parseJsonAddressArray(out, ".deployment.rewardTokens");
-        assertEq(rewards.length, 1);
+        assertEq(rewards.length, 2);
         assertEq(rewards[0], vm.parseJsonAddress(real, ".x402.usdc"));
-        assertEq(rewards[0], vm.parseJsonAddressArray(real, ".knownTokens")[0]);
+        assertEq(rewards[1], address(side));
     }
 
     function _assertOutputClocks(string memory out, SidequestClocks.Config memory clocks) internal pure {
@@ -585,8 +642,8 @@ contract RecipeTest is Test {
         vm.removeFile(path);
     }
 
-    /// @dev LAUNCH-AUDIT-004: on mainnet a reward list without USDC refuses before anything is written; without an
-    ///      explicit list the known tokens (USDC, and SIDE for Sidequest's own spending) become it; a list is kept as is.
+    /// @dev LAUNCH-AUDIT-004: on mainnet a reward list without USDC or SIDE refuses before anything is written; without
+    ///      an explicit list the known tokens (USDC, and SIDE for Sidequest's own spending) become it; a list is kept.
     function test_output_mainnetRewardTokensKeepUsdc() public {
         SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
         string memory real = vm.readFile(string.concat(vm.projectRoot(), "/config/monad-mainnet.json"));
@@ -612,16 +669,28 @@ contract RecipeTest is Test {
         assertEq(known.length, 2);
         assertEq(known[1], address(side), "SIDE is a reward token for Sidequest's own spending");
 
+        path = _mainnetTemp("rewards-no-side");
+        vm.writeJson(string.concat('{"rewardTokens":["', usdc, '"]}'), path, ".deployment");
+        vm.expectRevert(SidequestOutput.MainnetRewardTokens.selector);
+        this.writeExternal(path, d);
+        vm.removeFile(path);
+
         path = _mainnetTemp("rewards-kept");
         vm.writeJson(
-            string.concat('{"rewardTokens":["0x0000000000000000000000000000000000000Bad","', usdc, '"]}'),
+            string.concat(
+                '{"rewardTokens":["0x0000000000000000000000000000000000000Bad","',
+                usdc,
+                '","',
+                vm.toString(address(side)),
+                '"]}'
+            ),
             path,
             ".deployment"
         );
         this.writeExternal(path, d);
         address[] memory kept = vm.parseJsonAddressArray(vm.readFile(path), ".deployment.rewardTokens");
         vm.removeFile(path);
-        assertEq(kept.length, 2);
+        assertEq(kept.length, 3);
         assertEq(vm.toString(kept[1]), usdc);
     }
 

@@ -174,13 +174,26 @@ Create it in Safe{Wallet}, or from the factory as R7 does, with Kris's three own
   cast call --rpc-url "$R" "$S" "getThreshold()(uint256)")   # "1.4.1", the three owners, 1
 ```
 
+Before any SIDE reaches it, the Safe must have no module and no guard: a module acts without the owners' signatures
+(`execTransactionFromModule`), and a guard can change what executes. Stop if either line prints STOP, and never add a
+module or a guard later:
+
+```
+(set -a && . ./.env.local && set +a && SAFE=<safe> && R="$MONAD_MAINNET_RPC_URL"
+[ "$(cast call --rpc-url "$R" "$SAFE" 'getModulesPaginated(address,uint256)(address[],address)' \
+  0x0000000000000000000000000000000000000001 10 | head -1)" = "[]" ] || echo "STOP: the Safe has a module"
+[ "$(cast storage --rpc-url "$R" "$SAFE" \
+  0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8)" = "0x$(printf '%064d' 0)" ] \
+  || echo "STOP: the Safe has a guard")
+```
+
 ### 3.2 SIDE on nad.fun [tx, Kris's wallet]
 
 Kris creates the token on nad.fun from `0xB9970A6371358F6C74DFb15A7cB2653E3AE3E471`: name Sidequest, ticker SIDE, the
 Sidequest mark, the utility-only description, and the website and X links. In the same creation transaction, buy 5%
-of the supply (50M SIDE; about 3,544 MON at launch). Set the creator-fee vault's recipient to the Safe; if nad.fun only
-pays the creator, claim and sweep to the Safe instead, and record which. Check the creation fee on nad.fun first. Then
-read the token back; every line must match:
+of the supply (50M SIDE; about 3,544 MON at launch). Set the creator-fee vault's recipient to the Safe (R7 checks the
+vault names it with `getCreator(token)`). Check the creation fee on nad.fun first. Then read the token back; every line
+must match:
 
 ```
 (set -a && . ./.env.local && set +a && T=<SIDE> && R="$MONAD_MAINNET_RPC_URL" && \
@@ -189,9 +202,12 @@ read the token back; every line must match:
 # 1000000000000000000000000000, 18, "SIDE", 0 (permit is present)
 ```
 
-Send the 50M dev-buy SIDE to the Safe [tx], then write `sidequest.token` and add SIDE to `knownTokens` in
-`config/monad-mainnet.json`, and commit. Publish the address only from the site and the official accounts: nad.fun does
-not enforce unique tickers.
+Take the address only from the creation transaction's `Create(token, creator)` log, emitted by the router
+`nadfun.router`, with `creator` equal to Kris's wallet: nad.fun does not enforce unique tickers, and DeploySidequest
+refuses any token that is not a clone of `nadfun.tokenImplementation` on `nadfun.curve`. Send the 50M dev-buy SIDE to the
+Safe [tx], then write `sidequest.token` and add SIDE to `knownTokens` in `config/monad-mainnet.json` (PromoteSidequest
+refuses a mainnet reward list without USDC and SIDE), and commit. Publish the address only from the site and the
+official accounts.
 
 ### 3.3 DeploySidequest [tx]
 
@@ -241,20 +257,7 @@ problem; stop. The one exception is `launch:relay at or below RELAY_FLOOR_MAINNE
 
 ### 3.6 The Safe accepts the four [tx]
 
-First, the Safe must have no module and no guard: a module acts without the owners' signatures
-(`execTransactionFromModule`), and a guard can change what executes. Stop if either line prints STOP, and never add a
-module or a guard later:
-
-```
-(set -a && . ./.env.local && set +a && SAFE=<safe> && R="$MONAD_MAINNET_RPC_URL"
-[ "$(cast call --rpc-url "$R" "$SAFE" 'getModulesPaginated(address,uint256)(address[],address)' \
-  0x0000000000000000000000000000000000000001 10 | head -1)" = "[]" ] || echo "STOP: the Safe has a module"
-[ "$(cast storage --rpc-url "$R" "$SAFE" \
-  0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8)" = "0x$(printf '%064d' 0)" ] \
-  || echo "STOP: the Safe has a guard")
-```
-
-Then, with the threshold-1 Safe, sent by one owner, in a `contracts/` subshell:
+The Safe still has no module and no guard (§3.1). Then, with the threshold-1 Safe, sent by one owner, in a `contracts/` subshell:
 
 ```
 pwcheck ~/.config/sidequest/safe-owner.password && \
@@ -291,8 +294,11 @@ deploy reruns it.
 ### 3.8 Fund the operation [tx]
 
 Fund the relay, arbiter and crew wallets with MON (§2). From the dev buy's backing half, the Safe backs the official
-account (5M SIDE) and each crew agent (2.5M) with `delegateFor(account, safe, amount)`, so the Safe keeps each position.
-Record every hash.
+account (5M SIDE) and each crew agent (2.5M): one Safe{Wallet} batch through MultiSendCallOnly of `approve(vault, total)`
+on SIDE followed by `delegateFor(account, safe, amount)` for each account, so the Safe keeps each position. The Safe is
+2-of-3 by now, so two owners sign. Record every hash. The creator fee reaches nad.fun's creator-fee vault only when
+nad.fun's operator collects it (`FeeCollector.collectFee` refuses anyone else), so it is not claimable at once. Once
+the vault holds a claimable balance for SIDE, the Safe calls `claim(SIDE)` on it; record that first claim.
 
 ### 3.9 A drained production deploy (no chain transaction)
 

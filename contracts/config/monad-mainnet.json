@@ -53,6 +53,13 @@
     "maxRepairCost": 5,
     "positionOwner": "0x0000000000000000000000000000000000000000"
   },
+  "nadfun": {
+    "router": "0x8986C8fD44eb85294A725a7e61AF35E76bA26F91",
+    "curve": "0x9f3832732923252A21044F21eE6bd87F09514ae4",
+    "tokenImplementation": "0x4f44eAFa383FE5f97a0d6CfF97fC5d605D026Fbd",
+    "wmon": "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A",
+    "creatorFeeVault": "0x687f9172D5F4798694811333C5C5696afCF4F6f4"
+  },
   "sidequest": {
     "minimumCreatorBond": 1000000000000000000000000,
     "maxMinimumCreatorBond": 100000000000000000000000000,
