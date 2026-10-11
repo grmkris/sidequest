@@ -22,7 +22,7 @@ const units = 100n * 10n ** 18n
 const approval = {
   chainId: deployment.chainId,
   to: deployment.sidequest!.factory,
-  data: encodeFunctionData({ abi: sdk.factoryV2Abi, functionName: 'approve', args: [vault, units] }),
+  data: encodeFunctionData({ abi: sdk.sideTokenAbi, functionName: 'approve', args: [vault, units] }),
   value: '0' as const,
   description: 'Approve',
 }

@@ -27,8 +27,6 @@ export interface SidequestClocks {
   readonly holdingDelay: number
   readonly feeDelay: number
   readonly proposalGrace: number
-  readonly epochZeroDuration: number
-  readonly epochDuration: number
 }
 
 /** Production values used when an older deployment record has no clocks block. */
@@ -40,8 +38,6 @@ export const PRODUCTION_CLOCKS: SidequestClocks = Object.freeze({
   holdingDelay: 1814400,
   feeDelay: 259200,
   proposalGrace: 604800,
-  epochZeroDuration: 259200,
-  epochDuration: 604800,
 })
 
 /** The 14-day window ceilings stay compiled constants (D24). */
@@ -50,10 +46,13 @@ export const MAX_SIDEQUEST_WINDOW = 14 * 86400
 export function clocksFromConfig(value: SidequestClocks | undefined, chainId: number): SidequestClocks {
   if (value !== undefined && (value === null || typeof value !== 'object' || Array.isArray(value)))
     throw new Error('Invalid Sidequest clocks block')
-  const clocks = { ...(value ?? PRODUCTION_CLOCKS) }
-  for (const key of Object.keys(PRODUCTION_CLOCKS) as Array<keyof SidequestClocks>) {
+  const source = value ?? PRODUCTION_CLOCKS
+  // Only the v1 clocks: a record from before mining was deleted may still carry its epoch clocks.
+  const keys = Object.keys(PRODUCTION_CLOCKS) as Array<keyof SidequestClocks>
+  const clocks = Object.fromEntries(keys.map((key) => [key, source[key]])) as Record<keyof SidequestClocks, number>
+  for (const key of keys) {
     const seconds = clocks[key]
-    const minimum = key.startsWith('epoch') ? 600 : key.startsWith('min') ? 1 : 60
+    const minimum = key.startsWith('min') ? 1 : 60
     const maximum = key.startsWith('min') ? MAX_SIDEQUEST_WINDOW : 2 ** 48 - 1
     if (!Number.isSafeInteger(seconds) || seconds < minimum || seconds > maximum)
       throw new Error(`Invalid Sidequest clock ${key}`)
@@ -83,11 +82,6 @@ export interface SidequestDeployment {
   readonly factory: Address
   readonly vault: Address
   readonly feeSchedule: Address
-  readonly distributor: Address
-  readonly miningReserve: Address
-  readonly teamVesting: Address
-  /** Launch time, in Unix seconds, used for the mining epochs. */
-  readonly t0: number
   readonly clocks?: SidequestClocks
 }
 
@@ -216,7 +210,6 @@ export interface DeploymentConfig {
   /** See `NetworkMeta.firstParty`. */
   firstParty?: { addresses?: string[]; agents?: string[]; demoJobs?: string[] }
   usdPegged?: string[]
-  mining?: { creditRule?: { fromEpoch: string | number | bigint } }
   deployment: {
     block?: number
     core?: string
@@ -227,10 +220,6 @@ export interface DeploymentConfig {
       factory: string
       vault: string
       feeSchedule: string
-      distributor: string
-      miningReserve: string
-      teamVesting: string
-      t0: number
       clocks?: SidequestClocks
     }
     rewardTokens?: string[]
@@ -388,19 +377,10 @@ export function deploymentFromConfig(network: Network, c: DeploymentConfig): Dep
   let sidequest: SidequestDeployment | null = null
   if (d.sidequest !== undefined) {
     const h = d.sidequest
-    for (const name of [
-      'safe',
-      'factory',
-      'vault',
-      'feeSchedule',
-      'distributor',
-      'miningReserve',
-      'teamVesting',
-    ] as const) {
+    for (const name of ['safe', 'factory', 'vault', 'feeSchedule'] as const) {
       if (!validAddress(h[name])) throw new Error(`Sidequest deployment requires ${name}`)
     }
-    if (!Number.isSafeInteger(h.block) || h.block < 0 || !Number.isSafeInteger(h.t0) || h.t0 <= 0)
-      throw new Error('Sidequest deployment requires block and launch time')
+    if (!Number.isSafeInteger(h.block) || h.block < 0) throw new Error('Sidequest deployment requires its block')
     const clocks = h.clocks === undefined ? undefined : clocksFromConfig(h.clocks, c.chainId)
     sidequest = {
       block: BigInt(h.block),
@@ -408,10 +388,6 @@ export function deploymentFromConfig(network: Network, c: DeploymentConfig): Dep
       factory: h.factory as Address,
       vault: h.vault as Address,
       feeSchedule: h.feeSchedule as Address,
-      distributor: h.distributor as Address,
-      miningReserve: h.miningReserve as Address,
-      teamVesting: h.teamVesting as Address,
-      t0: h.t0,
       ...(clocks === undefined ? {} : { clocks }),
     }
   }

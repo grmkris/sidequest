@@ -1,5 +1,5 @@
 /** D24: immutables are authoritative on chain; synchronous consumers use the promoted config. */
-import { feeScheduleAbi, sidequestHoldingAbi, miningReserveAbi, stakeVaultAbi } from './abi/index.ts'
+import { feeScheduleAbi, sidequestHoldingAbi, stakeVaultAbi } from './abi/index.ts'
 import type { Ctx } from './actions.ts'
 import {
   clocksFromConfig,
@@ -103,25 +103,14 @@ export function readSidequestClocks(ctx: Ctx): Promise<SidequestClocks> {
   const saved = clocksCache.get(ctx)
   if (saved !== undefined) return saved
   const pending = (async () => {
-    const [bounds, unstakeDelay, holdingDelay, vaultGrace, feeDelay, feeGrace, epochZeroDuration, epochDuration] =
-      await Promise.all([
-        readWindowBounds(ctx),
-        ctx.publicClient.readContract({ address: h.vault, abi: stakeVaultAbi, functionName: 'UNSTAKE_DELAY' }),
-        ctx.publicClient.readContract({ address: h.vault, abi: stakeVaultAbi, functionName: 'HOLDING_DELAY' }),
-        ctx.publicClient.readContract({ address: h.vault, abi: stakeVaultAbi, functionName: 'PROPOSAL_GRACE' }),
-        ctx.publicClient.readContract({ address: h.feeSchedule, abi: feeScheduleAbi, functionName: 'DELAY' }),
-        ctx.publicClient.readContract({ address: h.feeSchedule, abi: feeScheduleAbi, functionName: 'PROPOSAL_GRACE' }),
-        ctx.publicClient.readContract({
-          address: h.miningReserve,
-          abi: miningReserveAbi,
-          functionName: 'EPOCH_ZERO_DURATION',
-        }),
-        ctx.publicClient.readContract({
-          address: h.miningReserve,
-          abi: miningReserveAbi,
-          functionName: 'EPOCH_DURATION',
-        }),
-      ])
+    const [bounds, unstakeDelay, holdingDelay, vaultGrace, feeDelay, feeGrace] = await Promise.all([
+      readWindowBounds(ctx),
+      ctx.publicClient.readContract({ address: h.vault, abi: stakeVaultAbi, functionName: 'UNSTAKE_DELAY' }),
+      ctx.publicClient.readContract({ address: h.vault, abi: stakeVaultAbi, functionName: 'HOLDING_DELAY' }),
+      ctx.publicClient.readContract({ address: h.vault, abi: stakeVaultAbi, functionName: 'PROPOSAL_GRACE' }),
+      ctx.publicClient.readContract({ address: h.feeSchedule, abi: feeScheduleAbi, functionName: 'DELAY' }),
+      ctx.publicClient.readContract({ address: h.feeSchedule, abi: feeScheduleAbi, functionName: 'PROPOSAL_GRACE' }),
+    ])
     if (vaultGrace !== feeGrace) throw new Error('Deployed proposal grace clocks disagree')
     return clocksFromConfig(
       {
@@ -132,8 +121,6 @@ export function readSidequestClocks(ctx: Ctx): Promise<SidequestClocks> {
         holdingDelay,
         feeDelay,
         proposalGrace: vaultGrace,
-        epochZeroDuration,
-        epochDuration,
       },
       ctx.deployment.chainId,
     )

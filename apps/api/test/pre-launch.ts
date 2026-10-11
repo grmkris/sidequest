@@ -9,7 +9,7 @@ const PRE_LAUNCH = new Set([
   'open-token main Holding metadata',
   'main v1 kind',
   'v1 factory consistency',
-  'sidequest block/T0',
+  'sidequest block',
   'sidequest:safeOwners/safeThreshold',
   'rewardTokens:USDC',
   'artifact rewardTokens',

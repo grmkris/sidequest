@@ -37,8 +37,6 @@ const abi = parseAbi([
   'function HOLDING_DELAY() view returns (uint48)',
   'function PROPOSAL_GRACE() view returns (uint48)',
   'function DELAY() view returns (uint48)',
-  'function EPOCH_ZERO_DURATION() view returns (uint48)',
-  'function EPOCH_DURATION() view returns (uint48)',
   'function MAX_REVIEW_WINDOW() view returns (uint32)',
   'function MAX_DISPUTE_WINDOW() view returns (uint32)',
   'function MAX_ARBITRATION_WINDOW() view returns (uint32)',
@@ -60,8 +58,6 @@ const addresses = {
   evaluator: a(0x11),
   vault: a(0x12),
   feeSchedule: a(0x13),
-  distributor: a(0x14),
-  miningReserve: a(0x15),
 }
 const DEFAULT_ADMIN = toHex(0, { size: 32 })
 const ADMIN = keccak256(toHex('ADMIN_ROLE'))
@@ -73,7 +69,7 @@ const POLICY: SafePolicy = { owners: OWNERS, threshold: 1 }
 const SLOT_0 = toHex(0, { size: 32 })
 const word = (address: string) => `0x${'0'.repeat(24)}${address.slice(2).toLowerCase()}` as Hex
 
-/** A promoted mainnet config: the six owned by the Safe and the core's roles with it. */
+/** A promoted mainnet config: the four owned by the Safe and the core's roles with it. */
 function promoted(): ChainConfig {
   const config = structuredClone(mainnet) as unknown as ChainConfig
   config.deployment = {
@@ -94,10 +90,6 @@ function promoted(): ChainConfig {
       factory: a(0xfa),
       vault: addresses.vault,
       feeSchedule: addresses.feeSchedule,
-      distributor: addresses.distributor,
-      miningReserve: addresses.miningReserve,
-      teamVesting: a(0x16),
-      t0: 1_791_500_000,
     },
   }
   return config
@@ -218,7 +210,7 @@ test('D16: a promoted deployment with the Safe in custody, a verifier attester a
   expect(await gate()).toEqual([])
 })
 
-// ---- PROD-GATE-001: the Safe owns all six ----
+// ---- PROD-GATE-001: the Safe owns all four ----
 
 test('PROD-GATE-001: a missing Safe, a Safe without code, or an unreadable Safe refuses', async () => {
   expect(
@@ -555,8 +547,6 @@ test('CLOCKS: testnet fast config passes readback; production cannot be overridd
     holdingDelay: 900,
     feeDelay: 300,
     proposalGrace: 1800,
-    epochZeroDuration: 1800,
-    epochDuration: 3600,
   }
   const setup = (state: LiveState, config: ChainConfig) => {
     config.sidequest = { ...config.sidequest, clocks: fast }
@@ -574,14 +564,7 @@ test('CLOCKS: testnet fast config passes readback; production cannot be overridd
 })
 
 test('CLOCKS: partial, zero, out-of-range and cross-clock-invalid config refuse', async () => {
-  for (const patch of [
-    { proposalGrace: 0 },
-    { epochDuration: 0 },
-    { epochZeroDuration: 599 },
-    { minReviewWindow: 1209601 },
-    { holdingDelay: 60 },
-    { feeDelay: 59 },
-  ]) {
+  for (const patch of [{ proposalGrace: 0 }, { minReviewWindow: 1209601 }, { holdingDelay: 60 }, { feeDelay: 59 }]) {
     const failures = await gate((_, config) => {
       config.chainId = 10143
       config.sidequest = { ...config.sidequest, clocks: { ...productionLaunchClocks, ...patch } }
@@ -591,5 +574,5 @@ test('CLOCKS: partial, zero, out-of-range and cross-clock-invalid config refuse'
   const failures = await gate((_, config) => {
     config.sidequest = { clocks: {} as never }
   })
-  expect(failures).toHaveLength(9)
+  expect(failures).toHaveLength(7)
 })

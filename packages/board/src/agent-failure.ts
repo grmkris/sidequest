@@ -107,9 +107,7 @@ const KNOWN_REVERTS: ReadonlySet<string> = new Set(
     sdk.sidequestEvaluatorAbi,
     sdk.stakeVaultAbi,
     sdk.feeScheduleAbi,
-    sdk.factoryV2Abi,
-    sdk.miningReserveAbi,
-    sdk.epochDistributorAbi,
+    sdk.sideTokenAbi,
   ].flatMap((abi) =>
     (abi as readonly { type: string; name?: string }[])
       .filter((item) => item.type === 'error' && item.name !== undefined)

@@ -65,11 +65,7 @@
       "safeThreshold": null,
       "factory": null,
       "vault": null,
-      "feeSchedule": null,
-      "distributor": null,
-      "miningReserve": null,
-      "teamVesting": null,
-      "t0": null
+      "feeSchedule": null
     }
   }
 }

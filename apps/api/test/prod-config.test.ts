@@ -54,10 +54,6 @@ const configured = () => {
       factory: fixtureAddress,
       vault: fixtureAddress,
       feeSchedule: fixtureAddress,
-      distributor: fixtureAddress,
-      miningReserve: fixtureAddress,
-      teamVesting: fixtureAddress,
-      t0: 1_791_500_000,
     },
     rewardTokens: [USDC],
   }
@@ -146,7 +142,7 @@ test.each([
   'mainFactory',
   'sidequestFactory',
   'vault',
-  't0',
+  'sidequestBlockZero',
   'sidequestBlock',
   'demoStack',
   'fastStack',
@@ -175,14 +171,14 @@ test.each([
   if (kind === 'mainFactory') config.deployment.main!.factory = '0x2222222222222222222222222222222222222222'
   if (kind === 'sidequestFactory') config.deployment.sidequest!.factory = '0x2222222222222222222222222222222222222222'
   if (kind === 'vault') artifact.deployment.sidequest.vault = '0x0000000000000000000000000000000000000000'
-  if (kind === 't0') config.deployment.sidequest!.t0 = 0
+  if (kind === 'sidequestBlockZero') config.deployment.sidequest!.block = 0
   if (kind === 'sidequestBlock') artifact.deployment.sidequest.block = 124
   if (kind === 'demoStack') config.deployment.demo = { ...config.deployment.main! }
   if (kind === 'fastStack') config.deployment.fast = { ...config.deployment.main! }
   expect(validateProdConfig(config, artifact).length).toBeGreaterThan(0)
 })
 
-test.each(['safe', 'factory', 'vault', 'feeSchedule', 'distributor', 'miningReserve', 'teamVesting'] as const)(
+test.each(['safe', 'factory', 'vault', 'feeSchedule'] as const)(
   'every v1 component %s requires an explicit matching address',
   (name) => {
     const { config, artifact } = configured()

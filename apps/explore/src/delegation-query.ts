@@ -73,7 +73,7 @@ async function readDelegations(contracts: SidequestContracts, delegator: Address
   const [wallet, open, cooldown] = await Promise.all([
     ctx.publicClient.readContract({
       address: contracts.factory,
-      abi: sdk.factoryV2Abi,
+      abi: sdk.sideTokenAbi,
       functionName: 'balanceOf',
       args: [delegator],
       blockNumber,

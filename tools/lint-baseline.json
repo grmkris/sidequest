@@ -1539,30 +1539,6 @@
     "typescript(no-explicit-any)": 1,
     "typescript(no-unnecessary-type-assertion)": 1
   },
-  "packages/sdk/src/abi/core.ts": {
-    "eslint(max-lines)": 1
-  },
-  "packages/sdk/src/abi/epochDistributor.ts": {
-    "eslint(max-lines)": 1
-  },
-  "packages/sdk/src/abi/factoryV2.ts": {
-    "eslint(max-lines)": 1
-  },
-  "packages/sdk/src/abi/feeSchedule.ts": {
-    "eslint(max-lines)": 1
-  },
-  "packages/sdk/src/abi/miningReserve.ts": {
-    "eslint(max-lines)": 1
-  },
-  "packages/sdk/src/abi/sidequestEvaluator.ts": {
-    "eslint(max-lines)": 1
-  },
-  "packages/sdk/src/abi/sidequestHolding.ts": {
-    "eslint(max-lines)": 1
-  },
-  "packages/sdk/src/abi/stakeVault.ts": {
-    "eslint(max-lines)": 1
-  },
   "packages/sdk/src/actions.test.ts": {
     "anti-slop(no-chained-type-assertions)": 2,
     "anti-slop(require-safety-comment-for-type-assertion)": 11,
@@ -1627,7 +1603,7 @@
   },
   "packages/sdk/src/deployment.ts": {
     "anti-slop(no-runtime-typeof)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 32,
+    "anti-slop(require-safety-comment-for-type-assertion)": 30,
     "complexity(complexity)": 2,
     "typescript(no-unnecessary-type-assertion)": 2
   },

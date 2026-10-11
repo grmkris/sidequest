@@ -89,10 +89,6 @@ function undeployed(): V1Deployment {
     factory: none,
     vault: none,
     feeSchedule: none,
-    distributor: none,
-    miningReserve: none,
-    teamVesting: none,
-    t0: 0,
   }
   return {
     network,

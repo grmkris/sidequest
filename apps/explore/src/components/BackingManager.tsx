@@ -229,7 +229,7 @@ function Stake({
         }
         const balance = await ctx.publicClient.readContract({
           address: contracts.factory,
-          abi: sdk.factoryV2Abi,
+          abi: sdk.sideTokenAbi,
           functionName: 'balanceOf',
           args: [owner],
         })

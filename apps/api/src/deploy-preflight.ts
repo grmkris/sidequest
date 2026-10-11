@@ -186,8 +186,6 @@ export async function assertTestnetProdConfig(
     ['feeSchedule', addresses.feeSchedule],
     ['holding', config.deployment.main.holding],
     ['evaluator', config.deployment.main.evaluator],
-    ['distributor', addresses.distributor],
-    ['miningReserve', addresses.miningReserve],
   ] as const) {
     try {
       const raw = await reader.call(address, ownerAbi)

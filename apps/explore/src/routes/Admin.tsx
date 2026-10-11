@@ -104,8 +104,6 @@ function adminContext(c: SidequestContracts, safe: Address, me: Address): AdminC
         ['notePause'],
         ['notePause'],
       ),
-      [c.miningReserve.toLowerCase()]: target('MiningReserve', sdk.miningReserveAbi, []),
-      [c.distributor.toLowerCase()]: target('EpochDistributor', sdk.epochDistributorAbi, []),
       [deployment.core.toLowerCase()]: {
         name: 'Core',
         abi: sdk.coreAbi as unknown as Abi,
@@ -461,8 +459,6 @@ function Ownership({ c, safe, act, busy }: { c: SidequestContracts; safe: Addres
     ['StakeVault', c.vault, sdk.stakeVaultAbi],
     ['SidequestHolding', c.holding, sdk.sidequestHoldingAbi],
     ['SidequestEvaluator', c.evaluator, sdk.sidequestEvaluatorAbi],
-    ['MiningReserve', c.miningReserve, sdk.miningReserveAbi],
-    ['EpochDistributor', c.distributor, sdk.epochDistributorAbi],
   ]
   const reads = useReadContracts({
     contracts: owned.flatMap(([, address, abi]) => [

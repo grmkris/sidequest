@@ -25,8 +25,6 @@ const FAST = {
   holdingDelay: 262800,
   feeDelay: 300,
   proposalGrace: 1800,
-  epochZeroDuration: 1800,
-  epochDuration: 3600,
 }
 const windowSum = (windows: ReturnType<typeof standardOfferWindows>) =>
   windows.reviewSeconds + windows.disputeSeconds + windows.arbitrationSeconds
@@ -45,8 +43,6 @@ function fixture() {
     HOLDING_DELAY: FAST.holdingDelay,
     PROPOSAL_GRACE: FAST.proposalGrace,
     DELAY: FAST.feeDelay,
-    EPOCH_ZERO_DURATION: FAST.epochZeroDuration,
-    EPOCH_DURATION: FAST.epochDuration,
   }
   const readContract = vi.fn(async ({ functionName }: { functionName: string; address: Address }) => {
     if (!(functionName in values)) throw new Error(`unexpected ${functionName}`)
@@ -86,8 +82,6 @@ describe('deploy-time clocks', () => {
     { holdingDelay: NaN },
     { feeDelay: 0 },
     { proposalGrace: 2 ** 48 },
-    { epochZeroDuration: 599 },
-    { epochDuration: Number.MAX_SAFE_INTEGER },
   ])('refuses invalid config clocks %j', (clocks) => {
     expect(() => clocksFromConfig({ ...PRODUCTION_CLOCKS, ...clocks }, 10143)).toThrow('Invalid Sidequest clock')
   })
@@ -111,7 +105,7 @@ describe('deploy-time clocks', () => {
     expect(f.readContract).toHaveBeenCalledTimes(12)
   })
 
-  it('reads delay/grace/epoch clocks from the right contracts, without reusing stale config values', async () => {
+  it('reads delay and grace clocks from the right contracts, without reusing stale config values', async () => {
     const f = fixture(),
       h = f.ctx.deployment.sidequest!
     const clocks = await readSidequestClocks(f.ctx)
@@ -123,10 +117,7 @@ describe('deploy-time clocks', () => {
     expect(f.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ address: h.feeSchedule, functionName: 'DELAY' }),
     )
-    expect(f.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({ address: h.miningReserve, functionName: 'EPOCH_DURATION' }),
-    )
-    expect(f.readContract).toHaveBeenCalledTimes(13)
+    expect(f.readContract).toHaveBeenCalledTimes(11)
   })
 
   it('does not cache failed reads or turn RPC failure into production clock evidence', async () => {

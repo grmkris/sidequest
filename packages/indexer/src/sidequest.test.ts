@@ -40,10 +40,6 @@ const d: sdk.Deployment = {
     factory: addr(1),
     vault: addr(4),
     feeSchedule: addr(5),
-    distributor: addr(6),
-    miningReserve: addr(7),
-    teamVesting: addr(8),
-    t0: 1_000,
   },
 }
 const contracts = contractsFromDeployment(d)

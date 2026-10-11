@@ -43,10 +43,13 @@ describe('v1 deployment config', () => {
     const c = currentConfig()
     delete c.deployment.sidequest!.clocks
     expect(deploymentFromConfig('monad-testnet', c).sidequest?.clocks).toBeUndefined()
-    c.deployment.sidequest!.clocks = { ...PRODUCTION_CLOCKS, minReviewWindow: 120, epochDuration: 3600 }
-    expect(deploymentFromConfig('monad-testnet', c).sidequest?.clocks?.epochDuration).toBe(3600)
-    c.deployment.sidequest!.clocks = { ...c.deployment.sidequest!.clocks, epochDuration: 599 }
-    expect(() => deploymentFromConfig('monad-testnet', c)).toThrow('epochDuration')
+    c.deployment.sidequest!.clocks = { ...PRODUCTION_CLOCKS, minReviewWindow: 120, feeDelay: 300 }
+    expect(deploymentFromConfig('monad-testnet', c).sidequest?.clocks?.feeDelay).toBe(300)
+    c.deployment.sidequest!.clocks = { ...c.deployment.sidequest!.clocks, feeDelay: 59 }
+    expect(() => deploymentFromConfig('monad-testnet', c)).toThrow('feeDelay')
+    // A record written before mining was deleted keeps its epoch clocks; they are ignored, not carried.
+    c.deployment.sidequest!.clocks = Object.assign({}, PRODUCTION_CLOCKS, { epochDuration: 3600 })
+    expect(deploymentFromConfig('monad-testnet', c).sidequest?.clocks).toEqual(PRODUCTION_CLOCKS)
     c.deployment.sidequest!.clocks = { ...PRODUCTION_CLOCKS, minReviewWindow: 120 }
     c.network = 'monad-mainnet'
     c.chainId = 143
@@ -75,7 +78,7 @@ describe('v1 deployment config', () => {
       c.deployment.sidequest!.safe = address(0)
     },
     (c: DeploymentConfig) => {
-      c.deployment.sidequest!.t0 = 0
+      c.deployment.sidequest!.feeSchedule = address(0)
     },
     (c: DeploymentConfig) => {
       c.deployment.sidequest!.block = 0.5

@@ -43,10 +43,6 @@ function fixture(network: sdk.Network = 'monad-testnet') {
       safe: addr('4'),
       vault: addr('3'),
       feeSchedule: addr('5'),
-      distributor: addr('6'),
-      miningReserve: addr('7'),
-      teamVesting: addr('8'),
-      t0: 1,
     },
   }
   const db = new DatabaseSync(':memory:')

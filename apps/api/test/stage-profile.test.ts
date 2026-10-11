@@ -85,7 +85,7 @@ test('live gate requires the matching stage, remote state, migrations, and compl
   expect(rpcUrlForNetwork({ SIDEQUEST_STAGE: 'prod', MONAD_TESTNET_RPC_URL: 'https://old.example' })).toBeUndefined()
 })
 
-test('testnet prod checks chain, stage signer keys and all six owners without mainnet clocks', async () => {
+test('testnet prod checks chain, stage signer keys and all four owners without mainnet clocks', async () => {
   const relayKey = `0x${'1'.repeat(64)}` as const,
     attesterKey = `0x${'2'.repeat(64)}` as const
   const p = { ...stageProfile('prod')!, relay: privateKeyToAccount(relayKey).address }
@@ -100,7 +100,7 @@ test('testnet prod checks chain, stage signer keys and all six owners without ma
     storage: async () => '0x00' as `0x${string}`,
   })
   await assertTestnetProdConfig(p, config, env, fetcher, reader)
-  expect(call).toHaveBeenCalledTimes(6)
+  expect(call).toHaveBeenCalledTimes(4)
   await expect(
     assertTestnetProdConfig(p, config, { ...env, RELAY_PRIVATE_KEY: attesterKey }, fetcher, reader),
   ).rejects.toThrow('relay')

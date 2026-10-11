@@ -10,11 +10,10 @@ import {
   encodeFunctionData,
   http,
   parseEther,
-  zeroAddress,
 } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { monadTestnet } from 'viem/chains'
-import { coreAbi, factoryV2Abi, sidequestHoldingAbi, stakeVaultAbi } from '../src/abi/index.ts'
+import { coreAbi, sideTokenAbi, sidequestHoldingAbi, stakeVaultAbi } from '../src/abi/index.ts'
 import type { Ctx, Wallet } from '../src/actions.ts'
 import { clocksFromConfig, deployment } from '../src/deployment.ts'
 import testnetConfig from '../../../contracts/config/monad-testnet.json'
@@ -170,12 +169,8 @@ export async function startSidequestFork() {
     ])
     // SIDE as the launcher creates it (no burn); the recipe deploys against an existing token and mints nothing.
     const factory = await deploy('LaunchToken', [admin.account.address])
-    // Fresh fixtures use the recipe's clocks, including the three-day bond horizon. The contracts no longer take epoch
-    // clocks; the SDK's clock type still names them until the mining fields leave the SDK schema.
-    const clocks = clocksFromConfig(
-      { ...testnetConfig.sidequest.clocks, epochZeroDuration: 1800, epochDuration: 3600 },
-      testnetConfig.chainId,
-    )
+    // Fresh fixtures use the recipe's clocks, including the three-day bond horizon.
+    const clocks = clocksFromConfig(testnetConfig.sidequest.clocks, testnetConfig.chainId)
     const feeSchedule = await deploy('FeeSchedule', [
       {
         thresholds: [0n, parseEther('10000'), parseEther('100000'), parseEther('1000000')],
@@ -198,12 +193,11 @@ export async function startSidequestFork() {
       clocks,
     ])
     const evaluator = await deploy('SidequestEvaluator', [core, holding, d.reputation])
-    const t0 = Number((await publicClient.getBlock()).timestamp)
     await send(core, coreAbi, 'setHookWhitelist', [holding, true])
     await send(holding, sidequestHoldingAbi, 'setEvaluator', [evaluator])
     await send(vault, stakeVaultAbi, 'bootstrapHolding', [holding])
     for (const account of [creator, worker, contributor])
-      await send(factory, factoryV2Abi, 'transfer', [account.account.address, parseEther('20000')])
+      await send(factory, sideTokenAbi, 'transfer', [account.account.address, parseEther('20000')])
     const stack = { kind: 'sidequest-v1' as const, factory, holding, evaluator, openTokens: true }
     const ctx: Ctx = {
       publicClient,
@@ -219,11 +213,6 @@ export async function startSidequestFork() {
           factory,
           vault,
           feeSchedule,
-          // No mining or vesting contracts exist any more; these placeholders go with the SDK schema's mining fields.
-          distributor: zeroAddress,
-          miningReserve: zeroAddress,
-          teamVesting: zeroAddress,
-          t0,
           clocks,
         },
       },

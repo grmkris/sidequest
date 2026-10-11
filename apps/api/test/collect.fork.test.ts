@@ -173,7 +173,7 @@ fork('B4 wallet tools and all-pair Collect on a real local Monad fork', () => {
     for (const wallet of [f.creator, f.worker]) {
       const prep = await board.stake(actor(wallet), { amount: '100' })
       expect(prep.amount).toBe(parseEther('100').toString())
-      const args = decodeFunctionData({ abi: sdk.factoryV2Abi, data: prep.transactions[0]!.data }).args as readonly [
+      const args = decodeFunctionData({ abi: sdk.sideTokenAbi, data: prep.transactions[0]!.data }).args as readonly [
         string,
         bigint,
       ]

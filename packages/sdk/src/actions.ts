@@ -28,7 +28,7 @@ import {
   sidequestHoldingAbi,
   sidequestEvaluatorAbi,
   stakeVaultAbi,
-  factoryV2Abi,
+  sideTokenAbi,
   testnetFaucetAbi,
 } from './abi/index.ts'
 import type { Deployment, Stack } from './deployment.ts'
@@ -557,8 +557,8 @@ export async function delegatePermit(ctx: Ctx, staker: Address, amount: bigint, 
   if (ctx.deployment.sidequest === null) throw new Error('delegatePermit is only available on sidequest-v1')
   const factory = ctx.deployment.sidequest.factory
   const [name, nonce] = await Promise.all([
-    ctx.publicClient.readContract({ address: factory, abi: factoryV2Abi, functionName: 'name' }),
-    ctx.publicClient.readContract({ address: factory, abi: factoryV2Abi, functionName: 'nonces', args: [staker] }),
+    ctx.publicClient.readContract({ address: factory, abi: sideTokenAbi, functionName: 'name' }),
+    ctx.publicClient.readContract({ address: factory, abi: sideTokenAbi, functionName: 'nonces', args: [staker] }),
   ])
   return {
     domain: { name, version: '1', chainId: ctx.deployment.chainId, verifyingContract: factory },

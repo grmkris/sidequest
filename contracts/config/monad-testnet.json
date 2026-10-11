@@ -59,8 +59,6 @@
     "sidequest": {
       "block": 69362265,
       "clocks": {
-        "epochDuration": 3600,
-        "epochZeroDuration": 1800,
         "feeDelay": 300,
         "holdingDelay": 262800,
         "minArbitrationWindow": 300,
@@ -69,13 +67,9 @@
         "proposalGrace": 1800,
         "unstakeDelay": 259200
       },
-      "distributor": "0x931DC564e1D4f768008a7965CF616Aa743B8DDa8",
       "factory": "0xbf0A7336d774729af63d415b5A6bDae8731b2e9B",
       "feeSchedule": "0x9e0CE88C25f5989fd9bC79c88EdB791f9f701033",
-      "miningReserve": "0x7B5e3D35B854EB8d578BdEA89C9d02EbBBA430BE",
       "safe": "0x77923113FD1a71Ad91F81064C3c05cA1EfB44CD8",
-      "t0": 1791494929,
-      "teamVesting": "0xDafD3e64d756BF206DFB160BBfb787252Ea74ED5",
       "vault": "0x0281F52d12ADbBe48DeF22a79ADef9A2308BD81b"
     },
     "testnetFaucet": "0x553b9256ac6C4114C61B6faAb06679757C7D4399"
@@ -139,10 +133,5 @@
   "boards": [
     "https://dev.sidequest.exchange",
     "https://sidequest.exchange"
-  ],
-  "mining": {
-    "creditRule": {
-      "fromEpoch": 44
-    }
-  }
+  ]
 }

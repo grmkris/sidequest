@@ -97,14 +97,7 @@ export async function runV1AdminFlow(d: V1FlowDeps & { safeOwner: sdk.Wallet }, 
       concat([pad(safeOwner.account.address, { size: 32 }), pad('0x', { size: 32 }), '0x01']),
     ])
   if (flow === 'admin-ownership') {
-    for (const target of [
-      h.vault,
-      h.feeSchedule,
-      ctx.stack.holding,
-      ctx.stack.evaluator,
-      h.distributor,
-      h.miningReserve,
-    ]) {
+    for (const target of [h.vault, h.feeSchedule, ctx.stack.holding, ctx.stack.evaluator]) {
       const owner = await ctx.publicClient.readContract({ address: target, abi: ownable, functionName: 'owner' })
       if (owner.toLowerCase() === h.safe.toLowerCase()) continue
       const pending = await ctx.publicClient.readContract({

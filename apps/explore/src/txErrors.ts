@@ -11,7 +11,7 @@ const ABIS = [
   sdk.sidequestEvaluatorAbi,
   sdk.stakeVaultAbi,
   sdk.feeScheduleAbi,
-  sdk.factoryV2Abi,
+  sdk.sideTokenAbi,
   sdk.coreAbi,
 ] as unknown as Abi[]
 

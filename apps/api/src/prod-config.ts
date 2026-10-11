@@ -23,10 +23,6 @@ interface ProdSidequest {
   factory: string | null
   vault: string | null
   feeSchedule: string | null
-  distributor: string | null
-  miningReserve: string | null
-  teamVesting: string | null
-  t0: number | null
 }
 
 export interface ProdArtifact {
@@ -171,22 +167,11 @@ function validateCompleteProdConfig(config: ChainConfig, artifact: ProdArtifact)
     sidequest !== undefined &&
       Number.isSafeInteger(sidequest.block) &&
       (sidequest.block ?? 0) > 0 &&
-      Number.isSafeInteger(sidequest.t0) &&
-      (sidequest.t0 ?? 0) > 0 &&
-      artifact.deployment.sidequest.block === sidequest.block &&
-      artifact.deployment.sidequest.t0 === sidequest.t0,
-    'sidequest block/T0',
+      artifact.deployment.sidequest.block === sidequest.block,
+    'sidequest block',
   )
   // D16 / PROD-GATE-001: the Safe that must own everything is part of the reviewed record, in config and artifact.
-  for (const name of [
-    'safe',
-    'factory',
-    'vault',
-    'feeSchedule',
-    'distributor',
-    'miningReserve',
-    'teamVesting',
-  ] as const) {
+  for (const name of ['safe', 'factory', 'vault', 'feeSchedule'] as const) {
     const value = sidequest?.[name]
     check(
       address(value) && artifact.deployment.sidequest[name]?.toLowerCase() === value.toLowerCase(),
@@ -294,8 +279,6 @@ const launchAbi = parseAbi([
   'function HOLDING_DELAY() view returns (uint48)',
   'function PROPOSAL_GRACE() view returns (uint48)',
   'function DELAY() view returns (uint48)',
-  'function EPOCH_ZERO_DURATION() view returns (uint48)',
-  'function EPOCH_DURATION() view returns (uint48)',
   'function MAX_REVIEW_WINDOW() view returns (uint32)',
   'function MAX_DISPUTE_WINDOW() view returns (uint32)',
   'function MAX_ARBITRATION_WINDOW() view returns (uint32)',
@@ -319,10 +302,6 @@ export const launchClockReads = [
   ['vault', 'PROPOSAL_GRACE', 'proposalGrace'],
   ['feeSchedule', 'DELAY', 'feeDelay'],
   ['feeSchedule', 'PROPOSAL_GRACE', 'proposalGrace'],
-  ['miningReserve', 'EPOCH_ZERO_DURATION', 'epochZeroDuration'],
-  ['miningReserve', 'EPOCH_DURATION', 'epochDuration'],
-  ['distributor', 'EPOCH_ZERO_DURATION', 'epochZeroDuration'],
-  ['distributor', 'EPOCH_DURATION', 'epochDuration'],
 ] as const
 
 /** The canonical SafeL2 v1.4.1 singleton on Monad (runbook §1.1); a Safe proxy keeps it at storage slot 0. */
@@ -335,15 +314,8 @@ const word = (value: unknown): value is `0x${string}` => typeof value === 'strin
 
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 
-/** The six Ownable2Step v1 contracts the Safe must own (not merely be pending for) before admission opens. */
-export const launchOwnedContracts = [
-  'vault',
-  'feeSchedule',
-  'holding',
-  'evaluator',
-  'distributor',
-  'miningReserve',
-] as const
+/** The four Ownable2Step v1 contracts the Safe must own (not merely be pending for) before admission opens. */
+export const launchOwnedContracts = ['vault', 'feeSchedule', 'holding', 'evaluator'] as const
 
 /** A floor given in wei (bigint) or in MON (string/number); undefined stays undefined, which the gate refuses. */
 export function relayFloorWei(floor: bigint | string | number | undefined): bigint | undefined {
@@ -504,8 +476,6 @@ export async function liveLaunchGate(
     feeSchedule: deployed.sidequest?.feeSchedule,
     holding: deployed.main?.holding,
     evaluator: deployed.main?.evaluator,
-    distributor: deployed.sidequest?.distributor,
-    miningReserve: deployed.sidequest?.miningReserve,
   }
   for (const name of launchOwnedContracts) {
     const owner = await read(`launch:owner:${name}`, () => view(owned[name], 'owner'))
@@ -519,7 +489,7 @@ export async function liveLaunchGate(
   if (input !== undefined) {
     for (const key of Object.keys(clocks) as (keyof LaunchClocks)[]) {
       const value = input?.[key]
-      const min = key.startsWith('min') ? 1 : key.startsWith('epoch') ? 600 : 60
+      const min = key.startsWith('min') ? 1 : 60
       const max = key.startsWith('min') ? 1209600 : 281474976710655
       if (
         !Number.isSafeInteger(value) ||

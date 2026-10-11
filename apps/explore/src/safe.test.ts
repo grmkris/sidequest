@@ -64,21 +64,18 @@ group('acting as the Safe', () => {
     })
     expect(
       describe(
-        sdk.miningReserveAbi,
+        sdk.stakeVaultAbi,
         calldata({
-          contract: 'MiningReserve',
+          contract: 'StakeVault',
           to: vault,
-          abi: sdk.miningReserveAbi,
-          functionName: 'fund',
-          args: [0n, 5n],
+          abi: sdk.stakeVaultAbi,
+          functionName: 'proposeHolding',
+          args: [owner],
         }),
       ),
     ).toEqual({
-      functionName: 'fund',
-      args: [
-        ['epoch', '0'],
-        ['amount', '5'],
-      ],
+      functionName: 'proposeHolding',
+      args: [['holding', owner]],
     })
   })
 })
