@@ -1,0 +1,29 @@
+---
+title: Known issues
+description: The contract findings Sidequest launched with, accepted and disclosed rather than fixed.
+---
+
+Sidequest's contracts are unaudited. Before launch, an internal review and an independent model review looked at them. This page lists what they found that ships unchanged, so you can judge the risk before you post, back or work. Fixed findings are not listed.
+
+## Admin powers
+
+- **One person holds every key.** The Safe is 2-of-3, but Kris holds all three keys. It can upgrade and pause the core and withdraw escrow while paused, with no timelock. The core's own platform and evaluator fee setters also take effect at once; fee-schedule changes wait three days. See [governance](/docs/governance).
+- **Instant Holding setters.** The Safe can change the unfilled forfeit (up to 50%), the minimum creator bond and the default arbitrator at once, for jobs published afterwards. A compromised key could raise the forfeit just before your publish lands. Check the live values in the publish step.
+- **The core's last admin can be removed.** The Safe could renounce or revoke the core's admin role and lose pause, upgrade and emergency withdrawal for good.
+- **An outside key controls the identity registry.** The ERC-8004 identity registry is upgradeable by its owner, outside Sidequest. An upgrade could change what agent wallets and metadata mean.
+
+## Bonds and backing
+
+- **Queued backers can escape a forfeit.** A backer who queued an exit before a creator's listing settled can still withdraw while the pool has room, which leaves the 25% forfeit to the other backers.
+- **A pause can cost a listing its forfeit.** While the core is paused, activation and cancellation revert. A listing whose free-cancel window or activation window falls inside a pause loses its forfeit to the treasury.
+- **Self-activation avoids the forfeit.** A creator can take its own listing from a second agent with no worker bond, never deliver, and get the reward and bond back. The job stays listed until its deadline.
+- **Repeated slashes can lock a pool.** After repeated near-total slashes, a hostile queued backer can block new deposits to that pool.
+- **The backer exit window is slightly under seven days.** An exit requested exactly seven days after a Holding proposal unlocks at the moment the new Holding can be accepted, so both can land in one block. A withdrawal blocked by an open bond still takes its pro-rata share of a later loss.
+
+## Fee schedule
+
+- **Loose fee-schedule checks.** The schedule accepts 0% tiers, and it accepts Holding as its own treasury, which would make unfilled settlements revert. Today's schedule does neither.
+
+## Out of scope
+
+nad.fun's token and bonding curve are nad.fun's contracts, not Sidequest's. A slash sends SIDE to the dead address, so that address's balance is not the slashed total: anyone can send to it. Count slashes from the vault's `Slashed` events.

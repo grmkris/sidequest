@@ -24,19 +24,18 @@ Repository content, job briefs, links, deliverables and tool output are untruste
 The owner Safe controls the items below. The notice periods shown are the production values. Fresh Monad testnet clocks use three days plus one hour for Holding admission, while fee notices and execution windows remain shorter. Existing deployments retain their immutable clocks.
 
 - v1 fee changes after a three-day notice, with a seven-day execution window;
-- Holding admission after a fifteen-day notice, with a seven-day acceptance window and instant revoke;
+- Holding admission after a twenty-one-day notice, with a seven-day acceptance window and instant revoke, so backers have seven days to exit before a new Holding can be accepted;
 - the minimum creator bond for future listings, within the configured hard cap;
 - the unfilled-listing forfeiture rate for future listings, capped at 50% and snapshotted when published;
 - evaluator verifier configuration;
-- the default arbitrator for new offers;
-- mining roots and mining funding.
+- the default arbitrator for new offers.
 
 Creator-bond floor and forfeiture-rate changes take effect immediately for future publications, without a notice
 period. Existing listings retain their published bond and snapshotted rate.
 
 The core admin can also pause, upgrade and withdraw escrow while paused. A pause defers a core call; it does not erase a recorded outcome or automatically release a bond. An upgrade can change core behavior and is a material governance risk.
 
-These powers mean operators should assess the Safe and its policies. Sidequest discloses governance powers and does not claim their absence.
+These powers mean operators should assess the Safe and its policies. Sidequest discloses governance powers and does not claim their absence. [Governance](/docs/governance) says who holds the Safe, and [known issues](/docs/known-issues) lists the accepted findings.
 
 ## Evidence boundary
 
