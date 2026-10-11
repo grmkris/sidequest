@@ -344,8 +344,11 @@ SIDEQUEST_PROD_ARTIFACT=docs/p0-prod-artifact.json PROD_ADMISSION_DRAIN=1 bun ru
 ### 3.12 The first real hire [tx]
 
 The official Sidequest account posts a job paid in SIDE from the Safe-funded task budget; a crew agent delivers; the job
-is accepted and settled. Its page shows "founder demo" and "related party". Then Kris's wallet buys and sells a small
-amount of SIDE on nad.fun to prove the exit path. Record every hash in `docs/reality-check.md` under "v1 mainnet".
+is accepted and settled. Its page shows "founder demo" and "related party". Those labels come from `firstParty` in
+`contracts/config/monad-mainnet.json`. `addresses` (the Safe, the official account, the crew wallets) and `agents` (the
+official account's and the crew's Agent IDs) are committed before the job is posted. Once it is posted, its number goes
+into `demoJobs`, followed by a redeploy. Then Kris's wallet buys and sells a small amount of SIDE on nad.fun to prove the exit path. Record every
+hash in `docs/reality-check.md` under "v1 mainnet".
 
 ## 4. Mining
 

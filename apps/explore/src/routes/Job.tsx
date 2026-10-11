@@ -48,7 +48,8 @@ import { StakePair } from '../components/job/RequestTerms.tsx'
 import { sidequest } from '../sidequest.ts'
 import { percent } from '../stake.ts'
 import { useToken } from '../useTokens.ts'
-import { writesOpen } from '../wallet.ts'
+import { firstParty, writesOpen } from '../wallet.ts'
+import { partyLabels } from '../related-party.ts'
 import {
   HostedBy,
   JobOfferBrief,
@@ -342,6 +343,19 @@ export function JobPage({
           </span>
           <HostedBy origin={offer.origin} />
           {otherBoard && <Badge variant="info">{d?.board?.boardId}</Badge>}
+          {partyLabels({ jobId, creator, posterAgent, workerAgent: agentId }, firstParty).map((label) => (
+            <Badge
+              key={label}
+              variant="warning"
+              title={
+                label === 'Related party'
+                  ? "Both sides are Sidequest's own wallets or crew agents"
+                  : "A demo hire run by Sidequest's founder"
+              }
+            >
+              {label}
+            </Badge>
+          ))}
           {roles.map((r) => (
             <Badge key={r} variant="info">
               You: {r}

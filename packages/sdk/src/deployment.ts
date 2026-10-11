@@ -213,6 +213,8 @@ export interface DeploymentConfig {
   nadfun?: { app?: string; [key: string]: unknown }
   /** The deploy recipe's input; `token` is the existing SIDE it deploys against (contracts/script/SidequestRecipe.sol). */
   sidequest?: { token?: string; [key: string]: unknown }
+  /** See `NetworkMeta.firstParty`. */
+  firstParty?: { addresses?: string[]; agents?: string[]; demoJobs?: string[] }
   usdPegged?: string[]
   mining?: { creditRule?: { fromEpoch: string | number | bigint } }
   deployment: {
@@ -298,11 +300,18 @@ export function deployment(network: Network): Deployment {
  * - `getSide`: SIDE's page on its launcher, where people get it while it has no market of ours: `nadfun.app` and the
  *   SIDE address (`sidequest.token`, then the deployed `factory`). Absent until both are known.
  * - `usdPegged`: tokens Explore values at one US dollar each in its estimates. Anything else needs a live price.
+ * - `firstParty`: Sidequest's own wallets (the Safe, the official account, the crew) and crew Agent IDs, so a job
+ *   between them is labelled a related party; `demoJobs` are the founder demo hires. Empty until the config names them.
  */
 export interface NetworkMeta {
   readonly links: { readonly testnet?: string; readonly mainnet?: string; readonly x?: string }
   readonly getSide?: string
   readonly usdPegged: readonly Address[]
+  readonly firstParty: {
+    readonly addresses: readonly Address[]
+    readonly agents: readonly string[]
+    readonly demoJobs: readonly string[]
+  }
 }
 
 export function networkMeta(network: Network): NetworkMeta {
@@ -326,6 +335,16 @@ function getSideFromConfig(c: DeploymentConfig): string | undefined {
   return app === undefined || side === undefined ? undefined : `${app}/tokens/${side}`
 }
 
+const DECIMAL_ID = /^[1-9][0-9]*$/
+
+function firstPartyFromConfig(c: DeploymentConfig): NetworkMeta['firstParty'] {
+  const { addresses = [], agents = [], demoJobs = [] } = c.firstParty ?? {}
+  if (!addresses.every(validAddress)) throw new Error('Network config firstParty.addresses must list addresses')
+  if (![...agents, ...demoJobs].every((id) => DECIMAL_ID.test(id)))
+    throw new Error('Network config firstParty agents and demoJobs must be decimal ids')
+  return { addresses, agents, demoJobs }
+}
+
 export function networkMetaFromConfig(c: DeploymentConfig): NetworkMeta {
   const testnetOrigin = originAt('links.testnet', c.links?.testnet)
   const mainnetOrigin = originAt('links.mainnet', c.links?.mainnet)
@@ -343,6 +362,7 @@ export function networkMetaFromConfig(c: DeploymentConfig): NetworkMeta {
       ),
     ),
     usdPegged,
+    firstParty: firstPartyFromConfig(c),
   }
 }
 

@@ -136,6 +136,15 @@ describe('network meta', () => {
     const launched = { ...c, nadfun: { app: 'https://nad.fun' }, sidequest: { token: side } }
     expect(networkMetaFromConfig(launched).getSide).toBe(`https://nad.fun/tokens/${side}`)
     expect(() => networkMetaFromConfig({ ...launched, sidequest: { token: 'SIDE' } })).toThrow('token address')
+  })
+  it('reads the first-party wallets, crew agents and demo jobs, empty until named', () => {
+    const c = currentConfig()
+    expect(networkMeta('monad-mainnet').firstParty).toEqual({ addresses: [], agents: [], demoJobs: [] })
+    const safe = '0x2222222222222222222222222222222222222222'
+    const named = { ...c, firstParty: { addresses: [safe], agents: ['2023'], demoJobs: ['1'] } }
+    expect(networkMetaFromConfig(named).firstParty).toEqual({ addresses: [safe], agents: ['2023'], demoJobs: ['1'] })
+    expect(() => networkMetaFromConfig({ ...c, firstParty: { addresses: ['Safe'] } })).toThrow('firstParty.addresses')
+    expect(() => networkMetaFromConfig({ ...c, firstParty: { demoJobs: ['#1'] } })).toThrow('decimal ids')
     expect(() => networkMetaFromConfig({ ...c, usdPegged: ['USDC'] })).toThrow('token addresses')
   })
 })
