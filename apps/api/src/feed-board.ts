@@ -40,48 +40,6 @@ export function boardFeedEvents(board: Sql, input: BoardToolEvent): FeedEvent[] 
     return request === undefined ? {} : { requestId: request.id }
   }
 
-  if (tool === 'pick_quote') {
-    const requestId = text(args.requestId),
-      quoteId = text(args.quoteId),
-      target = task(text(result.taskId))
-    if (requestId === undefined || target === undefined) return []
-    // Every other bidder learns it lost (gap 4): list_quotes then shows the winning quote and its price.
-    const lost: FeedEvent[] =
-      quoteId === undefined
-        ? []
-        : board
-            .all<{ worker: string }>('SELECT worker FROM quotes WHERE request_id = ? AND id <> ?', requestId, quoteId)
-            .map(({ worker }) => ({
-              id: `board:${boardId}:quote-lost:${requestId}:${worker.toLowerCase()}`,
-              address: worker,
-              kind: 'quote.lost',
-              boardId,
-              requestId,
-              taskId: target.id,
-              jobId: target.job_id,
-              role: 'bidder',
-              summary: `Another quote was picked on request ${requestId}.`,
-              url: `${base}/request/${encodeURIComponent(requestId)}`,
-              next: { tool: 'list_quotes', args: { requestId } },
-              occurredAt: now,
-            }))
-    const picked = [target.creator, PUBLIC_ADDRESS].map((address) => ({
-      id: `board:${boardId}:picked:${requestId}:${address.toLowerCase()}`,
-      address,
-      kind: 'request.picked',
-      boardId,
-      requestId,
-      taskId: target.id,
-      jobId: target.job_id,
-      role: address === PUBLIC_ADDRESS ? 'public' : 'creator',
-      summary: `Quote request ${requestId} is linked to task ${target.id}; read the chain to verify escrow.`,
-      url: jobUrl(target),
-      next: { tool: 'get_task', args: { taskId: target.id } },
-      occurredAt: now,
-    }))
-    return [...picked, ...lost]
-  }
-
   if (tool === 'submit_quote') {
     const requestId = text(args.requestId),
       quoteHash = text(result.quoteHash)
@@ -194,10 +152,11 @@ export function boardFeedEvents(board: Sql, input: BoardToolEvent): FeedEvent[] 
     ]
   }
   if (tool === 'report_transaction') {
-    // An invitation is news once its offer is escrowed on chain, not when the creator only prepared it.
+    // An invitation, and a pick, is news once its offer is escrowed on chain, not when the creator only prepared it:
+    // an over-budget pick its operator rejects never publishes, so it is never announced.
     const target = task(text(args.taskId))
     if (target === undefined || target.job_id === null) return []
-    return board
+    const invited = board
       .all<{ worker: string }>(
         "SELECT worker FROM applications WHERE task_id = ? AND (note = 'direct hire invitation' OR note LIKE 'picked quote %')",
         target.id,
@@ -216,8 +175,61 @@ export function boardFeedEvents(board: Sql, input: BoardToolEvent): FeedEvent[] 
         next: { tool: 'get_task', args: { taskId: target.id } },
         occurredAt: now,
       }))
+    return [...pickEvents(board, { boardId, base, now }, { ...target, job_id: target.job_id }), ...invited]
   }
   return []
+}
+
+/**
+ * A picked quote's notices, once its job is on chain: the creator and the public learn the request is hired, and
+ * every other bidder that its quote lost (gap 4: list_quotes then shows the winning quote and its price). Event ids
+ * are those the pick itself used to send, so a pick announced before this moved is not announced again.
+ */
+function pickEvents(
+  board: Sql,
+  where: { readonly boardId: string; readonly base: string; readonly now: number },
+  target: { readonly id: string; readonly creator: string; readonly job_id: string },
+): FeedEvent[] {
+  const { boardId, base, now } = where
+  const request = board.all<{ id: string }>('SELECT id FROM quote_requests WHERE task_id = ?', target.id)[0]
+  const pick = board.all<{ note: string }>(
+    "SELECT note FROM applications WHERE task_id = ? AND note LIKE 'picked quote %'",
+    target.id,
+  )[0]
+  if (request === undefined || pick === undefined) return []
+  const requestId = request.id
+  const quoteId = pick.note.slice('picked quote '.length)
+  const lost = board
+    .all<{ worker: string }>('SELECT worker FROM quotes WHERE request_id = ? AND id <> ?', requestId, quoteId)
+    .map(({ worker }) => ({
+      id: `board:${boardId}:quote-lost:${requestId}:${worker.toLowerCase()}`,
+      address: worker,
+      kind: 'quote.lost',
+      boardId,
+      requestId,
+      taskId: target.id,
+      jobId: target.job_id,
+      role: 'bidder',
+      summary: `Another quote was picked on request ${requestId}.`,
+      url: `${base}/request/${encodeURIComponent(requestId)}`,
+      next: { tool: 'list_quotes', args: { requestId } },
+      occurredAt: now,
+    }))
+  const picked = [target.creator, PUBLIC_ADDRESS].map((address) => ({
+    id: `board:${boardId}:picked:${requestId}:${address.toLowerCase()}`,
+    address,
+    kind: 'request.picked',
+    boardId,
+    requestId,
+    taskId: target.id,
+    jobId: target.job_id,
+    role: address === PUBLIC_ADDRESS ? 'public' : 'creator',
+    summary: `Quote request ${requestId} is hired as job #${target.job_id}.`,
+    url: `${base}/job/${encodeURIComponent(target.job_id)}`,
+    next: { tool: 'get_task', args: { taskId: target.id } },
+    occurredAt: now,
+  }))
+  return [...picked, ...lost]
 }
 
 /** Writes the tool's feed rows and Telegram notices; logs and swallows every failure. */

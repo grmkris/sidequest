@@ -75,15 +75,12 @@ describe('board feed hook', () => {
     })
     // A request's page lives in the Jobs list's request route; /quotes/<id> only redirects there.
     expect(quote[0]).toMatchObject({ url: 'https://dev.sidequest.exchange/request/r1' })
-    board.run("UPDATE quote_requests SET task_id = 't1' WHERE id = 'r1'")
-    expect(boardFeedEvents(board, call('pick_quote', { requestId: 'r1' }, { taskId: 't1' }))).toEqual(
-      expect.arrayContaining([expect.objectContaining({ kind: 'request.picked', requestId: 'r1', taskId: 't1' })]),
-    )
     expect(boardFeedEvents(board, call('get_task', { taskId: 't1' }, {}))).toEqual([])
     expect(boardFeedEvents(board, call('apply', { taskId: 'nope' }, { applicationId: 'a9' }))).toEqual([])
   })
 
-  it('tells every other bidder its quote lost when the creator picks one, without its text', async () => {
+  // A pick is announced once its job is on chain: an over-budget pick its operator rejects never publishes.
+  it('announces a pick to the creator, the public and every losing bidder only once the job is on chain', async () => {
     const { board } = await setup()
     const loser = '0x3333333333333333333333333333333333333333'
     for (const [id, bidder] of [
@@ -97,7 +94,20 @@ describe('board feed hook', () => {
         `0x${id}`,
       )
     board.run("UPDATE quote_requests SET task_id = 't1' WHERE id = 'r1'")
-    const events = boardFeedEvents(board, call('pick_quote', { requestId: 'r1', quoteId: 'q1' }, { taskId: 't1' }))
+    board.run("UPDATE applications SET note = 'picked quote q1' WHERE id = 'a1'")
+    expect(boardFeedEvents(board, call('pick_quote', { requestId: 'r1', quoteId: 'q1' }, { taskId: 't1' }))).toEqual([])
+    expect(boardFeedEvents(board, call('report_transaction', { taskId: 't1' }, {}))).toEqual([])
+    board.run("UPDATE tasks SET job_id = '42' WHERE id = 't1'")
+    const events = boardFeedEvents(board, call('report_transaction', { taskId: 't1' }, {}))
+    expect(events.filter((e) => e.kind === 'request.picked')).toEqual([
+      expect.objectContaining({
+        id: `board:public:picked:r1:${creator}`,
+        address: creator,
+        role: 'creator',
+        jobId: '42',
+      }),
+      expect.objectContaining({ id: 'board:public:picked:r1:*', address: '*', role: 'public' }),
+    ])
     expect(events.filter((e) => e.kind === 'quote.lost')).toEqual([
       expect.objectContaining({
         id: `board:public:quote-lost:r1:${loser}`,
@@ -107,7 +117,22 @@ describe('board feed hook', () => {
         next: { tool: 'list_quotes', args: { requestId: 'r1' } },
       }),
     ])
+    expect(events.filter((e) => e.kind === 'invite.received')).toEqual([
+      expect.objectContaining({ address: worker, jobId: '42' }),
+    ])
     expect(JSON.stringify(events)).not.toContain('private note')
+  })
+
+  it('announces a pick once however often its publish is reported', async () => {
+    const { board, d1 } = await setup()
+    board.run("UPDATE quote_requests SET task_id = 't1' WHERE id = 'r1'")
+    board.run("UPDATE applications SET note = 'picked quote q1' WHERE id = 'a1'")
+    board.run("UPDATE tasks SET job_id = '42' WHERE id = 't1'")
+    for (let i = 0; i < 2; i++) await recordBoardEvent(board, d1, call('report_transaction', { taskId: 't1' }, {}))
+    const inbox = await readInbox(d1, { network, address: creator, kinds: ['request.picked'], now })
+    // The creator's inbox holds its own notice and the public one, each once.
+    const ids = inbox.events.filter((e) => e.kind === 'request.picked').map((e) => e.id)
+    expect(ids.toSorted()).toEqual([`board:public:picked:r1:*`, `board:public:picked:r1:${creator}`].toSorted())
   })
 
   it('tells an invited worker only once the offer is escrowed on chain', async () => {
