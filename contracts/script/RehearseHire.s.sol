@@ -122,8 +122,9 @@ contract RehearseHire is RehearsalScript {
         jobId = holding.publish(p);
         vm.stopBroadcast();
 
+        // The selection nonce is per creator, and this creator selects twice: the job id keeps each one unique.
         ISidequestHolding.Selection memory sel =
-            ISidequestHolding.Selection(jobId, worker, agentId, policy, deadline - 1, 1);
+            ISidequestHolding.Selection(jobId, worker, agentId, policy, deadline - 1, jobId);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorKey, holding.selectionDigest(sel));
         (, fee, net) = holding.quoteActivation(jobId, worker);
         ERC8183WithAuthorization.Authorization memory auth =
@@ -171,13 +172,14 @@ contract RehearseHire is RehearsalScript {
                 token,
                 amount,
                 keccak256(""),
-                uint72(1),
+                uint72(jobId),
                 deadline
             )
         );
         (uint8 v, bytes32 r, bytes32 s) =
             vm.sign(key, keccak256(abi.encodePacked("\x19\x01", core.DOMAIN_SEPARATOR(), structHash)));
-        return ERC8183WithAuthorization.Authorization(signer, 1, deadline, abi.encodePacked(r, s, v));
+        // The authorization nonce is per signer, and this worker authorizes two budgets: the job id keeps each unique.
+        return ERC8183WithAuthorization.Authorization(signer, uint72(jobId), deadline, abi.encodePacked(r, s, v));
     }
 }
 
