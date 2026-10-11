@@ -9,7 +9,7 @@ import {
 } from 'viem'
 import { expect, it } from 'vitest'
 import { coreAbi, sidequestHoldingAbi, stakeVaultAbi } from './abi/index.ts'
-import { type JobEconomics, verifyJobEconomics, verifyOwedWithdrawal } from './v1-flow-economics.ts'
+import { type JobEconomics, SLASH_SINK, verifyJobEconomics, verifyOwedWithdrawal } from './v1-flow-economics.ts'
 
 const addr = (n: number) => `0x${n.toString(16).padStart(40, '0')}` as Address
 const x: JobEconomics = {
@@ -43,13 +43,13 @@ function log(abi: Abi, name: string, address: Address, args: Record<string, unkn
 }
 const receipt = (logs: ReturnType<typeof log>[]): TransactionReceipt =>
   ({ status: 'success', transactionHash: `0x${'1'.repeat(64)}`, logs }) as TransactionReceipt
-function terminal(owed = false) {
+function terminal(owed = false, slashTo: Address = zeroAddress) {
   return receipt([
     log(sidequestHoldingAbi, 'BondReleased', x.holding, { jobId: x.jobId, side: 0, account: x.creator, amount: 10n }),
     log(stakeVaultAbi, 'Released', x.vault, { holding: x.holding, account: x.creator, amount: 10n }),
     log(sidequestHoldingAbi, 'BondSlashed', x.holding, { jobId: x.jobId, side: 1, account: x.worker, amount: 10n }),
     log(stakeVaultAbi, 'Slashed', x.vault, { holding: x.holding, account: x.worker, amount: 10n }),
-    log(erc20Abi, 'Transfer', x.factory, { from: x.vault, to: zeroAddress, value: 10n }),
+    log(erc20Abi, 'Transfer', x.factory, { from: x.vault, to: slashTo, value: 10n }),
     ...(owed
       ? [
           log(sidequestHoldingAbi, 'RewardSettled', x.holding, {
@@ -74,6 +74,10 @@ function terminal(owed = false) {
 it('proves exact per-job release, burn and payment from authentic receipts', () => {
   verifyJobEconomics([terminal()], x)
   verifyJobEconomics([terminal(true)], { ...x, workerOwed: 70n })
+})
+it('counts a slash sent to the slash sink as the burn of a launcher SIDE without burn()', () => {
+  verifyJobEconomics([terminal(false, SLASH_SINK)], x)
+  expect(() => verifyJobEconomics([terminal(false, addr(9))], x)).toThrow()
 })
 it('requires the actual Vault effects, supply burn and token transfer alongside protocol statements', () => {
   const r = terminal()

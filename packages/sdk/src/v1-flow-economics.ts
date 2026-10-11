@@ -3,6 +3,9 @@ import { erc20Abi } from 'viem'
 import { type Abi, type Address, type TransactionReceipt, decodeEventLog, zeroAddress } from 'viem'
 import { coreAbi, sidequestHoldingAbi, stakeVaultAbi } from './abi/index.ts'
 
+/** SidequestConstants.SLASH_SINK: where the vault sends slashed SIDE, since the launcher's token has no burn. */
+export const SLASH_SINK: Address = '0x000000000000000000000000000000000000dEaD'
+
 interface Event {
   name: string
   args: Record<string, unknown>
@@ -71,10 +74,11 @@ export function verifyJobEconomics(receipts: readonly TransactionReceipt[], x: J
     exact(`side ${side} Vault slash`, amount(vault, 'Slashed', vaultMatch), slash ? bond : 0n)
   }
   const transfers = events(receipts, erc20Abi, x.factory)
-  // Factory v2 burns supply, so the recipient is zero (not the legacy dead-address sink).
+  // A slash leaves circulation: vaults up to testnet G1e burn their Factory token (recipient zero); the current vault
+  // sends it to the slash sink, because the launcher's SIDE has no burn.
   exact(
-    'SIDE burned by Vault',
-    amount(transfers, 'Transfer', (a) => eq(a.from, x.vault) && eq(a.to, zeroAddress)),
+    'SIDE slashed out of circulation by Vault',
+    amount(transfers, 'Transfer', (a) => eq(a.from, x.vault) && (eq(a.to, zeroAddress) || eq(a.to, SLASH_SINK))),
     (x.slashCreator ? x.creatorBond : 0n) + (x.slashWorker ? x.workerBond : 0n),
   )
   const core = events(receipts, coreAbi, x.core).filter(
