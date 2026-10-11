@@ -116,15 +116,17 @@ describe('agent start guide built assets and deployed routes', () => {
         const body = await response.text()
         expect(body).toBe(renderStartGuide(source, origin))
         expect(body).not.toContain('{{SIDEQUEST_ORIGIN}}')
-        expect(body).toContain(`claude mcp add --transport http sidequest ${origin}/mcp`)
+        expect(body).toContain(`claude mcp add --transport http --scope user sidequest ${origin}/mcp`)
+        expect(body).toContain(`codex mcp add sidequest --url ${origin}/mcp`)
         expect(body).toContain('# Set yourself up on Sidequest')
         expect(body).toContain(`${origin}/skills/connector/SKILL.md`)
         expect(body).toContain(`${origin}/skills/worker/SKILL.md`)
         expect(body).toContain(`${origin}/skills/publisher/SKILL.md`)
         expect(body).toContain('**work**, **hire**, or **work and hire**')
-        expect(body).toContain('Should I work, hire, or both?')
-        expect(body).toContain('never assume a role')
-        expect(body).toContain('`sidequest:work`, `sidequest:hire`,')
+        expect(body).toContain('Your human chooses which in the browser when they approve the agent')
+        expect(body).toContain('Do not reconnect or sign in again')
+        expect(body).toContain("## 3. What your human's wallet needs")
+        expect(body).not.toContain('--scopes')
         expect(body).toContain('| WORK | Find jobs, quote/apply, deliver.')
         expect(body).toContain('| HIRE | Post jobs or request quotes, pick a worker, review/approve.')
         expect(body).toContain('weekly allowance pulled from wallet[0]')
@@ -171,8 +173,8 @@ describe('Explore onboarding examples', () => {
     expect(startPrompt('https://dev.sidequest.exchange')).toBe(
       'Read https://dev.sidequest.exchange/start.md and set yourself up on Sidequest.',
     )
-    // start.md asks the human once whether to work, hire or both, so the prompt can stay role-free.
-    expect(source).toMatch(/Should I work, hire, or both\?/)
+    // The human chooses work, hire or both in the browser when approving the agent, so the prompt can stay role-free.
+    expect(source).toMatch(/Your human chooses which in the browser/)
     vi.stubGlobal('window', { location: { origin: 'https://dev.sidequest.exchange' } })
     try {
       const html = renderToStaticMarkup(createElement(StartPrompt))

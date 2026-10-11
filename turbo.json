@@ -119,7 +119,8 @@
         "$TURBO_ROOT$/apps/explore/src/**",
         "$TURBO_ROOT$/apps/docs/src/**",
         "$TURBO_ROOT$/apps/docs/content/**",
-        "$TURBO_ROOT$/scripts/gen-docs.mjs"
+        "$TURBO_ROOT$/scripts/gen-docs.mjs",
+        "$TURBO_ROOT$/scripts/gen-skills.mjs"
       ],
       "outputs": [],
       "env": [
