@@ -320,7 +320,24 @@ export async function mcpRoute(input: {
     const settled = modern ? settledCreation(params, name, grant) : undefined
     if (settled !== undefined) return respond(settled)
     const refusal = toolRefusal(grant, name)
-    if (refusal !== undefined) return respond(refusal)
+    // ADR-0021: a missing scope is the MCP step-up, so a client that can will ask its user for more access.
+    if (refusal !== undefined && 'stepUp' in refusal)
+      return json(
+        {
+          jsonrpc: '2.0',
+          id: id ?? null,
+          error: {
+            code: -32003,
+            message: `insufficient_scope: this connection was not granted ${name}. Sign in to Sidequest again to grant it; a client that cannot step up must reconnect.`,
+            data: { scope: refusal.stepUp },
+          },
+        },
+        403,
+        {
+          'www-authenticate': `Bearer error="insufficient_scope", scope="${refusal.stepUp}", resource_metadata="${origin}/.well-known/oauth-protected-resource${pathname}"`,
+        },
+      )
+    if (refusal !== undefined) return respond(refusal.result)
     if (name === 'get_instructions') {
       const role = typeof args.role === 'string' ? args.role : 'connector'
       return respond(
@@ -350,16 +367,7 @@ export async function mcpRoute(input: {
           ? grant.agentIds[0]!
           : ''
     if (!grant.agentIds.includes(agentId))
-      return respond({
-        content: [{ type: 'text', text: 'forbidden: select one granted agent' }],
-        isError: true,
-        _meta: {
-          'mcp/www_authenticate': {
-            error: 'insufficient_scope',
-            error_description: 'Select one agent granted by this connection',
-          },
-        },
-      })
+      return respond({ content: [{ type: 'text', text: 'forbidden: select one granted agent' }], isError: true })
     try {
       const run = () =>
         Object.hasOwn(hiringTools, name) ? renderHiring(name, args, agentId, call) : call(name, args, agentId)
@@ -392,21 +400,7 @@ export async function mcpRoute(input: {
         content: [{ type: 'text', text: JSON.stringify(name === 'whoami' ? structuredContent : output) }],
         structuredContent,
         ...(name === 'whoami' ? { _meta: { 'openai/profile': true } } : {}),
-        ...(failed
-          ? {
-              isError: true,
-              ...(['forbidden', 'unauthenticated'].includes(String((output as { code?: string }).code))
-                ? {
-                    _meta: {
-                      'mcp/www_authenticate': {
-                        error: 'insufficient_scope',
-                        error_description: String((output as { message?: string }).message ?? 'Access is not granted'),
-                      },
-                    },
-                  }
-                : {}),
-            }
-          : {}),
+        ...(failed ? { isError: true } : {}),
       })
     } catch (error) {
       const failure = agentFailureReply(error, 'The tool failed')
@@ -414,9 +408,6 @@ export async function mcpRoute(input: {
         content: [{ type: 'text', text: JSON.stringify(failure) }],
         structuredContent: failure,
         isError: true,
-        ...(['forbidden', 'unauthenticated'].includes(failure.code)
-          ? { _meta: { 'mcp/www_authenticate': { error: 'insufficient_scope', error_description: failure.message } } }
-          : {}),
       })
     }
   }

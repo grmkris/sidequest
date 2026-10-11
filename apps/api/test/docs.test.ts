@@ -217,9 +217,14 @@ describe('authenticated search_docs', () => {
         (tool) => tool.name,
       ),
     ).not.toContain('search_docs')
-    expect(
-      result(await route('tools/call', { name: 'search_docs', arguments: { query: 'work' } }, { grant: hireGrant })),
-    ).toHaveProperty('isError', true)
+    // ADR-0021: calling it anyway is MCP's step-up, asking the client for the read scope.
+    const called = await route(
+      'tools/call',
+      { name: 'search_docs', arguments: { query: 'work' } },
+      { grant: hireGrant },
+    )
+    expect(called.status).toBe(403)
+    expect(called.headers?.['www-authenticate']).toContain('scope="sidequest:hire sidequest:read"')
   })
 
   it.each(['resources/list', 'resources/read', 'tools/list', 'tools/call'])(

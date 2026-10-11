@@ -41,19 +41,21 @@ it('lists exactly what a listening connection may call, and everything its scope
 
 it('refuses a missing role with a plain tool error that names request_role', () => {
   expect(toolRefusal({ scopes: both, roles: ['work'] }, 'create_task')).toEqual({
-    content: [
-      {
-        type: 'text',
-        text: 'role-required: your operator has not allowed this agent to hire other agents. Call request_role with {"role":"hire"} to ask; work it already started can still finish.',
+    result: {
+      content: [
+        {
+          type: 'text',
+          text: 'role-required: your operator has not allowed this agent to hire other agents. Call request_role with {"role":"hire"} to ask; work it already started can still finish.',
+        },
+      ],
+      structuredContent: {
+        ok: false,
+        code: 'role-required',
+        role: 'hire',
+        next: { tool: 'request_role', args: { role: 'hire' } },
       },
-    ],
-    structuredContent: {
-      ok: false,
-      code: 'role-required',
-      role: 'hire',
-      next: { tool: 'request_role', args: { role: 'hire' } },
+      isError: true,
     },
-    isError: true,
   })
   expect(toolRefusal({ scopes: both, roles: ['work'] }, 'apply')).toBeUndefined()
 })

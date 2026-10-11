@@ -347,14 +347,13 @@ describe('hosted tool metadata', () => {
       expect(requiredToolScope(name)).toBe('sidequest:work')
     }
     const call = vi.fn()
-    const refused = result(
-      await route(
-        'tools/call',
-        { _meta: meta, name: 'x402_pay', arguments: { operationKey: 'k' } },
-        { grant: hireGrant, tools: registry, call },
-      ),
+    const refused = await route(
+      'tools/call',
+      { _meta: meta, name: 'x402_pay', arguments: { operationKey: 'k' } },
+      { grant: hireGrant, tools: registry, call },
     )
-    expect(refused).toMatchObject({ isError: true, _meta: { 'mcp/www_authenticate': { error: 'insufficient_scope' } } })
+    expect(refused.status).toBe(403)
+    expect(refused.headers?.['www-authenticate']).toContain('scope="sidequest:read sidequest:hire sidequest:work"')
     expect(call).not.toHaveBeenCalled()
   })
   it.each(['get_task', 'create_task'])('keeps complete text and structured output for %s', async (name) => {
@@ -389,13 +388,33 @@ describe('hosted tool metadata', () => {
     })
     expect(JSON.parse((one.content as { text: string }[])[0]!.text)).toEqual(one.structuredContent)
   })
-  it('adds a linking challenge only to grant/auth failures', async () => {
+  // ADR-0021: a missing scope is MCP's step-up (403 insufficient_scope); every other refusal is a plain tool error.
+  it('challenges a missing scope with 403 and the scope to grant, and nothing else', async () => {
     const call = vi.fn()
-    const denied = result(await route('tools/call', { name: 'create_task' }, { tools: registry, call }))
-    expect(denied).toMatchObject({
-      isError: true,
-      _meta: { 'mcp/www_authenticate': { error: 'insufficient_scope', error_description: expect.any(String) } },
+    const denied = await route('tools/call', { name: 'create_task' }, { tools: registry, call })
+    expect(denied).toEqual({
+      status: 403,
+      headers: {
+        'cache-control': 'no-store',
+        'www-authenticate': `Bearer error="insufficient_scope", scope="sidequest:read sidequest:hire", resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp"`,
+      },
+      body: {
+        jsonrpc: '2.0',
+        id: 1,
+        error: {
+          code: -32003,
+          message: expect.stringContaining('insufficient_scope: this connection was not granted create_task'),
+          data: { scope: 'sidequest:read sidequest:hire' },
+        },
+      },
     })
+    // A tool either side may call asks for the scope of the roles the agent holds.
+    const shared = await route(
+      'tools/call',
+      { name: 'settlement_actions' },
+      { tools: registry, call, grant: { ...grant, roles: ['work'] } },
+    )
+    expect(shared.headers?.['www-authenticate']).toContain('scope="sidequest:read sidequest:work"')
     expect(call).not.toHaveBeenCalled()
     const failed = result(
       await route(
@@ -404,7 +423,10 @@ describe('hosted tool metadata', () => {
         { call: async () => ({ ok: false, code: 'forbidden', message: 'Grant revoked' }) },
       ),
     )
-    expect(failed).toHaveProperty('_meta.mcp/www_authenticate')
+    expect(failed).toMatchObject({ isError: true })
+    expect(failed).not.toHaveProperty('_meta')
+    const unknown = result(await route('tools/call', { name: 'submit_selection' }, { tools: registry, call }))
+    expect(unknown).toMatchObject({ isError: true, content: [{ text: expect.stringContaining('not-found') }] })
   })
 })
 

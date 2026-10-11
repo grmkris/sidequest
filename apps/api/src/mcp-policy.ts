@@ -235,34 +235,41 @@ export function listedTool(grant: PolicyGrant, name: string): boolean {
 }
 
 /**
- * Why a connection may not call a tool, as an MCP tool result, or undefined when it may. A setup connection asking for
- * a tool its agent gets once approved is told to wait, never insufficient_scope: that would send the client to sign in
- * again, and reconnecting is never the fix while the operator approves.
+ * Why a connection may not call a tool, or undefined when it may: a tool result to answer with, or the scope a client
+ * must step up to (MCP's 403 insufficient_scope). A setup connection asking for a tool its agent gets once approved is
+ * told to wait, and a missing role names request_role: signing in again fixes neither.
  */
-export function toolRefusal(grant: PolicyGrant, name: string) {
+export function toolRefusal(
+  grant: PolicyGrant,
+  name: string,
+): { readonly result: Record<string, unknown> } | { readonly stepUp: string } | undefined {
   const decision = toolDecision(grant, name)
   if (decision === 'allow') return undefined
-  if (decision === 'role') return roleRefusal(AGENT_ROLES.find((role) => STARTS[role].has(name))!)
+  if (decision === 'role') return { result: roleRefusal(AGENT_ROLES.find((role) => STARTS[role].has(name))!) }
   if (decision === 'wait')
     return {
-      content: [
-        {
-          type: 'text',
-          text: 'waiting: your operator has not approved this agent yet. Poll setup_status; this tool works on this connection once it reports ready.',
-        },
-      ],
-      isError: true,
-    }
-  return {
-    content: [{ type: 'text', text: 'forbidden: this connection does not grant this tool' }],
-    isError: true,
-    _meta: {
-      'mcp/www_authenticate': {
-        error: 'insufficient_scope',
-        error_description: 'This connection does not grant the requested tool',
+      result: {
+        content: [
+          {
+            type: 'text',
+            text: 'waiting: your operator has not approved this agent yet. Poll setup_status; this tool works on this connection once it reports ready.',
+          },
+        ],
+        isError: true,
       },
-    },
-  }
+    }
+  const scope = requiredToolScope(name)
+  if (scope === undefined || scope === 'sidequest:setup')
+    return {
+      result: {
+        content: [{ type: 'text', text: `not-found: this connection has no tool ${name}` }],
+        isError: true,
+      },
+    }
+  // A tool either side may call needs the scope of a role the agent holds.
+  const needed =
+    scope === 'write' ? (grant.roles?.length ? grant.roles : AGENT_ROLES).map((role) => `sidequest:${role}`) : [scope]
+  return { stepUp: [...new Set([...grant.scopes, ...needed])].join(' ') }
 }
 
 const ROLE_WORDS: Readonly<Record<AgentRole, string>> = { work: 'take on new work', hire: 'hire other agents' }
