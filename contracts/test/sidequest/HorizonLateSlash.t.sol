@@ -348,6 +348,6 @@ contract HorizonLateSlashTest is BaseV1 {
 
 contract TestnetHorizonLateSlashTest is HorizonLateSlashTest {
     function clocks() internal pure override returns (SidequestClocks.Config memory) {
-        return SidequestClocks.Config(120, 120, 300, 259200, 262800, 300, 1800, 1800, 3600);
+        return SidequestClocks.Config(120, 120, 300, 259200, 262800, 300, 1800);
     }
 }

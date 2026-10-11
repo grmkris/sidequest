@@ -3,7 +3,7 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 
-/// @notice The G1-DRY-001 residual, source-level: launch-testnet.sh and the four fork rehearsals take the launch lock
+/// @notice The G1-DRY-001 residual, source-level: the fork rehearsals take the launch lock
 ///         (`script/launch-lock.sh`) before anything else, no anvil they start can hold it past their run, and the
 ///         rehearsals keep forge to their own `broadcast/` and `cache/rehearsal-<id>` directories. What it does at run
 ///         time is `script/test-launch-lock.sh` (a second concurrent invocation refuses) and the rehearsals themselves.
@@ -11,12 +11,9 @@ contract LaunchLockTest is Test {
     string internal constant TAKE = "cd \"$(dirname \"$0\")/..\"\n. script/launch-lock.sh\ntake_launch_lock\n";
 
     function _scripts() internal pure returns (string[] memory s) {
-        s = new string[](5);
-        s[0] = "launch-testnet.sh";
-        s[1] = "rehearse-launch.sh";
-        s[2] = "rehearse-launch-testnet.sh";
-        s[3] = "rehearse-flows-testnet.sh";
-        s[4] = "rehearse-sidequest-pipeline.sh";
+        s = new string[](2);
+        s[0] = "rehearse-launch.sh";
+        s[1] = "rehearse-sidequest-pipeline.sh";
     }
 
     function _read(string memory name) internal view returns (string memory) {
@@ -57,7 +54,7 @@ contract LaunchLockTest is Test {
                 );
             }
         }
-        assertEq(anvils, 4, "one forked anvil per rehearsal");
+        assertEq(anvils, 2, "one forked anvil per rehearsal");
     }
 
     function test_rehearsalsUseTheirOwnForgePaths() public view {

@@ -13,7 +13,6 @@ fs_permissions = [
     { access = "read", path = "../docs/mainnet-runbook.md" },
     { access = "read", path = "../scripts/preflight-prod.ts" },
     { access = "read", path = "../package.json" },
-    { access = "read", path = "../scripts/mining/README.md" },
     { access = "read", path = "../apps/api/src/prod-config.ts" },
 ]
 solc_version = "0.8.28"

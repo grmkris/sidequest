@@ -1,5 +1,4 @@
-# Sourced by the fork rehearsals (rehearse-launch.sh, rehearse-launch-testnet.sh, rehearse-flows-testnet.sh,
-# rehearse-sidequest-pipeline.sh). A real launch run from the same checkout writes config/<network>.json and forge's
+# Sourced by the fork rehearsals (rehearse-launch.sh, rehearse-sidequest-pipeline.sh). A real launch run from the same checkout writes config/<network>.json and forge's
 # broadcast/<script>/<chain>/run-latest.json (with its cache/ twin); a rehearsal must never write or delete either
 # (G1-DRY-001 and its residual).
 

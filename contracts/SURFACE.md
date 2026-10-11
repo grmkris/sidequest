@@ -1,7 +1,8 @@
 # Sidequest v1 contract surface
 
-This document describes the only supported protocol surface. The v1 deployment is a fresh ERC-8183 core, one
-`SidequestHolding`/`SidequestEvaluator` pair, and the SIDE v2 token. The `legacy-final` tag preserves the retired protocol.
+This document describes the only supported protocol surface. The v1 deployment is a fresh ERC-8183 core and one
+`SidequestHolding`/`SidequestEvaluator` pair, deployed against an existing SIDE token (on mainnet, created by the nad.fun
+launcher). The `legacy-final` tag preserves the retired protocol; `mining-final` preserves the removed mining and vesting.
 
 ## Core contracts
 
@@ -11,14 +12,12 @@ This document describes the only supported protocol surface. The v1 deployment i
 - `SidequestEvaluator` is the per-offer evaluator. The approver accepts or rejects, an arbitrator rules during the
   frozen appeal window, and permissionless timeouts settle silence, missed delivery, and arbitration expiry. It records
   evidence and feedback without allowing a classifier to move money.
-- `StakeVault` tracks delegated SIDE shares and reservations. `reserve` requires an admitted Holding; `release`, `slash` and treasury `forfeit` consume only the caller's own reservations; unstaking uses a fourteen-day production cooldown and Holding admission uses its timelock.
-- `Factory` is SIDE v2: a fixed one-billion supply, ERC-20 permit support, and burn with no mint or admin hook.
+- `StakeVault` tracks delegated SIDE shares and reservations. `reserve` requires an admitted Holding; `release`, `slash` and treasury `forfeit` consume only the caller's own reservations; unstaking uses a fourteen-day production cooldown and Holding admission uses its timelock. A slash sends SIDE to `SidequestConstants.SLASH_SINK` (`0x…dEaD`), because SIDE has no `burn`.
+- SIDE (`IFactory`) is a plain ERC-20 with 18 decimals and permit: a fixed one-billion supply, no mint, burn or admin hook.
+- Every owned contract inherits `NoRenounce`: ownership moves in two steps and can never be renounced.
 - `FeeSchedule` supplies the worker's fee rate and treasury address; schedule changes have a three-day notice.
   `SidequestHolding` pays earned-work fees and never-activated creator-bond forfeitures to the current treasury.
-- `TeamVesting` releases the fixed team allocation after its configured cliff and duration.
-- `EpochDistributor` and `MiningReserve` distribute posted Merkle roots into stake. Mining is a funded, permissionless
-  claim path and makes no promise of earnings.
-- `SeedHelper` is the one-shot SIDE/USDC liquidity helper. `TestnetFaucet`, `BlocklistUSD`, and `GasBurnerUSD` are
+- `SeedHelper` is the one-shot SIDE/USDC liquidity helper, used on testnet; mainnet trades SIDE on nad.fun. `TestnetFaucet`, `BlocklistUSD`, and `GasBurnerUSD` are
   testnet-only fixtures. The faucet constructor and odd-token deployment script refuse chain 143.
 
 ## Hire lifecycle
@@ -26,9 +25,9 @@ This document describes the only supported protocol surface. The v1 deployment i
 `publish` escrows the reward and reserves the creator bond. The selected worker calls `activate`, which verifies the
 creator's EIP-712 Selection, registered ERC-8004 wallet, frozen terms, and worker bond before funding the core with the
 quoted net reward. The worker submits once. Acceptance, rejection, ruling, or a timeout records the outcome before core
-settlement. `settle` releases or burns due reservations and pays the recorded beneficiary; payout failures remain owed.
-Every publish requires at least the live creator-bond floor (initially 10 SIDE testnet / 10,000 mainnet). The Safe
-can adjust it up to the immutable 1,000 / 100,000 SIDE cap. New listings snapshot `publishedAt` and the unfilled
+settlement. `settle` releases or slashes due reservations and pays the recorded beneficiary; payout failures remain owed.
+Every publish requires at least the live creator-bond floor (initially 10 SIDE testnet / 1M mainnet). The Safe
+can adjust it up to the immutable 1,000 / 100M SIDE cap. New listings snapshot `publishedAt` and the unfilled
 forfeit rate (initially 2500 bps, owner-adjustable from 0 to the constant 5000 bps cap). Cancellation before
 `publishedAt + CANCEL_GRACE` (600 seconds) releases all backing. Never-activated cancellation after that boundary,
 or expiry regardless of grace, forfeits `creatorBond * snapshotBps / 10_000` rounded down to the current treasury.
@@ -43,33 +42,27 @@ its deadline. An arbitrator signature is portable EIP-712 data and may be relaye
 
 ## Deployment recipe
 
-`DeploySidequest.s.sol` reads the `sidequest` input block from `config/<network>.json`, deploys a fresh core and all v1
-components, wires the evaluator and registries, bootstraps the Holding, funds mining, and transfers ownership to the Safe.
+`DeploySidequest.s.sol` reads the `sidequest` input block from `config/<network>.json`, checks the existing SIDE (code,
+18 decimals, the 1e9 supply), deploys a fresh core and the v1 components against it, wires the evaluator and registries,
+bootstraps the Holding, and transfers ownership to the Safe. It mints nothing.
 `PromoteSidequest.s.sol` verifies successful receipts and live wiring before writing `.deployment`; `SafeAccept.s.sol`
-accepts the six ownership transfers. The core's `ADMIN_ROLE` and `DEFAULT_ADMIN_ROLE` are granted to the Safe and
+accepts the four ownership transfers. The core's `ADMIN_ROLE` and `DEFAULT_ADMIN_ROLE` are granted to the Safe and
 renounced by the deployer in the same fresh deployment.
 
 The input includes `safe`, `defaultArbitrator`, `margin`, `minimumCreatorBond`, `maxMinimumCreatorBond`,
-`unfilledForfeitBps`, four fee thresholds and rates, three allocation addresses,
-vesting parameters, mining genesis, and optional clock values. Mainnet requires the production clock tuple. The output
-contains `core`, `factory`, `rewardTokens`, `sidequest` (block, safe, factory, vault, feeSchedule, distributor,
-miningReserve, teamVesting, t0, clocks), and `main` (`kind: "sidequest-v1"`, factory, holding, evaluator,
-`openTokens: true`).
+`unfilledForfeitBps`, four fee thresholds and rates, the SIDE `token`, and optional clock values. Mainnet requires the
+production clock tuple. The output contains `core`, `factory` (SIDE), `rewardTokens`, `sidequest` (block, safe, factory,
+vault, feeSchedule, clocks), and `main` (`kind: "sidequest-v1"`, factory, holding, evaluator, `openTokens: true`).
 
-The script sends four transactions from the seeder: deploy the `SeedHelper`, approve SIDE, approve USDC, and call
-`seed()`. The helper initializes or repairs the target pool, mints the full-range position to the Safe, and clears its
-allowances. `SeedPool.s.sol --sig "verify()"` reads the receipts and verifies the live owner, pool key, liquidity, and
-allowances.
+On testnet, `SeedPool.s.sol` sends four transactions from the seeder: deploy the `SeedHelper`, approve SIDE, approve
+USDC, and call `seed()`. The helper initializes or repairs the target pool, mints the full-range position to the Safe,
+and clears its allowances. `SeedPool.s.sol --sig "verify()"` reads the receipts and verifies the live owner, pool key,
+liquidity, and allowances.
 
 ## Launch checks
 
-`MainnetRunbook.t.sol` pins the launch order, RPC guards, Safe custody readback, mining signature checks, and script
-existence. `LaunchLock.t.sol` checks that launch and rehearsal scripts take the lock before work and isolate forge logs.
-The seed transaction count is pinned by `MainnetRunbook.t.sol`:
-
-| step | txs |
-| --- | ---: |
-| SeedPool (helper, 2 approvals, seed) | 4 |
+`MainnetRunbook.t.sol` pins the launch order, RPC guards, Safe custody readback, the threshold raise, keystore use and
+script existence. `LaunchLock.t.sol` checks that the rehearsal scripts take the lock before work and isolate forge logs.
 
 All contract tests under `test/sidequest/`, testnet fixtures, and the retained fork rehearsals exercise this v1 surface.
 Fork tests are skipped when their RPC variable is absent. A local fork is not live deployment evidence.
@@ -86,34 +79,25 @@ Evaluator decisions survive a failed bounded core call. Collect calls `retryDefe
 bounded pushes protect the settlement path. The quoted activation rate also applies to paid top-ups; refund outcomes
 leave each contribution discoverable through `claimTopUpRefund`.
 
-The Safe controls fee proposals, Holding admission/revocation, verifier configuration, default arbitrator, mining roots,
-and reserve funding. The core admin can pause, upgrade, and withdraw escrow while paused. Pause and evaluator
+The Safe controls fee proposals, Holding admission/revocation, verifier configuration, the default arbitrator, and the
+creator-bond floor and unfilled-forfeit rate. The core admin can pause, upgrade, and withdraw escrow while paused. Pause and evaluator
 `notePause` must be batched atomically by the Safe. The protocol therefore depends on these disclosed admin powers.
 
 ## Stake and fees
 
 `delegate`, `delegateWithPermit`, and `delegateFor` mint a delegator's shares backing an account. Only the share owner
 can request or cancel undelegation and withdraw after cooldown; queued shares remain exposed to pending reservations.
-Slashing burns SIDE and changes every position's asset value pro rata. Admission has a fifteen-day notice, free exit has
-a fourteen-day production cooldown, and callers can deny a Holding new reservations for their own account. Revocation preserves
+Slashing sends SIDE to the sink and changes every position's asset value pro rata. Admission has a twenty-one-day
+notice, free exit has a fourteen-day production cooldown (a backer has a week to leave after a Holding is proposed), and callers can deny a Holding new reservations for their own account. Revocation preserves
 settlement of existing reservations. See `test/sidequest/StakeVaultDelegation.t.sol`, `StakeVaultLedger.t.sol`,
 `StakeVaultInvariants.t.sol`, and `Invariants.t.sol`.
 
-`FeeSchedule` starts at 0 / 10k / 100k / 1M SIDE with rates 30 / 10 / 3 / 1 percent. The worker signs a core budget for
-`net = reward - ceil(reward * feeBps / 10000)`, freshly quoted before activation. SIDE allocations are mining 500M,
-treasury 200M, team vesting 150M, ecosystem 100M, and liquidity 50M. The configured beneficiary owns `TeamVesting`.
-Tests: `test/sidequest/FeeSchedule.t.sol`, `Factory.t.sol`, `V1Activation.t.sol`, and `V1Lifecycle.t.sol`.
+`FeeSchedule` starts on mainnet at 0 / 1M / 10M / 50M SIDE with rates 30 / 10 / 3 / 1 percent. The worker signs a core
+budget for `net = reward - ceil(reward * feeBps / 10000)`, freshly quoted before activation. The protocol holds no SIDE
+allocation: SIDE comes from the launcher, and the Safe's SIDE is a disclosed dev buy.
+Tests: `test/sidequest/FeeSchedule.t.sol`, `V1Activation.t.sol`, and `V1Lifecycle.t.sol`.
 
-## Mining and testnet tokens
-
-`MiningReserve.fund(epoch, amount)` funds an ended epoch within the cumulative fixed allocation schedule.
-`EpochDistributor.setRoot(epoch, root, total, dataHash)` promises funded stake; a root may be replaced until its first
-claim. `resizeRoot` cannot reduce below claimed amounts. A valid posted proof is required to claim and every claim
-stakes through `vault.delegateFor(account, account, amount)`. The tree contains one aggregated leaf per account/epoch.
-`IdentityRegistry.setMetadata(agentId, "sidequest.backerShareBps", abi.encode(uint16))` is a used surface: an agent's
-backers share of its work mining ([ADR-0018](../docs/adr/0018-backer-share.md)). It needs no contract change; its
-`MetadataSet` events are inputs to the off-chain epoch computation.
-Production epoch zero is 72 hours; later epochs last seven days. See `test/sidequest/Mining.t.sol`.
+## Testnet tokens
 
 `MockPaymentToken` has six decimals and open test minting. `BlocklistUSD` and `GasBurnerUSD` also have six decimals;
 their owner can block transfers or consume gas at a recipient to exercise deferred/owed behavior. `TestnetFaucet.drip`
@@ -124,12 +108,12 @@ another address; only its owner adjusts amounts or withdraws funds. Test tokens 
 ## Clock configuration and evidence
 
 Production minimum review/dispute windows are one hour and arbitration is twelve hours; all three maxima are fourteen
-days. Other production clocks are fourteen-day unstaking, fifteen-day Holding admission, three-day fee notice, seven-day
-proposal grace, a three-day first epoch, and seven-day later epochs. Testnet may use the bounded faster tuple from its
+days. Other production clocks are fourteen-day unstaking, twenty-one-day Holding admission, three-day fee notice and
+seven-day proposal grace. Testnet may use the bounded faster tuple from its
 config. `SidequestClocks` validates the whole tuple; no setter changes these immutable values. `ClockConfig.t.sol` and
 `Clocks.t.sol` cover bounds and timing.
 
 `test/sidequest/Recipe.t.sol` covers fresh-core roles, atomic setup, output shape, receipt checks, and idempotent
 promotion. `Signatures.t.sol` checks EOA, ERC-1271, and EIP-7702 signatures. Retained optional rehearsals are
-`test/fork/SidequestRehearsal.t.sol`, `SafeAcceptRehearsal.t.sol`, `SeedPoolRehearsal.t.sol`, `UniswapRouterSwap.fork.t.sol`,
+`test/fork/SidequestRehearsal.t.sol`, `SafeAcceptRehearsal.t.sol`, `UniswapRouterSwap.fork.t.sol`,
 `Erc8004Fork.t.sol`, and `Erc8004RolesFork.t.sol`. Only dated receipts in `../docs/reality-check.md` establish live flows.

@@ -18,13 +18,11 @@ contract MainnetRunbookTest is Test {
 
     /// The forge steps both documents share, in launch order.
     function _sharedSteps() internal pure returns (string[] memory s) {
-        s = new string[](6);
+        s = new string[](4);
         s[0] = "MAINNET_GO=yes forge script script/DeploySidequest.s.sol";
         s[1] = "forge script script/PromoteSidequest.s.sol";
         s[2] = "MAINNET_GO=yes forge script script/SafeAccept.s.sol";
         s[3] = "forge script script/SafeAccept.s.sol --sig \"check()\"";
-        s[4] = "MAINNET_GO=yes forge script script/SeedPool.s.sol";
-        s[5] = "forge script script/SeedPool.s.sol --sig \"verify()\"";
     }
 
     function test_runbookAndR7RunTheSameForgeSteps() public view {
@@ -35,21 +33,22 @@ contract MainnetRunbookTest is Test {
     function test_runbookSequenceWithGates() public view {
         string memory live = "bun scripts/preflight-prod.ts docs/p0-prod-artifact.json --live";
         string[] memory s = new string[](18);
-        s[0] = "MAINNET_GO=yes forge script script/DeploySidequest.s.sol";
-        s[1] = "forge script script/PromoteSidequest.s.sol";
-        s[2] = live;
-        s[3] = "production launch gate refused";
-        // Before the Safe takes ownership: no module and no guard, which the mining fund's nonce guard needs (D18).
-        s[4] = "getModulesPaginated(address,uint256)(address[],address)";
-        s[5] = GUARD_SLOT;
-        s[6] = "MAINNET_GO=yes forge script script/SafeAccept.s.sol";
-        s[7] = "forge script script/SafeAccept.s.sol --sig \"check()\"";
-        s[8] = live;
-        s[9] = "Sidequest v1 production launch gate passed";
+        s[0] = "### 3.2 SIDE on nad.fun";
+        s[1] = "MAINNET_GO=yes forge script script/DeploySidequest.s.sol";
+        s[2] = "forge script script/PromoteSidequest.s.sol";
+        s[3] = live;
+        s[4] = "production launch gate refused";
+        // Before the Safe takes ownership: no module and no guard, which would act outside the owners' signatures.
+        s[5] = "getModulesPaginated(address,uint256)(address[],address)";
+        s[6] = GUARD_SLOT;
+        s[7] = "MAINNET_GO=yes forge script script/SafeAccept.s.sol";
+        s[8] = "forge script script/SafeAccept.s.sol --sig \"check()\"";
+        s[9] = live;
+        s[10] = "Sidequest v1 production launch gate passed";
         // LAUNCH-AUDIT-003: the gate reads the reviewed Safe back against the artifact's pins.
-        s[10] = "the reviewed Safe: storage slot 0 is the canonical SafeL2 singleton";
-        s[11] = "MAINNET_GO=yes forge script script/SeedPool.s.sol";
-        s[12] = "forge script script/SeedPool.s.sol --sig \"verify()\"";
+        s[11] = "the reviewed Safe: storage slot 0 is the canonical SafeL2 singleton";
+        // R4/G1: the Safe goes to 2-of-3 once it owns everything, and the gate's threshold pin follows.
+        s[12] = "`changeThreshold(uint256)` with 2";
         s[13] = "PROD_ADMISSION_DRAIN=1 bun run deploy:prod";
         s[14] = "Post-deploy probes";
         s[15] = "bun scripts/preflight-prod.ts docs/p0-prod-artifact.json --probe https://sidequest.exchange";
@@ -60,36 +59,6 @@ contract MainnetRunbookTest is Test {
 
     /// keccak256("guard_manager.guard.address"), Safe v1.4.1's guard storage slot.
     string internal constant GUARD_SLOT = "0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8";
-
-    /// U-FUND-SEC-001: the terminal fund path is /admin's (D18): the remainder from calls.fund, while its expect still
-    /// matches totalFunded, signed as an ECDSA SafeTx at the nonce read with it, never pre-validated; R7 does the same,
-    /// and the testnet launch refuses a Safe with a module or a guard.
-    function test_fundIsNonceBoundEcdsa() public view {
-        string memory root = vm.projectRoot();
-        string memory readme = vm.readFile(string.concat(root, "/../scripts/mining/README.md"));
-        string memory mine = vm.readFile(string.concat(root, "/script/RehearseHireAndMine.s.sol"));
-        string memory launch = vm.readFile(string.concat(root, "/script/launch-testnet.sh"));
-        string[5] memory runbook = [
-            "calls.fund.expect.totalFunded",
-            "NONCE=$(cast call --block \"$B\"",
-            "getTransactionHash(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,uint256)(bytes32)",
-            "SIG=$(cast wallet sign --no-hash \"$H\" \"${KEY[@]}\")",
-            "Never use a pre-validated (v = 1) signature"
-        ];
-        for (uint256 i; i < runbook.length; ++i) {
-            assertTrue(vm.contains(doc, runbook[i]), string.concat("runbook lacks ", runbook[i]));
-        }
-        assertFalse(vm.contains(doc, "fund(n, total)"), "runbook still funds the total");
-        assertFalse(vm.contains(readme, "fund(n, total)"), "mining README still funds the total");
-        assertTrue(vm.contains(readme, "calls.fund.expect.totalFunded"), "mining README lacks the expect check");
-        assertTrue(vm.contains(readme, "Never use a pre-validated (v = 1) signature"), "mining README allows v = 1");
-        assertTrue(vm.contains(mine, "vm.sign(ownerKey, fundHash)"), "R7 does not ECDSA-sign the fund");
-        assertTrue(vm.contains(mine, "\"GS026\""), "R7 does not show the spent nonce refusing");
-        assertTrue(
-            vm.contains(launch, "getModulesPaginated(address,uint256)(address[],address)"), "launch: no module check"
-        );
-        assertTrue(vm.contains(launch, GUARD_SLOT), "launch: no guard check");
-    }
 
     /// LAUNCH-AUDIT-003: D16 itself reads the Safe's singleton, VERSION, owners, threshold, modules and guard against the
     /// artifact's pins; the artifact has the fields; R7 runs the gate with its own Safe's pins and shows the refusals.
@@ -130,7 +99,7 @@ contract MainnetRunbookTest is Test {
     /// holds whatever that record holds: no block before R2, R2's own block after (replaced here).
     function test_documentedSidequestInputLoads() public {
         (string memory json, uint256 rows) = _documentedSidequest("");
-        assertEq(rows, 17, "runbook: the sidequest table lists the 17 fields load reads");
+        assertEq(rows, 10, "runbook: the sidequest table lists the 10 fields load reads");
 
         string memory real = vm.readFile(string.concat(vm.projectRoot(), "/config/monad-mainnet.json"));
         string memory path_ = string.concat(vm.projectRoot(), "/config/.test-schema.json");
@@ -143,7 +112,7 @@ contract MainnetRunbookTest is Test {
             SidequestRecipe.Config memory c = SidequestRecipe.load(vm, ".test-schema");
             assertEq(c.chainId, 143);
             assertEq(c.safe, address(uint160(0xa000 + 1)));
-            assertEq(c.genesis, 1);
+            assertEq(address(c.token), address(uint160(0xa000 + 10)), "the existing SIDE, the last row");
         }
         (string memory short,) = _documentedSidequest("margin");
         vm.writeFile(path_, real);
@@ -247,96 +216,16 @@ contract MainnetRunbookTest is Test {
             command = "";
             subshell = false;
         }
-        assertGt(checked, 10, "runbook: expected the launch commands");
+        assertGt(checked, 7, "runbook: expected the launch commands");
     }
 
-    /// LAUNCH-AUDIT-009: R7's post-seed tail in order: hire, mining:epoch, ECDSA fund, setRoot, the two claims; and
-    /// runbook §4's epoch steps in order: mining:publish (validated against rootOf, uploaded, read back) after setRoot and
-    /// before the claims, with its key and digest recorded.
-    function test_postSeedOrderAndEpochPublication() public view {
-        string[4] memory r7Tail = [
-            "MAINNET_GO=yes forge script script/SeedPool.s.sol",
-            "--tc RehearseHire --rpc-url",
-            "bun ../scripts/mining/epoch.ts 0 --network monad-mainnet",
-            "--tc RehearseMining --rpc-url"
-        ];
-        string[] memory tail = new string[](4);
-        for (uint256 i; i < 4; ++i) {
-            tail[i] = r7Tail[i];
-        }
-        _inOrder(r7, tail, "rehearse-launch.sh post-seed");
-
-        string memory mine = vm.readFile(string.concat(vm.projectRoot(), "/script/RehearseHireAndMine.s.sol"));
-        string[] memory mining = new string[](5);
-        mining[0] = "vm.sign(ownerKey, fundHash)";
-        mining[1] = "safe.execTransaction(address(reserve), 0, fundData";
-        mining[2] = "_exec(safe, vm.addr(ownerKey), address(distributor), vm.envBytes(\"SETROOT_DATA\"))";
-        mining[3] = "distributor.claim(0, worker,";
-        mining[4] = "distributor.claim(0, creator,";
-        _inOrder(mine, mining, "RehearseMining");
-
-        string[] memory epoch = new string[](5);
-        epoch[0] = "bun run mining:epoch <n> --network monad-mainnet";
-        epoch[1] = "**`calls.fund`**";
-        epoch[2] = "**`calls.setRoot`**";
-        epoch[3] = "bun run mining:publish <dir>/epoch-<n>.json --stage prod";
-        epoch[4] = "Each claim stakes the reward";
-        _inOrder(doc, epoch, "runbook section 4");
-        assertTrue(vm.contains(doc, "After `setRoot` and before any claim, publish"), "runbook: publish not placed");
-        assertTrue(vm.contains(doc, "sha256sum <dir>/epoch-<n>.json"), "runbook does not record the file's digest");
-        assertTrue(
-            vm.contains(doc, "Record the key `mining/epoch-<n>.json` and the file's sha256"),
-            "runbook does not record the R2 key and digest"
-        );
-        assertFalse(vm.contains(doc, "TODO (backend)"), "runbook still has the publish TODO");
-        string memory root = vm.projectRoot();
-        assertTrue(
-            vm.contains(
-                vm.readFile(string.concat(root, "/../package.json")),
-                "\"mining:publish\": \"bun scripts/mining/publish.ts\""
-            ),
-            "package.json has no mining:publish"
-        );
-        assertTrue(
-            vm.contains(
-                vm.readFile(string.concat(root, "/../scripts/mining/README.md")),
-                "bun run mining:publish <epoch-n.json> --stage dev|prod"
-            ),
-            "scripts/mining/README.md documents another mining:publish usage"
-        );
-    }
-
-    /// LAUNCH-AUDIT-010: SeedPool sends four transactions, and the script, the runbook budget and SURFACE say so.
-    function test_seedPoolIsFourTransactions() public view {
-        string memory root = vm.projectRoot();
-        assertTrue(
-            vm.contains(
-                vm.readFile(string.concat(root, "/script/SeedPool.s.sol")), "Four transactions: deploy the `SeedHelper`"
-            ),
-            "SeedPool.s.sol does not say four transactions"
-        );
-        assertTrue(
-            vm.contains(doc, "| SeedPool: helper, 2 approvals, seed | 4 |"), "runbook budget: SeedPool is not 4 txs"
-        );
-        string memory surface = vm.readFile(string.concat(root, "/SURFACE.md"));
-        assertTrue(vm.contains(surface, "The script sends four transactions from the"), "SURFACE does not say four");
-        assertTrue(
-            vm.contains(surface, "| SeedPool (helper, 2 approvals, seed) | 4 |"),
-            "SURFACE budget: SeedPool is not 4 txs"
-        );
-        assertFalse(vm.contains(surface, "three transactions from the"), "SURFACE still says three");
-    }
-
-    function test_runbookCarriesBudgetFundingAndFallbackKey() public view {
-        string[8] memory needles = [
-            "32,282,526", // R7's launch gas limit
+    function test_runbookCarriesBudgetAndFunding() public view {
+        string[5] memory needles = [
+            "| nad.fun creation with the 5% dev buy |", // SIDE comes from the launcher, with the dev buy
             "| arbitrator | `roles.arbitrator` (a fresh R2 key) | 0.11 |", // LAUNCH-AUDIT-007: the cancellation reserve
             "RELAY_FLOOR_MAINNET",
             "| relay |",
-            "| liquidity holder",
-            "\"fee\": 10000",
-            "\"tickSpacing\": 200",
-            "PriceNotSet"
+            "| changeThreshold(2) |"
         ];
         for (uint256 i; i < needles.length; ++i) {
             assertTrue(vm.contains(doc, needles[i]), string.concat("runbook lacks ", needles[i]));
@@ -352,21 +241,17 @@ contract MainnetRunbookTest is Test {
     }
 
     function test_mainnetSignsFromKeystores() public view {
-        string[12] memory needles = [
+        string[9] memory needles = [
             "cast wallet import sidequest-deployer --interactive",
             "--account sidequest-deployer --password-file ~/.config/sidequest/deployer.password",
             "--account sidequest-safe-owner",
-            "--account sidequest-liquidity",
             "--password-file ~/.config/sidequest/safe-owner.password",
             // KEYSTORE-SEC-002: an existing directory or file is tightened, and every signer is checked first.
             "chmod 700 ~/.config/sidequest",
             "rm -f ~/.config/sidequest/deployer.password",
             "chmod 600 ~/.config/sidequest/deployer.password",
             "pwcheck ~/.config/sidequest/deployer.password && \\",
-            "pwcheck ~/.config/sidequest/safe-owner.password && \\",
-            "pwcheck ~/.config/sidequest/liquidity.password && \\",
-            // KEYSTORE-SEC-003: the mining price list is signed behind the same check.
-            "pwcheck ~/.config/sidequest/safe-owner.password && bun scripts/mining/sign-prices.ts"
+            "pwcheck ~/.config/sidequest/safe-owner.password && \\"
         ];
         for (uint256 i; i < needles.length; ++i) {
             assertTrue(vm.contains(doc, needles[i]), string.concat("runbook lacks ", needles[i]));
@@ -420,7 +305,6 @@ contract MainnetRunbookTest is Test {
         _has(string.concat(root, "/script/DeploySidequest.s.sol"), "function run()");
         _has(string.concat(root, "/script/PromoteSidequest.s.sol"), "function run()");
         _has(string.concat(root, "/script/SafeAccept.s.sol"), "function check()");
-        _has(string.concat(root, "/script/SeedPool.s.sol"), "function verify()");
         _has(string.concat(root, "/../scripts/preflight-prod.ts"), "process.argv.includes('--live')");
         _has(string.concat(root, "/../scripts/preflight-prod.ts"), "Sidequest v1 production launch gate passed");
         _has(string.concat(root, "/../scripts/preflight-prod.ts"), "process.argv.indexOf('--probe')");

@@ -85,9 +85,7 @@
       "unstakeDelay": 259200,
       "holdingDelay": 262800,
       "feeDelay": 300,
-      "proposalGrace": 1800,
-      "epochZeroDuration": 1800,
-      "epochDuration": 3600
+      "proposalGrace": 1800
     },
     "safe": "0x77923113FD1a71Ad91F81064C3c05cA1EfB44CD8",
     "defaultArbitrator": "0x96eE4e1660744A4dE92D9E22476C501063524716",
@@ -115,15 +113,7 @@
       "ecosystem": "0xeF41b657Ecc8b710e6e32c7c255B891836F060b7",
       "liquidity": "0xe5B7054e177e833D63f8d0548ffa9ecfC4289A71"
     },
-    "vesting": {
-      "beneficiary": "0x9ebB46bE653CA656251772f5f55749DaE8c0aE2B",
-      "startOffset": 31536000,
-      "duration": 94608000,
-      "cliff": 0
-    },
-    "mining": {
-      "genesis": 0
-    }
+    "token": "0xbf0A7336d774729af63d415b5A6bDae8731b2e9B"
   },
   "liquidity": {
     "uniswapV4": {

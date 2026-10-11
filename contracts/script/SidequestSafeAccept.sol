@@ -29,8 +29,8 @@ interface IOwnable2StepTarget {
 }
 
 /// @title SidequestSafeAccept
-/// @notice Step 3 of the deploy (C10): the Safe accepts ownership of the six owned v1 contracts (vault, fee schedule,
-///         Holding, evaluator, distributor, mining reserve), one `execTransaction` each, signed with a pre-validated
+/// @notice Step 3 of the deploy (C10): the Safe accepts ownership of the four owned v1 contracts (vault, fee schedule,
+///         Holding, evaluator), one `execTransaction` each, signed with a pre-validated
 ///         owner signature: `r` = the owner's address, `s` = 0, `v` = 1, which the Safe accepts because that owner is
 ///         the transaction's sender. Only for a threshold-1 Safe; a higher threshold needs collected signatures.
 library SidequestSafeAccept {
@@ -40,26 +40,24 @@ library SidequestSafeAccept {
     error SafeTxFailed(address target);
     error NotOwned(address target, address owner);
 
-    /// @notice The Safe and the six targets from the promoted record in `config/<network>.json`.
-    function targets(Vm vm, string memory json) internal pure returns (address safe, address[6] memory t) {
+    /// @notice The Safe and the four targets from the promoted record in `config/<network>.json`.
+    function targets(Vm vm, string memory json) internal pure returns (address safe, address[4] memory t) {
         safe = vm.parseJsonAddress(json, ".deployment.sidequest.safe");
         t[0] = vm.parseJsonAddress(json, ".deployment.sidequest.vault");
         t[1] = vm.parseJsonAddress(json, ".deployment.sidequest.feeSchedule");
         t[2] = vm.parseJsonAddress(json, ".deployment.main.holding");
         t[3] = vm.parseJsonAddress(json, ".deployment.main.evaluator");
-        t[4] = vm.parseJsonAddress(json, ".deployment.sidequest.distributor");
-        t[5] = vm.parseJsonAddress(json, ".deployment.sidequest.miningReserve");
     }
 
     /// @notice Accepts every handover still pending, as `sender` (who must be one of the Safe's owners and the one
     ///         sending these transactions). Contracts the Safe already owns are skipped, so it is safe to run again.
-    function accept(ISafe safe, address[6] memory t, address sender) internal returns (uint256 accepted) {
+    function accept(ISafe safe, address[4] memory t, address sender) internal returns (uint256 accepted) {
         if (!safe.isOwner(sender)) revert NotSafeOwner(sender);
         uint256 threshold = safe.getThreshold();
         if (threshold != 1) revert ThresholdNotOne(threshold);
         bytes memory signature = abi.encodePacked(bytes32(uint256(uint160(sender))), bytes32(0), uint8(1));
         bytes memory data = abi.encodeCall(IOwnable2StepTarget.acceptOwnership, ());
-        for (uint256 i; i < 6; ++i) {
+        for (uint256 i; i < 4; ++i) {
             IOwnable2StepTarget target = IOwnable2StepTarget(t[i]);
             if (target.owner() == address(safe)) continue;
             address pending = target.pendingOwner();
@@ -71,9 +69,9 @@ library SidequestSafeAccept {
         }
     }
 
-    /// @notice Reverts unless the Safe owns all six.
-    function verify(address safe, address[6] memory t) internal view {
-        for (uint256 i; i < 6; ++i) {
+    /// @notice Reverts unless the Safe owns all four.
+    function verify(address safe, address[4] memory t) internal view {
+        for (uint256 i; i < 4; ++i) {
             address owner = IOwnable2StepTarget(t[i]).owner();
             if (owner != safe) revert NotOwned(t[i], owner);
         }

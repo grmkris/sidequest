@@ -14,8 +14,6 @@ library SidequestClocks {
         uint48 holdingDelay;
         uint48 feeDelay;
         uint48 proposalGrace;
-        uint48 epochZeroDuration;
-        uint48 epochDuration;
     }
 
     error InvalidClock(bytes32 clock, uint256 value);
@@ -28,9 +26,7 @@ library SidequestClocks {
             C.UNSTAKE_DELAY,
             C.HOLDING_DELAY,
             C.FEE_DELAY,
-            C.PROPOSAL_GRACE,
-            C.EPOCH_ZERO_DURATION,
-            C.EPOCH_DURATION
+            C.PROPOSAL_GRACE
         );
     }
 
@@ -46,8 +42,6 @@ library SidequestClocks {
         _check("feeDelay", c.feeDelay, 60, maxDelay, C.FEE_DELAY);
         _check("proposalGrace", c.proposalGrace, 60, maxDelay, C.PROPOSAL_GRACE);
         if (c.holdingDelay <= c.unstakeDelay) revert InvalidClock("holdingDelay", c.holdingDelay);
-        _check("epochZeroDuration", c.epochZeroDuration, 600, type(uint48).max, C.EPOCH_ZERO_DURATION);
-        _check("epochDuration", c.epochDuration, 600, type(uint48).max, C.EPOCH_DURATION);
     }
 
     function _check(bytes32 name, uint256 value, uint256 min, uint256 max, uint256 prod) private view {

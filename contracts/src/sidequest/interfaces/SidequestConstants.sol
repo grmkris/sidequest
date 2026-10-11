@@ -36,16 +36,6 @@ library SidequestConstants {
     ///         controls; it leaves circulation exactly as a burn would.
     address internal constant SLASH_SINK = 0x000000000000000000000000000000000000dEaD;
 
-    /// @notice SIDE's fixed supply: 1e9 tokens with 18 decimals, minted once.
+    /// @notice SIDE's fixed supply: 1e9 tokens with 18 decimals. The launcher fixes it; the deploy checks it.
     uint256 internal constant SIDE_SUPPLY = 1_000_000_000e18;
-    /// @notice Half the supply is mined: 500M SIDE.
-    uint256 internal constant MINING_RESERVE = 500_000_000e18;
-    /// @notice The first weekly mining budget, W = 500M / 52 SIDE.
-    uint256 internal constant WEEKLY_BUDGET = MINING_RESERVE / 52;
-    /// @notice Epoch 0 is short (72 h) and gets W · 3/7.
-    uint48 internal constant EPOCH_ZERO_DURATION = 72 hours;
-    /// @notice Every later epoch lasts a week.
-    uint48 internal constant EPOCH_DURATION = 7 days;
-    /// @notice The weekly budget halves every 26 epochs after epoch 0: epoch k ≥ 1 gets `W >> ((k - 1) / 26)`.
-    uint256 internal constant HALVING_EPOCHS = 26;
 }

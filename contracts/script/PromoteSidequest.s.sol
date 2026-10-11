@@ -14,7 +14,7 @@ import {SidequestVerify} from "./SidequestVerify.sol";
 ///         It reads the candidate `DeploySidequest` wrote and forge's receipts
 ///         (`broadcast/DeploySidequest.s.sol/<chainId>/run-latest.json`), and refuses unless every transaction of the
 ///         run has a successful receipt and `SidequestVerify.verify` passes against live state: code everywhere,
-///         wiring, bootstrap, the untouched 500M reserve, one genesis, the configured fee schedule, every owner the
+///         wiring, bootstrap, the configured SIDE with its fixed 1e9 supply, the configured fee schedule, every owner the
 ///         Safe or pending to it, and on a fresh core both admin roles held by the Safe and renounced by the deployer.
 ///         Block numbers come from the receipts. Running it again after success changes nothing.
 contract PromoteSidequest is Script {

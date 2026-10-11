@@ -6,14 +6,10 @@ import {SidequestClocks} from "../../src/sidequest/SidequestClocks.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {FeeSchedule} from "../../src/sidequest/FeeSchedule.sol";
 import {SidequestHolding} from "../../src/sidequest/SidequestHolding.sol";
-import {MiningReserve} from "../../src/sidequest/MiningReserve.sol";
-import {EpochDistributor} from "../../src/sidequest/EpochDistributor.sol";
 import {IERC8004Identity} from "../../src/vendor/erc8004/IERC8004.sol";
 import {ISidequestHolding} from "../../src/sidequest/interfaces/ISidequestHolding.sol";
 import {IStakeVault} from "../../src/sidequest/interfaces/IStakeVault.sol";
 import {IFeeSchedule} from "../../src/sidequest/interfaces/IFeeSchedule.sol";
-import {IMiningReserve} from "../../src/sidequest/interfaces/IMiningReserve.sol";
-import {IEpochDistributor} from "../../src/sidequest/interfaces/IEpochDistributor.sol";
 
 contract ClocksTest is BaseV1 {
     // Exercise each real constructor, not only the shared validation helper.
@@ -36,12 +32,11 @@ contract ClocksTest is BaseV1 {
                 )
             );
         }
-        if (which == 3) return address(new MiningReserve(factory, address(holding), 1, c));
-        return address(new EpochDistributor(factory, vault, 1, c));
+        revert("unknown constructor");
     }
 
     function _refuseAll(SidequestClocks.Config memory c, bytes32 name, uint256 value) internal {
-        for (uint256 which; which < 5; ++which) {
+        for (uint256 which; which < 3; ++which) {
             vm.expectRevert(abi.encodeWithSelector(SidequestClocks.InvalidClock.selector, name, value));
             this.deployOne(which, c);
         }
@@ -80,14 +75,6 @@ contract ClocksTest is BaseV1 {
             name = "proposalGrace";
             value = ++c.proposalGrace;
         }
-        if (field == 7) {
-            name = "epochZeroDuration";
-            value = ++c.epochZeroDuration;
-        }
-        if (field == 8) {
-            name = "epochDuration";
-            value = ++c.epochDuration;
-        }
         _refuseAll(c, name, value);
     }
 
@@ -119,17 +106,9 @@ contract ClocksTest is BaseV1 {
         _mainnet(6);
     }
 
-    function test_143_refusesEpochZeroDuration() public {
-        _mainnet(7);
-    }
-
-    function test_143_refusesEpochDuration() public {
-        _mainnet(8);
-    }
-
     function test_143_acceptsProductionInAllConstructors() public {
         vm.chainId(143);
-        for (uint256 which; which < 5; ++which) {
+        for (uint256 which; which < 3; ++which) {
             assertTrue(this.deployOne(which, SidequestClocks.production()) != address(0));
         }
     }
@@ -148,12 +127,6 @@ contract ClocksTest is BaseV1 {
         SidequestClocks.Config memory c = SidequestClocks.production();
         c.proposalGrace = 0;
         _refuseAll(c, "proposalGrace", 0);
-        c = SidequestClocks.production();
-        c.epochDuration = 0;
-        _refuseAll(c, "epochDuration", 0);
-        c = SidequestClocks.production();
-        c.epochZeroDuration = 0;
-        _refuseAll(c, "epochZeroDuration", 0);
         c = SidequestClocks.production();
         c.minReviewWindow = 0;
         _refuseAll(c, "minReviewWindow", 0);
@@ -192,18 +165,12 @@ contract ClocksTest is BaseV1 {
         c = SidequestClocks.production();
         c.proposalGrace = 59;
         _refuseAll(c, "proposalGrace", 59);
-        c = SidequestClocks.production();
-        c.epochZeroDuration = 599;
-        _refuseAll(c, "epochZeroDuration", 599);
-        c = SidequestClocks.production();
-        c.epochDuration = 599;
-        _refuseAll(c, "epochDuration", 599);
     }
 }
 
 contract FastClocksTest is BaseV1 {
     function clocks() internal pure override returns (SidequestClocks.Config memory) {
-        return SidequestClocks.Config(120, 120, 300, 259200, 262800, 300, 1800, 1800, 3600);
+        return SidequestClocks.Config(120, 120, 300, 259200, 262800, 300, 1800);
     }
 
     function test_fastWindowsPublishAtMinimums_belowEachRefuses() public {
@@ -301,51 +268,5 @@ contract FastClocksTest is BaseV1 {
         vm.warp(t0 + 2 * (262800 + 1800) + 1);
         vm.expectRevert(IStakeVault.HoldingProposalExpired.selector);
         vault.acceptHolding();
-    }
-
-    function test_fastEpochCloseFundingRootClaimIntoStake() public {
-        uint48 genesis = uint48(vm.getBlockTimestamp());
-        EpochDistributor distributor = new EpochDistributor(factory, vault, genesis, clocks());
-        MiningReserve reserve = new MiningReserve(factory, address(distributor), genesis, clocks());
-        vm.prank(deployer);
-        factory.transfer(address(reserve), 500_000_000e18);
-        bytes32 root = distributor.leaf(0, stranger, 10e18);
-        vm.warp(uint256(genesis) + 1799);
-        vm.expectRevert(abi.encodeWithSelector(IMiningReserve.EpochNotEnded.selector, 0, uint256(genesis) + 1800));
-        reserve.fund(0, 10e18);
-        vm.expectRevert(abi.encodeWithSelector(IEpochDistributor.EpochNotEnded.selector, 0, uint256(genesis) + 1800));
-        distributor.setRoot(0, root, 10e18, root);
-        vm.warp(uint256(genesis) + 1800);
-        reserve.fund(0, 10e18);
-        distributor.setRoot(0, root, 10e18, root);
-        distributor.claim(0, stranger, 10e18, new bytes32[](0));
-        assertEq(vault.stakeOf(stranger), 10e18);
-        assertEq(reserve.currentEpoch(), 1);
-        assertEq(reserve.epochEnd(1), uint256(genesis) + 5400);
-        assertEq(distributor.epochEnd(1), reserve.epochEnd(1));
-        assertEq(reserve.budget(0), uint256(500_000_000e18) / 52 * 3 / 7, "economic budgets stay fixed");
-        vm.warp(uint256(genesis) + 5399);
-        assertEq(reserve.currentEpoch(), 1);
-        vm.warp(uint256(genesis) + 5400);
-        assertEq(reserve.currentEpoch(), 2);
-    }
-
-    function testFuzz_epochBoundaries(uint48 zero, uint48 duration, uint32 epoch) public {
-        zero = uint48(bound(zero, 600, 30 days));
-        duration = uint48(bound(duration, 600, 30 days));
-        epoch = uint32(bound(epoch, 0, 1_000_000));
-        SidequestClocks.Config memory c = clocks();
-        c.epochZeroDuration = zero;
-        c.epochDuration = duration;
-        uint48 genesis = uint48(vm.getBlockTimestamp());
-        EpochDistributor distributor = new EpochDistributor(factory, vault, genesis, c);
-        MiningReserve reserve = new MiningReserve(factory, address(distributor), genesis, c);
-        uint256 end = reserve.epochEnd(epoch);
-        assertEq(distributor.epochEnd(epoch), end);
-        assertEq(end - reserve.epochStart(epoch), epoch == 0 ? zero : duration);
-        vm.warp(end - 1);
-        assertEq(reserve.currentEpoch(), epoch);
-        vm.warp(end);
-        assertEq(reserve.currentEpoch(), uint256(epoch) + 1);
     }
 }

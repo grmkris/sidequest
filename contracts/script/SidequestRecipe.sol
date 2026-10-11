@@ -6,14 +6,11 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {ERC8183WithAuthorization} from "../src/vendor/erc8183/ERC8183WithAuthorization.sol";
 import {IERC8004Identity, IERC8004Reputation} from "../src/vendor/erc8004/IERC8004.sol";
-import {Factory} from "../src/sidequest/Factory.sol";
-import {TeamVesting} from "../src/sidequest/TeamVesting.sol";
+import {IFactory} from "../src/sidequest/interfaces/IFactory.sol";
 import {FeeSchedule} from "../src/sidequest/FeeSchedule.sol";
 import {StakeVault} from "../src/sidequest/StakeVault.sol";
 import {SidequestHolding} from "../src/sidequest/SidequestHolding.sol";
 import {SidequestEvaluator} from "../src/sidequest/SidequestEvaluator.sol";
-import {EpochDistributor} from "../src/sidequest/EpochDistributor.sol";
-import {MiningReserve} from "../src/sidequest/MiningReserve.sol";
 import {IFeeSchedule} from "../src/sidequest/interfaces/IFeeSchedule.sol";
 import {SidequestConstants} from "../src/sidequest/interfaces/SidequestConstants.sol";
 import {SidequestClocks} from "../src/sidequest/SidequestClocks.sol";
@@ -24,16 +21,14 @@ import {SidequestClocks} from "../src/sidequest/SidequestClocks.sol";
 ///         a third party's calls between them:
 ///
 ///         1. core: a fresh proxy with fees 0;
-///         2. TeamVesting → Factory → FeeSchedule → StakeVault → SidequestHolding → SidequestEvaluator, then
+///         2. FeeSchedule → StakeVault (on the configured SIDE) → SidequestHolding → SidequestEvaluator, then
 ///            `setEvaluator` and the attester as verifier;
 ///         3. `bootstrapHolding` (staking opens here, after every piece it depends on exists);
-///         4. EpochDistributor → MiningReserve, and the 500M mining allocation sent to the reserve;
-///         5. every owner handed to the Safe (`transferOwnership`; the Safe must `acceptOwnership`), and the core has
+///         4. every owner handed to the Safe (`transferOwnership`; the Safe must `acceptOwnership`), and the core has
 ///            both admin roles moved to the Safe and renounced by the deployer.
 ///
-///         Genesis: the deployer receives the mining (500M, forwarded in step 4) and liquidity (50M) allocations; the
-///         treasury (200M), the ecosystem (100M) and the vesting wallet (150M) receive theirs at construction. No
-///         allocation depends on a predicted address.
+///         SIDE is not deployed here: it exists before the recipe runs (`sidequest.token`; on mainnet, the nad.fun
+///         token) and the recipe only checks it. There is no mining reserve, distributor or vesting wallet.
 library SidequestRecipe {
     uint256 internal constant MAINNET = 143;
 
@@ -58,40 +53,25 @@ library SidequestRecipe {
         uint256[4] thresholds;
         uint16[4] bps;
         address feeTreasury;
-        address treasury;
-        address ecosystem;
-        address liquidity;
-        address vestingBeneficiary;
-        uint64 vestingStartOffset;
-        uint64 vestingDuration;
-        uint64 vestingCliff;
-        /// @dev Epoch 0 start; zero means the deploy time.
-        uint48 genesis;
+        /// @dev SIDE, created outside the protocol (on mainnet by the nad.fun launcher). The recipe deploys against it
+        ///      and mints nothing.
+        IFactory token;
         SidequestClocks.Config clocks;
     }
 
     struct Deployed {
         ERC8183WithAuthorization core;
-        uint48 t0;
-        TeamVesting vesting;
-        Factory factory;
+        /// @dev SIDE: the configured token, recorded as `factory` like every deployment record before it.
+        IFactory factory;
         FeeSchedule fees;
         StakeVault vault;
         SidequestHolding holding;
         SidequestEvaluator evaluator;
-        EpochDistributor distributor;
-        MiningReserve reserve;
     }
 
     error WrongChain(uint256 expected, uint256 actual);
     error BadConfig(string what);
     error MainnetNotGo();
-
-    uint256 internal constant MINING = SidequestConstants.MINING_RESERVE;
-    uint256 internal constant TREASURY_SHARE = 200_000_000e18;
-    uint256 internal constant TEAM_SHARE = 150_000_000e18;
-    uint256 internal constant ECOSYSTEM_SHARE = 100_000_000e18;
-    uint256 internal constant LIQUIDITY_SHARE = 50_000_000e18;
 
     /// @notice Every script calls this before any broadcast or readback (review C10-001): the RPC must be the config's
     ///         chain, so a testnet config on a mainnet RPC cannot skip the guard; and when the script sends
@@ -162,14 +142,7 @@ library SidequestRecipe {
             c.bps[i] = SafeCast.toUint16(bps[i]);
         }
         c.feeTreasury = vm.parseJsonAddress(json, ".sidequest.schedule.treasury");
-        c.treasury = vm.parseJsonAddress(json, ".sidequest.allocation.treasury");
-        c.ecosystem = vm.parseJsonAddress(json, ".sidequest.allocation.ecosystem");
-        c.liquidity = vm.parseJsonAddress(json, ".sidequest.allocation.liquidity");
-        c.vestingBeneficiary = vm.parseJsonAddress(json, ".sidequest.vesting.beneficiary");
-        c.vestingStartOffset = SafeCast.toUint64(vm.parseJsonUint(json, ".sidequest.vesting.startOffset"));
-        c.vestingDuration = SafeCast.toUint64(vm.parseJsonUint(json, ".sidequest.vesting.duration"));
-        c.vestingCliff = SafeCast.toUint64(vm.parseJsonUint(json, ".sidequest.vesting.cliff"));
-        c.genesis = SafeCast.toUint48(vm.parseJsonUint(json, ".sidequest.mining.genesis"));
+        c.token = IFactory(vm.parseJsonAddress(json, ".sidequest.token"));
         c.clocks = loadClocks(vm, json, ".sidequest.clocks");
     }
 
@@ -189,8 +162,6 @@ library SidequestRecipe {
             clocks.holdingDelay = SafeCast.toUint48(vm.parseJsonUint(json, string.concat(p, ".holdingDelay")));
             clocks.feeDelay = SafeCast.toUint48(vm.parseJsonUint(json, string.concat(p, ".feeDelay")));
             clocks.proposalGrace = SafeCast.toUint48(vm.parseJsonUint(json, string.concat(p, ".proposalGrace")));
-            clocks.epochZeroDuration = SafeCast.toUint48(vm.parseJsonUint(json, string.concat(p, ".epochZeroDuration")));
-            clocks.epochDuration = SafeCast.toUint48(vm.parseJsonUint(json, string.concat(p, ".epochDuration")));
         }
     }
 
@@ -203,9 +174,13 @@ library SidequestRecipe {
         }
         if (
             c.safe == address(0) || c.defaultArbitrator == address(0) || c.feeTreasury == address(0)
-                || c.treasury == address(0) || c.ecosystem == address(0) || c.liquidity == address(0)
-                || c.vestingBeneficiary == address(0) || c.attester == address(0)
+                || c.attester == address(0)
         ) revert BadConfig("zero address");
+        // SIDE exists before the deploy and is exactly the launcher's token: code, 18 decimals and the fixed 1e9
+        // supply (nad.fun V2 tokens have no mint and no burn, so live totalSupply cannot drift).
+        if (address(c.token).code.length == 0) revert BadConfig("SIDE has no code");
+        if (c.token.decimals() != 18) revert BadConfig("SIDE decimals");
+        if (c.token.totalSupply() != SidequestConstants.SIDE_SUPPLY) revert BadConfig("SIDE supply");
         if (address(c.identity).code.length == 0 || address(c.reputation).code.length == 0) {
             revert BadConfig("ERC-8004 registries missing");
         }
@@ -222,11 +197,6 @@ library SidequestRecipe {
         for (uint256 i; i < 4; ++i) {
             if (c.thresholds[i] * 1e18 > SidequestConstants.SIDE_SUPPLY) revert BadConfig("threshold above supply");
         }
-        // A past genesis would make several epochs fundable at once; a far one leaves mining unstarted.
-        if (c.genesis != 0 && (uint256(c.genesis) + 1 days < block.timestamp || c.genesis > block.timestamp + 90 days))
-        {
-            revert BadConfig("genesis out of range");
-        }
         // A bonded listing must expire within the vault's unstake delay (BondOutlastsUnbonding), and its expiry is at
         // least deliveryDeadline + review + dispute + arbitration + margin. Clocks whose shortest windows and margin
         // leave under an hour of delivery inside that delay would make every bonded hire impossible.
@@ -240,22 +210,17 @@ library SidequestRecipe {
     function deploy(Config memory c) internal returns (Deployed memory d) {
         check(c);
         stepCore(c, d);
-        stepVesting(c, d);
-        stepFactory(c, d);
         stepFeeSchedule(c, d);
         stepVault(c, d);
         stepHolding(c, d);
         stepEvaluator(c, d);
         stepWire(c, d);
         stepBootstrap(d);
-        stepDistributor(c, d);
-        stepReserve(c, d);
-        stepFundReserve(d);
         stepHandover(c, d);
     }
 
     function stepCore(Config memory c, Deployed memory d) internal {
-        d.t0 = c.genesis == 0 ? uint48(block.timestamp) : c.genesis;
+        d.factory = c.token;
         ERC8183WithAuthorization impl = new ERC8183WithAuthorization();
         // Initialised inside the proxy's CREATE: no initializer gap to front-run.
         d.core = ERC8183WithAuthorization(
@@ -265,24 +230,6 @@ library SidequestRecipe {
         );
         d.core.setPlatformFee(0, c.safe);
         d.core.setEvaluatorFee(0);
-    }
-
-    function stepVesting(Config memory c, Deployed memory d) internal {
-        d.vesting = new TeamVesting(
-            c.vestingBeneficiary, uint64(d.t0) + c.vestingStartOffset, c.vestingDuration, c.vestingCliff
-        );
-    }
-
-    function stepFactory(Config memory c, Deployed memory d) internal {
-        address[] memory to = new address[](5);
-        uint256[] memory amounts = new uint256[](5);
-        // The deployer holds the mining allocation only until step 4 forwards it to the reserve.
-        (to[0], amounts[0]) = (c.admin, MINING);
-        (to[1], amounts[1]) = (c.treasury, TREASURY_SHARE);
-        (to[2], amounts[2]) = (address(d.vesting), TEAM_SHARE);
-        (to[3], amounts[3]) = (c.ecosystem, ECOSYSTEM_SHARE);
-        (to[4], amounts[4]) = (c.liquidity, LIQUIDITY_SHARE);
-        d.factory = new Factory("Sidequest", "SIDE", to, amounts);
     }
 
     function stepFeeSchedule(Config memory c, Deployed memory d) internal {
@@ -296,7 +243,7 @@ library SidequestRecipe {
     }
 
     function stepVault(Config memory c, Deployed memory d) internal {
-        d.vault = new StakeVault(d.factory, c.clocks);
+        d.vault = new StakeVault(c.token, c.clocks);
     }
 
     function stepHolding(Config memory c, Deployed memory d) internal {
@@ -328,20 +275,6 @@ library SidequestRecipe {
         d.vault.bootstrapHolding(address(d.holding));
     }
 
-    function stepDistributor(Config memory c, Deployed memory d) internal {
-        d.distributor = new EpochDistributor(d.factory, d.vault, d.t0, c.clocks);
-    }
-
-    /// @dev Both mining contracts get the one `t0` fixed in `stepCore` (review C6-001).
-    function stepReserve(Config memory c, Deployed memory d) internal {
-        d.reserve = new MiningReserve(d.factory, address(d.distributor), d.t0, c.clocks);
-        if (d.reserve.genesis() != d.distributor.genesis()) revert BadConfig("mining genesis mismatch");
-    }
-
-    function stepFundReserve(Deployed memory d) internal {
-        d.factory.transfer(address(d.reserve), MINING);
-    }
-
     /// @dev Starts every handover; ownership is complete only once the Safe calls `acceptOwnership` on each. On a fresh
     ///      core the Safe gets both admin roles and the deployer renounces its own, so it keeps no upgrade, pause or
     ///      emergency-withdraw power.
@@ -350,8 +283,6 @@ library SidequestRecipe {
         d.fees.transferOwnership(c.safe);
         d.holding.transferOwnership(c.safe);
         d.evaluator.transferOwnership(c.safe);
-        d.distributor.transferOwnership(c.safe);
-        d.reserve.transferOwnership(c.safe);
         d.core.grantRole(d.core.DEFAULT_ADMIN_ROLE(), c.safe);
         d.core.grantRole(d.core.ADMIN_ROLE(), c.safe);
         d.core.renounceRole(d.core.ADMIN_ROLE(), c.admin);

@@ -10,6 +10,7 @@ import {
   encodeFunctionData,
   http,
   parseEther,
+  zeroAddress,
 } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { monadTestnet } from 'viem/chains'
@@ -167,9 +168,14 @@ export async function startSidequestFork() {
         args: [admin.account.address, admin.account.address],
       }),
     ])
-    const factory = await deploy('Factory', ['Factory', 'SIDE', [admin.account.address], [parseEther('1000000000')]])
-    // Fresh fixtures use the recipe's clocks, including the three-day bond horizon.
-    const clocks = clocksFromConfig(testnetConfig.sidequest.clocks, testnetConfig.chainId)
+    // SIDE as the launcher creates it (no burn); the recipe deploys against an existing token and mints nothing.
+    const factory = await deploy('LaunchToken', [admin.account.address])
+    // Fresh fixtures use the recipe's clocks, including the three-day bond horizon. The contracts no longer take epoch
+    // clocks; the SDK's clock type still names them until the mining fields leave the SDK schema.
+    const clocks = clocksFromConfig(
+      { ...testnetConfig.sidequest.clocks, epochZeroDuration: 1800, epochDuration: 3600 },
+      testnetConfig.chainId,
+    )
     const feeSchedule = await deploy('FeeSchedule', [
       {
         thresholds: [0n, parseEther('10000'), parseEther('100000'), parseEther('1000000')],
@@ -193,9 +199,6 @@ export async function startSidequestFork() {
     ])
     const evaluator = await deploy('SidequestEvaluator', [core, holding, d.reputation])
     const t0 = Number((await publicClient.getBlock()).timestamp)
-    const distributor = await deploy('EpochDistributor', [factory, vault, t0, clocks])
-    const miningReserve = await deploy('MiningReserve', [factory, distributor, t0, clocks])
-    const teamVesting = await deploy('TeamVesting', [admin.account.address, t0 + 86400, 86400 * 365, 86400])
     await send(core, coreAbi, 'setHookWhitelist', [holding, true])
     await send(holding, sidequestHoldingAbi, 'setEvaluator', [evaluator])
     await send(vault, stakeVaultAbi, 'bootstrapHolding', [holding])
@@ -216,9 +219,10 @@ export async function startSidequestFork() {
           factory,
           vault,
           feeSchedule,
-          distributor,
-          miningReserve,
-          teamVesting,
+          // No mining or vesting contracts exist any more; these placeholders go with the SDK schema's mining fields.
+          distributor: zeroAddress,
+          miningReserve: zeroAddress,
+          teamVesting: zeroAddress,
           t0,
           clocks,
         },

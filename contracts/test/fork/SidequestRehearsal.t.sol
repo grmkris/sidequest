@@ -10,7 +10,8 @@ import {ISidequestEvaluator} from "../../src/sidequest/interfaces/ISidequestEval
 import {IStakeVault} from "../../src/sidequest/interfaces/IStakeVault.sol";
 import {SidequestRecipe} from "../../script/SidequestRecipe.sol";
 import {SidequestVerify} from "../../script/SidequestVerify.sol";
-import {IMiningReserve} from "../../src/sidequest/interfaces/IMiningReserve.sol";
+import {IFactory} from "../../src/sidequest/interfaces/IFactory.sol";
+import {LaunchToken} from "../mocks/LaunchToken.sol";
 import {RecipeDriver} from "../sidequest/Recipe.t.sol";
 
 /// @dev The C8 rehearsal on a local fork of Monad (nothing is sent). The recipe runs step by step from the configured
@@ -43,18 +44,14 @@ contract SidequestRehearsalForkTest is Test {
         c.thresholds = [uint256(0), 10_000, 100_000, 1_000_000];
         c.bps = [uint16(3000), 1000, 300, 100];
         c.feeTreasury = safe;
-        c.treasury = safe;
-        c.ecosystem = c.chainId == 10143 ? c.admin : safe;
-        c.liquidity = c.admin;
-        c.vestingBeneficiary = makeAddr("team");
-        c.vestingStartOffset = 365 days;
-        c.vestingDuration = 3 * 365 days;
+        // SIDE exists before the recipe; a launcher-like token on the fork stands in for it (R7 creates the real one).
+        c.token = IFactory(address(new LaunchToken(c.admin)));
     }
 
     function _deploy(SidequestRecipe.Config memory c) internal returns (SidequestRecipe.Deployed memory d) {
         RecipeDriver driver = new RecipeDriver();
         driver.configure(c);
-        for (uint256 i; i < 13; ++i) {
+        for (uint256 i; i < 8; ++i) {
             driver.step(i);
             d = driver.deployed();
             // A third party between every step: staking, early publishing and every one-time setup fail.
@@ -73,19 +70,12 @@ contract SidequestRehearsalForkTest is Test {
                 vm.expectRevert();
                 d.holding.setEvaluator(stranger);
             }
-            if (address(d.distributor) != address(0)) {
-                vm.prank(stranger);
-                vm.expectRevert();
-                d.distributor.setRoot(0, keccak256("root"), 0, bytes32(0));
-            }
         }
         vm.startPrank(safe);
         d.vault.acceptOwnership();
         d.fees.acceptOwnership();
         d.holding.acceptOwnership();
         d.evaluator.acceptOwnership();
-        d.distributor.acceptOwnership();
-        d.reserve.acceptOwnership();
         vm.stopPrank();
     }
 
@@ -95,10 +85,8 @@ contract SidequestRehearsalForkTest is Test {
         assertEq(d.fees.owner(), safe);
         assertEq(d.holding.owner(), safe);
         assertEq(d.evaluator.owner(), safe);
-        assertEq(d.distributor.owner(), safe);
-        assertEq(d.reserve.owner(), safe);
         assertEq(d.factory.totalSupply(), 1_000_000_000e18);
-        assertEq(d.factory.balanceOf(address(d.reserve)), 500_000_000e18);
+        assertEq(address(d.vault.factory()), address(c.token));
         assertEq(d.core.platformFeeBP(), 0);
         assertEq(d.core.evaluatorFeeBP(), 0);
         assertEq(address(d.holding.identity()), address(c.identity));
@@ -112,10 +100,6 @@ contract SidequestRehearsalForkTest is Test {
         assertEq(d.vault.HOLDING_DELAY(), c.clocks.holdingDelay);
         assertEq(d.fees.DELAY(), c.clocks.feeDelay);
         assertEq(d.fees.PROPOSAL_GRACE(), c.clocks.proposalGrace);
-        assertEq(d.reserve.EPOCH_ZERO_DURATION(), c.clocks.epochZeroDuration);
-        assertEq(d.reserve.EPOCH_DURATION(), c.clocks.epochDuration);
-        assertEq(d.distributor.EPOCH_ZERO_DURATION(), c.clocks.epochZeroDuration);
-        assertEq(d.distributor.EPOCH_DURATION(), c.clocks.epochDuration);
     }
 
     function _budgetAuth(
@@ -239,24 +223,6 @@ contract SidequestRehearsalForkTest is Test {
         string memory json = vm.readFile(SidequestRecipe.path(vm, "monad-testnet"));
         IERC20 mUsd = IERC20(vm.parseJsonAddressArray(json, ".deployment.rewardTokens")[0]);
         _hire(c, d, mUsd, 25e6);
-        // The testnet tuple closes epoch zero in 30 min and claims into the new vault, on real testnet dependencies.
-        assertEq(c.clocks.epochZeroDuration, 1800);
-        assertEq(c.clocks.epochDuration, 3600);
-        uint256 end = d.reserve.epochEnd(0);
-        bytes32 root = d.distributor.leaf(0, stranger, 1e18);
-        vm.warp(end - 1);
-        vm.prank(safe);
-        vm.expectRevert(abi.encodeWithSelector(IMiningReserve.EpochNotEnded.selector, 0, end));
-        d.reserve.fund(0, 1e18);
-        vm.warp(end);
-        vm.startPrank(safe);
-        d.reserve.fund(0, 1e18);
-        d.distributor.setRoot(0, root, 1e18, keccak256("fork-only-epoch"));
-        vm.stopPrank();
-        d.distributor.claim(0, stranger, 1e18, new bytes32[](0));
-        assertEq(d.vault.stakeOf(stranger), 1e18);
-        assertEq(d.vault.positionOf(stranger, stranger).shares, 1e18, "mining owns its self position");
-        assertEq(d.reserve.epochEnd(1), end + 3600);
     }
 
     function test_fork_mainnet_freshCore_rolesToSafe_oneHire() public {

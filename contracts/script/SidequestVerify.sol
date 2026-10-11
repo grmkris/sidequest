@@ -29,14 +29,11 @@ library SidequestVerify {
         _require(block.chainid == c.chainId, "chain");
         SidequestClocks.validate(c.clocks);
         _require(address(d.core).code.length != 0, "core code");
-        _require(address(d.vesting).code.length != 0, "vesting code");
         _require(address(d.factory).code.length != 0, "factory code");
         _require(address(d.fees).code.length != 0, "feeSchedule code");
         _require(address(d.vault).code.length != 0, "vault code");
         _require(address(d.holding).code.length != 0, "holding code");
         _require(address(d.evaluator).code.length != 0, "evaluator code");
-        _require(address(d.distributor).code.length != 0, "distributor code");
-        _require(address(d.reserve).code.length != 0, "miningReserve code");
         _require(c.safe.code.length != 0, "safe code");
 
         // A fresh core charges nothing and its admin roles belong to the Safe alone.
@@ -65,10 +62,6 @@ library SidequestVerify {
         _require(d.vault.bootstrapped() && d.vault.isHolding(address(d.holding)), "vault bootstrap");
         (address pendingHolding,) = d.vault.pendingHolding();
         _require(pendingHolding == address(0), "vault pending holding");
-        _require(address(d.distributor.vault()) == address(d.vault), "distributor.vault");
-        _require(address(d.distributor.factory()) == address(d.factory), "distributor.factory");
-        _require(address(d.reserve.factory()) == address(d.factory), "miningReserve.factory");
-        _require(d.reserve.distributor() == address(d.distributor), "miningReserve.distributor");
 
         // D24: promotion must prove the immutable clocks from live reads.
         _require(d.holding.MIN_REVIEW_WINDOW() == c.clocks.minReviewWindow, "holding.MIN_REVIEW_WINDOW");
@@ -79,10 +72,6 @@ library SidequestVerify {
         _require(d.vault.PROPOSAL_GRACE() == c.clocks.proposalGrace, "vault.PROPOSAL_GRACE");
         _require(d.fees.DELAY() == c.clocks.feeDelay, "fees.DELAY");
         _require(d.fees.PROPOSAL_GRACE() == c.clocks.proposalGrace, "fees.PROPOSAL_GRACE");
-        _require(d.reserve.EPOCH_ZERO_DURATION() == c.clocks.epochZeroDuration, "reserve.EPOCH_ZERO_DURATION");
-        _require(d.reserve.EPOCH_DURATION() == c.clocks.epochDuration, "reserve.EPOCH_DURATION");
-        _require(d.distributor.EPOCH_ZERO_DURATION() == c.clocks.epochZeroDuration, "distributor.EPOCH_ZERO_DURATION");
-        _require(d.distributor.EPOCH_DURATION() == c.clocks.epochDuration, "distributor.EPOCH_DURATION");
 
         // Fee schedule: the configured one, nothing queued.
         IFeeSchedule.Schedule memory s = d.fees.schedule();
@@ -93,31 +82,16 @@ library SidequestVerify {
         (, uint48 feeEta) = d.fees.pending();
         _require(feeEta == 0, "fee schedule pending");
 
-        // SIDE and mining: the whole supply, the untouched reserve, one genesis, nothing promised yet.
-        // The genesis supply is proven from the Factory's creation receipt (`blocks`), not from live `totalSupply`,
-        // which any holder can lower with `burn` (review C8-002).
-        // Lower bounds for balances anyone can donate to (review C8-002): dust must not block promotion. The exact
-        // allocation is already proven by the run's successful receipts and the fixed, immutable supply.
-        _require(d.factory.balanceOf(address(d.reserve)) >= SidequestConstants.MINING_RESERVE, "reserve balance");
-        _require(d.reserve.totalFunded() == 0 && d.distributor.outstanding() == 0, "mining untouched");
-        _require(d.reserve.genesis() == d.t0 && d.distributor.genesis() == d.t0, "mining genesis");
-        if (c.genesis != 0) _require(d.t0 == c.genesis, "configured genesis");
-        _require(d.vesting.owner() == c.vestingBeneficiary, "vesting beneficiary");
-        _require(d.vesting.start() == uint256(d.t0) + c.vestingStartOffset, "vesting start");
-        _require(d.vesting.duration() == c.vestingDuration, "vesting duration");
-        _require(
-            d.factory.balanceOf(address(d.vesting)) + d.vesting.released(address(d.factory))
-                >= SidequestRecipe.TEAM_SHARE,
-            "vesting allocation"
-        );
-
+        // SIDE: the configured token, unchanged since `check`. It has no mint and no burn, so the live supply is the
+        // launch supply; the vault stakes exactly it.
+        _require(address(d.factory) == address(c.token), "SIDE token");
+        _require(d.factory.decimals() == 18, "SIDE decimals");
+        _require(d.factory.totalSupply() == SidequestConstants.SIDE_SUPPLY, "SIDE supply");
         // Ownership: the Safe owns, or the handover to it is pending (the deployer still owns).
         _owned(address(d.vault), c, "vault owner");
         _owned(address(d.fees), c, "feeSchedule owner");
         _owned(address(d.holding), c, "holding owner");
         _owned(address(d.evaluator), c, "evaluator owner");
-        _owned(address(d.distributor), c, "distributor owner");
-        _owned(address(d.reserve), c, "miningReserve owner");
     }
 
     function _owned(address target, SidequestRecipe.Config memory c, string memory what) private view {
@@ -133,9 +107,8 @@ library SidequestVerify {
     }
 
     /// @notice Deploy blocks from the receipts, after checking the log is complete: every transaction has a successful
-    ///         receipt, every candidate contract was created by one of them, and the Factory's creation receipt mints
-    ///         exactly the 1e9 supply (review C8-002; SIDE has no mint after its constructor). `sidequestBlock` is the
-    ///         first block of the run; `coreBlock` is the core proxy's block.
+    ///         receipt and every candidate contract was created by one of them. SIDE is not among them: it exists before
+    ///         the run. `sidequestBlock` is the first block of the run; `coreBlock` is the core proxy's block.
     function blocks(Vm vm, string memory path, SidequestRecipe.Deployed memory d)
         internal
         view
@@ -149,30 +122,19 @@ library SidequestVerify {
 
         address[] memory created = new address[](n);
         uint256[] memory blockOf = new uint256[](n);
-        uint256[] memory receiptOf = new uint256[](n);
         sidequestBlock = type(uint256).max;
         for (uint256 i; i < n; ++i) {
             string memory t = string.concat(".transactions[", vm.toString(i), "]");
             bytes32 hash = vm.parseJsonBytes32(json, string.concat(t, ".hash"));
-            (bool found, uint256 blockNumber, uint256 r) = _receipt(vm, json, hash);
+            (bool found, uint256 blockNumber,) = _receipt(vm, json, hash);
             if (!found) revert BadBroadcast("transaction without a successful receipt");
             blockOf[i] = blockNumber;
-            receiptOf[i] = r;
             if (blockNumber < sidequestBlock) sidequestBlock = blockNumber;
             if (_eq(vm.parseJsonString(json, string.concat(t, ".transactionType")), "CREATE")) {
                 created[i] = vm.parseJsonAddress(json, string.concat(t, ".contractAddress"));
             }
         }
-        address[8] memory expected = [
-            address(d.vesting),
-            address(d.factory),
-            address(d.fees),
-            address(d.vault),
-            address(d.holding),
-            address(d.evaluator),
-            address(d.distributor),
-            address(d.reserve)
-        ];
+        address[4] memory expected = [address(d.fees), address(d.vault), address(d.holding), address(d.evaluator)];
         for (uint256 k; k < expected.length; ++k) {
             if (!_contains(created, expected[k])) revert BadBroadcast("candidate contract not created by this run");
         }
@@ -180,13 +142,6 @@ library SidequestVerify {
             if (created[i] == address(d.core)) coreBlock = blockOf[i];
         }
         if (coreBlock == 0) revert BadBroadcast("core proxy not created by this run");
-        for (uint256 i; i < n; ++i) {
-            if (created[i] == address(d.factory)) {
-                if (_minted(vm, json, receiptOf[i], address(d.factory)) != SidequestConstants.SIDE_SUPPLY) {
-                    revert BadBroadcast("factory genesis is not the 1e9 supply");
-                }
-            }
-        }
     }
 
     function _receipt(Vm vm, string memory json, bytes32 hash)
@@ -200,20 +155,6 @@ library SidequestVerify {
             if (vm.parseJsonBytes32(json, string.concat(r, ".transactionHash")) != hash) continue;
             if (vm.parseJsonUint(json, string.concat(r, ".status")) != 1) return (false, 0, 0);
             return (true, vm.parseJsonUint(json, string.concat(r, ".blockNumber")), j);
-        }
-    }
-
-    /// @dev The sum of `Transfer(0, …)` events `token` emitted in receipt `r`.
-    function _minted(Vm vm, string memory json, uint256 r, address token) private view returns (uint256 total) {
-        bytes32 transferTopic = keccak256("Transfer(address,address,uint256)");
-        string memory base = string.concat(".receipts[", vm.toString(r), "].logs[");
-        for (uint256 k;; ++k) {
-            string memory l = string.concat(base, vm.toString(k), "]");
-            if (!vm.keyExistsJson(json, l)) return total;
-            if (vm.parseJsonAddress(json, string.concat(l, ".address")) != token) continue;
-            bytes32[] memory topics = vm.parseJsonBytes32Array(json, string.concat(l, ".topics"));
-            if (topics.length != 3 || topics[0] != transferTopic || topics[1] != bytes32(0)) continue;
-            total += abi.decode(vm.parseJsonBytes(json, string.concat(l, ".data")), (uint256));
         }
     }
 

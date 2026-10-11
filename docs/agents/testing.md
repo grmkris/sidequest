@@ -19,9 +19,9 @@ local-cache results were accepted; API, indexer and indexer Worker tests execute
 | `packages/react` | 6 | 0 | `@sidequest/react` |
 | `tools` | 53 | 0 | `tools` |
 
-Run a workspace with `bunx turbo run test --filter <filter>`. The contracts floor is 339 passing unit tests (fork tests excluded); see
-[contracts/AGENTS.md](../../contracts/AGENTS.md). The mandatory MainnetRunbook check passed 13 tests with
-`cd contracts && heavy forge test --match-contract MainnetRunbook` after the docs change.
+Run a workspace with `bunx turbo run test --filter <filter>`. The contracts floor is 373 passing unit tests (fork tests excluded); see
+[contracts/AGENTS.md](../../contracts/AGENTS.md). The mandatory MainnetRunbook check passed 10 tests with
+`cd contracts && heavy forge test --match-contract MainnetRunbook` after the 11 October launch-model change.
 
 ## Cleanup checks
 

@@ -2,15 +2,11 @@
 # R7: the mainnet launch, end to end, on a throwaway anvil fork of Monad mainnet (chain 143), Monad gas pricing.
 # Steps, in launch order (docs/mainnet-runbook.md, D16):
 #   1. a 1-of-2 Safe from the canonical v1.4.1 SafeProxyFactory + SafeL2 singleton (their code is checked first);
-#   2. DeploySidequest with a fresh core and MAINNET_GO;
-#   3. PromoteSidequest (no transactions), then the D16 launch gate, which must refuse: the six are only pending;
-#   4. SafeAccept (six execTransactions from an owner), then the D16 gate, which must pass with this Safe's owners and
+#   2. DeploySidequest with a fresh core and MAINNET_GO, against the existing SIDE ($SIDE, created on nad.fun first);
+#   3. PromoteSidequest (no transactions), then the D16 launch gate, which must refuse: the four are only pending;
+#   4. SafeAccept (four execTransactions from an owner), then the D16 gate, which must pass with this Safe's owners and
 #      threshold pinned (LAUNCH-AUDIT-003), and refuse a wrong owner pin and a guard;
-#   5. SeedPool (helper, approvals, seed) and its receipt-based verify();
-#   6. one direct hire through the v1 pair (register, stake, publish, activate, submit, accept, settle);
-#   7. mining: warp past epoch 0; a Safe owner signs the price list (a throwaway keystore), scripts/mining computes the
-#      epoch from the fork's logs, the Safe sends the tool's fund (an ECDSA SafeTx at the nonce read with totalFunded, as
-#      /admin does, D18; the same signature again reverts) + setRoot, and the worker's and creator's claims stake.
+#   6. one direct hire through the v1 pair (register, stake, publish, activate, submit, accept, settle).
 # Every step's gas (the limits actually sent, which Monad charges, and gasUsed) is printed as the launch budget.
 # Sends nothing to a real chain: anvil's public dev keys sign everything, against a local fork. Holds the launch lock
 # (script/launch-lock.sh), so it refuses while another launch or rehearsal runs in this checkout. Writes only its own
@@ -134,15 +130,12 @@ ok "Safe $SAFE (1.4.1, owners $OWNER1 $OWNER2, threshold 1)"
 # The scratch config: mainnet's, with the fork's roles, the Safe and a v1 sidequest block. Mainnet's own sidequest keys
 # (the creator-bond policy) are kept, so R7 deploys the launch values.
 jq --arg safe "$SAFE" --arg admin "$DEPLOYER" --arg relay "$RELAY" --arg attester "$ATTESTER" \
-  --arg arbitrator "$ARBITRATOR" --arg team "$TEAM" '
+  --arg arbitrator "$ARBITRATOR" --arg side "${SIDE:?SIDE is created on nad.fun before the deploy}" '
   .roles = { admin: $admin, relay: $relay, attester: $attester, arbitrator: $arbitrator }
   | .sidequest = (.sidequest // {}) + {
       safe: $safe, defaultArbitrator: $arbitrator, margin: 3600,
-      schedule: { thresholds: [0, 10000, 100000, 1000000], bps: [3000, 1000, 300, 100], treasury: $safe },
-      allocation: { treasury: $safe, ecosystem: $safe, liquidity: $admin },
-      vesting: { beneficiary: $team, startOffset: 31536000, duration: 94608000, cliff: 0 },
-      mining: { genesis: 0 } }
-  | .liquidity.positionOwner = $safe
+      schedule: { thresholds: [0, 1000000, 10000000, 50000000], bps: [3000, 1000, 300, 100], treasury: $safe },
+      token: $side }
   | .deployment = {}' config/monad-mainnet.json >"$CONFIG"
 
 # 2. DeploySidequest (fresh core).
@@ -158,9 +151,9 @@ record "3. PromoteSidequest (reads; writes config)" 0 0 0
 [[ "$(jq -r .deployment.sidequest.safe "$CONFIG")" == "$SAFE" ]] || fail "promotion did not record the Safe"
 set +e; REFUSED=$(gate); CODE=$?; set -e
 [[ $CODE -eq 3 ]] || fail "D16 gate opened before the Safe accepted ($REFUSED)"
-[[ "$(jq length <<<"$REFUSED")" == 6 && "$(jq '[.[] | select(endswith("is not the Safe"))] | length' <<<"$REFUSED")" == 6 ]] \
+[[ "$(jq length <<<"$REFUSED")" == 4 && "$(jq '[.[] | select(endswith("is not the Safe"))] | length' <<<"$REFUSED")" == 4 ]] \
   || fail "D16 gate refused for other reasons: $REFUSED"
-ok "promoted; D16 gate refuses with the six handovers pending"
+ok "promoted; D16 gate refuses with the four handovers pending"
 # LAUNCH-AUDIT-004: the config had knownTokens only; the promoted record must give the SDK USDC as its reward token.
 bun -e "import { readFileSync } from 'node:fs'; import { deploymentFromConfig } from '$REPO/packages/sdk/src/deployment.ts'
 const c = JSON.parse(readFileSync('$PWD/$CONFIG', 'utf8')); const d = deploymentFromConfig('monad-mainnet', c)
@@ -171,10 +164,10 @@ ok "the SDK reads the promoted record's reward token: USDC, derived from knownTo
 # 4. SafeAccept, then the D16 gate passes.
 log /tmp/r7-accept.log env MAINNET_GO=yes forge script script/SafeAccept.s.sol --rpc-url "$LOCAL" \
   --private-key $K_OWNER1 --broadcast --slow || fail "SafeAccept"
-budget_run "4. SafeAccept (6 execTransactions)" SafeAccept
+budget_run "4. SafeAccept (4 execTransactions)" SafeAccept
 log /tmp/r7-accept-check.log forge script script/SafeAccept.s.sol --sig "check()" --rpc-url "$LOCAL" || fail "SafeAccept check"
 gate >/tmp/r7-gate.log || fail "D16 gate refused after SafeAccept: $(cat /tmp/r7-gate.log)"
-ok "the Safe owns all six; D16 gate passes (reviewed Safe: canonical 1.4.1, pinned owners/threshold, no module, no guard; custody, core roles, verifier, relay above RELAY_FLOOR_MAINNET)"
+ok "the Safe owns all four; D16 gate passes (reviewed Safe: canonical 1.4.1, pinned owners/threshold, no module, no guard; custody, core roles, verifier, relay above RELAY_FLOOR_MAINNET)"
 # LAUNCH-AUDIT-003 on the fork: a pinned owner set the Safe does not have, then a guard, each refuse.
 set +e; REFUSED=$(gate "{\"owners\":[\"$OWNER1\",\"$TEAM\"],\"threshold\":1}"); CODE=$?; set -e
 [[ $CODE -eq 3 && "$REFUSED" == '["launch:safe owners differ from the pinned set"]' ]] || fail "a wrong owner pin did not refuse: $REFUSED"
@@ -186,54 +179,11 @@ cast rpc --rpc-url "$LOCAL" anvil_setStorageAt "$SAFE" $GUARD_SLOT "$(cast to-ui
 gate >/tmp/r7-gate.log || fail "D16 gate refused once the guard was cleared: $(cat /tmp/r7-gate.log)"
 ok "D16 refuses a wrong pinned owner set and a Safe guard; passes again once cleared"
 
-# 5. SeedPool and its receipt-based verification. The seeder holds the liquidity allocation; USDC is dealt.
-# Monad's USDC is Circle's FiatToken v2 (balances at storage slot 9); anvil_dealERC20 cannot find the slot.
-cast rpc --rpc-url "$LOCAL" anvil_setStorageAt "$USDC" "$(cast index address "$DEPLOYER" 9)" \
-  "$(cast to-uint256 1000000000)" >/dev/null
-[[ "$(cast call --rpc-url "$LOCAL" "$USDC" "balanceOf(address)(uint256)" "$DEPLOYER" | awk '{print $1}')" == 1000000000 ]] \
-  || fail "could not give the seeder 1000 USDC on the fork"
-log /tmp/r7-seed.log env MAINNET_GO=yes forge script script/SeedPool.s.sol --rpc-url "$LOCAL" \
-  --private-key $K_DEPLOYER --broadcast --slow || fail "SeedPool"
-budget_run "5. SeedPool (helper, 2 approvals, seed)" SeedPool
-log /tmp/r7-seed-verify.log forge script script/SeedPool.s.sol --sig "verify()" --rpc-url "$LOCAL" || fail "SeedPool verify"
-ok "pool seeded; $(grep -o 'position token id [0-9]*' /tmp/r7-seed-verify.log) verified from the receipts"
-
 # 6. One direct hire.
 log /tmp/r7-hire.log env MAINNET_GO=yes DEPLOYER_KEY=$K_DEPLOYER CREATOR_KEY=$K_CREATOR WORKER_KEY=$K_WORKER \
-  forge script script/RehearseHireAndMine.s.sol --tc RehearseHire --rpc-url "$LOCAL" --broadcast --slow || fail "hire"
-budget_run "6. One hire (fund, register, stake, publish, activate, submit, accept, settle)" RehearseHireAndMine
+  forge script script/RehearseHire.s.sol --tc RehearseHire --rpc-url "$LOCAL" --broadcast --slow || fail "hire"
+budget_run "6. One hire (fund, register, stake, publish, activate, submit, accept, settle)" RehearseHire
 ok "hire settled ($(grep -o 'net to worker [0-9]*' /tmp/r7-hire.log))"
-
-# 7. Mining epoch 0.
-RESERVE=$(jq -r .deployment.sidequest.miningReserve "$CONFIG")
-END=$(cast call --rpc-url "$LOCAL" "$RESERVE" "epochEnd(uint256)(uint256)" 0 | awk '{print $1}')
-NOW=$(cast block --rpc-url "$LOCAL" latest -f timestamp)
-cast rpc --rpc-url "$LOCAL" evm_increaseTime $((END - NOW + 60)) >/dev/null
-cast rpc --rpc-url "$LOCAL" evm_mine >/dev/null
-# mining:epoch reads only up to the finalized head, which on anvil trails latest by 64 blocks.
-cast rpc --rpc-url "$LOCAL" anvil_mine 0x41 >/dev/null
-# The B8 tool, as the coordinator runs it: the price list signed from a keystore (USDC at $1, SIDE at $0.0001), then
-# the epoch from chain logs alone.
-chmod 700 "$MINING"
-(umask 077; printf 'r7-%s%s' "$RANDOM" "$RANDOM" >"$MINING/password")
-cast wallet import --keystore-dir "$MINING" owner --private-key "$K_OWNER1" --unsafe-password "$(cat "$MINING/password")" >/dev/null 2>&1
-printf '{"epoch":"0","tokens":[{"token":"%s","decimals":6,"usdPrice":"1000000000000000000"}],"factoryUsdPrice":"100000000000000"}\n' \
-  "$USDC" >"$MINING/unsigned.json"
-log /tmp/r7-prices.log bun ../scripts/mining/sign-prices.ts "$MINING/unsigned.json" --network monad-mainnet --config "$PWD/$CONFIG" \
-  --out "$MINING/prices.json" --keystore "$MINING/owner" --password-file "$MINING/password" || fail "sign the price list"
-log /tmp/r7-epoch.log bun ../scripts/mining/epoch.ts 0 --network monad-mainnet --config "$PWD/$CONFIG" --rpc "$LOCAL" \
-  --prices "$MINING/prices.json" --out "$MINING" || fail "mining:epoch"
-EPOCH="$MINING/epoch-0.json"
-[[ "$(jq '[.inputs.fees[] | select(.status == "counted")] | length' "$EPOCH")" -ge 1 ]] || fail "the tool counted no fee from the hire"
-claim() { jq -r --arg a "$(addr "$1" | tr 'A-F' 'a-f')" ".claims[\$a].$2 | if type == \"array\" then join(\",\") else . end" "$EPOCH"; }
-log /tmp/r7-mine.log env MAINNET_GO=yes SAFE_OWNER_KEY=$K_OWNER1 WORKER_KEY=$K_WORKER CREATOR_KEY=$K_CREATOR \
-  FUND_DATA="$(jq -r .calls.fund.data "$EPOCH")" FUND_EXPECT_TOTAL="$(jq -r .calls.fund.expect.totalFunded "$EPOCH")" \
-  SETROOT_DATA="$(jq -r .calls.setRoot.data "$EPOCH")" \
-  WORKER_AMOUNT="$(claim $K_WORKER amount)" WORKER_PROOF="$(claim $K_WORKER proof)" \
-  CREATOR_AMOUNT="$(claim $K_CREATOR amount)" CREATOR_PROOF="$(claim $K_CREATOR proof)" \
-  forge script script/RehearseHireAndMine.s.sol --tc RehearseMining --rpc-url "$LOCAL" --broadcast --slow || fail "mining"
-budget_run "7. Mining epoch 0 (fund + setRoot via Safe, two claims → stake)" RehearseHireAndMine
-ok "epoch 0 by scripts/mining: $(jq -r .total "$EPOCH") SIDE wei over $(jq '.claims | length' "$EPOCH") leaves, root $(jq -r .root "$EPOCH" | cut -c1-14)…; funded, root set, both claims staked"
 
 echo
 echo "LAUNCH BUDGET (Monad charges the gas limit; MON at 102 gwei now, and at forge's 203 gwei max fee)"

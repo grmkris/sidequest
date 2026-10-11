@@ -64,16 +64,6 @@ export const feeScheduleAbi = [
             "name": "proposalGrace",
             "type": "uint48",
             "internalType": "uint48"
-          },
-          {
-            "name": "epochZeroDuration",
-            "type": "uint48",
-            "internalType": "uint48"
-          },
-          {
-            "name": "epochDuration",
-            "type": "uint48",
-            "internalType": "uint48"
           }
         ]
       }

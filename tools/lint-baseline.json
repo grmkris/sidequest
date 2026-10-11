@@ -962,15 +962,6 @@
     "eslint(max-lines-per-function)": 1,
     "typescript(no-unnecessary-type-assertion)": 3
   },
-  "contracts/script/check-keystore-testnet.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 3
-  },
-  "contracts/script/check-launch-testnet.ts": {
-    "anti-slop(no-runtime-typeof)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 5,
-    "complexity(complexity)": 1,
-    "typescript(no-unnecessary-type-assertion)": 5
-  },
   "contracts/script/epoch0-transactions.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 6,
     "typescript(no-unnecessary-type-assertion)": 10

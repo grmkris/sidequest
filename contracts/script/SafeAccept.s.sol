@@ -10,29 +10,29 @@ import {SidequestSafeAccept, ISafe} from "./SidequestSafeAccept.sol";
 ///         NETWORK=monad-testnet forge script script/SafeAccept.s.sol --rpc-url $MONAD_TESTNET_RPC_URL \
 ///           --private-key $SAFE_BACKUP_TESTNET_PRIVATE_KEY --broadcast
 ///
-///         Without `--broadcast` it is a dry run. `--sig "check()"` only reads back the six owners. Chain 143 also
+///         Without `--broadcast` it is a dry run. `--sig "check()"` only reads back the four owners. Chain 143 also
 ///         needs MAINNET_GO=yes and signs from a keystore, never a raw key: `--account sidequest-safe-owner
-///         --password-file ~/.config/sidequest/safe-owner.password` (docs/mainnet-runbook.md §3.5). Sends up to six
+///         --password-file ~/.config/sidequest/safe-owner.password` (docs/mainnet-runbook.md §3.5). Sends up to four
 ///         transactions, from the owner, to the Safe.
 contract SafeAccept is Script {
     function run() external {
         string memory network = vm.envString("NETWORK");
         string memory json = vm.readFile(SidequestRecipe.path(vm, network));
         SidequestRecipe.guardChain(vm, json, true);
-        (address safe, address[6] memory t) = SidequestSafeAccept.targets(vm, json);
+        (address safe, address[4] memory t) = SidequestSafeAccept.targets(vm, json);
         vm.startBroadcast();
         uint256 accepted = SidequestSafeAccept.accept(ISafe(safe), t, msg.sender);
         vm.stopBroadcast();
         SidequestSafeAccept.verify(safe, t);
         console2.log("acceptOwnership sent through the Safe:", accepted);
-        console2.log("owner() == safe on all six:", safe);
+        console2.log("owner() == safe on all four:", safe);
     }
 
     function check() external view {
         string memory json = vm.readFile(SidequestRecipe.path(vm, vm.envString("NETWORK")));
         SidequestRecipe.guardChain(vm, json, false);
-        (address safe, address[6] memory t) = SidequestSafeAccept.targets(vm, json);
+        (address safe, address[4] memory t) = SidequestSafeAccept.targets(vm, json);
         SidequestSafeAccept.verify(safe, t);
-        console2.log("owner() == safe on all six:", safe);
+        console2.log("owner() == safe on all four:", safe);
     }
 }

@@ -6,28 +6,25 @@ import {SidequestClocks} from "../src/sidequest/SidequestClocks.sol";
 import {SidequestRecipe} from "./SidequestRecipe.sol";
 import {BroadcastPath} from "./BroadcastPath.sol";
 import {ERC8183WithAuthorization} from "../src/vendor/erc8183/ERC8183WithAuthorization.sol";
-import {TeamVesting} from "../src/sidequest/TeamVesting.sol";
-import {Factory} from "../src/sidequest/Factory.sol";
+import {IFactory} from "../src/sidequest/interfaces/IFactory.sol";
 import {FeeSchedule} from "../src/sidequest/FeeSchedule.sol";
 import {StakeVault} from "../src/sidequest/StakeVault.sol";
 import {SidequestHolding} from "../src/sidequest/SidequestHolding.sol";
 import {SidequestEvaluator} from "../src/sidequest/SidequestEvaluator.sol";
-import {EpochDistributor} from "../src/sidequest/EpochDistributor.sol";
-import {MiningReserve} from "../src/sidequest/MiningReserve.sol";
 
 /// @title SidequestOutput
 /// @notice Rewrites `.deployment` in a network config after the Sidequest v1 deploy has been verified on-chain
 ///         (`PromoteSidequest`), in the shape of decisions D1:
-///         `factory` becomes SIDE v2; `sidequest` lists the owner Safe (D5), the protocol contracts and `t0`; `main` is the v1 pair
+///         `factory` records SIDE (the launcher's token); `sidequest` lists the owner Safe (D5) and the protocol contracts; `main` is the v1 pair
 ///         (`kind: "sidequest-v1"`). A fresh core is recorded from its creation receipt. An unknown deployment key,
 ///         or a config that already records a v1 deployment, refuses. On mainnet
-///         (LAUNCH-AUDIT-004) `rewardTokens` is kept or, when absent, derived from the single `knownTokens` entry, and must
+///         (LAUNCH-AUDIT-004) `rewardTokens` is kept or, when absent, taken from `knownTokens` (USDC and SIDE), and must
 ///         contain `x402.usdc`: the SDK and Explore read their reward tokens from it.
 library SidequestOutput {
     error UnknownKey(string where, string key);
     error AlreadyDeployed();
     error ClockMismatch();
-    /// @dev Mainnet: no `rewardTokens` and not exactly one `knownTokens` entry, or a reward list without `x402.usdc`.
+    /// @dev Mainnet: no `rewardTokens` and no `knownTokens`, or a reward list without `x402.usdc`.
     error MainnetRewardTokens();
 
     uint256 private constant MAINNET = 143;
@@ -64,15 +61,15 @@ library SidequestOutput {
         if (_mainnet(vm, json)) rewardTokens(vm, json);
     }
 
-    /// @notice The reward tokens the record will carry: `.deployment.rewardTokens` if present, else on mainnet the single
-    ///         `knownTokens` entry (USDC). On mainnet the list must contain `x402.usdc`.
+    /// @notice The reward tokens the record will carry: `.deployment.rewardTokens` if present, else on mainnet the
+    ///         `knownTokens` list (USDC, and SIDE for Sidequest's own spending). On mainnet the list must contain `x402.usdc`.
     function rewardTokens(Vm vm, string memory json) internal view returns (address[] memory tokens) {
         bool mainnet = _mainnet(vm, json);
         if (vm.keyExistsJson(json, ".deployment.rewardTokens")) {
             tokens = vm.parseJsonAddressArray(json, ".deployment.rewardTokens");
         } else if (mainnet) {
             tokens = vm.parseJsonAddressArray(json, ".knownTokens");
-            if (tokens.length != 1) revert MainnetRewardTokens();
+            if (tokens.length == 0) revert MainnetRewardTokens();
         }
         if (!mainnet) return tokens;
         address usdc = vm.parseJsonAddress(json, ".x402.usdc");
@@ -120,9 +117,6 @@ library SidequestOutput {
         vm.serializeAddress(h, "factory", address(d.factory));
         vm.serializeAddress(h, "vault", address(d.vault));
         vm.serializeAddress(h, "feeSchedule", address(d.fees));
-        vm.serializeAddress(h, "distributor", address(d.distributor));
-        vm.serializeAddress(h, "miningReserve", address(d.reserve));
-        vm.serializeAddress(h, "teamVesting", address(d.vesting));
         string memory clockKey = "deployment.sidequest.clocks";
         vm.serializeUint(clockKey, "minReviewWindow", clocks.minReviewWindow);
         vm.serializeUint(clockKey, "minDisputeWindow", clocks.minDisputeWindow);
@@ -130,10 +124,9 @@ library SidequestOutput {
         vm.serializeUint(clockKey, "unstakeDelay", clocks.unstakeDelay);
         vm.serializeUint(clockKey, "holdingDelay", clocks.holdingDelay);
         vm.serializeUint(clockKey, "feeDelay", clocks.feeDelay);
-        vm.serializeUint(clockKey, "proposalGrace", clocks.proposalGrace);
-        vm.serializeUint(clockKey, "epochZeroDuration", clocks.epochZeroDuration);
-        vm.serializeString(h, "clocks", vm.serializeUint(clockKey, "epochDuration", clocks.epochDuration));
-        vm.serializeString(o, "sidequest", vm.serializeUint(h, "t0", d.t0));
+        vm.serializeString(
+            o, "sidequest", vm.serializeString(h, "clocks", vm.serializeUint(clockKey, "proposalGrace", clocks.proposalGrace))
+        );
 
         string memory m = "deployment.main";
         vm.serializeString(m, "kind", "sidequest-v1");
@@ -155,12 +148,7 @@ library SidequestOutput {
         c.holdingDelay = d.vault.HOLDING_DELAY();
         c.feeDelay = d.fees.DELAY();
         c.proposalGrace = d.vault.PROPOSAL_GRACE();
-        c.epochZeroDuration = d.reserve.EPOCH_ZERO_DURATION();
-        c.epochDuration = d.reserve.EPOCH_DURATION();
-        if (
-            d.fees.PROPOSAL_GRACE() != c.proposalGrace || d.distributor.EPOCH_ZERO_DURATION() != c.epochZeroDuration
-                || d.distributor.EPOCH_DURATION() != c.epochDuration
-        ) revert ClockMismatch();
+        if (d.fees.PROPOSAL_GRACE() != c.proposalGrace) revert ClockMismatch();
         SidequestClocks.validate(c);
     }
 
@@ -177,10 +165,6 @@ library SidequestOutput {
             && vm.parseJsonAddress(json, string.concat(h, "factory")) == address(d.factory)
             && vm.parseJsonAddress(json, string.concat(h, "vault")) == address(d.vault)
             && vm.parseJsonAddress(json, string.concat(h, "feeSchedule")) == address(d.fees)
-            && vm.parseJsonAddress(json, string.concat(h, "distributor")) == address(d.distributor)
-            && vm.parseJsonAddress(json, string.concat(h, "miningReserve")) == address(d.reserve)
-            && vm.parseJsonAddress(json, string.concat(h, "teamVesting")) == address(d.vesting)
-            && vm.parseJsonUint(json, string.concat(h, "t0")) == d.t0
             && vm.parseJsonAddress(json, ".deployment.main.holding") == address(d.holding)
             && vm.parseJsonAddress(json, ".deployment.main.evaluator") == address(d.evaluator)
             && vm.parseJsonAddress(json, ".deployment.core") == address(d.core);
@@ -221,16 +205,12 @@ library SidequestOutput {
         string memory k = "candidate";
         vm.serializeUint(k, "chainId", chainId);
         vm.serializeAddress(k, "safe", safe);
-        vm.serializeUint(k, "t0", d.t0);
         vm.serializeAddress(k, "core", address(d.core));
-        vm.serializeAddress(k, "teamVesting", address(d.vesting));
         vm.serializeAddress(k, "factory", address(d.factory));
         vm.serializeAddress(k, "feeSchedule", address(d.fees));
         vm.serializeAddress(k, "vault", address(d.vault));
         vm.serializeAddress(k, "holding", address(d.holding));
-        vm.serializeAddress(k, "evaluator", address(d.evaluator));
-        vm.serializeAddress(k, "distributor", address(d.distributor));
-        vm.writeJson(vm.serializeAddress(k, "miningReserve", address(d.reserve)), path);
+        vm.writeJson(vm.serializeAddress(k, "evaluator", address(d.evaluator)), path);
     }
 
     function readCandidate(Vm vm, string memory path)
@@ -241,15 +221,11 @@ library SidequestOutput {
         string memory json = vm.readFile(path);
         chainId = vm.parseJsonUint(json, ".chainId");
         safe = vm.parseJsonAddress(json, ".safe");
-        d.t0 = uint48(vm.parseJsonUint(json, ".t0"));
         d.core = ERC8183WithAuthorization(vm.parseJsonAddress(json, ".core"));
-        d.vesting = TeamVesting(payable(vm.parseJsonAddress(json, ".teamVesting")));
-        d.factory = Factory(vm.parseJsonAddress(json, ".factory"));
+        d.factory = IFactory(vm.parseJsonAddress(json, ".factory"));
         d.fees = FeeSchedule(vm.parseJsonAddress(json, ".feeSchedule"));
         d.vault = StakeVault(vm.parseJsonAddress(json, ".vault"));
         d.holding = SidequestHolding(vm.parseJsonAddress(json, ".holding"));
         d.evaluator = SidequestEvaluator(vm.parseJsonAddress(json, ".evaluator"));
-        d.distributor = EpochDistributor(vm.parseJsonAddress(json, ".distributor"));
-        d.reserve = MiningReserve(vm.parseJsonAddress(json, ".miningReserve"));
     }
 }

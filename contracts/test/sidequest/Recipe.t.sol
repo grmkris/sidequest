@@ -12,15 +12,15 @@ import {IERC8004Identity, IERC8004Reputation} from "../../src/vendor/erc8004/IER
 import {MockPaymentToken} from "../../src/MockPaymentToken.sol";
 import {ISidequestHolding} from "../../src/sidequest/interfaces/ISidequestHolding.sol";
 import {IStakeVault} from "../../src/sidequest/interfaces/IStakeVault.sol";
-import {IEpochDistributor} from "../../src/sidequest/interfaces/IEpochDistributor.sol";
+import {IFactory} from "../../src/sidequest/interfaces/IFactory.sol";
 import {SidequestRecipe} from "../../script/SidequestRecipe.sol";
 import {SidequestOutput} from "../../script/SidequestOutput.sol";
 import {SidequestVerify} from "../../script/SidequestVerify.sol";
-import {SidequestConstants} from "../../src/sidequest/interfaces/SidequestConstants.sol";
 import {SidequestHolding} from "../../src/sidequest/SidequestHolding.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {MockIdentity} from "../mocks/MockIdentity.sol";
 import {MockReputation} from "../mocks/MockReputation.sol";
+import {LaunchToken} from "../mocks/LaunchToken.sol";
 import {UnpromotedTestnet} from "../helpers/UnpromotedTestnet.sol";
 
 /// @dev Calls the recipe's steps one at a time under the deployer, so the test can act as a third party between them.
@@ -38,18 +38,13 @@ contract RecipeDriver is Test {
         SidequestRecipe.Deployed memory dd = d;
         vm.startPrank(cc.admin);
         if (i == 0) SidequestRecipe.stepCore(cc, dd);
-        if (i == 1) SidequestRecipe.stepVesting(cc, dd);
-        if (i == 2) SidequestRecipe.stepFactory(cc, dd);
-        if (i == 3) SidequestRecipe.stepFeeSchedule(cc, dd);
-        if (i == 4) SidequestRecipe.stepVault(cc, dd);
-        if (i == 5) SidequestRecipe.stepHolding(cc, dd);
-        if (i == 6) SidequestRecipe.stepEvaluator(cc, dd);
-        if (i == 7) SidequestRecipe.stepWire(cc, dd);
-        if (i == 8) SidequestRecipe.stepBootstrap(dd);
-        if (i == 9) SidequestRecipe.stepDistributor(cc, dd);
-        if (i == 10) SidequestRecipe.stepReserve(cc, dd);
-        if (i == 11) SidequestRecipe.stepFundReserve(dd);
-        if (i == 12) SidequestRecipe.stepHandover(cc, dd);
+        if (i == 1) SidequestRecipe.stepFeeSchedule(cc, dd);
+        if (i == 2) SidequestRecipe.stepVault(cc, dd);
+        if (i == 3) SidequestRecipe.stepHolding(cc, dd);
+        if (i == 4) SidequestRecipe.stepEvaluator(cc, dd);
+        if (i == 5) SidequestRecipe.stepWire(cc, dd);
+        if (i == 6) SidequestRecipe.stepBootstrap(dd);
+        if (i == 7) SidequestRecipe.stepHandover(cc, dd);
         vm.stopPrank();
         d = dd;
     }
@@ -63,19 +58,24 @@ contract RecipeTest is Test {
     address admin = makeAddr("deployer");
     address safe = makeAddr("safe");
     address ecosystem = makeAddr("ecosystem");
-    address team = makeAddr("team");
     address attester = makeAddr("attester");
     address stranger = makeAddr("stranger");
     address arbitrator;
     uint256 arbitratorPk;
     RecipeDriver driver;
     SidequestRecipe.Config c;
+    /// @dev SIDE as the launcher creates it, before the recipe runs: the deployer holds it, `ecosystem` some.
+    LaunchToken side;
 
     function setUp() public {
         c.maxMinimumCreatorBond = 100_000e18;
         c.unfilledForfeitBps = 2500;
         c.minimumCreatorBond = 10_000e18;
         vm.warp(1_800_000_000);
+        side = new LaunchToken(admin);
+        vm.prank(admin);
+        side.transfer(ecosystem, 1_000e18);
+        c.token = side;
         vm.etch(safe, hex"00"); // the Safe is a contract; the recipe and the promotion check it has code
         vm.createDir(SidequestOutput.candidateDir(vm), true); // gitignored: absent on a clean checkout
         (arbitrator, arbitratorPk) = makeAddrAndKey("arbiter");
@@ -92,26 +92,18 @@ contract RecipeTest is Test {
         c.thresholds = [uint256(0), 10_000, 100_000, 1_000_000];
         c.bps = [uint16(3000), 1000, 300, 100];
         c.feeTreasury = safe;
-        c.treasury = safe;
-        c.ecosystem = ecosystem;
-        c.liquidity = admin;
-        c.vestingBeneficiary = team;
-        c.vestingStartOffset = 365 days;
-        c.vestingDuration = 3 * 365 days;
-        c.vestingCliff = 0;
         driver = new RecipeDriver();
         driver.configure(c);
     }
 
     function _runWithThirdPartyBetweenSteps() internal returns (SidequestRecipe.Deployed memory d) {
         driver.step(0);
+        d = driver.deployed();
+        // SIDE exists before the recipe and the recipe mints none.
+        assertEq(address(d.factory), address(side));
+        assertEq(side.totalSupply(), 1_000_000_000e18);
         driver.step(1);
         driver.step(2);
-        d = driver.deployed();
-        // Only genesis recipients hold SIDE.
-        assertEq(d.factory.balanceOf(stranger), 0);
-        driver.step(3);
-        driver.step(4);
         d = driver.deployed();
         // A SIDE holder tries to stake ahead of the bootstrap; a donation lands but changes nothing.
         vm.startPrank(ecosystem);
@@ -120,7 +112,7 @@ contract RecipeTest is Test {
         d.vault.delegate(ecosystem, 1);
         d.factory.transfer(address(d.vault), 1);
         vm.stopPrank();
-        driver.step(5);
+        driver.step(3);
         d = driver.deployed();
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
@@ -129,25 +121,19 @@ contract RecipeTest is Test {
         vm.prank(stranger);
         vm.expectRevert(ISidequestHolding.EvaluatorNotSet.selector);
         d.holding.publish(early);
-        driver.step(6);
+        driver.step(4);
         d = driver.deployed();
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
         d.evaluator.setVerifier(stranger, true);
-        driver.step(7);
+        driver.step(5);
         // Wired but not yet authorized in the vault: nothing can be published, even unbonded.
         _publishRefused(d);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
         d.vault.bootstrapHolding(stranger);
-        driver.step(8);
-        driver.step(9);
-        d = driver.deployed();
-        vm.prank(ecosystem);
-        d.factory.transfer(address(d.distributor), 1);
-        driver.step(10);
-        driver.step(11);
-        driver.step(12);
+        driver.step(6);
+        driver.step(7);
         d = driver.deployed();
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, stranger));
@@ -177,12 +163,10 @@ contract RecipeTest is Test {
         d.fees.acceptOwnership();
         d.holding.acceptOwnership();
         d.evaluator.acceptOwnership();
-        d.distributor.acceptOwnership();
-        d.reserve.acceptOwnership();
         vm.stopPrank();
     }
 
-    function test_recipe_stepsWithThirdPartyGaps_handoverAndAllocation() public {
+    function test_recipe_stepsWithThirdPartyGaps_handover() public {
         SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
         assertEq(d.vault.owner(), admin, "handover is not complete until the Safe accepts");
         assertEq(d.vault.pendingOwner(), safe);
@@ -191,8 +175,6 @@ contract RecipeTest is Test {
         assertEq(d.fees.owner(), safe);
         assertEq(d.holding.owner(), safe);
         assertEq(d.evaluator.owner(), safe);
-        assertEq(d.distributor.owner(), safe);
-        assertEq(d.reserve.owner(), safe);
 
         // A fresh core: the Safe holds both roles, the deployer none, fees 0 to the Safe.
         assertTrue(d.core.hasRole(d.core.DEFAULT_ADMIN_ROLE(), safe));
@@ -208,15 +190,11 @@ contract RecipeTest is Test {
         );
         d.core.pause();
 
-        // Genesis.
-        assertEq(d.factory.totalSupply(), 1_000_000_000e18);
-        assertEq(d.factory.balanceOf(address(d.reserve)), 500_000_000e18);
-        assertEq(d.factory.balanceOf(safe), 200_000_000e18);
-        assertEq(d.factory.balanceOf(address(d.vesting)), 150_000_000e18);
-        assertEq(d.factory.balanceOf(ecosystem), 100_000_000e18 - 2, "minus the two test donations");
-        assertEq(d.factory.balanceOf(admin), 50_000_000e18, "liquidity only; the mining share was forwarded");
-        assertEq(d.vesting.owner(), team);
-        assertEq(d.vesting.start(), d.t0 + 365 days);
+        // SIDE: the configured token, which the deploy neither minted nor moved.
+        assertEq(address(d.vault.factory()), address(side));
+        assertEq(side.totalSupply(), 1_000_000_000e18);
+        assertEq(side.balanceOf(admin), 1_000_000_000e18 - 1_000e18);
+        assertEq(side.balanceOf(address(d.vault)), 1, "only the test donation");
 
         // Wiring.
         assertEq(d.holding.evaluator(), address(d.evaluator));
@@ -225,9 +203,6 @@ contract RecipeTest is Test {
         assertEq(d.holding.defaultArbitrator(), arbitrator);
         assertEq(d.fees.treasury(), safe);
         assertEq(d.fees.feeBps(10_000e18), 1000);
-        assertEq(d.reserve.genesis(), d.t0);
-        assertEq(d.distributor.genesis(), d.t0);
-        assertEq(address(d.reserve.distributor()), address(d.distributor));
     }
 
     /// @dev The fresh deployment runs one hire end to end.
@@ -335,10 +310,20 @@ contract RecipeTest is Test {
         bad.thresholds[3] = 1_000_000e18;
         vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "threshold above supply"));
         driver.configure(bad);
+        // SIDE must exist before the deploy, with 18 decimals and exactly the launcher's 1e9 supply.
         bad = c;
-        bad.genesis = uint48(block.timestamp - 2 days);
-        vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "genesis out of range"));
+        bad.token = IFactory(makeAddr("no-code-token"));
+        vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "SIDE has no code"));
         driver.configure(bad);
+        bad = c;
+        bad.token = IFactory(address(new MockPaymentToken("USD", "USD")));
+        vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "SIDE decimals"));
+        driver.configure(bad);
+        bad = c;
+        vm.mockCall(address(side), abi.encodeWithSignature("totalSupply()"), abi.encode(uint256(1)));
+        vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "SIDE supply"));
+        driver.configure(bad);
+        vm.clearMockedCalls();
         bad = c;
         bad.defaultArbitrator = admin;
         vm.expectRevert(
@@ -411,7 +396,7 @@ contract RecipeTest is Test {
         m.defaultArbitrator = fresh;
         RecipeDriver mainnet = new RecipeDriver();
         mainnet.configure(m);
-        for (uint256 i; i < 13; ++i) {
+        for (uint256 i; i < 8; ++i) {
             mainnet.step(i);
         }
         assertEq(mainnet.deployed().holding.defaultArbitrator(), fresh);
@@ -466,7 +451,7 @@ contract RecipeTest is Test {
     }
 
     function test_output_testnetShape_recordsFreshCoreAndPair() public {
-        c.clocks = SidequestClocks.Config(120, 120, 300, 259200, 262800, 300, 1800, 1800, 3600);
+        c.clocks = SidequestClocks.Config(120, 120, 300, 259200, 262800, 300, 1800);
         driver.configure(c);
         SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
         string memory shipped = vm.readFile(string.concat(vm.projectRoot(), "/config/monad-testnet.json"));
@@ -480,8 +465,9 @@ contract RecipeTest is Test {
         assertEq(vm.parseJsonUint(out, ".deployment.block"), 122);
         assertEq(vm.parseJsonAddress(out, ".deployment.factory"), address(d.factory));
         assertEq(vm.parseJsonAddress(out, ".deployment.sidequest.vault"), address(d.vault));
-        assertEq(vm.parseJsonAddress(out, ".deployment.sidequest.miningReserve"), address(d.reserve));
-        assertEq(vm.parseJsonUint(out, ".deployment.sidequest.t0"), d.t0);
+        assertEq(vm.parseJsonAddress(out, ".deployment.sidequest.factory"), address(side));
+        assertFalse(vm.keyExistsJson(out, ".deployment.sidequest.miningReserve"), "no mining in the record");
+        assertFalse(vm.keyExistsJson(out, ".deployment.sidequest.t0"), "no mining genesis in the record");
         assertEq(vm.parseJsonUint(out, ".deployment.sidequest.block"), 123);
         assertEq(vm.parseJsonAddress(out, ".deployment.sidequest.safe"), safe, "D5");
         _assertOutputClocks(out, c.clocks);
@@ -537,7 +523,7 @@ contract RecipeTest is Test {
 
     function _assertOutputClocks(string memory out, SidequestClocks.Config memory clocks) internal pure {
         string memory p = ".deployment.sidequest.clocks";
-        assertEq(vm.parseJsonKeys(out, p).length, 9, "complete promoted clock tuple");
+        assertEq(vm.parseJsonKeys(out, p).length, 7, "complete promoted clock tuple");
         assertEq(vm.parseJsonUint(out, string.concat(p, ".minReviewWindow")), clocks.minReviewWindow);
         assertEq(vm.parseJsonUint(out, string.concat(p, ".minDisputeWindow")), clocks.minDisputeWindow);
         assertEq(vm.parseJsonUint(out, string.concat(p, ".minArbitrationWindow")), clocks.minArbitrationWindow);
@@ -545,20 +531,18 @@ contract RecipeTest is Test {
         assertEq(vm.parseJsonUint(out, string.concat(p, ".holdingDelay")), clocks.holdingDelay);
         assertEq(vm.parseJsonUint(out, string.concat(p, ".feeDelay")), clocks.feeDelay);
         assertEq(vm.parseJsonUint(out, string.concat(p, ".proposalGrace")), clocks.proposalGrace);
-        assertEq(vm.parseJsonUint(out, string.concat(p, ".epochZeroDuration")), clocks.epochZeroDuration);
-        assertEq(vm.parseJsonUint(out, string.concat(p, ".epochDuration")), clocks.epochDuration);
     }
 
-    /// @dev Each changed input must refuse before writing. A copied input would silently pass all nine cases.
+    /// @dev Each changed input must refuse before writing. A copied input would silently pass all seven cases.
     function test_output_eachInputClockMismatch_preservesConfig() public {
-        c.clocks = SidequestClocks.Config(120, 120, 300, 259200, 262800, 300, 1800, 1800, 3600);
+        c.clocks = SidequestClocks.Config(120, 120, 300, 259200, 262800, 300, 1800);
         driver.configure(c);
         SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
         string memory shipped = vm.readFile(SidequestRecipe.path(vm, "monad-testnet"));
         string memory path = _temp("clock-mismatch", shipped);
         string memory fixture = UnpromotedTestnet.write(vm, path, shipped);
         string[] memory names = vm.parseJsonKeys(fixture, ".sidequest.clocks");
-        assertEq(names.length, 9);
+        assertEq(names.length, 7);
         for (uint256 i; i < names.length; ++i) {
             vm.writeFile(path, fixture);
             string memory p = string.concat(".sidequest.clocks.", names[i]);
@@ -571,30 +555,26 @@ contract RecipeTest is Test {
         vm.removeFile(path);
     }
 
-    /// @dev The clocks repeated on FeeSchedule/Distributor must agree with Vault/Reserve before promotion.
+    /// @dev The proposal grace repeated on FeeSchedule must agree with the vault's before promotion.
     function test_output_duplicateGetterMismatch_preservesConfig() public {
         SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
         string memory path = _mainnetTemp("clock-duplicates");
         string memory before = vm.readFile(path);
-        address[3] memory targets = [address(d.fees), address(d.distributor), address(d.distributor)];
-        string[3] memory getters = ["PROPOSAL_GRACE()", "EPOCH_ZERO_DURATION()", "EPOCH_DURATION()"];
-        for (uint256 i; i < targets.length; ++i) {
-            vm.mockCall(targets[i], abi.encodeWithSignature(getters[i]), abi.encode(uint256(123)));
-            vm.expectRevert(SidequestOutput.ClockMismatch.selector);
-            this.writeExternal(path, d);
-            assertEq(vm.readFile(path), before);
-            vm.clearMockedCalls();
-        }
+        vm.mockCall(address(d.fees), abi.encodeWithSignature("PROPOSAL_GRACE()"), abi.encode(uint256(123)));
+        vm.expectRevert(SidequestOutput.ClockMismatch.selector);
+        this.writeExternal(path, d);
+        assertEq(vm.readFile(path), before);
+        vm.clearMockedCalls();
         vm.removeFile(path);
     }
 
     function test_output_mainnetShape_refusesFastClocksEvenWhenInputMatches() public {
-        c.clocks = SidequestClocks.Config(120, 120, 300, 259200, 262800, 300, 1800, 1800, 3600);
+        c.clocks = SidequestClocks.Config(120, 120, 300, 259200, 262800, 300, 1800);
         driver.configure(c);
         SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
         string memory path = _mainnetTemp("clock-mainnet-fast");
         vm.writeJson(
-            '{"minReviewWindow":120,"minDisputeWindow":120,"minArbitrationWindow":300,"unstakeDelay":600,"holdingDelay":900,"feeDelay":300,"proposalGrace":1800,"epochZeroDuration":1800,"epochDuration":3600}',
+            '{"minReviewWindow":120,"minDisputeWindow":120,"minArbitrationWindow":300,"unstakeDelay":600,"holdingDelay":900,"feeDelay":300,"proposalGrace":1800}',
             path,
             ".sidequest.clocks"
         );
@@ -605,8 +585,8 @@ contract RecipeTest is Test {
         vm.removeFile(path);
     }
 
-    /// @dev LAUNCH-AUDIT-004: on mainnet a reward list without USDC, or no list and not exactly one known token, refuses
-    ///      before anything is written; an explicit list with USDC is kept as it is.
+    /// @dev LAUNCH-AUDIT-004: on mainnet a reward list without USDC refuses before anything is written; without an
+    ///      explicit list the known tokens (USDC, and SIDE for Sidequest's own spending) become it; a list is kept as is.
     function test_output_mainnetRewardTokensKeepUsdc() public {
         SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
         string memory real = vm.readFile(string.concat(vm.projectRoot(), "/config/monad-mainnet.json"));
@@ -618,11 +598,19 @@ contract RecipeTest is Test {
         this.writeExternal(path, d);
         vm.removeFile(path);
 
-        path = _mainnetTemp("rewards-two-known");
-        vm.writeJson(string.concat('["', usdc, '","0x0000000000000000000000000000000000000Bad"]'), path, ".knownTokens");
+        path = _mainnetTemp("rewards-known-no-usdc");
+        vm.writeJson('["0x0000000000000000000000000000000000000Bad"]', path, ".knownTokens");
         vm.expectRevert(SidequestOutput.MainnetRewardTokens.selector);
         this.writeExternal(path, d);
         vm.removeFile(path);
+
+        path = _mainnetTemp("rewards-two-known");
+        vm.writeJson(string.concat('["', usdc, '","', vm.toString(address(side)), '"]'), path, ".knownTokens");
+        this.writeExternal(path, d);
+        address[] memory known = vm.parseJsonAddressArray(vm.readFile(path), ".deployment.rewardTokens");
+        vm.removeFile(path);
+        assertEq(known.length, 2);
+        assertEq(known[1], address(side), "SIDE is a reward token for Sidequest's own spending");
 
         path = _mainnetTemp("rewards-kept");
         vm.writeJson(
@@ -658,10 +646,7 @@ contract RecipeTest is Test {
             '"defaultArbitrator":"0x00000000000000000000000000000000000000a2","margin":86400,"maxMinimumCreatorBond":100000000000000000000000,"unfilledForfeitBps":2500,"minimumCreatorBond":10000000000000000000000,',
             '"schedule":{"thresholds":[0,10000,100000,1000000],"bps":[3000,1000,300,100],',
             '"treasury":"0x00000000000000000000000000000000000000a1"},',
-            '"allocation":{"treasury":"0x00000000000000000000000000000000000000a1",',
-            '"ecosystem":"0x00000000000000000000000000000000000000a3","liquidity":"0x00000000000000000000000000000000000000a4"},',
-            '"vesting":{"beneficiary":"0x00000000000000000000000000000000000000a5","startOffset":31536000,',
-            '"duration":94608000,"cliff":0},"mining":{"genesis":0}}'
+            '"token":"0x00000000000000000000000000000000000000a3"}'
         );
         string memory path = string.concat(vm.projectRoot(), "/config/.test-load.json");
         vm.writeFile(path, base);
@@ -680,12 +665,7 @@ contract RecipeTest is Test {
         assertEq(l.thresholds[3], 1_000_000);
         assertEq(l.bps[1], 1000);
         assertEq(l.feeTreasury, address(0xa1));
-        assertEq(l.ecosystem, address(0xa3));
-        assertEq(l.liquidity, address(0xa4));
-        assertEq(l.vestingBeneficiary, address(0xa5));
-        assertEq(l.vestingStartOffset, 365 days);
-        assertEq(l.vestingDuration, 3 * 365 days);
-        assertEq(l.genesis, 0);
+        assertEq(address(l.token), address(0xa3));
         assertEq(l.admin, vm.parseJsonAddress(base, ".roles.admin"));
     }
 
@@ -751,16 +731,12 @@ contract RecipeTest is Test {
         vm.removeFile(path);
         assertEq(chainId, block.chainid);
         assertEq(s, safe);
-        assertEq(r.t0, d.t0);
         assertEq(address(r.core), address(d.core));
-        assertEq(address(r.vesting), address(d.vesting));
         assertEq(address(r.factory), address(d.factory));
         assertEq(address(r.fees), address(d.fees));
         assertEq(address(r.vault), address(d.vault));
         assertEq(address(r.holding), address(d.holding));
         assertEq(address(r.evaluator), address(d.evaluator));
-        assertEq(address(r.distributor), address(d.distributor));
-        assertEq(address(r.reserve), address(d.reserve));
     }
 
     /// @dev Pending and accepted handovers both verify; every gap the promotion must catch is refused.
@@ -778,65 +754,33 @@ contract RecipeTest is Test {
         cc.defaultArbitrator = stranger;
         _expectNotLive(cc, d, "holding.defaultArbitrator");
 
-        // A deployer-key action in the handover window (review ACL-3) blocks promotion.
-        vm.warp(d.reserve.epochEnd(0) + 1);
-        vm.prank(safe);
-        d.reserve.fund(0, 1);
-        _expectNotLive(c, d, "reserve balance");
+        // The vault stakes another token than the configured SIDE, or SIDE's supply is not the launch supply.
+        cc = c;
+        cc.token = IFactory(address(new LaunchToken(admin)));
+        _expectNotLive(cc, d, "SIDE token");
+        vm.mockCall(address(side), abi.encodeWithSignature("totalSupply()"), abi.encode(uint256(1)));
+        _expectNotLive(c, d, "SIDE supply");
+        vm.clearMockedCalls();
     }
 
-    /// @dev Review C8-002: unsolicited dust to the reserve or the vesting wallet, before or after their allocation,
-    ///      cannot block promotion; a short allocation still refuses.
-    function test_promotion_dustDoesNotBlock_shortfallRefuses() public {
-        driver.step(0);
-        driver.step(1);
-        SidequestRecipe.Deployed memory d = driver.deployed();
-        // Dust to the vesting wallet before SIDE exists is impossible; right after genesis, from a holder:
-        driver.step(2);
-        d = driver.deployed();
-        vm.prank(ecosystem);
-        d.factory.transfer(address(d.vesting), 1);
-        for (uint256 i = 3; i < 11; ++i) {
-            driver.step(i);
-        }
-        d = driver.deployed();
-        // Dust to the reserve before its 500M arrives, then after.
-        vm.prank(ecosystem);
-        d.factory.transfer(address(d.reserve), 1);
-        driver.step(11);
-        driver.step(12);
-        vm.prank(ecosystem);
-        d.factory.transfer(address(d.reserve), 1);
-        d = driver.deployed();
+    /// @dev Review C8-002: SIDE donated to every deployed contract cannot block promotion.
+    function test_promotion_dustDoesNotBlock() public {
+        SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
+        vm.startPrank(ecosystem);
+        d.factory.transfer(address(d.fees), 1);
+        d.factory.transfer(address(d.holding), 1);
+        d.factory.transfer(address(d.evaluator), 1);
+        d.factory.transfer(address(d.core), 1);
+        vm.stopPrank();
         this.verifyExternal(c, d);
-
-        // A reserve below 500M (the allocation never fully arrived) refuses.
-        SidequestRecipe.Deployed memory e = _runShortReserve();
-        _expectNotLive(c, e, "reserve balance");
-    }
-
-    /// @dev A deployment whose reserve received 1 wei less than 500M (simulates a short allocation).
-    function _runShortReserve() internal returns (SidequestRecipe.Deployed memory e) {
-        RecipeDriver other = new RecipeDriver();
-        other.configure(c);
-        for (uint256 i; i < 13; ++i) {
-            other.step(i);
-        }
-        e = other.deployed();
-        // Move 1 wei out of the reserve's balance by rewriting it (no contract path can).
-        bytes32 slot = keccak256(abi.encode(address(e.reserve), uint256(0)));
-        uint256 bal = e.factory.balanceOf(address(e.reserve));
-        vm.store(address(e.factory), slot, bytes32(bal - 1));
-        require(e.factory.balanceOf(address(e.reserve)) == bal - 1, "balance slot");
     }
 
     function test_promotion_refusesAnIncompleteHandover() public {
-        driver.step(0);
-        for (uint256 i = 1; i < 12; ++i) {
+        for (uint256 i; i < 7; ++i) {
             driver.step(i);
         }
         SidequestRecipe.Deployed memory d = driver.deployed();
-        // Step 12 (handover) not sent: the deployer still holds the core roles and every owner.
+        // Step 7 (handover) not sent: the deployer still holds the core roles and every owner.
         _expectNotLive(c, d, "core admin role: safe");
     }
 
@@ -863,32 +807,15 @@ contract RecipeTest is Test {
     }
 
     /// @dev A minimal forge run log: one CALL, then a CREATE for each deployed contract (the core proxy in block
-    ///      0x101, the rest in 0x102); `dropLast` leaves the last transaction without a receipt.
+    ///      0x101, the rest in 0x102); `dropLast` leaves the last transaction without a receipt. SIDE is not created by
+    ///      the run.
     function _runLog(SidequestRecipe.Deployed memory d, string memory status, bool dropLast)
         internal
         view
         returns (string memory)
     {
-        return _runLog(d, status, dropLast, SidequestConstants.SIDE_SUPPLY);
-    }
-
-    /// @dev The Factory's creation receipt carries two genesis mints adding up to `minted`.
-    function _runLog(SidequestRecipe.Deployed memory d, string memory status, bool dropLast, uint256 minted)
-        internal
-        view
-        returns (string memory)
-    {
-        address[9] memory created = [
-            address(d.core),
-            address(d.vesting),
-            address(d.factory),
-            address(d.fees),
-            address(d.vault),
-            address(d.holding),
-            address(d.evaluator),
-            address(d.distributor),
-            address(d.reserve)
-        ];
+        address[5] memory created =
+            [address(d.core), address(d.fees), address(d.vault), address(d.holding), address(d.evaluator)];
         string memory txs = string.concat(
             '{"hash":"',
             vm.toString(bytes32(uint256(1000))),
@@ -914,68 +841,16 @@ contract RecipeTest is Test {
                 '"}'
             );
             if (dropLast && i == created.length - 1) continue;
-            string memory logs = i == 2 ? _mintLogs(address(d.factory), minted) : "";
             receipts = string.concat(
                 receipts,
                 ',{"transactionHash":"',
                 hash,
                 '","status":"0x1","blockNumber":"',
                 i == 0 ? "0x101" : "0x102",
-                '","logs":[',
-                logs,
-                "]}"
+                '","logs":[]}'
             );
         }
         return string.concat('{"transactions":[', txs, '],"receipts":[', receipts, '],"pending":[]}');
-    }
-
-    function _mintLogs(address factory, uint256 minted) internal view returns (string memory) {
-        string memory topic0 = vm.toString(keccak256("Transfer(address,address,uint256)"));
-        string memory zero = vm.toString(bytes32(0));
-        string memory one = vm.toString(bytes32(uint256(uint160(admin))));
-        string memory a = vm.toString(abi.encode(minted / 2));
-        string memory b = vm.toString(abi.encode(minted - minted / 2));
-        return string.concat(
-            '{"address":"',
-            vm.toString(factory),
-            '","topics":["',
-            topic0,
-            '","',
-            zero,
-            '","',
-            one,
-            '"],"data":"',
-            a,
-            '"},{"address":"',
-            vm.toString(factory),
-            '","topics":["',
-            topic0,
-            '","',
-            zero,
-            '","',
-            one,
-            '"],"data":"',
-            b,
-            '"}'
-        );
-    }
-
-    /// @dev Review C8-002: a holder burning SIDE before promotion cannot block it; a genesis that minted anything
-    ///      but the 1e9 supply is refused.
-    function test_promotion_supplyFromTheGenesisReceipt() public {
-        SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
-        vm.prank(ecosystem);
-        d.factory.burn(1e18);
-        this.verifyExternal(c, d);
-        string memory path = string.concat(vm.projectRoot(), "/broadcast/sidequest/.test-supply.json");
-        vm.writeFile(path, _runLog(d, "0x1", false));
-        this.blocksExternal(path, d);
-        vm.writeFile(path, _runLog(d, "0x1", false, SidequestConstants.SIDE_SUPPLY + 1));
-        vm.expectRevert(
-            abi.encodeWithSelector(SidequestVerify.BadBroadcast.selector, "factory genesis is not the 1e9 supply")
-        );
-        this.blocksExternal(path, d);
-        vm.removeFile(path);
     }
 
     function test_promotion_isIdempotent() public {
@@ -989,12 +864,12 @@ contract RecipeTest is Test {
         other.vault = StakeVault(stranger);
         vm.expectRevert(SidequestOutput.AlreadyDeployed.selector);
         this.isPromotedExternal(once, other);
-        vm.writeJson("604801", path, ".deployment.sidequest.clocks.epochDuration");
+        vm.writeJson("604801", path, ".deployment.sidequest.clocks.proposalGrace");
         vm.expectRevert(SidequestOutput.AlreadyDeployed.selector);
         this.isPromotedExternal(vm.readFile(path), d);
         vm.writeFile(path, once);
         vm.writeJson(
-            '{"minReviewWindow":3600,"minDisputeWindow":3600,"minArbitrationWindow":43200,"unstakeDelay":1209600,"holdingDelay":1296000,"feeDelay":259200,"proposalGrace":604800,"epochZeroDuration":259200,"epochDuration":604801}',
+            '{"minReviewWindow":3600,"minDisputeWindow":3600,"minArbitrationWindow":43200,"unstakeDelay":1209600,"holdingDelay":1814400,"feeDelay":259200,"proposalGrace":604801}',
             path,
             ".sidequest.clocks"
         );
@@ -1039,22 +914,6 @@ contract RecipeTest is Test {
         vm.clearMockedCalls();
         vm.mockCall(address(d.fees), abi.encodeWithSignature("PROPOSAL_GRACE()"), abi.encode(uint256(1)));
         vm.expectRevert(abi.encodeWithSelector(SidequestVerify.NotLive.selector, "fees.PROPOSAL_GRACE"));
-        this.verifyExternal(c, d);
-        vm.clearMockedCalls();
-        vm.mockCall(address(d.reserve), abi.encodeWithSignature("EPOCH_ZERO_DURATION()"), abi.encode(uint256(1)));
-        vm.expectRevert(abi.encodeWithSelector(SidequestVerify.NotLive.selector, "reserve.EPOCH_ZERO_DURATION"));
-        this.verifyExternal(c, d);
-        vm.clearMockedCalls();
-        vm.mockCall(address(d.reserve), abi.encodeWithSignature("EPOCH_DURATION()"), abi.encode(uint256(1)));
-        vm.expectRevert(abi.encodeWithSelector(SidequestVerify.NotLive.selector, "reserve.EPOCH_DURATION"));
-        this.verifyExternal(c, d);
-        vm.clearMockedCalls();
-        vm.mockCall(address(d.distributor), abi.encodeWithSignature("EPOCH_ZERO_DURATION()"), abi.encode(uint256(1)));
-        vm.expectRevert(abi.encodeWithSelector(SidequestVerify.NotLive.selector, "distributor.EPOCH_ZERO_DURATION"));
-        this.verifyExternal(c, d);
-        vm.clearMockedCalls();
-        vm.mockCall(address(d.distributor), abi.encodeWithSignature("EPOCH_DURATION()"), abi.encode(uint256(1)));
-        vm.expectRevert(abi.encodeWithSelector(SidequestVerify.NotLive.selector, "distributor.EPOCH_DURATION"));
         this.verifyExternal(c, d);
         vm.clearMockedCalls();
     }
