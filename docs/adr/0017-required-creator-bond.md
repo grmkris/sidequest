@@ -3,6 +3,11 @@
 Status: accepted for G1e implementation; deployment remains separately gated.
 Date: 2026-10-08
 
+**Amended (11 Oct 2026, launch decisions in myplan note 22):** SIDE launches on nad.fun with a 1,000,000,000 supply. So
+the mainnet floor is **1,000,000 SIDE** and its immutable cap **100,000,000 SIDE**
+(`contracts/config/monad-mainnet.json`). Testnet keeps 10 and 1,000. The 10,000 / 100,000 mainnet values below are
+superseded.
+
 ## Context
 
 Gas alone is a weak deterrent to fake jobs. Refundable escrow and optional bonds let a creator publish cheaply and

@@ -29,8 +29,8 @@ Source, unit tests and local Monad fork rehearsals establish implemented behavio
   `quote.invited` to that wallet with `submit_quote` as the next step. The request stays public and anyone may quote;
   the invitation selects no worker and escrows no reward. Reads and retries return the stored agent ID and wallet.
 - Every publish reserves a required creator bond from available SIDE backing: initially **10 SIDE on testnet** and
-  **10,000 SIDE on mainnet**. The Safe can change the floor for new publications within immutable caps of 1,000 and
-  100,000 SIDE respectively. There is no posting fee or swap requirement; the reward and worker bond remain separate.
+  **1,000,000 SIDE on mainnet**. The Safe can change the floor for new publications within immutable caps of 1,000 and
+  100,000,000 SIDE respectively. There is no posting fee or swap requirement; the reward and worker bond remain separate.
 - A listing that ends without ever activating forfeits its snapshotted bond percentage (initially **25%**) to the current
   `FeeSchedule.treasury()`, with the rest released. Cancellation strictly before 600 seconds after publication is free;
   expiry always forfeits, even inside that window. The Safe may change the rate for future publications from 0 to 50%.
