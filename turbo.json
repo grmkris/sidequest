@@ -171,7 +171,6 @@
         "$TURBO_ROOT$/bun.lock",
         "$TURBO_ROOT$/tsconfig.base.json",
         "$TURBO_ROOT$/contracts/config/**",
-        "$TURBO_ROOT$/contracts/script/rehearse-flows-testnet.sh",
         "$TURBO_ROOT$/packages/board/src/**"
       ],
       "outputs": [],
