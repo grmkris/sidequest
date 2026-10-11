@@ -125,6 +125,10 @@ function createSetupOAuth(sql: Sql): void {
   sql.run(`CREATE TABLE IF NOT EXISTS agent_setup_operators (
     operator TEXT PRIMARY KEY, privy_user_id TEXT NOT NULL, verified_at INTEGER NOT NULL
   )`)
+  // When each connection last called hosted MCP, for the operator's connections list (ADR-0021).
+  sql.run(`CREATE TABLE IF NOT EXISTS agent_oauth_activity (
+    family_id TEXT PRIMARY KEY, last_used_at INTEGER NOT NULL
+  )`)
   sql.run(`CREATE TABLE IF NOT EXISTS agent_setup_connections (
     agent_key TEXT NOT NULL, family_id TEXT NOT NULL UNIQUE, board_id TEXT NOT NULL,
     resource TEXT NOT NULL, created_at INTEGER NOT NULL,

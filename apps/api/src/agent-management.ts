@@ -5,6 +5,7 @@ import {
   AgentRegistration,
   AgentSigning,
   AgentStore,
+  agentRoles,
   BoardError,
   GrantStore,
   RelaySender,
@@ -21,6 +22,7 @@ import { decisionFeedEvents, recordAgentEvents } from './feed-agent.ts'
 import { terminateSubscriptions } from './webhooks.ts'
 import type { AgentRouteRequest } from './routes/agents.ts'
 import { ownerAgentSetup } from './agent-setup-owner.ts'
+import { agentAccess } from './agent-access.ts'
 import { agentProfileManagement } from './agent-profile-management.ts'
 
 function text(body: Record<string, unknown>, key: string): string {
@@ -64,6 +66,7 @@ export async function agentManagement(input: {
     return new AgentRegistration({ sql, context, now }).record(id, operator, hex(body, 'txHash', 64))
   }
   if (action === 'setup-identity' || action === 'approve') return ownerAgentSetup(input)
+  if (action === 'roles' || action === 'connections' || action === 'disconnect') return agentAccess(input)
   const sponsor = new SponsorDesk({
     sql,
     ctx: context,
@@ -74,7 +77,7 @@ export async function agentManagement(input: {
     fail: (code, message) => new BoardError(code, message),
   })
   const lifecycle = new AgentLifecycle({ sql, context, now, sponsor })
-  if (action === 'list') return { agents: agents.list(operator) }
+  if (action === 'list') return { agents: agents.list(operator).map((row) => ({ ...row, roles: agentRoles(row) })) }
   if (action === 'approvals') return { approvals: agents.approvals(operator) }
   if (action === 'status') return lifecycle.status(id, operator)
   if (action === 'recovery') {
