@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test'
+import { rejects } from 'node:assert/strict'
 import { CloudflareManifests } from './publish-lib.ts'
 
 const token = 'fixture-secret-token'
@@ -40,7 +41,7 @@ test('R2 listing also follows result_info cursors and refuses malformed or stall
       env,
       requestOf(() => reply(result)),
     )
-    await expect(bad.list('fixture', 'mining/')).rejects.toThrow('cloudflare-unavailable')
+    await rejects(bad.list('fixture', 'mining/'), /cloudflare-unavailable/)
   }
 })
 
@@ -50,9 +51,9 @@ test('find treats only 404 as absent; get, list and put still refuse it', async 
     requestOf(() => new Response(token, { status: 404 })),
   )
   expect(await store.find('fixture', 'mining/absent.json')).toBeNull()
-  await expect(store.get('fixture', 'mining/absent.json')).rejects.toThrow('cloudflare-unavailable')
-  await expect(store.list('fixture', 'mining/')).rejects.toThrow('cloudflare-unavailable')
-  await expect(store.put('fixture', 'mining/a.json', new Uint8Array())).rejects.toThrow('cloudflare-unavailable')
+  await rejects(store.get('fixture', 'mining/absent.json'), /cloudflare-unavailable/)
+  await rejects(store.list('fixture', 'mining/'), /cloudflare-unavailable/)
+  await rejects(store.put('fixture', 'mining/a.json', new Uint8Array()), /cloudflare-unavailable/)
 })
 
 test('find returns exact bytes and refuses 500 or fetch exceptions without exposing the token', async () => {

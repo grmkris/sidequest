@@ -393,8 +393,12 @@ export class CloudflareManifests implements ManifestsStore, ManifestsIndex {
     return new Uint8Array(await (await this.#fetch(`/r2/buckets/${bucket}/objects/${key}`)).arrayBuffer())
   }
   async find(bucket: string, key: string) {
-    const response = await this.#fetch(`/r2/buckets/${bucket}/objects/${key}`, {}, true)
-    return response.status === 404 ? null : new Uint8Array(await response.arrayBuffer())
+    try {
+      const response = await this.#fetch(`/r2/buckets/${bucket}/objects/${key}`, {}, true)
+      return response.status === 404 ? null : new Uint8Array(await response.arrayBuffer())
+    } catch {
+      return refuse('cloudflare-unavailable')
+    }
   }
   async list(bucket: string, prefix: string) {
     const keys: string[] = [],

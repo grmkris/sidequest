@@ -98,6 +98,7 @@
     "p0:drills": "bun scripts/p0-drills.ts",
     "mining:epoch": "bun scripts/mining/epoch.ts",
     "mining:publish": "bun scripts/mining/publish.ts",
+    "mining:pipeline": "bun --no-env-file scripts/mining/pipeline.ts",
     "mining:test": "bun test scripts/mining",
     "db:generate": "node scripts/db-generate.mjs",
     "testnet:v1:flows": "bun packages/sdk/scripts/v1-flows.ts",
