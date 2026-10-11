@@ -1,5 +1,6 @@
 import { type Hex, getAddress } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
+import { recoverPriceListSigner } from '@sidequest/sdk'
 import { describe, expect, it } from 'vitest'
 import { SIDE_PRICE_FLOOR, type PriceDraft, priceListFile, priceListOf, priceTypedData } from './prices.ts'
 
@@ -67,6 +68,7 @@ describe('the price list Explore signs', () => {
       distributor,
     )
     expect(recovered).toBe(owner.address.toLowerCase())
+    expect(await recoverPriceListSigner(list, signature, 10143, distributor)).toBe(recovered)
     expect(file.signer).toBe(recovered)
     // Bound to the chain and the distributor: the same signature does not recover the owner elsewhere.
     expect(await mining.recoverPriceListSigner(mining.parsePriceList(file), signature, 143, distributor)).not.toBe(
