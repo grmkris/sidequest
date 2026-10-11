@@ -60,13 +60,11 @@ import { feedTools } from './feed.ts'
 import { telegramTools } from './tools-telegram.ts'
 import type { OAuthReply, OAuthGrant } from './oauth.ts'
 import { agentFirstMcpRoute as mcpRoute } from './mcp-agent-setup.ts'
+import { hostedMcpTools } from './mcp-registry.ts'
 import { McpEvents } from './mcp-events.ts'
-import { tools } from './tools.ts'
 import { jsonResponse } from './json.ts'
-import { networkTool, permittedTool } from './mcp-policy.ts'
 import { agentRoute } from './routes/agents.ts'
 import { approvalRoute } from './routes/approvals.ts'
-import { agentTools } from './tools-agents.ts'
 import { managementRequest } from './agent-requests.ts'
 import { isStakingDataPath, stakingDataRoute } from './routes/staking.ts'
 import { agentDataBody, identityReads } from './routes/agent-data.ts'
@@ -671,11 +669,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
               headers: request.headers,
               events: new McpEvents(sql, network),
               ...(grant === null ? {} : { grant }),
-              tools: Object.fromEntries(
-                Object.entries({ ...tools, ...tenantTools, ...directoryTools, ...agentTools, ...feedTools }).filter(
-                  ([name]) => grant !== null && permittedTool(grant, name) && networkTool(network, name),
-                ),
-              ),
+              tools: hostedMcpTools(network),
               call: async (tool, args, agentId) => {
                 if (
                   [
