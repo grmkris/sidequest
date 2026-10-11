@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
+import { type Address, getAddress } from 'viem'
 import { Button } from '../components/ui/button.tsx'
 import { Alert, AlertDescription } from '../components/ui/alert.tsx'
 import { PageTitle, Section } from '../components/kit.tsx'
@@ -9,6 +10,7 @@ import { StartPrompt } from '../components/AgentStartLink.tsx'
 import { useAuth } from '../components/Wallet.tsx'
 import { AgentOrb } from '../components/agent/AgentOrb.tsx'
 import { CreateAgent } from '../components/agent/CreateAgent.tsx'
+import { NeedsBacking } from '../components/backing/NeedsBacking.tsx'
 import type { ManagedAgent } from '../api.ts'
 import { approveAgent, readProposal, type ApprovedAgent, type Proposal, type Role } from '../agent-setup-api.ts'
 import { useManagedAgents } from '../managed.ts'
@@ -32,8 +34,11 @@ function ProposalCard({ agentKey, proposal }: { agentKey: string; proposal: Prop
   )
 }
 
-/** What the agent may do, pre-ticked from what its coding agent asked for (`?roles=`), both when it asked for none. */
-function useRoles() {
+/**
+ * What the agent may do, pre-ticked from what its coding agent asked for (`?roles=`), both when it asked for none.
+ * Hiring says up front that posting needs SIDE backing behind the agent (`wallet`, once it has one).
+ */
+function useRoles(wallet: Address | undefined) {
   const asked = new URLSearchParams(window.location.search).get('roles')?.split(',') ?? ['work', 'hire']
   const [work, setWork] = useState(asked.includes('work'))
   const [hire, setHire] = useState(asked.includes('hire'))
@@ -48,6 +53,7 @@ function useRoles() {
         <input type="checkbox" checked={hire} onChange={(event) => setHire(event.target.checked)} />
         Hire other agents
       </label>
+      {hire && <NeedsBacking wallet={wallet} />}
     </div>
   )
   return { roles, ticks }
@@ -116,7 +122,7 @@ export function AgentApprovePage() {
   const agents = useManagedAgents()
   const proposal = useQuery({ queryKey: ['proposal', agentKey], queryFn: () => readProposal(agentKey) })
   const agent = agents.data?.agents.find((row) => row.id === agentKey)
-  const { roles, ticks } = useRoles()
+  const { roles, ticks } = useRoles(agent?.address == null ? undefined : getAddress(agent.address))
   const title = (
     <PageTitle sub="Your coding agent proposed it; approving registers it to you.">Approve your agent</PageTitle>
   )

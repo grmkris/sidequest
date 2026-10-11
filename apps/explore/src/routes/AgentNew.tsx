@@ -3,6 +3,7 @@ import { Alert, AlertDescription } from '../components/ui/alert.tsx'
 import { PageTitle, Section, Segmented, textLinkClass } from '../components/kit.tsx'
 import { useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
+import { getAddress } from 'viem'
 import { type ManagedAgent } from '../api.ts'
 import { BoardLink } from '../components/BoardLink.tsx'
 import { PrivyLogin } from '../components/Privy.tsx'
@@ -12,6 +13,7 @@ import { agentHome, managedLiveness, useManagedAgents } from '../managed.ts'
 import { relative } from '../format.ts'
 import { AgentOrb } from '../components/agent/AgentOrb.tsx'
 import { CreateAgent } from '../components/agent/CreateAgent.tsx'
+import { NeedsBacking } from '../components/backing/NeedsBacking.tsx'
 import { ConnectionCard } from '../components/ConnectionCard.tsx'
 import { privyAppId } from '../wallet.ts'
 import { agentAction } from '../agent-api.ts'
@@ -146,7 +148,7 @@ function UseForConnection({
   return (
     <div className="grid gap-4">
       <p className="text-sm text-muted-foreground">
-        {agent.name} · Agent ID {agent.agent_id}. A weekly budget and backing can be added later from its page.
+        {agent.name} · Agent ID {agent.agent_id}. A weekly budget can be added later from its page.
       </p>
       <Segmented
         label="What this agent does"
@@ -158,6 +160,7 @@ function UseForConnection({
           ['work', 'Get hired'],
         ]}
       />
+      {role !== 'work' && <NeedsBacking wallet={agent.address === null ? undefined : getAddress(agent.address)} />}
       <Button busy={busy} onClick={() => void use()}>
         Use this agent for this connection
       </Button>

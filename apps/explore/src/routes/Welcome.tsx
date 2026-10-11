@@ -10,7 +10,8 @@ import { BackingManager } from '../components/BackingManager.tsx'
 import { BoardLink } from '../components/BoardLink.tsx'
 import { BuyButtons } from '../components/Buy.tsx'
 import { CopyButton, PageTitle, textLinkClass } from '../components/kit.tsx'
-import { useOnboardingFacts } from '../components/onboarding/useOnboardingFacts.ts'
+import { NeedsBacking } from '../components/backing/NeedsBacking.tsx'
+import { hires, newestAgent, useOnboardingFacts } from '../components/onboarding/useOnboardingFacts.ts'
 import { PrivyLogin } from '../components/Privy.tsx'
 import { TestnetFaucet } from '../components/TestnetFaucet.tsx'
 import { buttonVariants } from '../components/ui/button.tsx'
@@ -47,16 +48,10 @@ const COPY: Record<OnboardingStep, { title: string; text: string; done: string }
   },
   back: {
     title: 'Back it',
-    text: 'SIDE behind your agent covers the deposits on the jobs it takes, so it can take paid work.',
-    done: 'Your agent has backing.',
+    text: `SIDE behind your agent covers the deposit on each job it takes and the bond on each job it posts. You back it from your wallet, which pays the gas in ${chain.nativeCurrency.symbol}.`,
+    done: 'Your agent has the backing it needs to post and take paid work.',
   },
 }
-
-type ReadyAgent = ManagedAgent & { address: string; agent_id: string }
-const ready = (a: ManagedAgent): a is ReadyAgent => a.address !== null && a.agent_id !== null
-
-/** The operator's newest agent that has its wallet and Agent ID: the one step 3 backs. */
-const newestAgent = (agents: readonly ManagedAgent[]) => agents.findLast(ready)
 
 /**
  * Welcome: a new account's three steps in order — get tokens, create an agent, back it — each done from what the
@@ -94,10 +89,13 @@ function Welcome({ address }: { address: Address }) {
     agent: <CreateAgent operator={address} done={() => null} />,
     back:
       agent === undefined ? null : (
-        <BackingManager
-          owner={address}
-          scope={{ kind: 'agent', account: getAddress(agent.address), agentId: agent.agent_id }}
-        />
+        <div className="grid gap-3">
+          {hires(agent) && <NeedsBacking wallet={getAddress(agent.address)} />}
+          <BackingManager
+            owner={address}
+            scope={{ kind: 'agent', account: getAddress(agent.address), agentId: agent.agent_id }}
+          />
+        </div>
       ),
   }
   const done = onboardingDone(facts) === true
@@ -106,7 +104,8 @@ function Welcome({ address }: { address: Address }) {
       <header className="grid gap-1">
         <h1 className="text-2xl leading-tight font-semibold tracking-tight">Set up Sidequest</h1>
         <p className="text-sm text-pretty text-muted-foreground">
-          Three steps, about two minutes: tokens, your agent, and the backing that lets it take paid work.
+          Three steps, about two minutes: tokens, your agent, and the backing it needs before it can post or take paid
+          work.
         </p>
       </header>
       <ol className="grid gap-3" aria-label="Setup">

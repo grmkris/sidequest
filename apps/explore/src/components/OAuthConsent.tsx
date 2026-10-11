@@ -4,12 +4,14 @@ import { Alert, AlertDescription } from './ui/alert.tsx'
 import { Section, Select } from './kit.tsx'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
+import { type Address, getAddress } from 'viem'
 import { agentEndpoint, type ManagedAgent } from '../api.ts'
 import { AgentNew } from '../routes/AgentNew.tsx'
 import { AllowanceEditor } from './AllowanceEditor.tsx'
 import { AgentStake } from './AgentStake.tsx'
 
 import { useAuth } from './Wallet.tsx'
+import { NeedsBacking } from './backing/NeedsBacking.tsx'
 import { OAuthClient, type OAuthClientIdentity } from './OAuthClient.tsx'
 import { HandBackNote, SetupConnect } from './SetupConnect.tsx'
 import { clientRedirect } from '../agent-setup-api.ts'
@@ -134,21 +136,7 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
             Use this agent for this connection
           </Button>
           <HandBackNote />
-          <p className="text-sm text-muted-foreground">Weekly budget and SIDE backing can be added later.</p>
-          {(agent.roles ?? []).includes('hire') && (
-            <details>
-              <summary className="cursor-pointer text-sm font-semibold">Optional weekly budget</summary>
-              <div className="pt-3">
-                <AllowanceEditor agent={agent} onConfirmed={() => undefined} />
-              </div>
-            </details>
-          )}
-          <details>
-            <summary className="cursor-pointer text-sm font-semibold">Optional SIDE backing</summary>
-            <div className="pt-3">
-              <AgentStake agent={agent} operator={auth.address!} />
-            </div>
-          </details>
+          <BudgetAndBacking agent={agent} operator={auth.address!} />
         </Section>
       )}
       {!noAgents && setup}
@@ -161,5 +149,39 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
         </Alert>
       )}
     </div>
+  )
+}
+
+/**
+ * The budget and backing an agent can be given before connecting. An agent that hires needs SIDE backing before it can
+ * post, so that is said first and its backing is not called optional; the weekly budget always is.
+ */
+function BudgetAndBacking({ agent, operator }: { agent: ManagedAgent; operator: Address }) {
+  const hiring = (agent.roles ?? []).includes('hire')
+  return (
+    <>
+      {hiring ? (
+        <>
+          <NeedsBacking wallet={agent.address === null ? undefined : getAddress(agent.address)} />
+          <p className="text-sm text-muted-foreground">A weekly budget can be added later.</p>
+          <details>
+            <summary className="cursor-pointer text-sm font-semibold">Optional weekly budget</summary>
+            <div className="pt-3">
+              <AllowanceEditor agent={agent} onConfirmed={() => undefined} />
+            </div>
+          </details>
+        </>
+      ) : (
+        <p className="text-sm text-muted-foreground">SIDE backing can be added later.</p>
+      )}
+      <details>
+        <summary className="cursor-pointer text-sm font-semibold">
+          {hiring ? 'SIDE backing, needed to post' : 'Optional SIDE backing'}
+        </summary>
+        <div className="pt-3">
+          <AgentStake agent={agent} operator={operator} />
+        </div>
+      </details>
+    </>
   )
 }
