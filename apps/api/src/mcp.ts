@@ -2,6 +2,7 @@ import { agentFailureReply } from '@sidequest/board'
 import type { OAuthGrant } from './oauth.ts'
 import { listedTool, requiredToolScope, toolRefusal } from './mcp-policy.ts'
 import { toolWireMetadata } from './mcp-tool-metadata.ts'
+import { approvalRound, settledCreation } from './mcp-mrtr.ts'
 import { ROLE_GUIDES, connectorInstructions, renderSkill } from './mcp-instructions.ts'
 import type { McpEvents } from './mcp-events.ts'
 import { EventRpcError } from './webhooks.ts'
@@ -293,6 +294,9 @@ export async function mcpRoute(input: {
       typeof params.arguments === 'object' && params.arguments !== null
         ? (params.arguments as Record<string, unknown>)
         : {}
+    // A new agent's approval landed while the client waited on its native prompt: the same call now completes.
+    const settled = modern ? settledCreation(params, name, grant) : undefined
+    if (settled !== undefined) return respond(settled)
     const refusal = toolRefusal(grant, name)
     if (refusal !== undefined) return respond(refusal)
     if (name === 'get_instructions') {
@@ -335,9 +339,26 @@ export async function mcpRoute(input: {
         },
       })
     try {
-      const output = Object.hasOwn(hiringTools, name)
-        ? await renderHiring(name, args, agentId, call)
-        : await call(name, args, agentId)
+      const run = () =>
+        Object.hasOwn(hiringTools, name) ? renderHiring(name, args, agentId, call) : call(name, args, agentId)
+      const setupStatus = (agentKey: string) => call('setup_status', { agentKey }, agentId)
+      const round = modern
+        ? await approvalRound({ params, tool: name, agentId, args, run, setupStatus })
+        : { kind: 'output' as const, output: await run() }
+      // ADR-0021: an approval the client can open asks for it natively, then the client retries the same call.
+      if (round.kind === 'input') return json({ jsonrpc: '2.0', id: id ?? null, result: round.result })
+      if (round.kind === 'invalid') return rpcError(-32602, 'This retry does not carry the state its call was given')
+      if (round.kind === 'closed')
+        return respond({
+          content: [
+            {
+              type: 'text',
+              text: `closed: the approval prompt was closed, so nothing ran. It still waits for your operator at ${round.url}; call this tool again with the same operationKey once they decide.`,
+            },
+          ],
+          isError: true,
+        })
+      const output = round.output
       const structuredContent =
         name === 'whoami'
           ? whoamiContent(output, grant, await profileId(agentId, grant.address), agentId || 'Sidequest agent')
