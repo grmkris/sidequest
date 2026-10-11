@@ -14,6 +14,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../ui/empty.ts
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs.tsx'
 import { useAuth } from '../Wallet.tsx'
 import { Approval } from './Approval.tsx'
+import { AccessCards } from './AccessCards.tsx'
 import { ManagedAgentCard } from './ManagedAgentCard.tsx'
 import { NeedsYouStrip } from './NeedsYouStrip.tsx'
 import { PastApprovals } from './PastApprovals.tsx'
@@ -118,6 +119,7 @@ export function OwnerTabs({
         <Approvals managed={managed} posted={posted} focus={focus} />
       </TabsContent>
       <TabsContent value="manage" className="grid gap-7 text-base">
+        <AccessCards agent={managed} />
         <ManagedAgentCard agent={managed} onBack={onBack} />
       </TabsContent>
     </Tabs>
