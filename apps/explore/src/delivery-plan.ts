@@ -88,7 +88,12 @@ export function previewPlan(input: {
   const { deliverable: d, preview } = input
   const href = d === null ? null : deliveryHref(d)
   const curated =
-    input.jobId === null ? undefined : SHOWCASE.find((s) => showcaseJob(s, input.stage)?.jobId === input.jobId)
+    input.jobId === null
+      ? undefined
+      : SHOWCASE.find((s) => {
+          const job = showcaseJob(s, input.stage)
+          return job.origin === null && job.jobId === input.jobId
+        })
   // A curated delivery that carries a model keeps its own poster, so the model can still be turned.
   const model = siteModel(preview?.media ?? null)
   if (curated !== undefined && model === null)

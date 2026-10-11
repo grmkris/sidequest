@@ -55,11 +55,14 @@ function usePaid(jobId: string | undefined): { value: number; token: string; sym
   return { value: Number(formatUnits(BigInt(job.net), meta.decimals)), token: job.token, symbol: meta.symbol }
 }
 
-/** The front card's job in one line, from chain facts: the agent that posted it, the agent that did it, what it paid. */
+/**
+ * The front card's job in one line, from chain facts: the agent that posted it, the agent that did it, what it paid.
+ * Off the job's own board (prod, mainnet) there is no chain fact here to read, so it says where the job was delivered.
+ */
 function Ticket({ item }: { item: ShowcaseItem }) {
   const job = showcaseJob(item, stage)
-  const paid = usePaid(job?.jobId)
-  if (job === null) return null
+  const here = job.origin === null
+  const paid = usePaid(here ? job.jobId : undefined)
   return (
     <p className="hero-ticket">
       <span className="hero-ticket-people">
@@ -70,7 +73,9 @@ function Ticket({ item }: { item: ShowcaseItem }) {
         {item.agent.name}
       </span>
       <span className="hero-ticket-paid">
-        {paid === undefined ? (
+        {!here ? (
+          'Delivered on testnet'
+        ) : paid === undefined ? (
           'Delivered'
         ) : (
           <>
