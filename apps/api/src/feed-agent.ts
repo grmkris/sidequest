@@ -13,6 +13,7 @@ const KIND_WORDS: Record<ApprovalRow['kind'], string> = {
   'hire-over-limit': 'a hire above its weekly allowance',
   unstake: 'an exit from its stake',
   permission: 'a new permission',
+  role: 'a new role (Work or Hire)',
 }
 
 type Agent = Pick<AgentRow, 'id' | 'name' | 'operator' | 'address' | 'agent_id'>

@@ -2,6 +2,7 @@
 import * as sdk from '@sidequest/sdk'
 import { type Address, type Hex, keccak256, stringToHex } from 'viem'
 import { AgentPermissions } from './agent-permissions.ts'
+import { AgentRoles } from './agent-roles.ts'
 import { AgentStore, type AgentRow } from './agents.ts'
 import { GrantStore, type GrantRow } from './grants.ts'
 import { SponsorDesk } from './sponsor.ts'
@@ -181,7 +182,7 @@ export class AgentLifecycle {
     const approval = this.agents.approval(id)
     const agent = this.agents.owned(approval.agent_id, operator)
     if (agent.state !== 'active' || approval.status !== 'pending') throw new Error('This approval is unavailable')
-    if (approval.kind === 'unstake') return { approval }
+    if (approval.kind === 'unstake' || approval.kind === 'role') return { approval }
     if (approval.kind === 'permission') return new AgentPermissions(this.deps).prepare(approval, operator, adjust)
     const request = JSON.parse(approval.request_json) as { token: Address; amount: string }
     const operation = this.agents.operation(approval.operation_id)
@@ -232,6 +233,7 @@ export class AgentLifecycle {
         ...(permission.standing === undefined ? {} : { standing: permission.standing }),
       })
     }
+    if (approval.kind === 'role') return new AgentRoles(this.agents).decide(approval, operator, approved)
     if (!approved) return this.agents.decide(id, operator, false, {})
     if (approval.kind === 'unstake') return this.agents.decide(id, operator, true, {})
     const prepared = this.prepareApproval(id, operator)

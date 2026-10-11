@@ -6,6 +6,9 @@ import { SPONSOR_OBJECT_NAME } from './sponsor.ts'
 import { AgentFailure } from './agent-failure.ts'
 
 export const AGENTS_OBJECT_NAME = SPONSOR_OBJECT_NAME
+/** What an operator lets its agent do (ADR-0021); a connection's OAuth scope only bounds it. */
+export type AgentRole = 'work' | 'hire'
+export const AGENT_ROLES: readonly AgentRole[] = ['work', 'hire']
 export type AgentState = 'created' | 'upgraded' | 'grants-live' | 'registered' | 'active' | 'revoked'
 export interface AgentRow {
   id: string
@@ -48,7 +51,7 @@ export interface ApprovalRow {
   id: string
   agent_id: string
   operation_id: string
-  kind: 'hire-over-limit' | 'unstake' | 'permission'
+  kind: 'hire-over-limit' | 'unstake' | 'permission' | 'role'
   status: 'pending' | 'approved' | 'rejected' | 'executed'
   request_json: string
   decision_json: string | null
@@ -72,6 +75,24 @@ export function canonicalAgentArgs(value: unknown): string {
       .join(',')}}`
   }
   throw new Error('Agent arguments must be finite JSON')
+}
+
+/** The agent's roles, from `permissions_json`. Anything unreadable grants none. */
+export function agentRoles(row: Pick<AgentRow, 'permissions_json'>): AgentRole[] {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(row.permissions_json)
+  } catch {
+    return []
+  }
+  if (!(parsed instanceof Object) || Array.isArray(parsed)) return []
+  const flags = Object.fromEntries(Object.entries(parsed))
+  return AGENT_ROLES.filter((role) => flags[role] === true)
+}
+
+/** An agent operation's id: the same agent and operationKey always name the same operation. */
+export function agentOperationId(agentId: string, key: string): Hex {
+  return keccak256(stringToHex(JSON.stringify([agentId, key])))
 }
 
 const transitions: Readonly<Record<AgentState, readonly AgentState[]>> = {
@@ -193,6 +214,25 @@ export class AgentStore {
     this.sql.run('UPDATE agents SET agent_id=?,updated_at=? WHERE id=?', agentId, this.now(), id)
   }
 
+  roles(id: string): AgentRole[] {
+    return agentRoles(this.get(id))
+  }
+
+  setRoles(id: string, roles: readonly AgentRole[]): AgentRole[] {
+    this.get(id)
+    this.sql.run(
+      'UPDATE agents SET permissions_json=?,updated_at=? WHERE id=?',
+      canonicalAgentArgs({ hire: roles.includes('hire'), work: roles.includes('work') }),
+      this.now(),
+      id,
+    )
+    return this.roles(id)
+  }
+
+  addRole(id: string, role: AgentRole): AgentRole[] {
+    return this.setRoles(id, [...this.roles(id), role])
+  }
+
   touch(id: string): void {
     this.sql.run('UPDATE agents SET last_activity_at=? WHERE id=?', this.now(), id)
   }
@@ -243,7 +283,7 @@ export class AgentStore {
       throw new AgentFailure('forbidden', 'Agent access is revoked', 'agent-revoked', 'none')
     const intent = canonicalAgentArgs(args)
     const hash = keccak256(stringToHex(intent))
-    const operationId = keccak256(stringToHex(JSON.stringify([id, key])))
+    const operationId = agentOperationId(id, key)
     const prior = this.sql.all<AgentOperationRow>('SELECT * FROM agent_operations WHERE id=?', operationId)[0]
     if (prior) {
       if (prior.board_id !== boardId || prior.tool !== tool || prior.args_hash !== hash)
