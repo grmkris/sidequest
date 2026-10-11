@@ -359,6 +359,40 @@ describe('verification and subscription leases', () => {
     const other = await subscribeWebhook(sql, network, stranger, params(), now, f.transport)
     expect(other.id).not.toBe(sub.id)
   })
+
+  // goblin S11 and S6: two connections of one account subscribe to the same event with their own URLs and secrets.
+  it('keeps one subscription per connection and callback URL; neither replaces nor removes the other', async () => {
+    const sql = database()
+    await seed(sql)
+    const f = fake()
+    const hirerUrl = 'https://events.example/hirer'
+    const workerUrl = 'https://events.example/worker'
+    const subscribe = (url: string, family: string) =>
+      subscribeWebhook(
+        sql,
+        network,
+        principal,
+        params({ delivery: { mode: 'webhook', url, secret } }),
+        now,
+        f.transport,
+        family,
+      )
+    const hirer = await subscribe(hirerUrl, 'family-hirer')
+    const worker = await subscribe(workerUrl, 'family-worker')
+    expect(worker.id).not.toBe(hirer.id)
+    // A lease renewal on the same connection keeps its id, even after its OAuth refresh rotated the token.
+    expect((await subscribe(hirerUrl, 'family-hirer')).id).toBe(hirer.id)
+    await unsubscribeWebhook(
+      sql,
+      network,
+      principal,
+      { name: 'sidequest.inbox', arguments: {}, delivery: { mode: 'webhook', url: hirerUrl } },
+      now,
+      'family-hirer',
+    )
+    expect((await row(sql, String(hirer.id))).status).toBe('terminated')
+    expect(await row(sql, String(worker.id))).toMatchObject({ status: 'active', url: workerUrl })
+  })
 })
 
 describe('cron webhook delivery', () => {
