@@ -83,6 +83,8 @@ interface HyperSyncIO {
   fetch?: typeof fetch
   sleep?: (milliseconds: number) => Promise<void>
 }
+/** About 20 s of waiting in all (1 + 2 + … + 6 s) before a range HyperSync has not indexed is refused. */
+const STALL_RETRIES = 6
 async function query(url: string, body: unknown, io: HyperSyncIO) {
   const token = process.env.HYPERSYNC_API_TOKEN
   if (!token) throw new Error('set HYPERSYNC_API_TOKEN')
@@ -123,6 +125,7 @@ async function logs(params: unknown, network: HyperSyncNetwork, io: HyperSyncIO)
       : { topics: filter.topics.map((topic) => (topic === null ? [] : list(topic))) }),
   }
   const out: ReturnType<typeof rpcLog>[] = []
+  let stalls = 0
   for (let next = from; next < end;) {
     const page = await query(
       urls[network],
@@ -135,7 +138,13 @@ async function logs(params: unknown, network: HyperSyncNetwork, io: HyperSyncIO)
       io,
     )
     const following = integer(page.next_block)
-    if (following <= next) throw new Error('HyperSync paging stalled')
+    if (following <= next) {
+      // HyperSync trails the chain head by a few blocks: give it time to index the range, then refuse.
+      if (++stalls > STALL_RETRIES) throw new Error('HyperSync paging stalled')
+      await (io.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms))))(1000 * stalls)
+      continue
+    }
+    stalls = 0
     out.push(...pageLogs(page, next, Math.min(following, end)))
     next = following
   }

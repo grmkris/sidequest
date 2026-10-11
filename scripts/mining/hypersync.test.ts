@@ -140,11 +140,26 @@ test('429 exhaustion stops after twelve attempts and never includes provider det
   ])
 })
 
-test('a stalled second page refuses the entire range', async () => {
+test('a stalled second page waits for HyperSync, then refuses the entire range', async () => {
   let attempts = 0
   const fetch = mock(async () => Response.json(++attempts === 1 ? page(15) : page(15, [])))
-  expect((await rejectionOf(request(fetch)({ method: 'eth_getLogs', params: [filter] }))).message).toContain('paging')
-  expect(fetch).toHaveBeenCalledTimes(2)
+  const sleep = mock(async (_ms: number) => {})
+  expect((await rejectionOf(request(fetch, sleep)({ method: 'eth_getLogs', params: [filter] }))).message).toContain(
+    'paging',
+  )
+  expect(fetch).toHaveBeenCalledTimes(8)
+  expect(sleep.mock.calls).toEqual([[1000], [2000], [3000], [4000], [5000], [6000]])
+})
+
+test('a page HyperSync has not indexed yet is retried until it advances', async () => {
+  let attempts = 0
+  const fetch = mock(async () =>
+    Response.json(++attempts === 1 ? page(15) : attempts < 4 ? page(15, []) : page(20, [rawLog(16)])),
+  )
+  const sleep = mock(async (_ms: number) => {})
+  await request(fetch, sleep)({ method: 'eth_getLogs', params: [filter] })
+  expect(fetch).toHaveBeenCalledTimes(4)
+  expect(sleep.mock.calls).toEqual([[1000], [2000]])
 })
 
 test('malformed pages, invalid ranges and transport exceptions cannot expose credentials', async () => {
