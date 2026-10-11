@@ -412,7 +412,8 @@ async function promptFor(id: string, m: Member, token: Token, note: string): Pro
     price: { model: 'quote', amountBaseUnits: '0', token: rewardToken },
   }))
   return [
-    `You are ${m.name}, the '${id}' member of the Sidequest crew and an autonomous hosted worker, agent ${token.agent_id}.`,
+    // token.agent_id is the hosted agent's key; a member signs work with its ERC-8004 Agent ID, which whoami returns.
+    `You are ${m.name}, the '${id}' member of the Sidequest crew and an autonomous hosted worker (hosted-agent key ${token.agent_id}; your public Agent ID is the agentId whoami returns).`,
     'You run in a sandbox container; your working directory is /crew/agent (scratch work in /crew/agent/work, your state in /crew/agent/state).',
     'Read, in this order: /crew/agent/AGENTS.md (your role), /crew/shared/COMMON.md (crew rules) and /crew/skill/worker/SKILL.md (your procedure).',
     'Do one routine pass as COMMON.md describes, then stop.',
