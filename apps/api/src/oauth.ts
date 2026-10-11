@@ -1,4 +1,4 @@
-import { AgentStore, migrateAgentSchema, type Sql } from '@sidequest/board'
+import { AgentStore, agentRoles, migrateAgentSchema, type Sql } from '@sidequest/board'
 import type { Statement } from '@sidequest/indexer'
 import {
   parseScopes as parseAgentScopes,
@@ -12,7 +12,7 @@ import {
 
 import { Schema } from 'effect'
 import type { OAuthGrant as AgentOAuthGrant } from '@sidequest/indexer/oauth-types'
-import { bindWaitingSetupConnections, resolveSetupOAuth, setupOAuthRoute } from './oauth-setup.ts'
+import { bindWaitingSetupConnections, boundScopes, resolveSetupOAuth, setupOAuthRoute } from './oauth-setup.ts'
 export type OAuthGrant = AgentOAuthGrant & { readonly setup?: boolean; readonly setupFamilyId?: string }
 export const OAUTH_SCOPES = [...AGENT_SCOPES, 'sidequest:setup'] as const
 
@@ -262,10 +262,12 @@ export async function oauthRoute(input: {
       now,
     )[0]
     if (request === undefined) return failure('invalid_request', 'This consent request expired or was already used')
-    const agents = sql.all<{ id: string; operator: string; state: string; agent_id: string | null }>(
-      'SELECT id,operator,state,agent_id FROM agents WHERE operator=? ORDER BY created_at',
-      owner.toLowerCase(),
-    )
+    const agents = sql
+      .all<{ id: string; operator: string; state: string; agent_id: string | null; permissions_json: string }>(
+        'SELECT id,operator,state,agent_id,permissions_json FROM agents WHERE operator=? ORDER BY created_at',
+        owner.toLowerCase(),
+      )
+      .map(({ permissions_json, ...agent }) => ({ ...agent, roles: agentRoles({ permissions_json }) }))
     if (method === 'GET' && consent[2] === undefined)
       return good({
         ok: true,
@@ -297,23 +299,10 @@ export async function oauthRoute(input: {
         !agents.some((agent) => agent.id === selectedAgentId && agent.state === 'active'))
     )
       return failure('invalid_request', 'Select one active agent owned by this operator')
-    const requested = Schema.decodeUnknownSync(Schema.Array(Schema.String))(JSON.parse(request.scopes_json)).filter(
-      (scope) => scope !== 'sidequest:setup',
+    // The connection holds what its client asked for; the agent's own roles decide within that (ADR-0021).
+    const selectedScopes = boundScopes(
+      Schema.decodeUnknownSync(Schema.Array(Schema.String))(JSON.parse(request.scopes_json)),
     )
-    // The operator chooses the roles; the client's request only pre-ticks them, so consent may narrow or widen it.
-    // Choosing an existing agent answers a setup request too: setup is not an agent scope, so drop it, never refuse it.
-    const chosen =
-      body.scopes === undefined
-        ? requested
-        : Array.isArray(body.scopes)
-          ? body.scopes.filter((scope) => scope !== 'sidequest:setup')
-          : body.scopes
-    if (
-      !Schema.is(Schema.Array(Schema.String))(chosen) ||
-      !chosen.every((scope) => AGENT_SCOPES.some((known) => known === scope))
-    )
-      return failure('invalid_request', 'Consent scopes are sidequest:read, sidequest:work and sidequest:hire')
-    const selectedScopes = ['sidequest:read', ...chosen]
     const code = randomToken()
     const codeHash = await tokenHash(code)
     let consumed = false
@@ -344,7 +333,6 @@ export async function oauthRoute(input: {
           boardId: request.board_id,
           resource: request.resource,
           agentId: selectedAgentId!,
-          scopes: selectedScopes,
           now,
         })
       }

@@ -7,7 +7,7 @@ import { privyOperator } from './privy-operator.ts'
 import type { AgentRouteRequest } from './routes/agents.ts'
 import { profileOrigin } from './profiles.ts'
 import { resourceBoard } from './oauth-validation.ts'
-import { bindWaitingSetupConnections } from './oauth-setup.ts'
+import { bindWaitingSetupConnections, boundScopes } from './oauth-setup.ts'
 
 const strings = Schema.decodeUnknownSync(Schema.Array(Schema.String))
 const Roles = Schema.Array(Schema.Literals(['sidequest:work', 'sidequest:hire'])).check(
@@ -118,13 +118,18 @@ export async function approveAgentSetup(input: {
     operator.toLowerCase(),
     now(),
   )
-  const result = candidates.map((family) => approvalBinding(family, id, origin, approved))
+  const result = candidates.map((family) => approvalBinding(family, id, origin))
   const places = sql.all<{ board_id: string; resource: string }>(
     'SELECT DISTINCT board_id,resource FROM agent_setup_connections WHERE agent_key=?',
     id,
   )
   if (sql.atomic === undefined) throw new BoardError('unavailable', 'Approval requires atomic storage')
   const waiting = sql.atomic(() => {
+    // The ticks are the agent's roles; every connection keeps the scope its client asked for (ADR-0021).
+    new AgentStore(sql, now).setRoles(
+      id,
+      approved.map((scope) => (scope === 'sidequest:work' ? 'work' : 'hire')),
+    )
     for (const entry of result)
       sql.run(
         'UPDATE agent_oauth_setup_families SET agent_id=?,scopes_json=? WHERE id=? AND revoked_at IS NULL',
@@ -141,7 +146,6 @@ export async function approveAgentSetup(input: {
           boardId: place.board_id,
           resource: place.resource,
           agentId: id,
-          scopes: ['sidequest:read', ...approved],
           now: now(),
         }),
       )
@@ -149,16 +153,15 @@ export async function approveAgentSetup(input: {
   return { agentKey: id, agentId: agent.agent_id, state: 'ready', connections: [...result, ...waiting] }
 }
 
-/** The operator chooses the roles here; what the client requested only pre-ticked them, so approval may widen it. */
-function approvalBinding(family: Candidate, id: string, origin: string, approved: readonly string[]) {
+/** A connection the agent proposed becomes it with its client's own scope; one already bound elsewhere is a conflict. */
+function approvalBinding(family: Candidate, id: string, origin: string) {
   if (resourceBoard(family.resource, origin) !== family.board_id)
     throw new BoardError('forbidden', 'Approval cannot change the connection resource')
-  const scopes = ['sidequest:read', ...approved].toSorted()
-  if (
-    family.agent_id !== null &&
-    (family.agent_id !== id ||
-      JSON.stringify(strings(JSON.parse(family.scopes_json)).toSorted()) !== JSON.stringify(scopes))
-  )
-    throw new BoardError('conflict', 'This connection already approved another agent or different scopes')
-  return { familyId: family.id, resource: family.resource, scopes }
+  if (family.agent_id !== null && family.agent_id !== id)
+    throw new BoardError('conflict', 'This connection already approved another agent')
+  return {
+    familyId: family.id,
+    resource: family.resource,
+    scopes: boundScopes(strings(JSON.parse(family.requested_scopes_json))),
+  }
 }

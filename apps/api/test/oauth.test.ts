@@ -208,25 +208,29 @@ test('revoked agents cannot use or refresh an OAuth token and consent cannot gra
   }
 })
 
-// The operator chooses the roles; the client's request only pre-ticks them.
-test('operator consent sets the token scopes, narrower or wider than the request, never unknown ones', async () => {
+// ADR-0021: the connection holds what its client asked for; the agent's roles, not consent, decide within it.
+test('consent grants what the client requested plus read, whatever scopes the page sends', async () => {
   const f = fixture()
   try {
     const c = await connection(f, ['sidequest:read'])
     const tokens = (await f.route('/oauth/token', c.tokenBody)).body as Tokens
-    expect((await resolveOAuth(f.sql, tokens.access_token, resource, 1000))?.scopes).toEqual(['sidequest:read'])
+    expect((await resolveOAuth(f.sql, tokens.access_token, resource, 1000))?.scopes).toEqual([
+      'sidequest:hire',
+      'sidequest:read',
+      'sidequest:work',
+    ])
     const next = await f.route('/oauth/authorize', {}, c.query, 'GET')
     const requestId = new URL(next.redirect!).searchParams.get('oauth_request')!
     expect(
       (await f.route(`/oauth/requests/${requestId}/approve`, { agentIds: ['one'], scopes: ['arbitrary:write'] }))
         .status,
-    ).toBe(400)
-    const wider = await connection(f, ['sidequest:work'], 'sidequest:read')
+    ).toBe(200)
+    const hireOnly = await connection(f, ['sidequest:work'], 'sidequest:hire')
     // SAFETY: a token reply for an approved consent carries the issued token pair.
-    const widened = (await f.route('/oauth/token', wider.tokenBody)).body as Tokens
-    expect((await resolveOAuth(f.sql, widened.access_token, resource, 1000))?.scopes).toEqual([
+    const hiring = (await f.route('/oauth/token', hireOnly.tokenBody)).body as Tokens
+    expect((await resolveOAuth(f.sql, hiring.access_token, resource, 1000))?.scopes).toEqual([
+      'sidequest:hire',
       'sidequest:read',
-      'sidequest:work',
     ])
   } finally {
     f.db.close()
@@ -246,7 +250,7 @@ test('a client that requested setup can connect an existing agent', async () => 
     expect(reply.status).toBe(200)
     // SAFETY: a 200 token reply always carries the issued token pair.
     const grant = await resolveOAuth(f.sql, (reply.body as Tokens).access_token, resource, 1000)
-    expect(grant).toMatchObject({ agentIds: ['one'], scopes: ['sidequest:read', 'sidequest:hire'] })
+    expect(grant).toMatchObject({ agentIds: ['one'], scopes: ['sidequest:hire', 'sidequest:read'] })
     expect(grant?.setup).toBeUndefined()
   } finally {
     f.db.close()

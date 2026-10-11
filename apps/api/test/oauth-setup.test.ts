@@ -68,9 +68,10 @@ it("connecting an existing agent on consent turns the operator's waiting setup c
     scopes: ['sidequest:setup', 'sidequest:read', 'sidequest:hire'],
   })
   expect(approved?.status).toBe(200)
+  // It keeps the scope its own client asked for (read and work), not the consenting client's.
   expect(await resolveOAuth(f.sql, waiting.tokens.access_token, resource, 1000)).toMatchObject({
     agentIds: ['quill'],
-    scopes: ['sidequest:hire', 'sidequest:read'],
+    scopes: ['sidequest:read', 'sidequest:work'],
   })
 })
 

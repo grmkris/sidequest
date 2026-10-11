@@ -135,7 +135,7 @@ it('recovers an interrupted provider call under the same creation identity and s
   expect(f.boot().status(f.grant, { agentKey: id })).toMatchObject({ state: 'awaiting-approval' })
 })
 
-it('the same bearer becomes the approved agent, with the approved role scopes and a re-list instruction', async () => {
+it("the same bearer becomes the approved agent with its client's scope; approving again only changes roles", async () => {
   const f = await fixture(),
     created = await f.boot().create(f.grant, args)
   await expect(f.approve(created.agentKey)).rejects.toMatchObject({ code: 'conflict' })
@@ -162,18 +162,22 @@ it('the same bearer becomes the approved agent, with the approved role scopes an
   expect(permittedTool(bound, 'apply')).toBe(true)
   expect(permittedTool(bound, 'create_task')).toBe(false)
   expect(permittedTool(bound, 'create_agent')).toBe(false)
-  // Approved once, the connection keeps its roles: a different choice is a conflict, the same one is idempotent.
-  await expect(f.approve(created.agentKey, ['sidequest:hire'])).rejects.toMatchObject({ code: 'conflict' })
-  expect(await f.approve(created.agentKey)).toMatchObject({ agentKey: created.agentKey, state: 'ready' })
+  // The ticks are the agent's roles: approving again changes them and leaves the connection's scope alone.
+  expect(await f.approve(created.agentKey, ['sidequest:hire'])).toMatchObject({ state: 'ready' })
+  expect(f.agents.roles(created.agentKey)).toEqual(['hire'])
+  expect((await resolveOAuth(f.sql, f.connection.tokens.access_token, resource, f.now()))?.scopes).toEqual([
+    'sidequest:read',
+    'sidequest:work',
+  ])
 })
 
-it('approval may grant a role the client did not request: the operator chooses roles, the client only pre-ticks', async () => {
+it("approval sets the agent's roles, while each connection keeps the scope its client asked for", async () => {
   const f = await fixture(),
     created = await f.boot().create(f.grant, args)
   f.registered(created.agentKey)
   await f.approve(created.agentKey, ['sidequest:work', 'sidequest:hire'])
+  expect(f.agents.roles(created.agentKey)).toEqual(['work', 'hire'])
   expect((await resolveOAuth(f.sql, f.connection.tokens.access_token, resource, f.now()))?.scopes).toEqual([
-    'sidequest:hire',
     'sidequest:read',
     'sidequest:work',
   ])
