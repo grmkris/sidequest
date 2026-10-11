@@ -1,42 +1,15 @@
 /**
  * The parts of backing that only Account › Backing shows, beside `BackingManager`: the backing form and the agent
- * picker as sheets, the gas warning above the form, and bringing the confirm step into view once a sheet closes into it.
+ * picker as sheets, and bringing the confirm step into view once a sheet closes into it.
  * Presentation only; the transactions stay in `BackingManager`.
  */
-import { Link } from '@tanstack/react-router'
 import { type ReactNode, useEffect } from 'react'
-import { type Address, formatEther, parseEther } from 'viem'
+import type { Address } from 'viem'
 import type { BackableAgent } from '../../backing-agents.ts'
-import { deployment } from '../../wallet.ts'
 import { DELEGATION_RISK, factoryValue } from '../DelegationPositions.tsx'
 import { Sheet } from '../Sheet.tsx'
-import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
 import { AgentPicker } from './AgentPicker.tsx'
-
-/** About one backing send at testnet gas prices, with room to spare: backing is not gas-sponsored. */
-const BACKING_GAS = parseEther('0.03')
-
-/** Backing is sent from the wallet itself, so it needs MON for gas; said before the form, not after a failed send. */
-export function GasWarning({ mon }: { mon: bigint | undefined }) {
-  if (mon === undefined || mon >= BACKING_GAS) return null
-  return (
-    <Alert>
-      <AlertDescription>
-        Backing is sent from your wallet, which pays the gas in MON; Sidequest does not sponsor it. Your wallet holds{' '}
-        {Number(formatEther(mon)).toLocaleString(undefined, { maximumFractionDigits: 4 })} MON and a backing costs about
-        0.02.{' '}
-        {deployment.testnetFaucet !== null ? (
-          <Link to="/account" className="underline underline-offset-2">
-            Get test tokens
-          </Link>
-        ) : (
-          'Add MON to your wallet first.'
-        )}
-      </AlertDescription>
-    </Alert>
-  )
-}
 
 export function BackingSheets({
   open,

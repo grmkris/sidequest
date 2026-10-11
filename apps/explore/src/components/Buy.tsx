@@ -3,12 +3,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import * as sdk from '@sidequest/sdk'
 import { useEffect, useState } from 'react'
 import { formatUnits, parseUnits } from 'viem'
-import { useReadContracts } from 'wagmi'
+import { useBalance, useReadContracts } from 'wagmi'
 import { formatNumber, tokenInfo } from '../format.ts'
 import { stakeContext } from '../stake-context.ts'
 import { friendlyError } from '../txErrors.ts'
 import { chain, deployment } from '../wallet.ts'
 import { useToast } from './Sheet.tsx'
+import { GasWarning, SWAP_GAS } from './GasWarning.tsx'
 import { TxSteps } from './TxSteps.tsx'
 import type { WalletStep } from './txOperation.ts'
 import { Alert, AlertDescription } from './ui/alert.tsx'
@@ -101,6 +102,9 @@ function BuyPanel({
     retry: false,
   })
   const short = amountIn !== null && balance !== undefined && amountIn > balance
+  // A swap is sent from the wallet itself and is never gas-sponsored: say so before it fails for want of MON.
+  const gas = useBalance({ address, chainId: chain.id, query: { refetchInterval: 15_000 } }).data?.value
+  const noGas = gas !== undefined && gas < SWAP_GAS
   const out = quoted.data?.amountOut
   const review = async () => {
     if (amountIn === null || out === undefined) return
@@ -158,6 +162,7 @@ function BuyPanel({
                     ? 'Quoting…'
                     : `You get about ${formatNumber(out, outInfo.decimals)} ${outInfo.symbol} (at least ${formatNumber(sdk.minOutFor(out), outInfo.decimals)} ${outInfo.symbol}).`}
           </p>
+          <GasWarning mon={gas} action="A swap" need={SWAP_GAS} />
           {error !== null && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -165,7 +170,7 @@ function BuyPanel({
           )}
           <div>
             <Button
-              disabled={amountIn === null || short || out === undefined}
+              disabled={amountIn === null || short || out === undefined || noGas}
               busy={busy}
               onClick={() => void review()}
             >

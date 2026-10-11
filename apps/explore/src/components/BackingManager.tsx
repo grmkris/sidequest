@@ -10,13 +10,8 @@ import { type ManagedAgent, agentEndpoint } from '../api.ts'
 import { DelegationForm, exactFactory } from './DelegationForm.tsx'
 import { DELEGATION_RISK, DelegationPositions, factoryValue, walletAgentsKey } from './DelegationPositions.tsx'
 import { HoldingControls } from './HoldingControls.tsx'
-import {
-  AgentFormSheet,
-  BackingSheets,
-  GasWarning,
-  PositionsUnavailable,
-  useReveal,
-} from './backing/AccountBacking.tsx'
+import { GasWarning } from './GasWarning.tsx'
+import { AgentFormSheet, BackingSheets, PositionsUnavailable, useReveal } from './backing/AccountBacking.tsx'
 import { BackingOverview } from './backing/BackingOverview.tsx'
 import { emptyJournal, txJournalKey, writeTxJournalDurable } from './txJournal.ts'
 
