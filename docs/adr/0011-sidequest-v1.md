@@ -266,5 +266,8 @@ Pre-deploy checklist (ethskills security):
 - The vault is the highest-value contract and the focus of the C9 audit.
 - V1 excludes cross-chain settlement.
 
+**Amended (11 Oct 2026) by [ADR-0022](0022-no-mining-at-launch.md):** there is no mining at launch; the reserve,
+distributor, schedule and team vesting below leave the launch recipe. The mining sections are kept as history.
+
 **Amended (10 Oct 2026) by [ADR-0020](0020-mining-volume-credit.md):** from its cut-over epoch, mining credits gross
 volume at the lowest fee rate, boosted by the worker's held tier and capped at the fee paid, instead of the fee itself.

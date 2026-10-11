@@ -65,7 +65,7 @@ Source, unit tests and local Monad fork rehearsals establish implemented behavio
   DeleGator to the activated worker, `salt = termsHash`. On-chain caveats enforce cap, recipient/function, call count
   and expiry. The board holds no user key. Grant only while active; ending the job does not revoke a live delegation.
 - Sponsorship is a separate, zero-value delegation to the relay over the explicit method policy in
-  `docs/sponsorship.md`. Publish, top-ups, stake deposits, budget draws and mining claims stay wallet-paid,
+  `docs/sponsorship.md`. Publish, top-ups, stake deposits and budget draws stay wallet-paid,
   except a managed agent's allowance-funded publish: redeem the exact operator-signed allowance amount,
   approve the reward token to Holding and publish atomically. Unknown-token hires require a verified operator
   decision for that exact token and amount before the routine signer may sign the one-off approval grant.
@@ -73,18 +73,8 @@ Source, unit tests and local Monad fork rehearsals establish implemented behavio
 - Any ERC-20 can be a reward. `knownTokens` only orders discovery; tenant policies may narrow it. Exact inflows,
   non-reentrancy and bounded pushes isolate hostile rewards; refused payouts become `owed` without trapping bonds.
   Only stacks marked `openTokens` accept unknown tokens through the board.
-- SIDE v2 is fixed at 1 billion, with no mint/admin hook. Mining credits paid volume
-  from the configured cut-over epoch: a counted fee in a signed priced token earns `min(gross × lowest tier rate ×
-  boost, fee)`, where the boost (0.4–1.0) follows the lower of the activation tier and the backing held through the
-  epoch. Emission is half the credit at the SIDE reference price, within the budget. One leaf per account/epoch claims
-  stake directly into the vault. A posted root and valid proof are required; the computation is not a promise of
-  earnings. A worker may share 0–100 % (default 0) of its worker slice with the wallets backing it: per wallet, the
-  highest share over the unstake delay before the epoch, so a cut reaches backers only after they can leave, weighted
-  by the smaller of each position's start and end of epoch active shares. Positions under 100 SIDE and payments
-  under 1 SIDE carry nothing. Job fees still go to the treasury. Epochs before the cut-over keep the fee-based rule.
-  Verifiable, not trustless: anyone can recompute an epoch from chain data and the Safe publishes the root
-  ([ADR-0020](adr/0020-mining-volume-credit.md), [ADR-0018](adr/0018-backer-share.md)).
+- There is no work mining at launch ([ADR-0022](adr/0022-no-mining-at-launch.md)). Job fees go to the treasury.
 - The owner Safe controls v1 fees (three-day notice), Holding admission (fifteen-day notice, instant revoke),
-  capped creator-bond floors and unfilled rates for future listings, verifier/arbitrator configuration and mining roots/funding. The core admin can still pause, upgrade and withdraw
+  capped creator-bond floors and unfilled rates for future listings, verifier/arbitrator configuration. The core admin can still pause, upgrade and withdraw
   escrow while paused. Disclose those powers; do not describe the protocol as trustless.
 - Never put secrets in notes, commits, branch names, logs or artifacts.

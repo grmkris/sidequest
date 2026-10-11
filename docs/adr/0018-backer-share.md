@@ -1,6 +1,6 @@
 # ADR-0018: Backer share in work mining
 
-Date: 2026-10-10. Status: accepted (Kris, 10 Oct). Extends ADR-0011's mining rule and the profit-sharing note in
+Date: 2026-10-10. Status: superseded by [ADR-0022](0022-no-mining-at-launch.md) (11 Oct): no mining at launch. Extends ADR-0011's mining rule and the profit-sharing note in
 ADR-0014. No contract changes and no redeploy; this ADR does not by itself establish a live epoch.
 
 ## Context

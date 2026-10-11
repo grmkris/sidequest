@@ -1,6 +1,6 @@
 # ADR-0020: Mining v2: volume credit with a backing boost
 
-Date: 2026-10-10. Status: accepted (Kris, 10 Oct). Amends ADR-0011's mining rule and ADR-0018's backer-share rule.
+Date: 2026-10-10. Status: superseded by [ADR-0022](0022-no-mining-at-launch.md) (11 Oct): no mining at launch. Amends ADR-0011's mining rule and ADR-0018's backer-share rule.
 No contract changes; the new rule starts at a configured epoch (`mining.creditRule.fromEpoch`).
 
 ## Context

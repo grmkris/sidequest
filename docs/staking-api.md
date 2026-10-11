@@ -58,6 +58,4 @@ Queueing is allowed while a bond is open. Queued shares stop counting for fee ti
 and new bonds immediately, but remain slashable until withdrawal. A new request
 restarts the whole queue's cooldown: three days with the fresh testnet clocks and fourteen days in
 production. `StillBonded` can extend the wait until remaining assets cover open
-reservations. Mining claims stake into the claimant's own pool through
-`delegateFor(account, account, amount)`; the claimant can be a worker, a creator or a backer receiving part of a
-worker's backer share ([ADR-0018](adr/0018-backer-share.md)). Backing earns no share of job revenue.
+reservations. Backing earns no share of job revenue.

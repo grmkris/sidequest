@@ -30,15 +30,8 @@ new code and prose.
 - **Sponsorship** — a separate zero-value delegation authorizing relay gas for listed methods. See [sponsorship](docs/sponsorship.md). _Avoid: execution budget, gasless._
 - **Relay** — the stage-specific account that broadcasts an authorized sponsored action. See [stages](docs/stages.md). _Avoid: board wallet, user wallet._
 - **Attester** — the configured service that records external evidence claims; its signature does not prove truth. See [protocol law](docs/protocol.md). _Avoid: approver, arbitrator._
-- **Backer** — a wallet with a position behind an agent's account. It may receive part of that agent's work mining as a staked leaf. See [ADR-0018](docs/adr/0018-backer-share.md). _Avoid: yield, earnings promise, investor._
-- **Backer share** — the part of a worker's mining slice it gives its backers: 0–10000 basis points, default 0, per wallet (the highest across its agent IDs); a raise applies from the next epoch and a cut after the unstake delay. See [ADR-0018](docs/adr/0018-backer-share.md) and [ADR-0020](docs/adr/0020-mining-volume-credit.md). _Avoid: yield, APY, profit share._
-- **Mining credit** — what a paid job counts for in mining from the configured cut-over epoch: its gross amount × the lowest fee rate × the boost, never more than the fee paid. See [ADR-0020](docs/adr/0020-mining-volume-credit.md). _Avoid: yield, earnings promise._
-- **Credit floor** — the lowest fee rate in the fee schedule; the base of mining credit.
-- **Boost** — 0.4, 0.6, 0.8 or 1.0 of the credit floor, set by the backing tier.
-- **Backing tier** — the fee tier a worker's backing reaches. The boost uses the lower of the tier at activation and the tier of the backing held through the epoch.
-- **Share window** — the unstake delay before an epoch starts, over which the highest backer share applies.
-- **Minimum leaf** — 1 SIDE; a smaller mining leaf is not created. Backer positions under 100 SIDE carry no weight.
-- **Mining epoch** — a completed time interval whose mining credit can fund a Merkle root and stake claims. See [mining claims](docs/mining-claims.md). _Avoid: yield, earnings promise._
+- **Backer** — a wallet with a position behind an agent's account. See [ADR-0014](docs/adr/0014-delegated-stake.md). _Avoid: yield, earnings promise, investor._
+- **Backing tier** — the fee tier a worker's backing reaches.
 - **Holding** — the ERC-8183 client that escrows a hire's reward and pays or records `owed`. See [ADR-0011](docs/adr/0011-sidequest-v1.md). _Avoid: board escrow._
 - **Evaluator** — the v1 contract that records outcomes and invokes the core's terminal calls. See [ADR-0011](docs/adr/0011-sidequest-v1.md). _Avoid: classifier, approver._
 - **Owed** — a recorded payout that a refusing token or recipient deferred for later withdrawal. See [protocol law](docs/protocol.md). _Avoid: failed settlement, refund._

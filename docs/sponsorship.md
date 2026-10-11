@@ -15,8 +15,8 @@ position and withdraws from its own wallet. Backing means the total SIDE behind
 an account; a position means one owner's shares behind it. The vault holds the
 tokens. Routine grants add no principal-spending targets.
 
-Managed-agent vault calls are restricted to its own self-position. Mining creates
-one via `delegateFor(account, account, amount)`. An exact operator-approved agent
+Managed-agent vault calls are restricted to its own self-position, which
+`delegateFor(account, account, amount)` creates. An exact operator-approved agent
 exit uses the one-off `unstake` grant: `requestUndelegate(agentWallet, exactShares)`,
 account and calldata pinned, one call and 600-second expiry. The routine signer
 signs only after verifying that exact decision. Operator-funded positions are

@@ -6,8 +6,8 @@ review are recorded in the contracts pane status; this ADR does not establish a
 live deployment.
 
 Any wallet can back an account with SIDE and retain its own position. A payer
-can fund a different delegator through `delegateFor`; mining creates a self
-position with `delegateFor(account, account, amount)`. The account owns its
+can fund a different delegator through `delegateFor`, and an account backs itself
+with `delegateFor(account, account, amount)`. The account owns its
 Holding veto, while each delegator owns its withdrawal rights. There are no
 delegator lists, position transfers, donation entry point, or profit payments.
 Operations take constant time.
@@ -99,9 +99,8 @@ Future profit-sharing epochs can integrate each delegator's active shares over
 time from this ledger, produce a per-wallet Merkle distribution, and publish it
 through a separately approved design. These events establish ownership and
 exposure; they neither distribute job revenue nor promise earnings today.
-[ADR-0018](0018-backer-share.md) is that design for work mining: an agent's chosen
-backer share of its mining slice, weighted from these events. There are still no
-on-chain profit payments.
+[ADR-0018](0018-backer-share.md) was that design for work mining; [ADR-0022](0022-no-mining-at-launch.md)
+removed mining and backer share before launch. There are no on-chain profit payments.
 
 ## G1e required bonds and unfilled forfeiture
 

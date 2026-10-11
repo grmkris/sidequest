@@ -698,6 +698,8 @@ newest request is 12:02Z), so `creatorAgentId` on a fresh post is unit-tested on
 
 ## Backer share in work mining, live epoch on dev (10 Oct 2026)
 
+_History: mining and backer share were removed before launch by [ADR-0022](adr/0022-no-mining-at-launch.md)._
+
 ADR-0018 ran end to end on Monad testnet (10143) and the dev stage, from source d0bc235d (mining tool) and d5bf62d1
 (SDK, API, Explore); both dev CI runs passed.
 
@@ -881,6 +883,8 @@ Its first pass also showed three faults, each fixed the same evening:
   (`60fdb8d1`).
 
 ## Mining v2 live on dev (10 Oct 2026)
+
+_History: mining and backer share were removed before launch by [ADR-0022](adr/0022-no-mining-at-launch.md)._
 
 ADR-0020 went live on testnet from epoch 44 (cut-over ad785498).
 

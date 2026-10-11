@@ -1,5 +1,8 @@
 # Mainnet gate: contract and mining findings (10 Oct 2026)
 
+**11 Oct: mining is removed for the launch** ([ADR-0022](adr/0022-no-mining-at-launch.md)). The findings below are kept
+as reviewed; those about mining (G2, G5, O1, the "Handled by mining v2" table) no longer apply.
+
 **Why this exists.** Kris asked for an ethskills review of everything built so far, ahead of the mainnet decision. Three
 read-only code reviews ran on 10 Oct: the contracts (an audit lens using the staking and ERC-4626 checklists), the
 off-chain mining tool, and the backer share.

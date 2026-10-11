@@ -54,6 +54,9 @@ slashable until successful withdrawal. `StillBonded` can delay withdrawal beyond
 unlock until remaining assets cover reservations. Positions stay keyed by wallet
 address when the agent rotates. See [ADR-0014](0014-delegated-stake.md).
 
+_Note, 11 October 2026 ([ADR-0022](0022-no-mining-at-launch.md)):_ mining and backer share are removed, so the note
+below no longer applies.
+
 _Note, 10 October 2026 ([ADR-0018](0018-backer-share.md)):_ "agent-owned self-positions" above is too narrow for mining. A
 worker's backers can now hold mining leaves, and each leaf stakes into that account's own pool, so a backer wallet gets
 the same kind of self-position. The hosted agent's restrictions are unchanged: it can exit only its own self-position.

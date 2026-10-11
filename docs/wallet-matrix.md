@@ -10,7 +10,7 @@ specified in the [runbook](mainnet-runbook.md); the live-flow runner is testnet-
 
 Optional [sponsorship](sponsorship.md) adds an ERC-7710 grant from an EIP-7702 DeleGator to the relay. The exact
 zero-value/method/call/time caveats must be verified before signing. It covers the explicit v1 method policy, not
-publish, top-up, new backing deposits, execution-budget draws or mining claims. A managed agent may publish through
+publish, top-up, new backing deposits or execution-budget draws. A managed agent may publish through
 an operator-signed period allowance: the exact reward pull, B2 Holding approval and B1 publish share one atomic
 batch. Over-limit hires require an exact one-off allowance; unknown tokens additionally require the agent's exact
 one-off approval after the operator signature is verified. It therefore cannot make a typed-data-only
@@ -50,8 +50,8 @@ the whole queue's cooldown: three days with the fresh testnet clocks, fourteen d
 All shares remain slashable until successful withdrawal. `StillBonded` can extend
 the wait if the remaining assets cannot cover open reservations.
 
-Mining claims use `delegateFor(account, account, amount)`, creating agent-owned
-self-positions. Only those self-positions use the managed-agent exit/recovery path.
+`delegateFor(account, account, amount)` creates an agent-owned
+self-position. Only those self-positions use the managed-agent exit/recovery path.
 After exact operator approval, the routine signer can sign a one-call grant for
 `requestUndelegate(agentWallet, exactShares)` with a ten-minute expiry. Routine
 vault grants cover self-position cancellation and withdrawal, without new
