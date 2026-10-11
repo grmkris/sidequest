@@ -31,9 +31,11 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
 ## 0. What is already proven, without a mainnet transaction
 
 - **The launch on a fork of 143 (R7).** `RPC=https://rpc.monad.xyz bash contracts/script/rehearse-launch.sh` runs
-  §3.1 and §3.3–§3.7 and a first hire against the live chain's state, with Monad gas pricing and anvil dev keys. The
-  launch gate refuses while the four handovers are pending and passes after `SafeAccept`. R7 must pass again on the
-  launching commit before the go; it prints the exact gas budget (§2).
+  §3.1–§3.7 against the live chain's state, with Monad gas pricing and anvil dev keys: SIDE is created through the real
+  nad.fun router with the 5% dev buy and the creator fee paid to the Safe, and must have no `burn`. The launch gate
+  refuses while the four handovers are pending, passes after `SafeAccept`, and passes again at threshold 2. Then two
+  hires paid in SIDE (one settled, one missed whose worker bond must land in the sink) and a small buy and sell. R7
+  must pass again on the launching commit before the go; it prints the exact gas budget (§2).
 - **Fork tests** (`(cd contracts && set -a && . ../.env.local && set +a && forge test --match-path 'test/fork/*')`):
   - `SidequestRehearsal.t.sol`: the recipe step by step on a mainnet fork, with third-party calls between the steps,
     against a launcher-like SIDE (no `burn`); a fresh core whose admin roles move to the Safe; the Safe accepts every

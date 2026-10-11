@@ -811,7 +811,7 @@ contract RecipeTest is Test {
     ///      the run.
     function _runLog(SidequestRecipe.Deployed memory d, string memory status, bool dropLast)
         internal
-        view
+        pure
         returns (string memory)
     {
         address[5] memory created =

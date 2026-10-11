@@ -9,6 +9,7 @@ import {ISidequestHolding} from "../src/sidequest/interfaces/ISidequestHolding.s
 import {ISidequestEvaluator} from "../src/sidequest/interfaces/ISidequestEvaluator.sol";
 import {IStakeVault} from "../src/sidequest/interfaces/IStakeVault.sol";
 import {SidequestRecipe} from "./SidequestRecipe.sol";
+import {SidequestConstants} from "../src/sidequest/interfaces/SidequestConstants.sol";
 
 /// @dev Launch rehearsal only (R7, `script/rehearse-launch.sh`): runs against a scratch `config/rehearsal-*.json` on a
 ///      local anvil fork, with throwaway keys passed in the environment. Refuses any other config name.
@@ -31,49 +32,82 @@ abstract contract RehearsalScript is Script {
     }
 }
 
-/// @notice One direct hire through the v1 pair: the worker registers and stakes, the creator publishes in USDC and
-///         signs the selection, the worker activates and submits, the creator accepts, anyone settles.
-///         Keys: DEPLOYER_KEY (holds SIDE and USDC), CREATOR_KEY, WORKER_KEY.
+/// @notice Two hires through the v1 pair, paid in SIDE as Sidequest's own tasks are. The first: the worker registers and
+///         stakes, the creator publishes, signs the selection, the worker activates and submits, the creator accepts,
+///         anyone settles. The second is activated and never delivered; `RehearseSlash` settles it after the deadline.
+///         Keys: FUNDER_KEY (holds the dev-buy SIDE), CREATOR_KEY, WORKER_KEY.
 contract RehearseHire is RehearsalScript {
+    uint256 internal constant REWARD = 2_000_000e18;
+    uint256 internal constant WORKER_STAKE = 2_000_000e18;
+    uint256 internal constant WORKER_BOND = 1_000_000e18;
+
     function run() external {
         _load();
-        uint256 deployerKey = vm.envUint("DEPLOYER_KEY");
+        uint256 funderKey = vm.envUint("FUNDER_KEY");
         uint256 creatorKey = vm.envUint("CREATOR_KEY");
         uint256 workerKey = vm.envUint("WORKER_KEY");
         address creator = vm.addr(creatorKey);
         address worker = vm.addr(workerKey);
         ISidequestHolding holding = ISidequestHolding(_addr(".deployment.main.holding"));
-        ISidequestEvaluator evaluator = ISidequestEvaluator(_addr(".deployment.main.evaluator"));
-        ERC8183WithAuthorization core = ERC8183WithAuthorization(_addr(".deployment.core"));
         IStakeVault vault = IStakeVault(_addr(".deployment.sidequest.vault"));
-        IERC20 factory = IERC20(_addr(".deployment.sidequest.factory"));
-        IERC20 usdc = IERC20(_addr(".liquidity.quote"));
+        IERC20 side = IERC20(_addr(".deployment.sidequest.factory"));
         IERC8004Identity identity = IERC8004Identity(_addr(".erc8004.identity"));
-        uint256 reward = 25e6;
+        uint256 creatorBond = holding.minimumCreatorBond();
 
-        vm.startBroadcast(deployerKey);
-        factory.transfer(worker, 20_000e18);
-        factory.transfer(creator, holding.minimumCreatorBond());
-        usdc.transfer(creator, reward);
+        vm.startBroadcast(funderKey);
+        side.transfer(worker, WORKER_STAKE);
+        side.transfer(creator, creatorBond + 2 * REWARD);
         vm.stopBroadcast();
 
         vm.startBroadcast(workerKey);
         uint256 agentId = identity.register();
-        factory.approve(address(vault), 20_000e18);
-        vault.delegate(worker, 20_000e18);
+        side.approve(address(vault), WORKER_STAKE);
+        vault.delegate(worker, WORKER_STAKE);
         vm.stopBroadcast();
 
+        vm.startBroadcast(creatorKey);
+        side.approve(address(vault), creatorBond);
+        vault.delegate(creator, creatorBond);
+        vm.stopBroadcast();
+
+        (uint256 jobId, uint256 fee, uint256 net) = _hire(creatorKey, workerKey, agentId, "delivered");
+        vm.startBroadcast(workerKey);
+        ERC8183WithAuthorization(_addr(".deployment.core")).submit(jobId, keccak256("rehearsal-work"), "");
+        vm.stopBroadcast();
+        vm.startBroadcast(creatorKey);
+        ISidequestEvaluator(_addr(".deployment.main.evaluator")).accept{gas: 1_200_000}(jobId);
+        holding.settle{gas: 1_000_000}(jobId);
+        vm.stopBroadcast();
+
+        (uint256 missed,,) = _hire(creatorKey, workerKey, agentId, "missed");
+
+        console2.log("job", jobId);
+        console2.log("agentId", agentId);
+        console2.log("fee to treasury", fee);
+        console2.log("net to worker", net);
+        console2.log("slash job", missed);
+    }
+
+    /// @dev Publishes a SIDE-paid hire for the worker and activates it; returns the job and the quoted fee and net.
+    function _hire(uint256 creatorKey, uint256 workerKey, uint256 agentId, string memory tag)
+        internal
+        returns (uint256 jobId, uint256 fee, uint256 net)
+    {
+        ISidequestHolding holding = ISidequestHolding(_addr(".deployment.main.holding"));
+        ERC8183WithAuthorization core = ERC8183WithAuthorization(_addr(".deployment.core"));
+        IERC20 side = IERC20(_addr(".deployment.sidequest.factory"));
+        address worker = vm.addr(workerKey);
         uint48 deadline = uint48(block.timestamp + 1 days);
-        bytes32 policy = keccak256(abi.encode("rehearsal-policy", block.timestamp));
+        bytes32 policy = keccak256(abi.encode("rehearsal-policy", tag, block.timestamp));
         ISidequestHolding.PublishParams memory p = ISidequestHolding.PublishParams({
             approver: address(0),
             arbitrator: address(0),
-            manifestHash: keccak256("rehearsal-manifest"),
+            manifestHash: keccak256(abi.encode("rehearsal-manifest", tag)),
             policyHash: policy,
-            token: usdc,
-            reward: reward,
+            token: side,
+            reward: REWARD,
             creatorBond: holding.minimumCreatorBond(),
-            workerBond: 10e18,
+            workerBond: WORKER_BOND,
             deliveryDeadline: deadline,
             expiredAt: deadline + 1 hours + 1 hours + 12 hours + 1 days,
             reviewWindow: 1 hours,
@@ -81,34 +115,19 @@ contract RehearseHire is RehearsalScript {
             arbitrationWindow: 12 hours
         });
         vm.startBroadcast(creatorKey);
-        factory.approve(address(vault), p.creatorBond);
-        vault.delegate(creator, p.creatorBond);
-        usdc.approve(address(holding), reward);
-        uint256 jobId = holding.publish(p);
+        side.approve(address(holding), REWARD);
+        jobId = holding.publish(p);
         vm.stopBroadcast();
 
         ISidequestHolding.Selection memory sel =
             ISidequestHolding.Selection(jobId, worker, agentId, policy, deadline - 1, 1);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorKey, holding.selectionDigest(sel));
-        bytes memory creatorSig = abi.encodePacked(r, s, v);
-        (, uint256 fee, uint256 net) = holding.quoteActivation(jobId, worker);
+        (, fee, net) = holding.quoteActivation(jobId, worker);
         ERC8183WithAuthorization.Authorization memory auth =
-            _budgetAuth(core, workerKey, worker, jobId, address(usdc), net);
-
+            _budgetAuth(core, workerKey, worker, jobId, address(side), net);
         vm.startBroadcast(workerKey);
-        holding.activate(sel, creatorSig, auth);
-        core.submit(jobId, keccak256("rehearsal-work"), "");
+        holding.activate(sel, abi.encodePacked(r, s, v), auth);
         vm.stopBroadcast();
-
-        vm.startBroadcast(creatorKey);
-        evaluator.accept{gas: 1_200_000}(jobId);
-        holding.settle{gas: 1_000_000}(jobId);
-        vm.stopBroadcast();
-
-        console2.log("job", jobId);
-        console2.log("agentId", agentId);
-        console2.log("fee to treasury", fee);
-        console2.log("net to worker", net);
     }
 
     function _budgetAuth(
@@ -135,5 +154,25 @@ contract RehearseHire is RehearsalScript {
         (uint8 v, bytes32 r, bytes32 s) =
             vm.sign(key, keccak256(abi.encodePacked("\x19\x01", core.DOMAIN_SEPARATOR(), structHash)));
         return ERC8183WithAuthorization.Authorization(signer, 1, deadline, abi.encodePacked(r, s, v));
+    }
+}
+
+/// @notice The undelivered hire, strictly after its delivery deadline: anyone rejects it, which penalizes the worker
+///         bond, then settles. SIDE has no burn, so the slashed bond must arrive at `SidequestConstants.SLASH_SINK`.
+///         Keys: CREATOR_KEY (any account works; the calls are permissionless).
+contract RehearseSlash is RehearsalScript {
+    function run(uint256 jobId) external {
+        _load();
+        ISidequestHolding holding = ISidequestHolding(_addr(".deployment.main.holding"));
+        IERC20 side = IERC20(_addr(".deployment.sidequest.factory"));
+        uint256 bond = holding.getListing(jobId).workerBond;
+        uint256 sunk = side.balanceOf(SidequestConstants.SLASH_SINK);
+        vm.startBroadcast(vm.envUint("CREATOR_KEY"));
+        ISidequestEvaluator(_addr(".deployment.main.evaluator")).rejectAfterDeliveryDeadline{gas: 1_200_000}(jobId);
+        holding.settle{gas: 1_000_000}(jobId);
+        vm.stopBroadcast();
+        require(holding.getListing(jobId).workerBondBurned, "the missed delivery did not penalize the worker bond");
+        require(side.balanceOf(SidequestConstants.SLASH_SINK) == sunk + bond, "the slashed bond is not in the sink");
+        console2.log("slashed to the sink", bond);
     }
 }
