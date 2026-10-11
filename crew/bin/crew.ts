@@ -45,7 +45,11 @@ const stateRoot =
   (crew.board.stage === 'dev' ? join(repo, '.crew', 'hosted') : join(repo, '.crew', 'hosted', crew.board.stage))
 const cliproxyUrl = inContainer ? crew.harness.containerBaseUrl : crew.harness.baseUrl
 const IMAGE = 'sidequest-crew'
-const PROJECT = 'sidequest-crew'
+/** Dev keeps its names; another stage's crew gets its own containers, compose project and env files beside dev's. */
+const staged = (name: string) => (crew.board.stage === 'dev' ? name : `${name}-${crew.board.stage}`)
+const PROJECT = staged('sidequest-crew')
+const COMPOSE = join(repo, '.crew', `${staged('compose')}.json`)
+const ENV_DIR = join(repo, '.crew', staged('env'))
 const HARNESS_UID = 1000
 /** How a supervisor starts a run in its container: as the harness's uid, without groups, capabilities or setuid. */
 const DROP = ['--reuid=1000', '--regid=1000', '--clear-groups', '--no-new-privs', '--inh-caps=-all', '--']
@@ -128,7 +132,7 @@ const memberOf = (id: string | undefined): [string, Member] => {
   if (m === undefined) throw new Error(`member must be one of: ${Object.keys(crew.members).join(', ')}`)
   return [id!, m]
 }
-const bot = (id: string) => `sq-bot-${id}`
+const bot = (id: string) => (crew.board.stage === 'dev' ? `sq-bot-${id}` : `sq-bot-${crew.board.stage}-${id}`)
 /** OAuth files: in `secrets/` (root-only) once a member runs in its container, else in its home as before. */
 const secretPath = (id: string, file: string) =>
   inContainer || existsSync(join(home(id), 'secrets')) ? join(home(id), 'secrets', file) : join(home(id), file)
@@ -821,7 +825,7 @@ interface Mounts {
 
 /** One bot's compose service: its env file (0600, only the variables its member lists), limits, labels and mounts. */
 function botService(id: string, m: Member, e: Record<string, string>, at: Mounts, agentId: string) {
-  const envFile = join(repo, '.crew', 'env', `${id}.env`)
+  const envFile = join(ENV_DIR, `${id}.env`)
   const vars = [
     `CLIPROXY_API_KEY=${cliproxyKey(e)}`,
     ...Object.entries(memberEnv(m, e)).map(([name, value]) => `${name}=${value}`),
@@ -907,22 +911,20 @@ async function up(only: string[]) {
     gh: bin('gh'),
   }
   mkdirSync(join(stateRoot, '.slots'), { recursive: true })
-  mkdirSync(join(repo, '.crew', 'env'), { recursive: true, mode: 0o700 })
+  mkdirSync(ENV_DIR, { recursive: true, mode: 0o700 })
   const members = Object.entries(crew.members).filter(([id, m]) => m.enabled && existsSync(join(home(id), 'secrets')))
   const ids = await agentIds()
   const services = Object.fromEntries(
     members.map(([id, m]) => [bot(id), botService(id, m, e, at, ids.get(m.name) ?? '')]),
   )
-  const file = join(repo, '.crew', 'compose.json')
-  writeFileSync(file, json({ name: PROJECT, services, networks: { crew: { name: PROJECT } } }))
-  const started = spawnSync('docker', ['compose', '-f', file, 'up', '-d', '--remove-orphans', ...only.map(bot)], {
+  writeFileSync(COMPOSE, json({ name: PROJECT, services, networks: { crew: { name: PROJECT } } }))
+  const started = spawnSync('docker', ['compose', '-f', COMPOSE, 'up', '-d', '--remove-orphans', ...only.map(bot)], {
     stdio: 'inherit',
   })
   process.exitCode = started.status ?? 1
 }
 
-const compose = (...args: string[]) =>
-  spawnSync('docker', ['compose', '-f', join(repo, '.crew', 'compose.json'), ...args], { stdio: 'inherit' })
+const compose = (...args: string[]) => spawnSync('docker', ['compose', '-f', COMPOSE, ...args], { stdio: 'inherit' })
 
 const [command, a, b] = process.argv.slice(2)
 // On the host, a containerized member's commands run in its container: only there is its refresh token readable.

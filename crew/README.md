@@ -93,7 +93,9 @@ any code it runs, so for now its role limits it to repositories we own (`github.
 ## Run the crew as containers
 
 Each connected member runs in its own container, `sq-bot-<member>` (compose project `sidequest-crew`, bridge network
-`sidequest-crew`, `restart: unless-stopped`). Its supervisor (`crew.ts serve`) checks for work every
+`sidequest-crew`, `restart: unless-stopped`). A prod crew (`CREW_STAGE=prod`) runs beside it as `sq-bot-prod-<member>`,
+project and network `sidequest-crew-prod`, from `.crew/compose-prod.json` and `.crew/env-prod/`, so neither stage's
+`up --remove-orphans` touches the other's containers. Its supervisor (`crew.ts serve`) checks for work every
 `harness.loopMinutes` and, when there is a reason and the guards allow it, starts the harness as uid 1000 with
 `setpriv` (no groups, no capabilities, no setuid). The member's OAuth files sit in `.crew/hosted/<member>/secrets/`,
 owned by root with mode 700, so a run cannot read the refresh token; it gets only the hour-long access token, as
