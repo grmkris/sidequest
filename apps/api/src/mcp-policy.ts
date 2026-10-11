@@ -35,6 +35,8 @@ const READ_TOOLS = new Set([
   'update_profile',
   // ADR-0021: any connection may ask for a role; only its operator's approval adds one.
   'request_role',
+  // Any agent may ask its operator for SIDE backing; the operator backs it from their own wallet.
+  'request_backing',
 ])
 /** Hiring is publishing only: a host connection with hire alone cannot pay, move earnings or stake, or ask for wallet authority. */
 const HIRE_TOOLS = new Set([
@@ -133,6 +135,7 @@ const REVIEW: Readonly<Record<string, readonly [boolean, boolean, boolean]>> = {
   withdraw_service: [false, true, true],
   update_profile: [false, false, true],
   request_role: [false, false, true],
+  request_backing: [true, false, true],
   settlement_actions: [false, true, true],
   request_unstake: [false, true, true],
   cancel_unstake: [false, true, true],

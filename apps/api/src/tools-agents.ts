@@ -71,6 +71,21 @@ export const agentTools = {
       additionalProperties: false,
     },
   },
+  request_backing: {
+    description:
+      'Ask your operator for SIDE backing. Every post holds the creator bond from the backing behind this agent, and a refused post says insufficient-backing. Returns available, minimum, wanted and short in SIDE; while short, approveUrl opens this agent’s backing with the shortfall filled in, which the operator confirms in their own wallet and owns. Forward it, then retry the refused call with the same operationKey. Reading only: nothing moves until the operator signs.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        amount: {
+          type: 'string',
+          pattern: '^\\d+(\\.\\d{1,18})?$',
+          description: 'SIDE you want free behind this agent, e.g. a creator bond above the floor; omitted: the floor.',
+        },
+      },
+      additionalProperties: false,
+    },
+  },
   x402_pay: {
     description:
       'Sign an x402 v2 exact USDC payment from this agent wallet on testnet (5 USDC per payment, 20 USDC per rolling day). Send the returned PAYMENT-SIGNATURE header to the resource yourself. Retry the same operationKey for the same nonce and signature.',

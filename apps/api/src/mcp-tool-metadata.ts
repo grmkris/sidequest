@@ -108,6 +108,17 @@ const PUBLISHER_OUTPUT_SCHEMAS: Readonly<Record<string, Record<string, unknown>>
   cancel_task: hostedOutput,
   settlement_actions: hostedOutput,
   request_role: hostedOutput,
+  request_backing: envelope(
+    objectOutput({
+      state: { type: 'string', enum: ['backed', 'needs-backing'] },
+      available: stringOutput,
+      minimum: stringOutput,
+      wanted: stringOutput,
+      short: stringOutput,
+      approveUrl: stringOutput,
+      next: stringOutput,
+    }),
+  ),
 }
 
 /** What tools/list says about a tool beyond its input: title, annotations, output schema and OAuth schemes. */

@@ -33,6 +33,8 @@ import { agentFeedEvents, approvalUrl, recordAgentEvents } from './feed-agent.ts
 import { directoryAudience, directoryPort } from './directory-object.ts'
 import { managedProfileUpdates, profileOperationKey } from './agent-profiles.ts'
 import { runSetupTool } from './agent-setup.ts'
+import { BackingRequestInput, chainBackingReads, requestBacking } from './agent-backing-request.ts'
+import { publicOrigin } from './telegram.ts'
 import { objectFor } from './commons/route.ts'
 
 const key32 = (key: string) => /^0x[0-9a-fA-F]{64}$/.test(key)
@@ -204,6 +206,16 @@ export async function runAgent(runtime: {
     const result = new AgentRoles(agents).request(agent, req.env.boardId, operationKey, request)
     return await answered({ network: req.env.network, bindings, agent, tool: req.tool, key: operationKey }, result)
   }
+  if (req.tool === 'request_backing')
+    return toJson({
+      ok: true,
+      result: await requestBacking({
+        reads: chainBackingReads(ctx),
+        agent,
+        origin: publicOrigin(),
+        request: Schema.decodeUnknownSync(BackingRequestInput)(args, { onExcessProperty: 'error' }),
+      }),
+    })
   if (requiredToolScope(req.tool) === 'sidequest:read') return tenant.call(prepare(req.tool, args))
   const signerKey = typeof bindings.PRIVY_SIGNER_KEY === 'string' ? bindings.PRIVY_SIGNER_KEY : ''
   const appSecret = typeof bindings.PRIVY_APP_SECRET === 'string' ? bindings.PRIVY_APP_SECRET : ''
