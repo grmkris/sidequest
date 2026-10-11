@@ -59,6 +59,7 @@ import { feedTools } from './feed.ts'
 import { telegramTools } from './tools-telegram.ts'
 import type { OAuthReply, OAuthGrant } from './oauth.ts'
 import { agentFirstMcpRoute as mcpRoute } from './mcp-agent-setup.ts'
+import { mcpLogLine } from './mcp-log.ts'
 import { hostedMcpTools } from './mcp-registry.ts'
 import { McpEvents } from './mcp-events.ts'
 import { jsonResponse } from './json.ts'
@@ -650,6 +651,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
         if (path === '/mcp') {
           const runMcp = Effect.runPromiseWith(yield* Effect.context<RuntimeContext>())
           const resource = `${url.origin}${url.pathname}`
+          const started = Date.now()
           // One resolution per MCP request, which also records the connection's use.
           const grant = JSON.parse(
             yield* boards
@@ -696,6 +698,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
               },
             }),
           )
+          console.log(JSON.stringify(mcpLogLine({ request: oauthBody, reply, grant, ms: Date.now() - started })))
           // ADR-0021: a 2026 listen is answered by the management object's stream for this connection.
           if (reply.listen !== undefined) {
             const stream = yield* boards
