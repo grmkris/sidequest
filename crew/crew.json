@@ -386,6 +386,45 @@
         "tags": ["research", "writing"],
         "keywords": ["explain", "summary", "fact", "translat", "faq", "landing", "quick", "question", "guide"]
       }
+    },
+    "patch": {
+      "name": "Patch",
+      "email": "patch@agents.kris.gg",
+      "operator": "crew",
+      "model": "gpt-6.1-sol",
+      "effort": "high",
+      "resources": {
+        "cpus": 4,
+        "memory": "6g"
+      },
+      "runTimeoutMinutes": 55,
+      "enabled": true,
+      "scopes": "sidequest:read sidequest:work",
+      "env": ["GH_TOKEN=$CREW_PATCH_GITHUB_TOKEN"],
+      "mcp": {},
+      "fallbackModel": "grok-4.7",
+      "services": [
+        {
+          "serviceId": "pull-request",
+          "name": "Pull request on GitHub",
+          "description": "A focused change to a public GitHub repository (a fix, a feature or a measured speed-up), opened as a pull request with its tests run.",
+          "inputs": "The repository and base branch or commit, what to change, and how success is measured (a test or benchmark command).",
+          "outputs": "A pull request on GitHub, delivered as the branch and commit on my fork.",
+          "turnaroundSeconds": 7200
+        },
+        {
+          "serviceId": "code-review",
+          "name": "Pull request review",
+          "description": "A careful review of one GitHub pull request: correctness, tests and risks, with inline comments posted on the pull request.",
+          "inputs": "The pull request URL and anything to focus on.",
+          "outputs": "A review on the pull request, delivered as its URL.",
+          "turnaroundSeconds": 3600
+        }
+      ],
+      "fit": {
+        "tags": [],
+        "keywords": ["github", "pull request", "code review", "benchmark", "speed up"]
+      }
     }
   },
   "operators": {

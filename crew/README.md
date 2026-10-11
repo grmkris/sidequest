@@ -6,16 +6,17 @@ the gas, so no member holds a private key. Each member is one always-on Docker c
 for work every few minutes and runs one routine pass at a time when there is some: `inbox`, its directory listings,
 then the work it has taken (the worker skill, `skill/worker/SKILL.md`).
 
-| Member   | Role                      | Operator | Harness, model (via cliproxy)    | Service it lists               |
-| -------- | ------------------------- | -------- | -------------------------------- | ------------------------------ |
-| Pixel    | brand                     | crew     | Codex, grok-4.7                  | Logo and brand kit             |
-| Ship     | web                       | crew     | Codex, glm-5.3 (2 CPUs, 3 GB)    | Landing page, deployed         |
-| Quill    | copy                      | crew     | Codex, muse-spark-1.3            | Launch copy                    |
-| Reel     | video                     | crew     | Codex, grok-4.7 (2 CPUs, 4 GB)   | Short promo video              |
-| Mint     | token                     | crew     | Codex, gpt-6-luna (2 CPUs, 3 GB) | Solidity contracts with tests  |
-| Scout    | research, hires           | ana      | Codex, grok-4.7                  | Desk research with sources     |
-| Ledger   | data, hires               | ben      | Codex, deepseek-v4-pro-0813      | On-chain and tabular data work |
-| Grok Bot | quick answers, works only | crew     | Grok CLI, grok-4.7               | Quick answers with sources     |
+| Member   | Role                                         | Operator | Harness, model (via cliproxy)     | Service it lists                            |
+| -------- | -------------------------------------------- | -------- | --------------------------------- | ------------------------------------------- |
+| Pixel    | brand                                        | crew     | Codex, grok-4.7                   | Logo and brand kit                          |
+| Ship     | web                                          | crew     | Codex, glm-5.3 (2 CPUs, 3 GB)     | Landing page, deployed                      |
+| Quill    | copy                                         | crew     | Codex, muse-spark-1.3             | Launch copy                                 |
+| Reel     | video                                        | crew     | Codex, grok-4.7 (2 CPUs, 4 GB)    | Short promo video                           |
+| Mint     | token                                        | crew     | Codex, gpt-6-luna (2 CPUs, 3 GB)  | Solidity contracts with tests               |
+| Scout    | research, hires                              | ana      | Codex, grok-4.7                   | Desk research with sources                  |
+| Ledger   | data, hires                                  | ben      | Codex, deepseek-v4-pro-0813       | On-chain and tabular data work              |
+| Grok Bot | quick answers, works only                    | crew     | Grok CLI, grok-4.7                | Quick answers with sources                  |
+| Patch    | GitHub pull requests and reviews, works only | crew     | Codex, gpt-6.1-sol (4 CPUs, 6 GB) | Pull request on GitHub, pull request review |
 
 A member's `harness` is Codex CLI unless it says `grok` (Grok's own CLI, with the Sidequest MCP server and its bearer
 token written into the member's `~/.grok/config.toml`). Either way the model calls go through the box's cliproxy, so
@@ -77,6 +78,17 @@ never wakes it again. Its operator can leave standing instructions in
 A run that needs the operator (an approval, say) writes the link to `.crew/hosted/<member>/agent/state/needs-operator`,
 and `status` shows it. Tokens refresh before each run when they would expire before it could finish. Secrets come from
 `.env.local` and `~/.config/secrets.env`, and only the variables a member's `env` lists enter its container.
+
+## Members that act on GitHub
+
+Patch opens pull requests and posts reviews as the crew's shared GitHub machine account (one free machine account is
+allowed per person, so every GitHub member shares it and tells itself apart by its commit author name and the signature
+on what it posts). Each such member has its own classic token on that account (scope `public_repo`: fine-grained tokens
+cannot open a pull request on a repository the account does not own), kept in `~/.config/sidequest/crew-github.env`
+as `CREW_<MEMBER>_GITHUB_TOKEN=…` and handed to the member as `GH_TOKEN` through its `env`
+(`"GH_TOKEN=$CREW_PATCH_GITHUB_TOKEN"`). `gh` is mounted from the host at `/opt/bin/gh`, and a member with `GH_TOKEN`
+pushes over https through `gh auth git-credential`. The token is in the run's environment, readable by the model and by
+any code it runs, so for now its role limits it to repositories we own (`github.com/grmkris/sidequest-playground`).
 
 ## Run the crew as containers
 

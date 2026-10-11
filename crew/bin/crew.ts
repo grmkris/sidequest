@@ -160,6 +160,8 @@ function env(): Record<string, string> {
     join(repo, '.env.local'),
     join(process.env.HOME ?? '', '.config/secrets.env'),
     join(process.env.HOME ?? '', '.config/cliproxy.env'),
+    // The crew's GitHub tokens, one per member that acts on GitHub (see a member's `env`).
+    join(process.env.HOME ?? '', '.config/sidequest/crew-github.env'),
   ]
   const merged: Record<string, string> = {}
   for (const f of files) {
@@ -243,7 +245,12 @@ function writeHarnessConfig(m: Member, token: Token, harnessHome: string) {
   mkdirSync(join(harnessHome, '.codex'), { recursive: true, mode: 0o700 })
   writeFileSync(
     join(harnessHome, '.gitconfig'),
-    `[user]\n\tname = ${m.name}\n\temail = ${m.email}\n[safe]\n\tdirectory = *\n[init]\n\tdefaultBranch = main\n`,
+    `[user]\n\tname = ${m.name}\n\temail = ${m.email}\n[safe]\n\tdirectory = *\n[init]\n\tdefaultBranch = main\n${
+      // A member with a GitHub token pushes over https through gh, which reads GH_TOKEN from the run's env.
+      m.env.some((v) => v.startsWith('GH_TOKEN'))
+        ? '[credential "https://github.com"]\n\thelper =\n\thelper = !/opt/bin/gh auth git-credential\n'
+        : ''
+    }`,
   )
   const extraMcp = Object.entries(m.mcp)
     .map(([n, url]) => `[mcp_servers.${n}]\nurl = "${url}"\n`)
@@ -290,10 +297,23 @@ function harnessVars(m: Member, token: Token, e: Record<string, string>): Record
     GIT_COMMITTER_NAME: m.name,
     GIT_COMMITTER_EMAIL: m.email,
   }
+  return { ...vars, ...memberEnv(m, e) }
+}
+
+/**
+ * A member's allowlisted variables: `NAME` is looked up, `NAME=value` is literal, and `NAME=$SOURCE` takes SOURCE's
+ * value, so each member can get its own token under the name its tools read (`GH_TOKEN=$CREW_PATCH_GITHUB_TOKEN`). In
+ * a bot's container only the resolved NAME is in the env file, hence the fallback.
+ */
+function memberEnv(m: Member, e: Record<string, string>): Record<string, string> {
+  const vars: Record<string, string> = {}
   for (const v of m.env) {
     const at = v.indexOf('=')
-    if (at === -1) vars[v] = e[v] ?? ''
-    else vars[v.slice(0, at)] = v.slice(at + 1)
+    const name = at === -1 ? v : v.slice(0, at)
+    const value = at === -1 ? undefined : v.slice(at + 1)
+    if (value === undefined) vars[name] = e[name] ?? ''
+    else if (value.startsWith('$')) vars[name] = e[value.slice(1)] ?? e[name] ?? ''
+    else vars[name] = value
   }
   return vars
 }
@@ -344,6 +364,7 @@ function launchDocker(id: string, m: Member, command: string[], vars: Record<str
     `${dirname(bin('grok'))}:/opt/grok:ro`,
     `${dirname(bin('forge'))}:/opt/foundry:ro`,
     `${bin('bun')}:/opt/bin/bun:ro`,
+    `${bin('gh')}:/opt/bin/gh:ro`,
   ]
   const docker = [
     'run',
@@ -794,12 +815,16 @@ interface Mounts {
   grok: string
   forge: string
   bun: string
+  gh: string
 }
 
 /** One bot's compose service: its env file (0600, only the variables its member lists), limits, labels and mounts. */
 function botService(id: string, m: Member, e: Record<string, string>, at: Mounts, agentId: string) {
   const envFile = join(repo, '.crew', 'env', `${id}.env`)
-  const vars = [`CLIPROXY_API_KEY=${cliproxyKey(e)}`, ...m.env.map((v) => (v.includes('=') ? v : `${v}=${e[v] ?? ''}`))]
+  const vars = [
+    `CLIPROXY_API_KEY=${cliproxyKey(e)}`,
+    ...Object.entries(memberEnv(m, e)).map(([name, value]) => `${name}=${value}`),
+  ]
   writeFileSync(envFile, `${vars.join('\n')}\n`, { mode: 0o600 })
   chmodSync(envFile, 0o600)
   const keyFile = join(home(id), 'agent-key')
@@ -855,6 +880,7 @@ function botService(id: string, m: Member, e: Record<string, string>, at: Mounts
       `${dirname(at.grok)}:/opt/grok:ro`,
       `${at.forge}:/opt/foundry:ro`,
       `${at.bun}:/opt/bin/bun:ro`,
+      `${at.gh}:/opt/bin/gh:ro`,
     ],
   }
 }
@@ -877,6 +903,7 @@ async function up(only: string[]) {
     grok,
     forge: dirname(bin('forge')),
     bun: bin('bun'),
+    gh: bin('gh'),
   }
   mkdirSync(join(stateRoot, '.slots'), { recursive: true })
   mkdirSync(join(repo, '.crew', 'env'), { recursive: true, mode: 0o700 })
