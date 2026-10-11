@@ -94,14 +94,14 @@ describe('v1 deployment config', () => {
 })
 
 describe('network meta', () => {
-  it('reads the testnet link before mainnet is deployed', () => {
+  it('reads the testnet link and the X profile before mainnet is deployed', () => {
     const meta = networkMeta('monad-mainnet')
-    expect(meta.links.testnet).toBe('https://dev.sidequest.exchange')
+    expect(meta.links).toEqual({ testnet: 'https://dev.sidequest.exchange', x: 'https://x.com/sidequest_0' })
     expect(meta.usdPegged).toEqual([mainnet.x402.usdc])
   })
-  it('pegs the configured test dollar and links testnet nowhere', () => {
+  it('pegs the configured test dollar and links mainnet nowhere until the launch commit names it', () => {
     const meta = networkMeta('monad-testnet')
-    expect(meta.links).toEqual({})
+    expect(meta.links).toEqual({ x: 'https://x.com/sidequest_0' })
     expect(meta.usdPegged.map((a) => a.toLowerCase())).toContain(
       deployment('monad-testnet').rewardTokens[0]!.toLowerCase(),
     )
@@ -113,8 +113,19 @@ describe('network meta', () => {
       'https://dev.sidequest.exchange/',
       'https://dev.sidequest.exchange/start',
       'javascript:alert(1)',
+    ]) {
+      expect(() => networkMetaFromConfig({ ...c, links: { testnet: origin } })).toThrow('links.testnet')
+      expect(() => networkMetaFromConfig({ ...c, links: { mainnet: origin } })).toThrow('links.mainnet')
+    }
+    for (const x of [
+      'http://x.com/sidequest_0',
+      'https://x.com/sidequest_0/status/1',
+      'https://twitter.com/sidequest_0',
     ])
-      expect(() => networkMetaFromConfig({ ...c, links: { testnet: origin } })).toThrow('https origin')
+      expect(() => networkMetaFromConfig({ ...c, links: { x } })).toThrow('links.x')
+    expect(networkMetaFromConfig({ ...c, links: { mainnet: 'https://sidequest.exchange' } }).links).toEqual({
+      mainnet: 'https://sidequest.exchange',
+    })
     expect(() => networkMetaFromConfig({ ...c, usdPegged: ['USDC'] })).toThrow('token addresses')
   })
 })

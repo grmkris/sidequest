@@ -1,4 +1,4 @@
-import { stage } from '../wallet.ts'
+import { stage, xLink } from '../wallet.ts'
 import { textLinkClass } from './kit.tsx'
 import { cn } from '../lib/cn.ts'
 /**
@@ -20,7 +20,7 @@ import { usePaused } from '../wallet.ts'
 import { AccountAvatar, AccountLink, Count } from './AccountLink.tsx'
 import { type LinkTarget, BoardLink, boardRoutes } from './BoardLink.tsx'
 import { LaunchBanner } from './LaunchGate.tsx'
-import { TestnetEdge, TestnetTag } from './NetworkCue.tsx'
+import { NetworkSwitch, TestnetEdge, TestnetTag } from './NetworkCue.tsx'
 
 import { useCollectActions } from '../collect.ts'
 import { AccountControl, useAuth, useAutoSignIn } from './Wallet.tsx'
@@ -79,6 +79,15 @@ function RiskNote({ className }: { className?: string }) {
       <a className="underline" href="/docs">
         Docs
       </a>
+      {xLink !== null && (
+        <>
+          {' '}
+          ·{' '}
+          <a className="underline" href={xLink} target="_blank" rel="noreferrer">
+            X
+          </a>
+        </>
+      )}
     </p>
   )
 }
@@ -210,6 +219,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <AccountControl auth={auth} account={account} full />
             </div>
           )}
+          <NetworkSwitch className="mx-1" />
           <RiskNote className="px-1" />
         </div>
       </aside>

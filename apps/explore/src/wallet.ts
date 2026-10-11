@@ -20,11 +20,22 @@ if (typeof __SIDEQUEST_RELAY__ === 'string' && (__SIDEQUEST_RELAY__ as string) !
   sdk.setRelayOverride(__SIDEQUEST_RELAY__)
 export const isMainnet = network === 'monad-mainnet'
 
+const links = sdk.networkMeta(network).links
 /**
- * The testnet Explore's origin, from the network config (`links.testnet`): set only on mainnet before launch, where the
- * "launching soon" notices send people to try it. Null everywhere else: the networks never link to each other.
+ * The other network's Explore, which the network switch opens: testnet from mainnet (`links.testnet`), and mainnet from
+ * testnet (`links.mainnet`, which the testnet config names only once mainnet is live). Null without a link: no switch.
  */
-export const testnetLink: string | null = sdk.networkMeta(network).links.testnet ?? null
+export const otherNetwork: { readonly label: 'Mainnet' | 'Testnet'; readonly href: string } | null = isMainnet
+  ? links.testnet === undefined
+    ? null
+    : { label: 'Testnet', href: links.testnet }
+  : links.mainnet === undefined
+    ? null
+    : { label: 'Mainnet', href: links.mainnet }
+/** Testnet's Explore origin on mainnet, where the "launching soon" notices send people before launch; else null. */
+export const testnetLink: string | null = isMainnet ? (links.testnet ?? null) : null
+/** The project's X profile (`links.x`), or null. */
+export const xLink: string | null = links.x ?? null
 /** The deploy's chain; testnet with the explorer overridden (the chain's default testnet explorer entry is stale). */
 export const chain: Chain = isMainnet
   ? monad

@@ -1,10 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { cn } from '../lib/cn.ts'
-import { deployed, deployment, explorer } from '../wallet.ts'
+import { deployed, deployment, explorer, xLink } from '../wallet.ts'
 import { CopyButton, shortAddress } from './kit.tsx'
 import { LaunchBanner } from './LaunchGate.tsx'
-import { TestnetEdge, TestnetTag } from './NetworkCue.tsx'
+import { NetworkSwitch, TestnetEdge, TestnetTag } from './NetworkCue.tsx'
 import { Mark } from './Shell.tsx'
 import { buttonVariants } from './ui/button.tsx'
 
@@ -78,7 +78,13 @@ export function LandingShell({ children }: { children: ReactNode }) {
             >
               Source
             </a>
+            {xLink !== null && (
+              <a className="transition-colors hover:text-foreground" href={xLink} target="_blank" rel="noreferrer">
+                X
+              </a>
+            )}
           </nav>
+          <NetworkSwitch />
         </footer>
       </main>
     </div>

@@ -36,7 +36,8 @@
     "0x754704Bc059F8C67012fEd69BC8A327a5aafb603"
   ],
   "links": {
-    "testnet": "https://dev.sidequest.exchange"
+    "testnet": "https://dev.sidequest.exchange",
+    "x": "https://x.com/sidequest_0"
   },
   "liquidity": {
     "uniswapV4": {

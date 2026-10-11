@@ -208,7 +208,7 @@ export interface DeploymentConfig {
   delegation: { manager: string; delegator: string; enforcers: Record<keyof DelegationEnforcers, string> }
   x402?: { usdc: string; facilitator: string }
   /** See `NetworkMeta`. */
-  links?: { testnet?: string }
+  links?: { testnet?: string; mainnet?: string; x?: string }
   usdPegged?: string[]
   mining?: { creditRule?: { fromEpoch: string | number | bigint } }
   deployment: {
@@ -288,12 +288,13 @@ export function deployment(network: Network): Deployment {
 
 /**
  * What the network config says before (and apart from) any deployment, so it never throws `NotDeployedError`:
- * - `links.testnet`: the testnet Explore's origin, set only on mainnet before launch, where the "launching soon"
- *   notices point people. The two networks never link to each other otherwise.
+ * - `links.testnet` / `links.mainnet`: the other network's Explore origin, which the network switch opens. Mainnet's
+ *   config names testnet; testnet's names mainnet only once mainnet is live (the launch commit adds it).
+ * - `links.x`: the project's X profile.
  * - `usdPegged`: tokens Explore values at one US dollar each in its estimates. Anything else needs a live price.
  */
 export interface NetworkMeta {
-  readonly links: { readonly testnet?: string }
+  readonly links: { readonly testnet?: string; readonly mainnet?: string; readonly x?: string }
   readonly usdPegged: readonly Address[]
 }
 
@@ -302,12 +303,25 @@ export function networkMeta(network: Network): NetworkMeta {
 }
 
 export function networkMetaFromConfig(c: DeploymentConfig): NetworkMeta {
-  const testnetOrigin = c.links?.testnet
-  if (testnetOrigin !== undefined && !/^https:\/\/[a-z0-9.-]+$/.test(testnetOrigin))
-    throw new Error('Network config links.testnet must be an https origin')
+  const { testnet: testnetOrigin, mainnet: mainnetOrigin, x: xProfile } = c.links ?? {}
+  for (const [name, origin] of [
+    ['testnet', testnetOrigin],
+    ['mainnet', mainnetOrigin],
+  ] as const)
+    if (origin !== undefined && !/^https:\/\/[a-z0-9.-]+$/.test(origin))
+      throw new Error(`Network config links.${name} must be an https origin`)
+  if (xProfile !== undefined && !/^https:\/\/x\.com\/[A-Za-z0-9_]{1,15}$/.test(xProfile))
+    throw new Error('Network config links.x must be an https://x.com/<handle> profile')
   const usdPegged = c.usdPegged ?? []
   if (!usdPegged.every(validAddress)) throw new Error('Network config usdPegged must list token addresses')
-  return { links: testnetOrigin === undefined ? {} : { testnet: testnetOrigin }, usdPegged }
+  return {
+    links: {
+      ...(testnetOrigin === undefined ? {} : { testnet: testnetOrigin }),
+      ...(mainnetOrigin === undefined ? {} : { mainnet: mainnetOrigin }),
+      ...(xProfile === undefined ? {} : { x: xProfile }),
+    },
+    usdPegged,
+  }
 }
 
 /** Only explicit HTTPS origins may supply offers; paths and credentials are never discovery targets. */

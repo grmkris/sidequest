@@ -37,6 +37,9 @@
     "0x6B56D64150818f91f5112B285e806ec6C78EADe8",
     "0x534b2f3A21130d7a60830c2Df862319e593943A3"
   ],
+  "links": {
+    "x": "https://x.com/sidequest_0"
+  },
   "deployment": {
     "block": 69362272,
     "core": "0x5914B7de3E80F1e8460901b4eBd6D19B15f9147e",

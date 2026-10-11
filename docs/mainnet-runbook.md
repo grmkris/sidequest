@@ -333,7 +333,9 @@ SIDEQUEST_PROD_ARTIFACT=docs/p0-prod-artifact.json PROD_ADMISSION_DRAIN=1 bun ru
    set `MAINNET_LIVE = true` in `apps/explore/src/release.ts`; that line is the only source, and the preflight refuses
    an open artifact unless the pin and the source are both true. While it is false, Explore on chain 143 is read-only
    by any URL (PROD-GATE-006). Every write page shows "Launching soon", and only read tools reach the board. The build
-   writes the value to `/release.json` as `{network, mainnetLive, writesOpen}`.
+   writes the value to `/release.json` as `{network, mainnetLive, writesOpen}`. The same commit adds
+   `"links": {"mainnet": "https://sidequest.exchange"}` beside `links.x` in `contracts/config/monad-testnet.json`, so
+   testnet's network switch offers mainnet only once mainnet is open (mainnet's config already names testnet).
 2. Run `bun scripts/preflight-prod.ts docs/p0-prod-artifact.json --live` again; it must pass.
 3. Deploy with `SIDEQUEST_PROD_ARTIFACT=docs/p0-prod-artifact.json PROD_ADMISSION_DRAIN=0 bun run deploy:prod`. An
    opening deploy runs the D16 gate inside `assertDeployConfig` before any resource, and refuses on any failure.
