@@ -3,7 +3,7 @@
 `@sidequest/explore` owns browser marketplace and explorer and runs as the `browser` runtime class declared in [tools/graph.ts](../../tools/graph.ts). `worker.ts` is the graph's `cloud` zone and serves the browser assets and docs.
 
 - **Check**: `bun run check:files apps/explore`; `bun run --cwd apps/explore typecheck`; `bun run --cwd apps/explore test`.
-- **Test floor**: 86 files / 441 passed — recorded from the `heavy bun run check` steps on 11 October 2026 (onboarding: one client-setup recipe held to start.md and the quickstart, Buy SIDE gas warning). Do not set an RPC variable for this unit suite.
+- **Test floor**: 82 files / 421 passed — recorded from `heavy bun --no-env-file run --cwd apps/explore test` on 11 October 2026 (ADR-0021: roles on the agent, the Manage tab's roles and connections; the backer-share removal 52294b6e deleted four backer-share test files, which is why this is below the earlier 86 / 441). Do not set an RPC variable for this unit suite.
 - **Contract**: Browser routes, wallet actions, docs serving and stage-derived UI.
 - **Landmines**: No secrets or raw addresses in browser code; docs build must precede Explore build; anonymous reads never imply authenticated acceptance.
 - **Read**: [README](../../README.md), [docs app](../../apps/docs/AGENTS.md), [protocol](../../docs/protocol.md).
