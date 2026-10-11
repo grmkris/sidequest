@@ -76,6 +76,7 @@ import { isProfilePath, profileRoute } from './routes/profiles.ts'
 import { MAX_AVATAR_BYTES, type AvatarBucket } from './avatars.ts'
 import { avatarRouteRequest } from './agent-profile-management.ts'
 import { objectFor } from './commons/route.ts'
+import { miningRoute, type MiningBucket } from './mining-prices.ts'
 
 const STATUS: Record<string, number> = {
   unauthenticated: 401,
@@ -281,6 +282,14 @@ export default class Api extends Cloudflare.Worker<Api>()(
         }
 
         const reads = rpcUrl === '' ? undefined : sdk.context(network, 'main', rpcUrl).publicClient
+        if (path.startsWith('/data/mining/')) {
+          const webRequest = yield* HttpServerRequest.toWeb(request)
+          // SAFETY: Manifests is this Worker's existing R2 binding with get/put and object byte reads.
+          const bucket = (runtimeEnv as Record<string, unknown>).Manifests as MiningBucket | undefined
+          return yield* Effect.promise(() =>
+            miningRoute(webRequest, path, { stage, deployment, bucket, client: reads }),
+          )
+        }
         const tokenInfo = async (address: Address): Promise<TenantToken> => {
           const cached = tokenCache.get(address.toLowerCase())
           if (cached !== undefined) return cached

@@ -5,7 +5,7 @@ export interface EpochBucket {
 }
 export const miningArtifactKey = (epoch: string) => `mining/epoch-${miningEpoch(epoch)}.json`
 
-/** Reuses the API's existing Manifests R2 binding. There is no write endpoint or new binding. */
+/** Reuses Manifests R2; owner-signed prices enter through POST /data/mining/prices. */
 export function r2MiningSource(bucket: EpochBucket | undefined): MiningSource {
   return {
     load: async (epoch) => {
