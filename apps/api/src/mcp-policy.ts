@@ -1,5 +1,6 @@
 /** OAuth scopes are checked by both discovery and the Durable Object executing the action. */
 import type { OAuthGrant } from './oauth.ts'
+import { AGENT_ROLES, type AgentRole } from '@sidequest/board'
 import { commonsReadTools, commonsWriteTools, toolSpecs } from '@sidequest/commons'
 
 const READ_TOOLS = new Set([
@@ -186,11 +187,50 @@ export function requiredToolScope(
 }
 
 /**
- * What a connection lists. A setup connection also lists the tools an approved agent may get, because clients cache the
- * list (listChanged is false) and the same chat must act once the operator approves; until then a call to one of them
- * is refused with a wait. Every other connection lists exactly what it may call.
+ * Tools that start new work of a role (ADR-0021). Without the role an agent cannot start more, but finishing,
+ * settling and moving money out stay with its scope, so work it already took on or posted can still end.
  */
-export function listedTool(grant: Pick<OAuthGrant, 'scopes' | 'setup' | 'setupFamilyId'>, name: string): boolean {
+const STARTS: Readonly<Record<AgentRole, ReadonlySet<string>>> = {
+  work: new Set([
+    'apply',
+    'submit_quote',
+    'prepare_activation',
+    'advertise_service',
+    'x402_pay',
+    'request_permissions',
+    'use_permission',
+  ]),
+  hire: new Set(['create_task', 'request_quotes', 'pick_quote', 'select_worker']),
+}
+
+type PolicyGrant = Pick<OAuthGrant, 'scopes' | 'setup' | 'setupFamilyId' | 'roles' | 'listening'>
+
+/**
+ * One answer for listing, calling and executing a tool: the connection's scope first, then its agent's roles. `wait`
+ * is a setup connection asking for a tool its agent gets once approved; `role` a tool that starts work of a role the
+ * agent does not hold. A grant without roles predates them and is decided by scope alone.
+ */
+export function toolDecision(grant: PolicyGrant, name: string, internal = false): 'allow' | 'wait' | 'role' | 'scope' {
+  if (!permittedTool(grant, name, internal)) return awaitsApproval(grant, name) ? 'wait' : 'scope'
+  const role = AGENT_ROLES.find((candidate) => STARTS[candidate].has(name))
+  return role === undefined || grant.roles === undefined || grant.roles.includes(role) ? 'allow' : 'role'
+}
+
+/** What this connection may do now: the roles its scope covers and its agent holds. */
+export function effectiveRoles(grant: PolicyGrant): AgentRole[] {
+  return AGENT_ROLES.filter(
+    (role) => grant.scopes.includes(`sidequest:${role}`) && (grant.roles === undefined || grant.roles.includes(role)),
+  )
+}
+
+/**
+ * What a connection lists. A connection that listens for tool changes lists exactly what it may call now, because it
+ * is told the moment that changes. Any other connection lists everything its scope covers, as clients cache the list:
+ * a setup connection also lists the tools its approved agent may get, and a tool its agent lacks the role for stays
+ * listed and answers with how to ask for the role.
+ */
+export function listedTool(grant: PolicyGrant, name: string): boolean {
+  if (grant.listening === true) return toolDecision(grant, name) === 'allow'
   return permittedTool(grant, name) || awaitsApproval(grant, name)
 }
 
@@ -199,9 +239,11 @@ export function listedTool(grant: Pick<OAuthGrant, 'scopes' | 'setup' | 'setupFa
  * a tool its agent gets once approved is told to wait, never insufficient_scope: that would send the client to sign in
  * again, and reconnecting is never the fix while the operator approves.
  */
-export function toolRefusal(grant: Pick<OAuthGrant, 'scopes' | 'setup' | 'setupFamilyId'>, name: string) {
-  if (permittedTool(grant, name)) return undefined
-  if (awaitsApproval(grant, name))
+export function toolRefusal(grant: PolicyGrant, name: string) {
+  const decision = toolDecision(grant, name)
+  if (decision === 'allow') return undefined
+  if (decision === 'role') return roleRefusal(AGENT_ROLES.find((role) => STARTS[role].has(name))!)
+  if (decision === 'wait')
     return {
       content: [
         {
@@ -220,6 +262,22 @@ export function toolRefusal(grant: Pick<OAuthGrant, 'scopes' | 'setup' | 'setupF
         error_description: 'This connection does not grant the requested tool',
       },
     },
+  }
+}
+
+const ROLE_WORDS: Readonly<Record<AgentRole, string>> = { work: 'take on new work', hire: 'hire other agents' }
+
+/** A tool its agent lacks the role for: a plain tool error that names the way forward, never a sign-in prompt. */
+function roleRefusal(role: AgentRole) {
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `role-required: your operator has not allowed this agent to ${ROLE_WORDS[role]}. Call request_role with {"role":"${role}"} to ask; work it already started can still finish.`,
+      },
+    ],
+    structuredContent: { ok: false, code: 'role-required', role, next: { tool: 'request_role', args: { role } } },
+    isError: true,
   }
 }
 

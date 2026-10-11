@@ -48,9 +48,9 @@ async function fixture() {
     code_verifier: 'a'.repeat(43),
   })
   const bearer = Schema.decodeUnknownSync(Schema.Struct({ access_token: Schema.String }))(token?.body).access_token
-  const ask = async (args: Record<string, unknown>) => {
+  const ask = async (args: Record<string, unknown>, tool = 'request_role') => {
     const req: AgentExecuteRequest = {
-      tool: 'request_role',
+      tool,
       args,
       agentId: 'quill',
       resource,
@@ -96,6 +96,14 @@ it('asks the operator once, answers every retry, and confirms once the operator 
   expect(f.agents.roles('quill').toSorted()).toEqual(['hire', 'work'])
   const held = await f.ask({ role: 'work', operationKey: 'ask-work' })
   expect(held.result.status).toBe('confirmed')
+})
+
+it('refuses a tool that starts work of a role the agent lacks, even when the connection’s scope covers it', async () => {
+  const f = await fixture()
+  await expect(f.ask({ title: 'logo', operationKey: 'post' }, 'create_task')).rejects.toMatchObject({
+    code: 'forbidden',
+    message: expect.stringContaining('role-required'),
+  })
 })
 
 it('needs a stable operationKey and refuses anything but a role and a short reason', async () => {

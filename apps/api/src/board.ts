@@ -42,7 +42,7 @@ import { r2MiningSource, type EpochBucket } from './mining.ts'
 import { oauthRoute, resolveOAuth } from './oauth.ts'
 import { terminateGrantSubscriptions } from './webhooks.ts'
 import type { OAuthGrant } from './oauth.ts'
-import { permittedTool } from './mcp-policy.ts'
+import { toolDecision } from './mcp-policy.ts'
 import { resourceBoard } from './oauth-validation.ts'
 import { runAgent, type AgentExecuteRequest } from './agent-runtime.ts'
 import { agentManagement } from './agent-management.ts'
@@ -251,7 +251,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         !grant.agentIds.includes(req.agentAuth.agentId) ||
         grant.chainId !== sdk.deployment(req.env.network).chainId ||
         resourceBoard(grant.resource, origin) !== req.env.boardId ||
-        !permittedTool(grant, req.tool, true) ||
+        toolDecision(grant, req.tool, true) !== 'allow' ||
         req.caller?.toLowerCase() !== grant.address.toLowerCase()
       )
         throw new BoardError('forbidden', 'Agent scope, board or wallet mismatch')
@@ -441,7 +441,9 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               const grant = await resolveOAuth(sql, req.bearer, req.resource, Math.floor(Date.now() / 1000))
               if (grant !== undefined && req.activity === true)
                 new AgentStore(sql, () => Math.floor(Date.now() / 1000)).touch(grant.agentIds[0]!)
-              return toJson(grant ?? null)
+              if (grant === undefined) return toJson(null)
+              // A connection that hears tool changes gets the exact list (ADR-0021).
+              return toJson({ ...grant, listening: grant.grantId !== undefined && listeners.listening(grant.grantId) })
             }),
           ),
         ),

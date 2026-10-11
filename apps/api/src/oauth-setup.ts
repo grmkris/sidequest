@@ -1,5 +1,5 @@
 /** Setup families have no agent until their operator approves or connects one; every waiting family then becomes it. */
-import { AgentStore, type Sql } from '@sidequest/board'
+import { AgentStore, agentRoles, type Sql } from '@sidequest/board'
 import { Schema } from 'effect'
 import type { OAuthGrant, OAuthReply, oauthRoute } from './oauth.ts'
 import {
@@ -54,6 +54,7 @@ export function resolveSetupOAuth(sql: Sql, hash: string, resource: string, now:
       scopes: ['sidequest:setup'],
       grantId: family.id,
       setupFamilyId: family.id,
+      roles: [],
     }
   const agent = new AgentStore(sql, () => now).get(family.agent_id)
   if (agent.state !== 'active' || agent.address === null || agent.operator.toLowerCase() !== family.operator)
@@ -69,6 +70,7 @@ export function resolveSetupOAuth(sql: Sql, hash: string, resource: string, now:
     scopes: scopes(family.scopes_json),
     grantId: family.id,
     setupFamilyId: family.id,
+    roles: agentRoles(agent),
   }
 }
 

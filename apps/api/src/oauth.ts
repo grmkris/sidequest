@@ -1,4 +1,4 @@
-import { AgentStore, agentRoles, migrateAgentSchema, type Sql } from '@sidequest/board'
+import { AgentStore, agentRoles, migrateAgentSchema, type AgentRole, type Sql } from '@sidequest/board'
 import type { Statement } from '@sidequest/indexer'
 import {
   parseScopes as parseAgentScopes,
@@ -13,7 +13,14 @@ import {
 import { Schema } from 'effect'
 import type { OAuthGrant as AgentOAuthGrant } from '@sidequest/indexer/oauth-types'
 import { bindWaitingSetupConnections, boundScopes, resolveSetupOAuth, setupOAuthRoute } from './oauth-setup.ts'
-export type OAuthGrant = AgentOAuthGrant & { readonly setup?: boolean; readonly setupFamilyId?: string }
+export type OAuthGrant = AgentOAuthGrant & {
+  readonly setup?: boolean
+  readonly setupFamilyId?: string
+  /** The agent's roles (ADR-0021): a connection does what its scope and these both allow. */
+  readonly roles?: readonly AgentRole[]
+  /** This connection holds a 2026 listen stream, so its tools/list can be exact. */
+  readonly listening?: boolean
+}
 export const OAUTH_SCOPES = [...AGENT_SCOPES, 'sidequest:setup'] as const
 
 function parseScopes(value: string): string[] | undefined {
@@ -87,13 +94,14 @@ export async function resolveOAuth(
     address: string
     registry_agent_id: string | null
     chain_id: number
+    permissions_json: string
     scopes_json: string
     resource: string
     client_id: string
     agent_id: string
     grant_id: string
   }>(
-    "SELECT a.operator,a.state,a.address,a.agent_id registry_agent_id,a.chain_id,f.scopes_json,f.resource,f.client_id,f.agent_id,f.id grant_id FROM agent_oauth_tokens t JOIN agent_oauth_families f ON f.id=t.family_id JOIN agents a ON a.id=f.agent_id WHERE t.hash=? AND t.kind='access' AND t.expires_at>? AND f.revoked_at IS NULL",
+    "SELECT a.operator,a.state,a.address,a.agent_id registry_agent_id,a.chain_id,a.permissions_json,f.scopes_json,f.resource,f.client_id,f.agent_id,f.id grant_id FROM agent_oauth_tokens t JOIN agent_oauth_families f ON f.id=t.family_id JOIN agents a ON a.id=f.agent_id WHERE t.hash=? AND t.kind='access' AND t.expires_at>? AND f.revoked_at IS NULL",
     hash,
     now,
   )[0]
@@ -108,6 +116,7 @@ export async function resolveOAuth(
     registryAgentId: row.registry_agent_id,
     chainId: row.chain_id,
     grantId: row.grant_id,
+    roles: agentRoles(row),
   }
 }
 

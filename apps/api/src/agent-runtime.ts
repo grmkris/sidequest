@@ -22,7 +22,7 @@ import { Schema } from 'effect'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { BoardCall, BoardReply } from './board.ts'
 import { resolveOAuth } from './oauth.ts'
-import { networkTool, permittedTool, requiredToolScope, SETUP_TOOLS } from './mcp-policy.ts'
+import { networkTool, requiredToolScope, SETUP_TOOLS, toolDecision } from './mcp-policy.ts'
 import { resourceBoard } from './oauth-validation.ts'
 import { toJson } from './tools.ts'
 import { fromD1 } from '@sidequest/indexer'
@@ -100,13 +100,19 @@ export async function runAgent(runtime: {
   migrateAgentSchema(sql)
   if (req.operator === undefined) {
     const grant = await resolveOAuth(sql, req.bearer, req.resource, Math.floor(Date.now() / 1000))
+    const decision = grant === undefined ? 'scope' : toolDecision(grant, req.tool)
     if (
       grant === undefined ||
       (grant.setup === true ? !SETUP_TOOLS.has(req.tool) : !grant.agentIds.includes(req.agentId)) ||
-      !permittedTool(grant, req.tool) ||
+      (decision !== 'allow' && decision !== 'role') ||
       resourceBoard(req.resource, new URL(req.resource).origin) !== req.env.boardId
     )
       throw new BoardError('forbidden', 'This connection does not grant this agent, tool or board')
+    if (decision === 'role')
+      throw new BoardError(
+        'forbidden',
+        'role-required: the operator has not allowed this agent this role; call request_role',
+      )
     if (grant.setup === true || req.tool === 'setup_status')
       return toJson({ ok: true, result: await runSetupTool({ req, bindings, sql, grant }) })
   }

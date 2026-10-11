@@ -74,6 +74,9 @@ it('a connection’s access follows its agent’s roles and ends when it is disc
   await f.access('roles', { roles: ['work'] })
   const after = connectionAccess(f.sql, direct)
   expect(after).not.toBe(before)
+  // Both kinds of connection carry the agent's roles, which every tool decision reads.
+  for (const token of [f.direct.access_token, f.waiting.tokens.access_token])
+    expect(await resolveOAuth(f.sql, token, resource, f.now())).toMatchObject({ agentIds: ['quill'], roles: ['work'] })
   await f.access('roles', { roles: ['work'] })
   expect(connectionAccess(f.sql, direct)).toBe(after)
   await f.access('disconnect', { familyId: direct })

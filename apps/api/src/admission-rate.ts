@@ -11,7 +11,7 @@ import { fromD1 } from '@sidequest/indexer'
 import type { Network } from '@sidequest/sdk'
 import type { OAuthGrant } from './oauth.ts'
 import { resourceBoard } from './oauth-validation.ts'
-import { permittedTool } from './mcp-policy.ts'
+import { toolDecision } from './mcp-policy.ts'
 
 export interface AdmissionCall {
   network: Network
@@ -69,7 +69,7 @@ export async function admissionIdentity(bindings: Record<string, unknown>, input
         grant === null ||
         !grant.agentIds.includes(input.agentAuth.agentId) ||
         resourceBoard(grant.resource, new URL(grant.resource).origin) !== input.boardId ||
-        !permittedTool(grant, input.tool, true)
+        toolDecision(grant, input.tool, true) !== 'allow'
       )
         throw new Error('OAuth admission scope mismatch')
       address = grant.address as typeof address

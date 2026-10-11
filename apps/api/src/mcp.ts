@@ -1,7 +1,7 @@
 import { agentFailureReply } from '@sidequest/board'
 import { Schema } from 'effect'
 import type { OAuthGrant } from './oauth.ts'
-import { listedTool, requiredToolScope, toolRefusal } from './mcp-policy.ts'
+import { effectiveRoles, listedTool, requiredToolScope, toolRefusal } from './mcp-policy.ts'
 import { toolWireMetadata } from './mcp-tool-metadata.ts'
 import { approvalRound, settledCreation } from './mcp-mrtr.ts'
 import type { ListenRequest } from './mcp-listen.ts'
@@ -58,13 +58,14 @@ async function profileId(agentId: string, address: string): Promise<string> {
 
 /**
  * whoami for a connection: the board's answer plus the connection's profile, and inside `result` the ERC-8004 agent
- * this grant acts for, which `submit_quote` and `apply` name, and the roles its operator approved (none in setup).
+ * this grant acts for, which `submit_quote` and `apply` name, and what it may do now: the roles its scope covers and its
+ * agent holds (none in setup).
  * Agents read `result`; the profile is for the host.
  */
 function whoamiContent(output: unknown, grant: OAuthGrant, id: string, name: string) {
   const base = typeof output === 'object' && output !== null ? (output as Record<string, unknown>) : { value: output }
   const result = base.result instanceof Object ? Object.fromEntries(Object.entries(base.result)) : {}
-  const roles = ['work', 'hire'].filter((role) => grant.scopes.includes(`sidequest:${role}`))
+  const roles = effectiveRoles(grant)
   return { ...base, result: { ...result, agentId: grant.registryAgentId, chainId: grant.chainId, roles }, id, name }
 }
 

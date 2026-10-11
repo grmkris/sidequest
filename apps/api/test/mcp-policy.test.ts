@@ -1,0 +1,59 @@
+import { expect, it } from 'vitest'
+import { effectiveRoles, listedTool, toolDecision, toolRefusal } from '../src/mcp-policy.ts'
+
+const both = ['sidequest:read', 'sidequest:hire', 'sidequest:work']
+
+// ADR-0021: a connection does what its scope and its agent's roles both allow.
+it('decides by scope first, then by the agent’s roles for tools that start new work', () => {
+  const worker = { scopes: both, roles: ['work'] as const }
+  expect(toolDecision(worker, 'apply')).toBe('allow')
+  expect(toolDecision(worker, 'create_task')).toBe('role')
+  expect(toolDecision(worker, 'request_quotes')).toBe('role')
+  // Finishing what it posted, settling and reading never need the role.
+  for (const name of ['approve_work', 'cancel_task', 'settlement_actions', 'get_task', 'request_role'])
+    expect(toolDecision(worker, name)).toBe('allow')
+  expect(toolDecision({ scopes: ['sidequest:read'], roles: ['work', 'hire'] }, 'apply')).toBe('scope')
+  expect(toolDecision({ scopes: both, roles: [] }, 'submit_quote')).toBe('role')
+  expect(toolDecision({ scopes: both, roles: [] }, 'submit_selection', true)).toBe('allow')
+  expect(toolDecision({ scopes: both }, 'create_task')).toBe('allow')
+  expect(toolDecision({ scopes: ['sidequest:setup'], setup: true, roles: [] }, 'apply')).toBe('wait')
+  expect(toolDecision({ scopes: ['sidequest:setup'], setup: true, roles: [] }, 'create_agent')).toBe('allow')
+})
+
+it('says what a connection may do now: its scope and its agent’s roles together', () => {
+  expect(effectiveRoles({ scopes: both, roles: ['hire'] })).toEqual(['hire'])
+  expect(effectiveRoles({ scopes: ['sidequest:read', 'sidequest:work'], roles: ['work', 'hire'] })).toEqual(['work'])
+  expect(effectiveRoles({ scopes: both })).toEqual(['work', 'hire'])
+  expect(effectiveRoles({ scopes: ['sidequest:setup'], setup: true, roles: [] })).toEqual([])
+})
+
+it('lists exactly what a listening connection may call, and everything its scope covers otherwise', () => {
+  const hirer = { scopes: both, roles: ['hire'] as const }
+  expect(listedTool(hirer, 'apply')).toBe(true)
+  expect(listedTool({ ...hirer, listening: true }, 'apply')).toBe(false)
+  expect(listedTool({ ...hirer, listening: true }, 'create_task')).toBe(true)
+  expect(listedTool({ ...hirer, listening: true }, 'submit_work')).toBe(true)
+  const setup = { scopes: ['sidequest:setup'], setup: true, roles: [] }
+  expect(listedTool(setup, 'apply')).toBe(true)
+  expect(listedTool({ ...setup, listening: true }, 'apply')).toBe(false)
+  expect(listedTool({ ...setup, listening: true }, 'create_agent')).toBe(true)
+})
+
+it('refuses a missing role with a plain tool error that names request_role', () => {
+  expect(toolRefusal({ scopes: both, roles: ['work'] }, 'create_task')).toEqual({
+    content: [
+      {
+        type: 'text',
+        text: 'role-required: your operator has not allowed this agent to hire other agents. Call request_role with {"role":"hire"} to ask; work it already started can still finish.',
+      },
+    ],
+    structuredContent: {
+      ok: false,
+      code: 'role-required',
+      role: 'hire',
+      next: { tool: 'request_role', args: { role: 'hire' } },
+    },
+    isError: true,
+  })
+  expect(toolRefusal({ scopes: both, roles: ['work'] }, 'apply')).toBeUndefined()
+})
