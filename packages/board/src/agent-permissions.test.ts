@@ -177,12 +177,14 @@ it('grants a request a standing rule covers without asking, and asks again for a
   expect(await f.request('after-stop', f.periodic(3n, 2))).toMatchObject({ status: 'approval' })
 })
 
-it('a rejection ends the request; a malformed request is refused before any approval', async () => {
+it('a rejection ends the request and answers every retry; a malformed request is refused before any approval', async () => {
   const f = fixture()
   const asked = await f.request('no', f.periodic(5n))
   if (asked.status !== 'approval') throw new Error('expected an approval')
   await f.lifecycle.decideApproval(asked.approval.id, f.operator, false)
   expect(await f.request('no', f.periodic(5n))).toMatchObject({ status: 'rejected' })
+  // A client that retries again, unsure whether its last retry arrived, hears the same answer (ADR-0021).
+  expect(await f.request('no', f.periodic(5n))).toMatchObject({ status: 'rejected', result: { status: 'rejected' } })
   await expect(f.request('bad', { ...f.periodic(5n), to: recipient })).rejects.toMatchObject({
     code: 'invalid',
     reason: 'permission-request',

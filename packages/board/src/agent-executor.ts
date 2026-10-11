@@ -408,6 +408,13 @@ export class AgentExecutor {
       const sent = await this.deps.sponsor.submit(agent.address, [], operation.action_key)
       return this.#finish(operation, agent.address, sent)
     }
+    // A declined approval answers the same on every retry, so a client that retries an uncertain call learns it again.
+    const declined = this.deps.sql.all<ApprovalRow>(
+      "SELECT * FROM approvals WHERE id=? AND status='rejected'",
+      operation.id,
+    )[0]
+    if (operation.stage === 'failed' && declined !== undefined)
+      return { status: 'rejected', operationId: operation.id, result: declined }
     if (operation.stage === 'failed')
       throw new AgentFailure(
         'conflict',
