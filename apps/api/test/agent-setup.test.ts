@@ -150,7 +150,10 @@ it('the same bearer becomes the approved agent, with the approved role scopes an
     registryAgentId: '41',
   })
   expect(bound.setup).not.toBe(true)
-  expect((await resolveOAuth(f.sql, other.tokens.access_token, resource, f.now()))?.setup).toBe(true)
+  // The operator's other connection still waiting in setup becomes the approved agent too.
+  expect((await resolveOAuth(f.sql, other.tokens.access_token, resource, f.now()))?.agentIds).toEqual([
+    created.agentKey,
+  ])
   expect(f.boot().status(bound, { agentKey: created.agentKey })).toMatchObject({
     state: 'ready',
     agentId: '41',
@@ -176,6 +179,35 @@ it('approval may grant a role the client did not request: the operator chooses r
   ])
 })
 
+// Jonas, 11 Oct: his coding agent reconnected while Lizandro waited for approval and never became Lizandro.
+it('a reconnect waiting in setup follows and becomes the approved agent; one proposing another agent keeps waiting', async () => {
+  const f = await fixture(),
+    created = await f.boot().create(f.grant, args)
+  const grantOf = async (tokens: { access_token: string }) =>
+    (await resolveOAuth(f.sql, tokens.access_token, resource, f.now()))!
+  const reconnect = await f.newConnection()
+  expect(f.boot().status(await grantOf(reconnect.tokens), { agentKey: created.agentKey })).toMatchObject({
+    state: 'awaiting-approval',
+  })
+  // A connection that proposed a different agent (the fixture gives every created agent the same wallet).
+  const proposer = await f.newConnection()
+  f.sql.run(
+    'INSERT INTO agent_setup_connections (agent_key,family_id,board_id,resource,created_at) VALUES (?,?,?,?,?)',
+    'setup_second',
+    (await grantOf(proposer.tokens)).setupFamilyId ?? '',
+    'team-board',
+    resource,
+    f.now(),
+  )
+  f.registered(created.agentKey)
+  const approved = await f.approve(created.agentKey)
+  expect(approved.connections).toHaveLength(2)
+  const bound = await grantOf(reconnect.tokens)
+  expect(bound.agentIds).toEqual([created.agentKey])
+  expect(f.boot().status(bound, { agentKey: created.agentKey })).toMatchObject({ state: 'ready' })
+  expect((await grantOf(proposer.tokens)).setup).toBe(true)
+})
+
 it('approval refuses a foreign owner or a changed live wallet, and ignores revoked and expired connections', async () => {
   const f = await fixture(),
     created = await f.boot().create(f.grant, args)
@@ -192,7 +224,7 @@ it('approval refuses a foreign owner or a changed live wallet, and ignores revok
 it('does not expose other agents or scopes through setup status and stops bound tokens when the agent is revoked', async () => {
   const f = await fixture(),
     created = await f.boot().create(f.grant, args)
-  expect(() => f.boot().status(f.grant, { agentKey: 'someone-else' })).toThrow('not created')
+  expect(() => f.boot().status(f.grant, { agentKey: 'someone-else' })).toThrow('belongs to this operator')
   for (const tool of ['apply', 'create_task', 'update_profile', 'inbox', 'settlement_actions'])
     expect(permittedTool(f.grant, tool)).toBe(false)
   expect(toolAnnotations('create_agent')).toMatchObject({ readOnlyHint: false, idempotentHint: true })

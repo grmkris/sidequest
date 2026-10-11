@@ -58,6 +58,22 @@ it('offers setup to a client that did not request it and keeps its requested rol
   ])
 })
 
+it("connecting an existing agent on consent turns the operator's waiting setup connections into it", async () => {
+  const f = fixture(),
+    waiting = await f.connection()
+  f.active('quill')
+  const r = await f.request('sidequest:setup sidequest:read sidequest:hire')
+  const approved = await f.route(`/oauth/requests/${r.requestId}/approve`, {
+    agentIds: ['quill'],
+    scopes: ['sidequest:setup', 'sidequest:read', 'sidequest:hire'],
+  })
+  expect(approved?.status).toBe(200)
+  expect(await resolveOAuth(f.sql, waiting.tokens.access_token, resource, 1000)).toMatchObject({
+    agentIds: ['quill'],
+    scopes: ['sidequest:hire', 'sidequest:read'],
+  })
+})
+
 it('binds setup codes to PKCE, client, redirect and resource and consumes them once', async () => {
   const f = fixture(),
     c = await f.connection()

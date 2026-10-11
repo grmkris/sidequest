@@ -178,17 +178,17 @@ export class AgentSetup {
     }
   }
 
+  /** Any setup connection of the operator may ask: a reconnect must not lose track of the agent it waits for. */
   status(grant: OAuthGrant, args: Record<string, unknown>) {
     const family = this.#family(grant)
     const { agentKey } = readInput(StatusInput, args)
-    const associated = this.deps.sql.all<{ agent_key: string }>(
-      'SELECT agent_key FROM agent_setup_connections WHERE agent_key=? AND family_id=?',
+    const owned = this.deps.sql.all<{ id: string }>(
+      'SELECT id FROM agents WHERE id=? AND operator=?',
       agentKey,
-      family.id,
+      family.operator,
     )[0]
-    if (associated === undefined)
-      throw new BoardError('forbidden', 'This agent was not created by this setup connection')
-    const agent = this.agents.owned(agentKey, family.operator)
+    if (owned === undefined) throw new BoardError('forbidden', 'No agent with this key belongs to this operator')
+    const agent = this.agents.get(agentKey)
     if (agent.state === 'revoked') return { state: 'failed', message: 'Hosted access to this agent was stopped.' }
     if (family.agent_id === agentKey && agent.state === 'active')
       return {
@@ -196,6 +196,8 @@ export class AgentSetup {
         agentId: agent.agent_id,
         message: 'Re-list MCP tools, then call whoami to verify this agent before continuing.',
       }
+    if (family.agent_id !== null)
+      return { state: 'failed', message: 'This connection already acts as another agent. Call whoami.' }
     const operation = this.deps.sql.all<{ id: Hex }>(
       "SELECT id FROM agent_operations WHERE agent_id=? AND action_key='setup-create' AND tool='create_agent'",
       agentKey,
@@ -209,7 +211,11 @@ export class AgentSetup {
         state: 'failed',
         message: 'Agent setup was interrupted. Retry create_agent with the original operationKey and arguments.',
       }
-    return { state: 'awaiting-approval', message: 'Your operator must register the agent and approve this connection.' }
+    return {
+      state: 'awaiting-approval',
+      message:
+        'Your operator must register and connect the agent on its approval page. Do not reconnect; keep polling.',
+    }
   }
 }
 

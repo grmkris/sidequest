@@ -82,3 +82,9 @@ existing agent, or on the approval page when a setup connection's proposed agent
 client requests only pre-tick those choices, and the operator may narrow or widen them; every agent connection also
 gets `sidequest:read`. Why: requesting role scopes made each client's setup command differ and let a client's request
 silently fix what the operator could approve (Jonas's Codex onboarding on dev, 11 Oct).
+
+**Amendment, 11 Oct 2026 (setup connections).** Every live setup connection of an operator on a board and resource
+that has not proposed a different agent becomes the agent that operator approves or connects next, on the approval
+page or by choosing an existing agent at consent. A setup connection may ask for that agent's status even if another
+connection proposed it. Why: a coding agent that reconnected while waiting, or an app still holding an older token,
+otherwise stayed in setup forever while the proposing connection, which no client held any more, became the agent.

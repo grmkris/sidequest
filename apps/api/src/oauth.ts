@@ -12,7 +12,7 @@ import {
 
 import { Schema } from 'effect'
 import type { OAuthGrant as AgentOAuthGrant } from '@sidequest/indexer/oauth-types'
-import { resolveSetupOAuth, setupOAuthRoute } from './oauth-setup.ts'
+import { bindWaitingSetupConnections, resolveSetupOAuth, setupOAuthRoute } from './oauth-setup.ts'
 export type OAuthGrant = AgentOAuthGrant & { readonly setup?: boolean; readonly setupFamilyId?: string }
 export const OAUTH_SCOPES = [...AGENT_SCOPES, 'sidequest:setup'] as const
 
@@ -210,6 +210,18 @@ export async function oauthRoute(input: {
         'invalid_request',
         'Require authorization code, PKCE S256, supported scope and explicit MCP resource',
       )
+    // The same sign-in link opened twice (a client opens it and the user clicks it too) is one consent, not two.
+    const pending = sql.all<{ id: string }>(
+      "SELECT id FROM agent_oauth_requests WHERE client_id=? AND redirect_uri=? AND code_challenge=? AND state=? AND resource=? AND scopes_json=? AND status='pending' AND expires_at>?",
+      clientId,
+      redirectUri,
+      challenge,
+      query.get('state') ?? '',
+      resource,
+      JSON.stringify(scopes),
+      now,
+    )[0]
+    if (pending !== undefined) return redirect(`${siteOrigin}/connect?oauth_request=${encodeURIComponent(pending.id)}`)
     const requestId = consentId()
     write(sql, [
       {
@@ -296,7 +308,10 @@ export async function oauthRoute(input: {
         : Array.isArray(body.scopes)
           ? body.scopes.filter((scope) => scope !== 'sidequest:setup')
           : body.scopes
-    if (!Array.isArray(chosen) || !chosen.every((scope) => AGENT_SCOPES.some((known) => known === scope)))
+    if (
+      !Schema.is(Schema.Array(Schema.String))(chosen) ||
+      !chosen.every((scope) => AGENT_SCOPES.some((known) => known === scope))
+    )
       return failure('invalid_request', 'Consent scopes are sidequest:read, sidequest:work and sidequest:hire')
     const selectedScopes = ['sidequest:read', ...chosen]
     const code = randomToken()
@@ -323,6 +338,15 @@ export async function oauthRoute(input: {
           selectedAgentId!,
           now + 120,
         )
+        // A client that reconnected for this agent, or an app still holding its setup token, becomes it too.
+        bindWaitingSetupConnections(sql, {
+          operator: owner,
+          boardId: request.board_id,
+          resource: request.resource,
+          agentId: selectedAgentId!,
+          scopes: selectedScopes,
+          now,
+        })
       }
     })
     if (!consumed) return failure('invalid_request', 'Consent already used')

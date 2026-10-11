@@ -7,6 +7,7 @@ import { privyOperator } from './privy-operator.ts'
 import type { AgentRouteRequest } from './routes/agents.ts'
 import { profileOrigin } from './profiles.ts'
 import { resourceBoard } from './oauth-validation.ts'
+import { bindWaitingSetupConnections } from './oauth-setup.ts'
 
 const strings = Schema.decodeUnknownSync(Schema.Array(Schema.String))
 const Roles = Schema.Array(Schema.Literals(['sidequest:work', 'sidequest:hire'])).check(
@@ -118,8 +119,12 @@ export async function approveAgentSetup(input: {
     now(),
   )
   const result = candidates.map((family) => approvalBinding(family, id, origin, approved))
+  const places = sql.all<{ board_id: string; resource: string }>(
+    'SELECT DISTINCT board_id,resource FROM agent_setup_connections WHERE agent_key=?',
+    id,
+  )
   if (sql.atomic === undefined) throw new BoardError('unavailable', 'Approval requires atomic storage')
-  sql.atomic(() => {
+  const waiting = sql.atomic(() => {
     for (const entry of result)
       sql.run(
         'UPDATE agent_oauth_setup_families SET agent_id=?,scopes_json=? WHERE id=? AND revoked_at IS NULL',
@@ -127,8 +132,21 @@ export async function approveAgentSetup(input: {
         JSON.stringify(entry.scopes),
         entry.familyId,
       )
+    // The proposing connection may have been replaced by a reconnect: the operator's other waiting ones join it.
+    return places
+      .filter((place) => resourceBoard(place.resource, origin) === place.board_id)
+      .flatMap((place) =>
+        bindWaitingSetupConnections(sql, {
+          operator,
+          boardId: place.board_id,
+          resource: place.resource,
+          agentId: id,
+          scopes: ['sidequest:read', ...approved],
+          now: now(),
+        }),
+      )
   })
-  return { agentKey: id, agentId: agent.agent_id, state: 'ready', connections: result }
+  return { agentKey: id, agentId: agent.agent_id, state: 'ready', connections: [...result, ...waiting] }
 }
 
 /** The operator chooses the roles here; what the client requested only pre-ticked them, so approval may widen it. */

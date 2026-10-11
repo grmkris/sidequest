@@ -1,4 +1,4 @@
-/** Setup families have no agent until an owner binds the exact connection that created one. */
+/** Setup families have no agent until their operator approves or connects one; every waiting family then becomes it. */
 import { AgentStore, type Sql } from '@sidequest/board'
 import { Schema } from 'effect'
 import type { OAuthGrant, OAuthReply, oauthRoute } from './oauth.ts'
@@ -70,6 +70,45 @@ export function resolveSetupOAuth(sql: Sql, hash: string, resource: string, now:
     grantId: family.id,
     setupFamilyId: family.id,
   }
+}
+
+/**
+ * A coding agent may reconnect, or run in an app that still holds an older token, while its operator approves the agent
+ * it proposed. So every live, agentless setup connection of the operator on this board and resource becomes the agent
+ * the operator approves or connects next. A connection that proposed a different agent waits for that one instead.
+ */
+export function bindWaitingSetupConnections(
+  sql: Sql,
+  input: {
+    operator: string
+    boardId: string
+    resource: string
+    agentId: string
+    scopes: readonly string[]
+    now: number
+  },
+): Array<{ familyId: string; resource: string; scopes: string[] }> {
+  const waiting = sql.all<{ id: string }>(
+    `SELECT f.id FROM agent_oauth_setup_families f
+     WHERE f.operator=? AND f.board_id=? AND f.resource=? AND f.agent_id IS NULL AND f.revoked_at IS NULL
+     AND EXISTS (SELECT 1 FROM agent_oauth_setup_tokens t WHERE t.family_id=f.id AND t.expires_at>?
+       AND (t.kind='access' OR (t.kind='refresh' AND t.consumed_at IS NULL)))
+     AND NOT EXISTS (SELECT 1 FROM agent_setup_connections c WHERE c.family_id=f.id AND c.agent_key<>?)`,
+    input.operator.toLowerCase(),
+    input.boardId,
+    input.resource,
+    input.now,
+    input.agentId,
+  )
+  const granted = [...new Set(input.scopes)].toSorted()
+  for (const family of waiting)
+    sql.run(
+      'UPDATE agent_oauth_setup_families SET agent_id=?,scopes_json=? WHERE id=? AND agent_id IS NULL',
+      input.agentId,
+      JSON.stringify(granted),
+      family.id,
+    )
+  return waiting.map((family) => ({ familyId: family.id, resource: input.resource, scopes: granted }))
 }
 
 export async function setupOAuthRoute(input: Input): Promise<OAuthReply | undefined> {

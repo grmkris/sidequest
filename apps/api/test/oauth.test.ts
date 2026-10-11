@@ -253,6 +253,26 @@ test('a client that requested setup can connect an existing agent', async () => 
   }
 })
 
+// Jonas, 11 Oct: Codex opened the sign-in link and it was opened again, so two consent pages raced one listener.
+test('the same sign-in link opened twice is one consent request', async () => {
+  const f = fixture()
+  try {
+    const c = await connection(f)
+    const open = async () =>
+      new URL((await f.route('/oauth/authorize', {}, c.query, 'GET')).redirect!).searchParams.get('oauth_request')
+    const first = await open()
+    expect(first).not.toBe(c.requestId)
+    expect(await open()).toBe(first)
+    const other = new URLSearchParams(c.query)
+    other.set('code_challenge', await pkceChallenge('b'.repeat(43)))
+    expect(
+      new URL((await f.route('/oauth/authorize', {}, other, 'GET')).redirect!).searchParams.get('oauth_request'),
+    ).not.toBe(first)
+  } finally {
+    f.db.close()
+  }
+})
+
 test('consent identifies each requesting client and exact callback', async () => {
   const f = fixture()
   try {
