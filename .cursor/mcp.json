@@ -1,19 +1,7 @@
 {
   "mcpServers": {
-    "myplan": {
-      "url": "https://myplan.lol/mcp"
-    },
-    "myinbox": {
-      "url": "https://myinbox.lol/mcp"
-    },
-    "mytab": {
-      "url": "https://mytab.lol/mcp"
-    },
-    "mytmux": {
-      "url": "https://mytmux.lol/mcp"
-    },
-    "mygram": {
-      "url": "https://mygram.lol/mcp"
+    "mysi": {
+      "url": "https://mysi.lol/mcp"
     },
     "cloudflare": {
       "url": "https://mcp.cloudflare.com/mcp"

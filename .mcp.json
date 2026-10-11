@@ -1,10 +1,6 @@
 {
   "mcpServers": {
-    "myplan": { "type": "http", "url": "https://myplan.lol/mcp" },
-    "myinbox": { "type": "http", "url": "https://myinbox.lol/mcp" },
-    "mytab": { "type": "http", "url": "https://mytab.lol/mcp" },
-    "mytmux": { "type": "http", "url": "https://mytmux.lol/mcp" },
-    "mygram": { "type": "http", "url": "https://mygram.lol/mcp" },
+    "mysi": { "type": "http", "url": "https://mysi.lol/mcp" },
     "cloudflare": { "type": "http", "url": "https://mcp.cloudflare.com/mcp" }
   }
 }
