@@ -144,6 +144,24 @@ describe('the submission check', () => {
     expect((await checkDeliverable(other, deps({}))).ok).toBeNull()
   })
 
+  it('git: authenticates to GitHub when the board has a token, and says when GitHub rate-limits it', async () => {
+    const d = parseDeliverable({ kind: 'git', url: 'https://github.com/o/r', ref: 'main', sha: SHA })
+    const seen: Array<string | null> = []
+    const recording =
+      (status: number, remaining: string): CheckDeps['fetch'] =>
+      async (_input: string | URL | Request, init?: RequestInit) => {
+        seen.push(new Headers(init?.headers).get('authorization'))
+        return new Response('{}', { status, headers: { 'x-ratelimit-remaining': remaining } })
+      }
+    const withToken = { ...deps({}), fetch: recording(200, '4999'), githubToken: async () => 'ghs_installation' }
+    expect((await checkDeliverable(d, withToken)).ok).toBe(true)
+    const limited = await checkDeliverable(d, { ...deps({}), fetch: recording(403, '0') })
+    expect(limited).toMatchObject({ ok: null, detail: 'github.com answered 403 (rate limited)' })
+    const failing = { ...deps({}), fetch: recording(200, '59'), githubToken: () => Promise.reject(new Error('no app')) }
+    expect((await checkDeliverable(d, failing)).ok).toBe(true)
+    expect(seen).toEqual(['Bearer ghs_installation', null, null])
+  })
+
   it('artifact: matching hash, tampered file, ipfs through the gateway', async () => {
     const sha256 = await digest(bytes)
     const good = parseDeliverable({

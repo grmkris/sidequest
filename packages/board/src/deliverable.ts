@@ -153,6 +153,11 @@ export interface CheckDeps {
         getCode(a: { address: Hex }): Promise<Hex | undefined>
       }
     | undefined
+  /**
+   * A token for GitHub's API (the board's GitHub App installation), so the commit check is not one of the 60
+   * unauthenticated calls an hour GitHub allows the Worker's shared egress address. Absent: unauthenticated.
+   */
+  githubToken?: () => Promise<string>
 }
 
 export const MAX_FETCH_BYTES = 25 * 1024 * 1024
@@ -254,15 +259,25 @@ export async function checkDeliverable(d: Deliverable, deps: CheckDeps): Promise
         const api = commitApi(d.url, d.sha)
         if (api === undefined)
           return done(null, 'unverified host: the board checks github.com, gitlab.com, codeberg.org and gitea.com')
+        // Without a token the check still runs, just unauthenticated.
+        const token =
+          api.host === 'github.com' && deps.githubToken !== undefined
+            ? await deps.githubToken().catch(() => undefined)
+            : undefined
         const res = await deps.fetch(api.api, {
-          headers: { accept: 'application/json', 'user-agent': 'sidequest-board' },
+          headers: {
+            accept: 'application/json',
+            'user-agent': 'sidequest-board',
+            ...(token === undefined ? {} : { authorization: `Bearer ${token}` }),
+          },
           signal: AbortSignal.timeout(TIMEOUT_MS),
         })
         void res.body?.cancel().catch(() => {})
         if (res.status === 200) return done(true, `commit ${d.sha.slice(0, 12)} exists on ${api.host}`)
         if (res.status === 404 || res.status === 422)
           return done(false, `no commit ${d.sha.slice(0, 12)} in that repository on ${api.host} (or it is private)`)
-        return done(null, `${api.host} answered ${res.status}`)
+        const limited = res.headers.get('x-ratelimit-remaining') === '0'
+        return done(null, `${api.host} answered ${res.status}${limited ? ' (rate limited)' : ''}`)
       }
       case 'patch':
       case 'artifact': {

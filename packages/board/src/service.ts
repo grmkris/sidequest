@@ -648,10 +648,12 @@ export class Board {
   /** The one-time, advisory submission check; the board keeps the result, never the work. */
   #checkDeliverable(d: Deliverable): Promise<DeliverableCheck> {
     const contexts = Object.values(this.#config.contexts).filter((c): c is sdk.Ctx => c !== undefined)
+    const github = this.#config.evidence?.github
     return checkDeliverable(d, {
       fetch: this.#config.fetch ?? ((...a) => fetch(...a)),
       now: () => this.#now(),
       chain: (chainId) => contexts.find((c) => c.deployment.chainId === chainId)?.publicClient,
+      ...(github === undefined ? {} : { githubToken: () => installationToken(github, this.#now()) }),
     })
   }
 
