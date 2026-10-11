@@ -1,0 +1,43 @@
+{
+  "note": "Bytecode baseline of the mainnet launch contracts (note 23 T1.8). The launch commit must rebuild to these hashes; deployed runtime code differs only in immutables, so compare with forge verify-contract against the launch commit.",
+  "sourceCommit": "1939cb84c34f1bf93a661f22e59f45948b9f52b5",
+  "workingTreeHead": "3082770f93b929c6ef4803d7433884fc6040ccaa",
+  "observedAt": "2026-10-11T20:33:06Z",
+  "compiler": "Solc 0.8.28+commit.7893614a",
+  "settings": {
+    "optimizer": true,
+    "optimizerRuns": 200,
+    "viaIr": true,
+    "bytecodeHash": "none",
+    "cborMetadata": true
+  },
+  "buildCommand": "cd contracts && heavy forge build",
+  "hashCommand": "cast keccak of out/<C>.sol/<C>.json .bytecode.object and .deployedBytecode.object",
+  "contracts": {
+    "StakeVault": {
+      "bytecodeKeccak": "0x21eb2b454f5ec39268608b7670e52e22ff252c82cfd0af621d2600ea6fa430a3",
+      "deployedBytecodeKeccak": "0x8e79b25472ad22035aafdad05b4933e5342a74ee9f40bdb8bab80b7734799c7b",
+      "deployedBytes": 8253
+    },
+    "FeeSchedule": {
+      "bytecodeKeccak": "0x4a0167ddef94b9549dd11bf9aa1fabd510a8148c2f98e1d52293ffcadc4e72f3",
+      "deployedBytecodeKeccak": "0xeea6922ab326b6dfd428588f9354e24fa5282229b4d506e5779e4c44f9cb8a02",
+      "deployedBytes": 3160
+    },
+    "SidequestHolding": {
+      "bytecodeKeccak": "0x09cb94bc07dff20478ffa7a3aa3ddebabdd3bfbaba81c3ef73036e00ae2859c5",
+      "deployedBytecodeKeccak": "0xedf3ceaf77b213d60c47a66c53b0429bd39b9bca5e4e084ccf311daa46444faf",
+      "deployedBytes": 20731
+    },
+    "SidequestEvaluator": {
+      "bytecodeKeccak": "0x76e7c2ad70076400f3ab3d1800c859392e59b76ae275b9364daed55c1570e4b7",
+      "deployedBytecodeKeccak": "0xfb6ef477d8d4523d35298ee6cf4ff6a23699af3f1f05140fdf3592245475a221",
+      "deployedBytes": 18974
+    },
+    "ERC8183": {
+      "bytecodeKeccak": "0xc87c89f14e708207a6aabe85602debe683e948784f3e62380001b8af09434eb9",
+      "deployedBytecodeKeccak": "0xaaf25b90fbab36ac9f57667c471058eabc98e19044b262c65e3c7ab752573d86",
+      "deployedBytes": 19692
+    }
+  }
+}
