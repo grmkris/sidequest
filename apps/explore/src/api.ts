@@ -15,6 +15,7 @@ import {
 } from '@sidequest/react'
 import type { ForeignOffer } from './job-offer.tsx'
 import type { DirectoryAgent } from '@sidequest/sdk'
+import type { PriceListFile } from '@sidequest/sdk'
 import { LAUNCH_MESSAGE, toolAllowed } from './launch.ts'
 import { writesOpen } from './wallet.ts'
 
@@ -190,4 +191,34 @@ export async function agentEndpoint<T>(
   if (!response.ok || json.ok === false)
     throw new ApiError(json.code ?? 'error', json.message ?? 'Agent request failed')
   return (json.result ?? json) as T
+}
+
+export interface PricesUploaded {
+  ok: true
+  epoch: string
+  signer: string
+  keys: string[]
+}
+
+/** Price authority is the owner's signature, so this write needs no website session. */
+export async function uploadPrices(prices: PriceListFile, previous?: PriceListFile): Promise<PricesUploaded> {
+  if (!writesOpen) throw new ApiError('launching', LAUNCH_MESSAGE)
+  const response = await fetch('/data/mining/prices', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ prices, ...(previous === undefined ? {} : { previous }) }),
+  })
+  // SAFETY: the mining upload endpoint returns this success/refusal envelope, including its stable code.
+  const body = (await response.json()) as PricesUploaded | { ok: false; code: string; error: string }
+  if (!body.ok) throw new ApiError(body.code, body.error)
+  if (!response.ok) throw new ApiError('upload-failed', 'Mining price upload failed')
+  return body
+}
+
+/** Artifacts are raw JSON files, including empty epochs; they do not use the board's ok envelope. */
+export async function miningFile(name: string): Promise<string | null> {
+  const response = await fetch(`/data/mining/${encodeURIComponent(name)}`, { cache: 'no-store' })
+  if (response.status === 404) return null
+  if (!response.ok) throw new ApiError('mining-file', 'The mining file is unavailable')
+  return response.text()
 }

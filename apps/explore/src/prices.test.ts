@@ -2,7 +2,15 @@ import { type Hex, getAddress } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { recoverPriceListSigner } from '@sidequest/sdk'
 import { describe, expect, it } from 'vitest'
-import { SIDE_PRICE_FLOOR, type PriceDraft, priceListFile, priceListOf, priceTypedData } from './prices.ts'
+import {
+  SIDE_PRICE_FLOOR,
+  type PriceDraft,
+  priceListFile,
+  priceListOf,
+  priceTypedData,
+  previousPricesOf,
+  miningPoolConfigured,
+} from './prices.ts'
 
 /**
  * The mining tool's own price-list code (scripts/mining/prices.ts, B8): what Explore signs must be exactly what it
@@ -96,5 +104,35 @@ describe('the price list Explore signs', () => {
     expect(priceListOf({ ...draft, tokens: [{ token: usdc, decimals: null, usd: '1' }] })).toMatch(/decimals/)
     expect(priceListOf({ ...draft, tokens: [{ token: '0x12', decimals: 6, usd: '1' }] })).toMatch(/not a token address/)
     expect(priceListOf({ ...draft, factoryUsd: '0' })).toMatch(/SIDE price/)
+  })
+})
+
+describe('previous mining prices', () => {
+  const list = { epoch: 1n, tokens: [], factoryUsdPrice: 10n ** 14n }
+  const file = priceListFile(10143, distributor, list, owner.address, '0x')
+  it('prefers a published epoch to uploaded prices and preserves exact USD decimals', async () => {
+    const calls: string[] = []
+    const result = await previousPricesOf(2n, async (name) => {
+      calls.push(name)
+      return JSON.stringify({ priceList: file })
+    })
+    expect(result).toEqual({ factoryUsd: '0.0001', missing: false })
+    expect(calls).toEqual(['epoch-1.json'])
+  })
+  it('uses uploaded prices next and marks missing prices for the second wallet prompt', async () => {
+    expect(
+      await previousPricesOf(2n, async (name) => (name === 'prices-1.json' ? JSON.stringify(file) : null)),
+    ).toEqual({ factoryUsd: '0.0001', missing: false })
+    expect(await previousPricesOf(2n, async () => null)).toEqual({ factoryUsd: null, missing: true })
+    expect(
+      await previousPricesOf(0n, async () => {
+        throw new Error('epoch zero has no previous epoch')
+      }),
+    ).toEqual({ factoryUsd: null, missing: false })
+  })
+  it('refuses corrupt or misnumbered artifacts and reads the configured official-pool presence', async () => {
+    await expect(previousPricesOf(3n, async () => JSON.stringify({ priceList: file }))).rejects.toThrow(/another epoch/)
+    await expect(previousPricesOf(2n, async () => 'bad json')).rejects.toThrow()
+    expect(miningPoolConfigured('monad-testnet')).toBe(false)
   })
 })

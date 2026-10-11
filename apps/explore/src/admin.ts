@@ -178,6 +178,87 @@ export function readEpochFile(
   }
 }
 
+export type EpochStatus =
+  | 'waiting-prices'
+  | 'pending'
+  | 'empty'
+  | 'funded'
+  | 'rooted'
+  | 'published'
+  | 'abandoned'
+  | `failed:${string}`
+
+export interface EpochStatusInput {
+  prices: boolean
+  pending: { root: string | null; dataHash?: string } | null
+  root: { root: string; dataHash?: string } | null
+  funding: 'due' | 'done' | 'stale' | null
+  published: boolean
+  failure?: string | null
+}
+
+const postedRoot = (input: EpochStatusInput): { status: EpochStatus; next: string } | null => {
+  if (input.root === null || input.root.root === `0x${'0'.repeat(64)}`) return null
+  const wrongRoot = input.pending !== null && input.pending.root !== input.root.root
+  const wrongHash = input.pending?.dataHash !== undefined && input.pending.dataHash !== input.root.dataHash
+  if (wrongRoot || wrongHash)
+    return {
+      status: 'failed:root-mismatch',
+      next: 'The pending file differs from the posted root; check the mining workflow',
+    }
+  return { status: 'rooted', next: 'Publishing runs automatically within the hour' }
+}
+
+/** The owner's next action for one epoch, from signed prices, the workflow artifact and chain state. */
+export function epochStatus(input: EpochStatusInput): { status: EpochStatus; next: string } {
+  if (input.failure)
+    return { status: `failed:${input.failure}`, next: 'Reload the epoch status or check the mining workflow' }
+  if (input.published) return { status: 'published', next: 'Published' }
+  const posted = postedRoot(input)
+  if (posted !== null) return posted
+  if (!input.prices && input.pending === null) return { status: 'waiting-prices', next: 'Sign and upload prices' }
+  if (input.pending === null) return { status: 'pending', next: 'Computing: the mining workflow runs hourly at :41' }
+  if (input.pending.root === null) return { status: 'empty', next: 'Empty epoch: nothing to fund' }
+  if (input.funding === 'stale')
+    return { status: 'abandoned', next: 'The epoch changed; load the latest computed file' }
+  if (input.funding === 'done') return { status: 'funded', next: 'Set the root' }
+  return { status: 'pending', next: 'Fund the epoch' }
+}
+
+/** The existing additive-funding comparison, shared by the status and transaction display. */
+export function epochFunding(file: EpochFile | null, totalFunded: bigint | undefined) {
+  if (file?.fund == null || totalFunded === undefined) return null
+  if (totalFunded === file.fund.expectTotalFunded) return 'due'
+  return totalFunded - file.fund.expectTotalFunded === file.fund.amount ? 'done' : 'stale'
+}
+
+export interface EmptyEpochFile {
+  epoch: bigint
+  root: null
+}
+
+/** Empty workflow artifacts are displayable; only readEpochFile can admit transaction-bearing files. */
+export function readEpochArtifact(
+  text: string,
+  ctx: EpochFileContext,
+): { ok: true; file: EpochFile | EmptyEpochFile } | { ok: false; problem: string } {
+  const read = readEpochFile(text, ctx)
+  if (read.ok) return read
+  try {
+    const value: unknown = JSON.parse(text)
+    if (!isRecord(value) || value.chainId !== ctx.chainId || value.root !== null) return read
+    const epoch = dec(value.epoch)
+    if (epoch === null || dec(value.total) !== 0n || !isRecord(value.calls) || Object.keys(value.calls).length !== 0)
+      return read
+    return { ok: true, file: { epoch, root: null } }
+  } catch {
+    return read
+  }
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
 /**
  * A new total for a posted root (`resizeRoot`), or why not. Only shrinking is offered here, to the leaf sum when the
  * posted total overstated it; the contract never lets a total drop below what is already claimed.

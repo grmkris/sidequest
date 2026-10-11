@@ -9,9 +9,12 @@ import {
   readAdminOp,
   readAdminTx,
   readEpochFile,
+  epochStatus,
+  readEpochArtifact,
   resizeProblem,
   scheduleProposal,
 } from './admin.ts'
+
 import {
   MULTI_SEND_CALL_ONLY,
   atomically,
@@ -23,6 +26,30 @@ import {
   safeAbi,
   safeTxTypedData,
 } from './safe.ts'
+
+describe('mining epoch status', () => {
+  const root = `0x${'1'.repeat(64)}`
+  const base = { prices: true, pending: { root }, root: null, funding: 'due' as const, published: false }
+  it.each([
+    [{ ...base, prices: false, pending: null }, 'waiting-prices', 'Sign and upload prices'],
+    [{ ...base, pending: null }, 'pending', 'Computing'],
+    [base, 'pending', 'Fund the epoch'],
+    [{ ...base, pending: { root: null } }, 'empty', 'Empty epoch'],
+    [{ ...base, funding: 'done' }, 'funded', 'Set the root'],
+    [{ ...base, root: { root } }, 'rooted', 'Publishing'],
+    [{ ...base, prices: false, pending: null, published: true }, 'published', 'Published'],
+    [{ ...base, funding: 'stale' }, 'abandoned', 'changed'],
+    [{ ...base, failure: 'invalid-epoch' }, 'failed:invalid-epoch', 'Reload'],
+    [{ ...base, root: { root: `0x${'2'.repeat(64)}` } }, 'failed:root-mismatch', 'differs'],
+    [
+      { ...base, root: { root, dataHash: '0xa' }, pending: { root, dataHash: '0xb' } },
+      'failed:root-mismatch',
+      'differs',
+    ],
+  ] as const)('returns %s', (input, status, next) => {
+    expect(epochStatus(input)).toMatchObject({ status, next: expect.stringContaining(next) })
+  })
+})
 
 const treasury = '0x9999999999999999999999999999999999999999'
 const ok = { thresholds: ['0', '10000', '100000', '1000000'], rates: ['30', '10', '3', '1'], treasury }
@@ -106,6 +133,17 @@ describe('an epoch file', () => {
     leaves: 3,
     priceSigner: '0x1111111111111111111111111111111111111111',
   }
+
+  it('shows empty artifacts without admitting transaction buttons or relaxing nonempty validation', () => {
+    const empty = JSON.stringify({ ...file, root: null, total: '0', calls: {} })
+    expect(readEpochArtifact(empty, ctx)).toEqual({ ok: true, file: { epoch: 1n, root: null } })
+    expect(readEpochArtifact(JSON.stringify({ ...file, root: null }), ctx).ok).toBe(false)
+    expect(
+      readEpochArtifact(JSON.stringify({ ...file, root: null, total: '0', calls: {}, chainId: 143 }), ctx).ok,
+    ).toBe(false)
+    expect(readEpochArtifact('bad', ctx).ok).toBe(false)
+    expect(readEpochArtifact(JSON.stringify(file), ctx)).toEqual(readEpochFile(JSON.stringify(file), ctx))
+  })
 
   it('funds the whole total, the remainder, or nothing, as the run computed', () => {
     expect(read({})).toEqual({

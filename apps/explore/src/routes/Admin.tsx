@@ -11,7 +11,7 @@ import { type ReactNode, useEffect, useMemo, useState, useSyncExternalStore } fr
 import { type Abi, type Address, type Hex, erc20Abi, isAddress, recoverTypedDataAddress, zeroAddress } from 'viem'
 import { useReadContracts, useSignTypedData } from 'wagmi'
 import { getBlockNumber, getBytecode, readContracts } from 'wagmi/actions'
-import type { TxRequest } from '../api.ts'
+import { ApiError, miningFile, uploadPrices, type TxRequest } from '../api.ts'
 import { PrivyLogin } from '../components/Privy.tsx'
 import { useToast } from '../components/Sheet.tsx'
 import { Countdown, When, useNow } from '../components/Time.tsx'
@@ -24,15 +24,25 @@ import {
   type AdminContext,
   type AdminTx,
   type EpochFile,
+  type EpochFileContext,
   type FundGuard,
   fundProblem,
   readAdminOp,
-  readEpochFile,
+  epochStatus,
+  epochFunding,
+  readEpochArtifact,
   resizeProblem,
   scheduleProposal,
 } from '../admin.ts'
 import { type SidequestContracts, sidequest } from '../sidequest.ts'
-import { type PriceDraft, priceListFile, priceListOf, priceTypedData } from '../prices.ts'
+import {
+  miningPoolConfigured,
+  previousPricesOf,
+  type PriceDraft,
+  priceListFile,
+  priceListOf,
+  priceTypedData,
+} from '../prices.ts'
 import {
   MULTI_SEND_CALL_ONLY,
   type Call,
@@ -1185,6 +1195,51 @@ function Holdings({ c, act, busy }: { c: SidequestContracts; act: Act; busy: boo
 
 type EpochRoot = { root: Hex; total: bigint; claimed: bigint; dataHash: Hex }
 
+type MiningUpload =
+  | { name: string; file: EpochFile }
+  | { name: string; empty: true; epoch: bigint }
+  | { name: string; problem: string }
+
+function miningUpload(text: string, context: EpochFileContext, name: string, expected?: bigint): MiningUpload {
+  const read = readEpochArtifact(text, context)
+  if (!read.ok) return { name, problem: read.problem }
+  if (expected !== undefined && read.file.epoch !== expected) return { name, problem: 'The file names another epoch.' }
+  return read.file.root === null ? { name, empty: true, epoch: read.file.epoch } : { name, file: read.file }
+}
+
+function miningProgress(input: {
+  epoch: bigint
+  root: EpochRoot | undefined
+  totalFunded: bigint | undefined
+  context: EpochFileContext
+  files: { prices: string | null; pending: string | null; published: string | null } | undefined
+  unavailable: boolean
+}) {
+  const { files, root, context, epoch, totalFunded } = input
+  if (input.unavailable) return { status: 'failed:unavailable', next: 'Reload the epoch status' }
+  if (files === undefined || root === undefined) return null
+  const read = files.pending === null ? null : readEpochArtifact(files.pending, context)
+  if (read !== null && (!read.ok || read.file.epoch !== epoch))
+    return { status: 'failed:invalid-epoch', next: 'The computed epoch file could not be read' }
+  const pending = read?.ok ? read.file : null
+  const file = pending?.root === null ? null : pending
+  const funding = file?.fund === null ? 'done' : epochFunding(file, totalFunded)
+  return epochStatus({ prices: files.prices !== null, pending, root, funding, published: files.published !== null })
+}
+
+async function signPriceFile(
+  list: sdk.PriceList,
+  distributor: Address,
+  owner: Address,
+  sign: (typed: ReturnType<typeof priceTypedData>) => Promise<Hex>,
+) {
+  const typed = priceTypedData(chain.id, distributor, list)
+  const signature = await sign(typed)
+  const signer = await sdk.recoverPriceListSigner(list, signature, chain.id, distributor)
+  if (!same(signer, owner)) throw new Error('The price signature did not recover to this wallet')
+  return priceListFile(chain.id, distributor, list, signer, signature)
+}
+
 /**
  * The epoch's price list (B8, U5-PRICES). A Safe owner signs, with their own wallet, exactly the typed data
  * `bun run mining:epoch --prices` verifies, and downloads the file it reads. Decimals are read from each token on chain,
@@ -1204,6 +1259,7 @@ function Prices({ c, me }: { c: SidequestContracts; me: Address }) {
   const epochText = picked ?? (currentEpoch === undefined ? '' : String(currentEpoch > 0n ? currentEpoch - 1n : 0n))
   const [usd, setUsd] = useState<Record<string, string>>({})
   const [factoryUsd, setFactoryUsd] = useState('')
+
   const [added, setAdded] = useState<string[]>([])
   const [adding, setAdding] = useState('')
   // The deployment's reward tokens, every board's, and any added here.
@@ -1227,11 +1283,30 @@ function Prices({ c, me }: { c: SidequestContracts; me: Address }) {
   }
   const list = priceListOf(draft)
   const listKey =
-    typeof list === 'string' ? null : JSON.stringify(priceListFile(chain.id, c.distributor, list, me, '0x').message)
-  const { signTypedDataAsync } = useSignTypedData()
+    typeof list === 'string' ? null : JSON.stringify(priceListFile(chain.id, c.distributor, list, me, '0x'))
+  const previousPrices = useQuery({
+    queryKey: ['mining-previous-prices', deployment.network, epochText],
+    queryFn: () => previousPricesOf(BigInt(epochText.trim()), miningFile),
+    enabled: /^\d+$/.test(epochText.trim()),
+    staleTime: 30_000,
+  })
+  const needsPrevious = previousPrices.data?.missing === true && !miningPoolConfigured(deployment.network)
+  const { mutateAsync: signTypedDataAsync } = useSignTypedData()
   const [signing, setSigning] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
-  const [signed, setSigned] = useState<{ key: string; json: string; name: string } | null>(null)
+  const [signed, setSigned] = useState<{
+    key: string
+    json: string
+    name: string
+    file: ReturnType<typeof priceListFile>
+    previous?: ReturnType<typeof priceListFile> | undefined
+  } | null>(null)
+  const [uploaded, setUploaded] = useState<string | null>(null)
+  useEffect(() => {
+    const previousFactoryUsd = previousPrices.data?.factoryUsd
+    if (previousFactoryUsd != null) setFactoryUsd((current) => (current === '' ? previousFactoryUsd : current))
+  }, [previousPrices.data])
   // A signature stands only for the list it signed: any change asks for a new one.
   const shown = signed !== null && signed.key === listKey ? signed : null
   const json = shown?.json ?? null
@@ -1254,35 +1329,53 @@ function Prices({ c, me }: { c: SidequestContracts; me: Address }) {
           ? 'Already listed.'
           : null
   const sign = async () => {
-    if (typeof list === 'string' || listKey === null) return
+    if (typeof list === 'string' || listKey === null || previousPrices.data === undefined || previousPrices.isError)
+      return
     setProblem(null)
     setSigning(true)
     try {
-      const typed = priceTypedData(chain.id, c.distributor, list)
-      const signature = await signTypedDataAsync({ ...typed, account: me })
-      const signer = await recoverTypedDataAddress({ ...typed, signature })
-      if (!same(signer, me)) {
-        setProblem(
-          `The signature recovers ${signer}, not your address. The mining tool takes only a plain wallet (EOA) signature from a Safe owner. Nothing to download.`,
+      let saved = shown
+      if (saved === null) {
+        const file = await signPriceFile(list, c.distributor, me, (typed) =>
+          signTypedDataAsync({ ...typed, account: me }),
         )
-        return
+        const previous = needsPrevious
+          ? await signPriceFile({ ...list, epoch: list.epoch - 1n }, c.distributor, me, (typed) =>
+              signTypedDataAsync({ ...typed, account: me }),
+            )
+          : undefined
+        saved = {
+          key: listKey,
+          json: `${JSON.stringify(file, null, 2)}\n`,
+          name: `prices-epoch-${list.epoch}.json`,
+          file,
+          previous,
+        }
+        setSigned(saved)
       }
-      setSigned({
-        key: listKey,
-        json: `${JSON.stringify(priceListFile(chain.id, c.distributor, list, signer, signature), null, 2)}\n`,
-        name: `prices-epoch-${list.epoch}.json`,
-      })
+      setSigning(false)
+      setUploading(true)
+      await uploadPrices(saved.file, saved.previous)
+      setUploaded(listKey)
+      void previousPrices.refetch()
     } catch (failure) {
-      setProblem(walletRefused(failure) ? 'You declined to sign. Nothing was signed.' : friendlyError(failure))
+      setProblem(
+        failure instanceof ApiError
+          ? `${failure.code}: ${failure.message}`
+          : walletRefused(failure)
+            ? 'You declined to sign. The upload was not sent.'
+            : friendlyError(failure),
+      )
     } finally {
       setSigning(false)
+      setUploading(false)
     }
   }
 
   return (
     <Section
       title="Mining prices"
-      note="Each epoch’s fees are valued in USD from a price list a Safe owner signs. bun run mining:epoch --prices takes the file signed here; fees in a token with no price do not count. SIDE may be listed only at the SIDE reference price, and on mainnet only USD-pegged tokens within 1 % of $1."
+      note="Sign and upload prices for an ended epoch. Sidequest computes the epoch automatically; fees in unpriced tokens do not count. SIDE uses its reference price."
     >
       {reserve.isError || decimals.isError ? (
         <Unavailable retry={() => void Promise.all([reserve.refetch(), decimals.refetch()])} />
@@ -1375,20 +1468,47 @@ function Prices({ c, me }: { c: SidequestContracts; me: Address }) {
               <AlertDescription>{problem}</AlertDescription>
             </Alert>
           )}
-          {shown === null ? (
-            <Button disabled={typeof list === 'string' || signing} onClick={() => void sign()}>
-              {signing ? 'Waiting for your wallet…' : 'Sign the price list'}
+          {needsPrevious && shown === null && (
+            <p className="text-ui text-muted-foreground">
+              No previous list is stored. You will see two wallet prompts: this epoch and the preceding epoch, with the
+              same prices.
+            </p>
+          )}
+          {previousPrices.isError && (
+            <Alert variant="destructive">
+              <AlertDescription>The previous prices could not be read. Retry before signing.</AlertDescription>
+            </Alert>
+          )}
+          <Button
+            disabled={
+              typeof list === 'string' ||
+              signing ||
+              uploading ||
+              previousPrices.data === undefined ||
+              previousPrices.isError
+            }
+            onClick={() => void sign()}
+          >
+            {signing
+              ? 'Waiting for your wallet…'
+              : uploading
+                ? 'Uploading…'
+                : shown !== null && uploaded !== listKey
+                  ? 'Retry upload'
+                  : 'Sign and upload'}
+          </Button>
+          {previousPrices.isError && (
+            <Button variant="secondary" onClick={() => void previousPrices.refetch()}>
+              Retry previous prices
             </Button>
-          ) : (
+          )}
+          {shown !== null && (
             <>
               <p className="text-ui text-muted-foreground">
-                Signed by you for epoch {epochText.trim()} on {chain.name}. Pass it to{' '}
-                <code className="font-mono">
-                  bun run mining:epoch {epochText.trim()} --prices {shown.name}
-                </code>
-                .
+                {uploaded === listKey
+                  ? `Uploaded prices for epoch ${epochText.trim()}. Computing runs hourly at :41.`
+                  : 'Signed. Download the file below if upload is unavailable.'}
               </p>
-
               {href !== null && (
                 <a
                   href={href}
@@ -1422,6 +1542,19 @@ function Mining({ c, act, fund, busy }: { c: SidequestContracts; act: Act; fund:
   // The epoch to close: the last one that has ended.
   const epochText = picked ?? (currentEpoch === undefined ? '' : String(currentEpoch > 0n ? currentEpoch - 1n : 0n))
   const epoch = /^\d+$/.test(epochText) ? BigInt(epochText) : null
+  const artifacts = useQuery({
+    queryKey: ['mining-artifacts', deployment.network, epochText],
+    queryFn: async () => {
+      const [prices, pending, published] = await Promise.all([
+        miningFile(`prices-${epoch}.json`),
+        miningFile(`pending-epoch-${epoch}.json`),
+        miningFile(`epoch-${epoch}.json`),
+      ])
+      return { prices, pending, published }
+    },
+    enabled: epoch !== null,
+    refetchInterval: 30_000,
+  })
   const detail = useReadContracts({
     contracts: [
       {
@@ -1463,20 +1596,34 @@ function Mining({ c, act, fund, busy }: { c: SidequestContracts; act: Act; fund:
   const [preparing, setPreparing] = useState(false)
   const [fundError, setFundError] = useState<string | null>(null)
   // The epoch's mining output (D17): setRoot and fund take their arguments from it, never from typed fields.
-  const [upload, setUpload] = useState<{ name: string; file: EpochFile } | { name: string; problem: string } | null>(
-    null,
-  )
+  const [upload, setUpload] = useState<MiningUpload | null>(null)
+  const [loading, setLoading] = useState(false)
   const loaded = upload !== null && 'file' in upload ? upload.file : null
+  const empty = upload !== null && 'empty' in upload ? upload : null
   const forThisEpoch = loaded !== null && epoch !== null && loaded.epoch === epoch
+  const context = { chainId: chain.id, reserve: c.miningReserve, distributor: c.distributor }
   const choose = async (chosen: File | undefined) => {
     if (chosen === undefined) return
-    const read = readEpochFile(await chosen.text(), {
-      chainId: chain.id,
-      reserve: c.miningReserve,
-      distributor: c.distributor,
-    })
-    setUpload(read.ok ? { name: chosen.name, file: read.file } : { name: chosen.name, problem: read.problem })
-    if (read.ok) setPicked(String(read.file.epoch))
+    const parsedUpload = miningUpload(await chosen.text(), context, chosen.name)
+    setUpload(parsedUpload)
+    if ('file' in parsedUpload) setPicked(String(parsedUpload.file.epoch))
+    if ('empty' in parsedUpload) setPicked(String(parsedUpload.epoch))
+  }
+  const load = async () => {
+    if (epoch === null) return
+    const name = `pending-epoch-${epoch}.json`
+    setLoading(true)
+    try {
+      const text = await miningFile(name)
+      setUpload(
+        text === null ? { name, problem: 'No pending epoch is stored yet.' } : miningUpload(text, context, name, epoch),
+      )
+      void artifacts.refetch()
+    } catch (error) {
+      setUpload({ name, problem: error instanceof ApiError ? error.message : 'The pending epoch is unavailable.' })
+    } finally {
+      setLoading(false)
+    }
   }
   const ended = end !== undefined && Number(end) <= now
   const hasRoot = root !== undefined && root.root !== `0x${'0'.repeat(64)}`
@@ -1484,14 +1631,18 @@ function Mining({ c, act, fund, busy }: { c: SidequestContracts; act: Act; fund:
   // read. Any funding since moves it; exactly the remainder means this file's funding already went in.
   const totalFunded = result<bigint>(base.data, 1)
   const spare = result<bigint>(base.data, 2)
-  const funding =
-    loaded?.fund == null || totalFunded === undefined
+  const funding = epochFunding(loaded, totalFunded)
+  const progress =
+    epoch === null
       ? null
-      : totalFunded === loaded.fund.expectTotalFunded
-        ? 'due'
-        : totalFunded - loaded.fund.expectTotalFunded === loaded.fund.amount
-          ? 'done'
-          : 'stale'
+      : miningProgress({
+          epoch,
+          root,
+          totalFunded,
+          context,
+          files: artifacts.data,
+          unavailable: artifacts.isError,
+        })
 
   return (
     <Section
@@ -1538,6 +1689,11 @@ function Mining({ c, act, fund, busy }: { c: SidequestContracts; act: Act; fund:
                 )}
                 {hasRoot && <KV k="Claimed">{`${fmt(root.claimed)} of ${fmt(root.total)}`}</KV>}
               </ItemGroup>
+            )}
+            {epoch !== null && (
+              <output className="rounded-lg bg-muted px-3 py-2 text-ui">
+                {progress === null ? 'Loading epoch status…' : `${progress.status}: ${progress.next}`}
+              </output>
             )}
             {epoch !== null && hasRoot && (
               <div className="grid gap-2 rounded-lg bg-muted px-3 py-2.5">
@@ -1588,16 +1744,21 @@ function Mining({ c, act, fund, busy }: { c: SidequestContracts; act: Act; fund:
                 The root, total and data hash come from <code className="font-mono">bun run mining:epoch</code>: choose
                 the <code className="font-mono">epoch-&lt;n&gt;.json</code> it wrote. Nothing is typed by hand.
               </p>
-              <label className="flex min-h-11 cursor-pointer items-center justify-center rounded-xl bg-primary/14 px-4 text-sm font-semibold text-primary focus-within:ring-2 focus-within:ring-primary/40">
-                {upload === null ? 'Choose epoch file' : 'Choose another file'}
-                <input
-                  type="file"
-                  accept="application/json,.json"
-                  aria-label="Epoch file"
-                  className="sr-only"
-                  onChange={(e) => void choose(e.target.files?.[0])}
-                />
-              </label>
+              <div className="flex flex-wrap gap-2">
+                <label className="flex min-h-11 flex-1 cursor-pointer items-center justify-center rounded-xl bg-primary/14 px-4 text-sm font-semibold text-primary focus-within:ring-2 focus-within:ring-primary/40">
+                  {upload === null ? 'Choose epoch file' : 'Choose another file'}
+                  <input
+                    type="file"
+                    accept="application/json,.json"
+                    aria-label="Epoch file"
+                    className="sr-only"
+                    onChange={(e) => void choose(e.target.files?.[0])}
+                  />
+                </label>
+                <Button variant="secondary" disabled={epoch === null || loading} onClick={() => void load()}>
+                  {loading ? 'Loading…' : 'Load from Sidequest'}
+                </Button>
+              </div>
               {upload !== null && 'problem' in upload && (
                 <Alert variant="destructive">
                   <AlertDescription>
@@ -1625,6 +1786,9 @@ function Mining({ c, act, fund, busy }: { c: SidequestContracts; act: Act; fund:
                   <code className="font-mono text-xs break-all">{loaded.dataHash}</code>
                 </KV>
               </ItemGroup>
+            )}
+            {empty !== null && empty.epoch === epoch && (
+              <p className="rounded-lg bg-muted px-3 py-2 text-ui">Empty epoch: nothing to fund</p>
             )}
             {loaded !== null && !forThisEpoch && (
               <p className="text-ui text-muted-foreground">
@@ -1703,7 +1867,15 @@ function Mining({ c, act, fund, busy }: { c: SidequestContracts; act: Act; fund:
                 <p className="text-ui font-semibold">2. Post the root</p>
 
                 {hasRoot ? (
-                  <p className="text-ui text-muted-foreground">Posted.</p>
+                  <p className="text-ui text-muted-foreground">
+                    Posted. Publishing runs automatically within the hour{' '}
+                    <a
+                      className="text-primary underline"
+                      href="https://github.com/grmkris/sidequest/actions/workflows/mining.yml"
+                    >
+                      View workflow
+                    </a>
+                  </p>
                 ) : (
                   <>
                     {spare !== undefined && spare < loaded.total && (
