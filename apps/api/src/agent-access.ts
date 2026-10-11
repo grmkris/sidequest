@@ -56,7 +56,7 @@ export function agentConnections(sql: Sql, agentId: string, now: number): AgentC
 }
 
 /** Ends one connection: its tokens stop at once and its event subscriptions are terminated. */
-export function disconnectAgent(sql: Sql, agentId: string, familyId: string, now: number): boolean {
+function disconnectAgent(sql: Sql, agentId: string, familyId: string, now: number): boolean {
   if (sql.atomic === undefined) throw new BoardError('unavailable', 'Disconnecting requires atomic storage')
   return sql.atomic(
     () =>
