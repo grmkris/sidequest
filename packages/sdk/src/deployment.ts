@@ -37,7 +37,7 @@ export const PRODUCTION_CLOCKS: SidequestClocks = Object.freeze({
   minDisputeWindow: 3600,
   minArbitrationWindow: 43200,
   unstakeDelay: 1209600,
-  holdingDelay: 1296000,
+  holdingDelay: 1814400,
   feeDelay: 259200,
   proposalGrace: 604800,
   epochZeroDuration: 259200,

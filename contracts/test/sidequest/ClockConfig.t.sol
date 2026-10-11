@@ -69,7 +69,7 @@ contract ClockConfigTest is Test {
         );
         this.loadExternal();
         vm.writeJson(
-            '{"minReviewWindow":3600,"minDisputeWindow":3600,"minArbitrationWindow":43200,"unstakeDelay":1209600,"holdingDelay":1296000,"feeDelay":259200,"proposalGrace":604800,"epochZeroDuration":259200,"epochDuration":604800}',
+            '{"minReviewWindow":3600,"minDisputeWindow":3600,"minArbitrationWindow":43200,"unstakeDelay":1209600,"holdingDelay":1814400,"feeDelay":259200,"proposalGrace":604800,"epochZeroDuration":259200,"epochDuration":604800}',
             path,
             ".sidequest.clocks"
         );

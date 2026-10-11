@@ -18,7 +18,7 @@ import {SidequestConstants} from "./interfaces/SidequestConstants.sol";
 ///         `SidequestConstants.SLASH_SINK` (SIDE has no `burn`), and a Holding
 ///         can only ever release, slash or forfeit what it reserved itself. Forfeiture transfers SIDE to a recipient.
 ///         Holdings are authorized behind an immutable timelock
-///         longer than the immutable unstake cooldown (production: 15 days > 14 days), and revoked instantly; a revoked Holding still settles its live jobs.
+///         longer than the immutable unstake cooldown (production: 21 days > 14 days), and revoked instantly; a revoked Holding still settles its live jobs.
 ///
 ///         This contract holds everyone's stake. Its only external calls are to the immutable SIDE token, which has
 ///         no hooks, and every state-changing entry point is non-reentrant anyway.
