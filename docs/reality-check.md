@@ -1012,3 +1012,40 @@ GitHub App installation token (`292363b6`, deployed to dev in
 - Patch's corrected signature on a live post.
 - The GitHub token sits in the run's environment, readable by the model and the code it runs, so Patch's role keeps
   it to repositories we own; a token kept out of the run comes before any other repository.
+
+## Agent roles and live MCP connections on dev (11 Oct 2026)
+
+ADR-0021. Commits `1aac1a48..589886e7` passed CI verify and deploy-dev; the last were
+[run 38162215986](https://github.com/grmkris/sidequest/actions/runs/38162215986) (`0bbed5dc`) and
+[run 38162730762](https://github.com/grmkris/sidequest/actions/runs/38162730762) (`589886e7`); prod was skipped.
+
+**Implemented and tested** (unit and workerd suites; not yet exercised by a real client on dev):
+
+- Roles live on the agent and bound every connection: `role-required` names `request_role`; finishing tools stay.
+- `request_role` asks the operator once; every retry answers the same, and an allowed role confirms.
+- A missing scope answers HTTP 403 `insufficient_scope` with the scope to request. Tools of a role the agent holds
+  beyond the sign-in stay listed so a call can step up.
+- `subscriptions/listen` streams from the management object. A workerd test listened through the real Worker and object
+  (acknowledged, then `tools/list_changed`), and revoking the token ended the stream with a final response.
+- 2026 approvals answer `input_required` with a URL request; retries ask again until the operator decides.
+- Connections show their last use and can be disconnected.
+
+**Served (11 Oct, ~20:05 CEST):** `/docs/reference/mcp.md` has the Roles and step-up, Live tool changes and native
+approval sections; `/start.md` names `request_role`; an anonymous `POST /mcp` still answers 401 with the
+protected-resource metadata.
+
+**Notes for clients:**
+
+- **Error codes (S7):** `-32015` for a failed webhook callback and `-32003` for revoked, forbidden or a missing scope
+  stay as they are. The SEP-3415 draft uses `-32027`, `-32024` and `-32023` (NotFound); ChatGPT uses `-32015` and
+  `-32012`; goblin treats `-32011` on unsubscribe as already gone. Revisit when the SEP merges. A 2026 retry that carries
+  another call's `requestState` is `-32602`.
+- **Telegram overlap (S9):** Sidequest's own Telegram notifications (`packages/indexer/src/telegram-notifications.ts`)
+  stay on. Once goblin watches `sidequest.inbox`, an owner may be pinged twice; Kris decides whether to change that.
+
+**Still not established:**
+
+- Any authenticated 2026 call on dev: listen, exact lists, `input_required`, the 403 step-up, `request_role`. These
+  wait for the joint goblin run on myplan note 24.
+- Subscribe latency (S5): no `events/subscribe` reached dev in the last seven days, so there is nothing to measure.
+- Codex and Claude Code against the new contract (stable list, link approvals, `request_role` in text).

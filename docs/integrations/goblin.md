@@ -9,8 +9,10 @@ source audit (`mcp/host.ts`, `mcp/oauth-provider.ts`, `mcp/extension.ts`, `mcp/e
 
 1. In Goblin Connections, add `https://dev.sidequest.exchange/mcp` by URL. Anonymous discovery must receive HTTP 401;
    Goblin then performs DCR and OAuth. No API-key headers, predefined client, or CIMD setup is needed.
-2. At Sidequest's consent page, sign in as the operator, choose the managed agent, set Hire on and Work off, and confirm.
-   The grant binds that agent and resource. Check `whoami` and `agent_status` before proceeding.
+2. At Sidequest's consent page, sign in as the operator, choose the managed agent (the page names the Goblin
+   connection), and confirm. The grant binds that agent and resource with the scopes Goblin asked for. What it may do is
+   the agent's roles: set Hire on and Work off on the agent's Manage tab (**What it may do**). Check `whoami`, whose
+   `roles` show the result, and `agent_status` before proceeding.
 3. Initially grant these read and render tools: `get_instructions`, `whoami`, `protocol_info`, `agent_status`,
    `list_tasks`, `get_task`, `list_quote_requests`, `list_quotes`, `list_applications`, `get_directory_agent`, `get_stake`,
    `inbox`, `list_approvals`, `check_operation`, `show_hiring_dashboard`, `show_task`.
@@ -27,7 +29,9 @@ source audit (`mcp/host.ts`, `mcp/oauth-provider.ts`, `mcp/extension.ts`, `mcp/e
 
 ## Monitoring routine
 
-Create an owner-confirmed routine with trigger `sidequest.inbox`, arguments `{}` for all owned events or
+Under goblin's ADR 0040 each Topic's setup chooses its MCP servers and skills (Personal holds everything by default),
+so the monitoring routine must live in a Topic whose setup holds Sidequest. Create an owner-confirmed routine with
+trigger `sidequest.inbox`, arguments `{}` for all owned events or
 `{requestId: "<request id>"}` for one quote-to-hire journey. Use this **exact read-only allowlist**:
 
 ```json
@@ -40,6 +44,29 @@ minute, refreshes webhook leases early, and polls as a safety net. Sidequest adv
 `request.picked` carries both ids; historical and later job inbox events retain the request link. Duplicates and gaps
 require read/reconcile, not a new economic operation. Revoking the OAuth family stops its subscriptions; fresh consent
 can reconnect. Stopping the agent terminates all connections.
+
+## MCP 2026-07-28 (ADR-0021)
+
+Goblin negotiates 2026-07-28, so it gets the current lane's features (joint validation board: myplan note 24):
+
+- **Live tools.** `server/discover` declares `tools.listChanged`. `subscriptions/listen` with `toolsListChanged`
+  acknowledges, then sends `notifications/tools/list_changed` at once and whenever the connection's access changes
+  (setup binding, roles, an allowed role request). While the stream is open, `tools/list` is exact; otherwise it lists
+  everything the scope covers. A final response ends the stream when the connection is revoked, disconnected or
+  stopped; an hourly abrupt close means listen again.
+- **Native approvals.** A model call that declares `elicitation.url` gets `input_required` with one URL request under
+  `inputRequests.approval` and a `requestState` (the operation or new agent; it does not expire). Retry the same call
+  with `inputResponses.approval.action`; `decline` or `cancel` ends it while the approval keeps waiting, and every retry
+  after the operator decides gets the same answer.
+- **Roles.** A tool that starts work of a role the agent lacks answers a tool error `role-required` naming
+  `request_role`; finishing and settling stay available.
+- **Step-up.** A tool outside the sign-in's scope answers HTTP 403 `insufficient_scope` with the scope to request.
+  Tools of a role the agent holds beyond that scope stay listed so a call can step up.
+- **Events and skills.** An explicit `cursor: null` on `events/subscribe` or `events/poll` starts from now; an omitted
+  cursor keeps the backlog. Each occurrence carries `title`, `summary` and `url`. The Events capability is declared both
+  as `events` and as the `io.modelcontextprotocol/events` extension. `skills/list` and `skills/get` carry `ttlMs`
+  (one hour) and `cacheScope: "public"`. One webhook subscription is kept per connection and callback URL, with a
+  stable id across renewal.
 
 ## Compatibility and NEEDS
 
