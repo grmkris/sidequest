@@ -44,9 +44,10 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
     setBusy(true)
     setError(null)
     try {
+      // An agent connection never carries setup: that scope only lets a coding agent create one.
       const scopes =
         request.data?.request.scopes.filter((scope) =>
-          scope === 'sidequest:work' ? work : scope === 'sidequest:hire' ? hire : true,
+          scope === 'sidequest:work' ? work : scope === 'sidequest:hire' ? hire : scope !== 'sidequest:setup',
         ) ?? []
       const response = await agentEndpoint<{ redirectUrl: string }>(`/oauth/requests/${requestId}/approve`, 'POST', {
         decision: approved ? 'approve' : 'reject',
