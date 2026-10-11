@@ -3,7 +3,8 @@ pragma solidity ^0.8.28;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {NoRenounce} from "./NoRenounce.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
@@ -29,7 +30,7 @@ import {SidequestClocks} from "./SidequestClocks.sol";
 ///         entry point is non-reentrant; escrow is pooled per token; and every outflow is a push with a fixed gas
 ///         budget that falls back to `owed`, so a token that refuses, reverts or burns gas can delay only its own
 ///         payees and never blocks a bond or another payee.
-contract SidequestHolding is ISidequestHolding, EIP712, Ownable2Step, ReentrancyGuardTransient {
+contract SidequestHolding is ISidequestHolding, EIP712, NoRenounce, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     bytes32 public constant SELECTION_TYPEHASH = keccak256(

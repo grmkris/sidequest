@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {NoRenounce} from "./NoRenounce.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {IFactory} from "./interfaces/IFactory.sol";
@@ -21,7 +22,7 @@ import {SidequestConstants} from "./interfaces/SidequestConstants.sol";
 ///
 ///         This contract holds everyone's stake. Its only external calls are to the immutable SIDE token, which has
 ///         no hooks, and every state-changing entry point is non-reentrant anyway.
-contract StakeVault is IStakeVault, Ownable2Step, ReentrancyGuardTransient {
+contract StakeVault is IStakeVault, NoRenounce, ReentrancyGuardTransient {
     using SafeERC20 for IFactory;
     using SafeCast for uint256;
 

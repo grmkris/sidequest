@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {NoRenounce} from "./NoRenounce.sol";
 import {IFeeSchedule} from "./interfaces/IFeeSchedule.sol";
 import {SidequestConstants} from "./interfaces/SidequestConstants.sol";
 import {SidequestClocks} from "./SidequestClocks.sol";
@@ -10,7 +11,7 @@ import {SidequestClocks} from "./SidequestClocks.sol";
 /// @notice The worker's platform fee by staked SIDE (ADR-0011; the full contract is in `IFeeSchedule`). The owner
 ///         (the Safe) retunes the tiers and the treasury through an immutable timelock (production: 3 days), within fixed bounds. Jobs snapshot
 ///         their rate at activation, so a change never reaches a live job.
-contract FeeSchedule is IFeeSchedule, Ownable2Step {
+contract FeeSchedule is IFeeSchedule, NoRenounce {
     uint48 public immutable DELAY;
     uint16 public constant MAX_BPS = SidequestConstants.MAX_FEE_BPS;
     uint48 public immutable PROPOSAL_GRACE;

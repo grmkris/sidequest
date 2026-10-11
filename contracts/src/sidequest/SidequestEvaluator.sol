@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {NoRenounce} from "./NoRenounce.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -17,7 +18,7 @@ import {ISidequestEvaluator} from "./interfaces/ISidequestEvaluator.sol";
 ///         from the legacy `JobsEvaluator` without contests. The windows, approver and arbitrator are each listing's
 ///         own (`holding.termsOf`). Every terminal path records the outcome and any slash before it touches a bond or
 ///         the core (M1), pays the worker through `_payWorker` (M2), and decides a job at most once.
-contract SidequestEvaluator is ISidequestEvaluator, EIP712, Ownable2Step, ReentrancyGuardTransient {
+contract SidequestEvaluator is ISidequestEvaluator, EIP712, NoRenounce, ReentrancyGuardTransient {
     bytes32 public constant EVIDENCE_TYPEHASH = keccak256(
         "EvidenceAttestation(uint256 jobId,bytes32 submissionHash,bytes32 policyHash,bytes32 repo,bytes32 headSha,bytes32 testedSha,bytes32 checkRunsHash,uint8 conclusion,uint256 validUntil)"
     );
