@@ -46,6 +46,7 @@ import { BondHorizonNotice } from '../components/BondHorizonNotice.tsx'
 import { RequestTerms } from '../components/job/RequestTerms.tsx'
 import { Brief, Parties } from '../components/job/JobParts.tsx'
 import { JOBS_LABEL } from '../places.ts'
+import { type BackingRefusal, backingRefusal } from '../backing-refusal.ts'
 
 type Auth = ReturnType<typeof useSignedIn>
 /** What `list_quote_requests` carries beyond the shared type: the request as frozen (checks, deliverable spec). */
@@ -119,6 +120,7 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
   const [cap, setCap] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [refusal, setRefusal] = useState<BackingRefusal | null>(null)
   const [picked, setPicked] = useState<(Picked & { quote: Quote }) | null>(null)
   const [publish, setPublish] = useState<{ taskId: string; txs: TxRequest[] } | null>(null)
   const [sheet, setSheet] = useState(false)
@@ -187,6 +189,7 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
       setSheet(true)
     } catch (e) {
       setError((e as Error).message)
+      setRefusal(backingRefusal(e))
     } finally {
       setBusy(false)
     }
@@ -206,6 +209,7 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
       setSheet(true)
     } catch (e) {
       setError((e as Error).message)
+      setRefusal(backingRefusal(e))
     } finally {
       setPreparing(false)
     }
@@ -324,9 +328,7 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
                 </Item>
               </ItemGroup>
               {error !== null && picking === null && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
+                <RequestError error={error} refusal={refusal} agentId={posterAgent} />
               )}
             </Section>
           )}
@@ -634,11 +636,7 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
           ) : (
             <p className="text-sm text-muted-foreground">This quote declares no running costs.</p>
           ))}
-        {error !== null && picking !== null && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        {error !== null && picking !== null && <RequestError error={error} refusal={refusal} agentId={posterAgent} />}
       </ConfirmSheet>
     </>
   )
@@ -782,4 +780,42 @@ function WorkerLoad({ load }: { load: Quote['workerLoad'] }) {
     load.awaitingActivation > 0 ? `${load.awaitingActivation} waiting to start` : '',
   ].filter((part) => part !== '')
   return <span>{parts.length === 0 ? 'No unfinished jobs' : parts.join(' · ')}</span>
+}
+
+/**
+ * A pick or publish that failed. A post refused for want of backing says so plainly, with the shortfall and the way to
+ * add it: the agent's backing sheet, filled in. Any other failure shows the board's own words.
+ */
+function RequestError({
+  error,
+  refusal,
+  agentId,
+}: {
+  error: string
+  refusal: BackingRefusal | null
+  agentId: string | null
+}) {
+  if (refusal === null)
+    return (
+      <Alert variant="destructive">
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    )
+  return (
+    <output className="grid gap-2 rounded-xl bg-warning/14 p-4 text-sm text-warning-text">
+      <p className="text-pretty">
+        This post holds a <span className="tabular-nums">{refusal.bond}</span> SIDE creator bond, and only{' '}
+        <span className="tabular-nums">{refusal.available}</span> SIDE of backing is free behind the posting agent. Add{' '}
+        <span className="tabular-nums">{refusal.short}</span> SIDE of backing, then pick again.
+      </p>
+      {agentId !== null && (
+        <BoardLink
+          target={{ ...boardRoutes().agent(agentId), search: { back: refusal.short } }}
+          className={`${textLinkClass} inline-flex min-h-10 items-center self-start`}
+        >
+          Back this agent with {refusal.short} SIDE
+        </BoardLink>
+      )}
+    </output>
+  )
 }

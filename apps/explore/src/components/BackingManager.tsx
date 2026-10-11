@@ -47,11 +47,14 @@ export function BackingManager({
   owner,
   scope = { kind: 'account' },
   sheet,
+  initialAmount,
 }: {
   owner: Address
   scope?: { kind: 'account' } | { kind: 'agent'; account: Address; agentId?: string }
   /** Agent scope only: the form opens in this sheet instead of inline. */
   sheet?: BackingSheet
+  /** SIDE to fill the amount with, e.g. an agent's shortfall from a `?back=` link. */
+  initialAmount?: string | undefined
 }) {
   return (
     <Stake
@@ -61,6 +64,7 @@ export function BackingManager({
       initialAccount={scope.kind === 'agent' ? scope.account : undefined}
       scope={scope}
       sheet={scope.kind === 'agent' ? sheet : undefined}
+      initialAmount={initialAmount}
     />
   )
 }
@@ -71,12 +75,14 @@ function Stake({
   initialAccount,
   scope,
   sheet: agentSheet,
+  initialAmount,
 }: {
   contracts: SidequestContracts
   owner: Address
   initialAccount: Address | undefined
   scope: { kind: 'account' } | { kind: 'agent'; account: Address; agentId?: string }
   sheet: BackingSheet | undefined
+  initialAmount: string | undefined
 }) {
   const queryClient = useQueryClient()
   const reads = useDelegations(contracts, owner)
@@ -97,7 +103,7 @@ function Stake({
     setMode(next)
     setSheet('form')
   }
-  const [text, setText] = useState('')
+  const [text, setText] = useState(initialAmount ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [interrupted, setInterrupted] = useState<InterruptedVaultPreparation | null>(null)

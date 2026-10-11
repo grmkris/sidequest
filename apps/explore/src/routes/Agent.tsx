@@ -24,6 +24,7 @@ import { useAuth } from '../components/Wallet.tsx'
 import { useOwnedAgent } from '../managed.ts'
 import { chain, deployment } from '../wallet.ts'
 import type { AgentSummary } from '../agent-summary.ts'
+import { backAmount } from '../backing-refusal.ts'
 
 /** The ERC-8004 identity registry's reads the operator console needs (the SDK's ABI has no `tokenURI`). */
 const identityAbi = [
@@ -264,7 +265,9 @@ function Profile({ id }: { id: string }) {
   const { address } = useAuth()
   const now = useNow()
   // "Back this agent" (the header's, and Manage's) opens the backing form in a sheet, for the owner and everyone else.
-  const [backing, setBacking] = useState(false)
+  // A `?back=<SIDE>` link (a backing request or a refused post) opens it with that amount filled in.
+  const [backPrefill] = useState(() => backAmount(window.location.search))
+  const [backing, setBacking] = useState(backPrefill !== null)
   const openBacking = () => setBacking(true)
   const again = lastPaidJob(record.data?.jobs ?? [], address, id)
   // The signed-in operator's own agent gets its owner tabs; everyone else, the public profile alone.
@@ -349,7 +352,14 @@ function Profile({ id }: { id: string }) {
         />
       )}
       {wallet !== undefined && identity.exists !== false && (
-        <BackSheet id={id} wallet={wallet} viewer={address} open={backing} onOpenChange={setBacking} />
+        <BackSheet
+          id={id}
+          wallet={wallet}
+          viewer={address}
+          open={backing}
+          onOpenChange={setBacking}
+          initialAmount={backPrefill ?? undefined}
+        />
       )}
     </>
   )
@@ -365,12 +375,14 @@ function BackSheet({
   viewer,
   open,
   onOpenChange,
+  initialAmount,
 }: {
   id: string
   wallet: `0x${string}`
   viewer: `0x${string}` | undefined
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialAmount: string | undefined
 }) {
   if (viewer === undefined)
     return (
@@ -384,6 +396,7 @@ function BackSheet({
       owner={viewer}
       scope={{ kind: 'agent', account: wallet, agentId: id }}
       sheet={{ open, onOpenChange }}
+      initialAmount={initialAmount}
     />
   )
 }
