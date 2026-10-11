@@ -94,3 +94,9 @@ most half of it. Faking volume always costs more than it mints, at the reference
   yet configured; see `docs/mainnet-gate-findings.md`.
 - **Published epochs keep their v1 rule.** Testnet switches at the first epoch after release, and mainnet starts at
   epoch 0.
+
+## Amendment — 11 October 2026
+
+The Safe still signs price lists, funds epochs and sets roots. A GitHub Action
+now computes epochs for the `dev` stage on Monad testnet and publishes them
+after the root is on chain. Prod and mainnet remain manual until Kris enables them.

@@ -5,7 +5,7 @@ import { type DeploymentConfig } from '../../packages/sdk/src/deployment.ts'
 import { client } from './chain.ts'
 import { CloudflareManifests, MiningPublishError, publishArgs, publishEpoch, stageOf } from './publish-lib.ts'
 
-// Coordinator-only live command: no deployment, state initialization, signer or on-chain transaction.
+// Action/coordinator publication command: no deployment, state initialization, signer or on-chain transaction.
 try {
   const args = publishArgs(process.argv.slice(2))
   const selected = stageOf(args.stage)

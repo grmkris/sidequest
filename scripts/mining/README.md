@@ -1,7 +1,7 @@
 # Work mining: one epoch (B8)
 
-After the Safe has funded and published the epoch root, the coordinator publishes
-the computed file for Collect:
+After the Safe has funded and set the epoch root, the Action publishes the
+computed file for Collect:
 
 ```
 bun run mining:publish <epoch-n.json> --stage dev|prod
@@ -25,6 +25,61 @@ stage/network bindings, and the exact Manifests bucket binding and bucket readba
 `infra/dev.json` and `infra/prod.json` select independent resources on the same testnet deployment.
 Unit tests use fake R2 only; the
 coordinator runs live publication.
+
+## Pipeline (dev)
+
+The [`Mining` GitHub Action](../../.github/workflows/mining.yml) runs hourly at
+minute 41, or by workflow dispatch, in the GitHub `dev` environment:
+
+```
+bun run mining:pipeline --stage dev [--dry-run]
+```
+
+It computes ended epochs with HyperSync, uploads
+the pending state before the pending epoch, and publishes once the Safe's root
+is on chain. `--dry-run` lists the same plan and summary without computing,
+uploading or publishing.
+
+The API Manifests bucket contains these keys:
+
+- `mining/prices-<n>.json` is the exact Safe-signed price list uploaded from `/admin`.
+- `mining/previous-prices-<n>.json` is the optional signed previous list uploaded with it.
+- `mining/pending-state-<n>.json` and `mining/pending-epoch-<n>.json` are the Action's exact builder bytes.
+- `mining/state-<n>.json` and `mining/epoch-<n>.json` are published after root, total and dataHash readback.
+
+The API serves these filenames under `GET /data/mining/<name>` as raw bytes
+with `cache-control: no-store`; a missing object is a 404. No other mining
+filenames are served.
+
+Each pass publishes all pending epochs whose non-null root, total and dataHash
+match `rootOf(n)`, in numeric order. It then selects the highest epoch with
+prices that is neither published nor empty, and abandons lower unprocessed
+epochs. A set root without a matching pending file fails with `root-mismatch`.
+A missing pending file, changed price signature or changed rooted checkpoint
+anchor triggers computation only after the finalized epoch end and funding
+finality. Later funded epochs prevent replay and cause abandonment. A pending
+file with `root: null` is terminal and needs no funding or root.
+
+Previous prices come from the published `epoch-<n−1>.json`'s top-level
+`priceList`, then `prices-<n−1>.json`, then `previous-prices-<n>.json`. With no
+official-pool samples, the builder requires the previous signed list. Replay
+uses a fresh temporary checkpoint directory with a fallback to the published
+store, verifying the onchain commitment, state hash, block hash, chain,
+contracts and rule before restoring the latest rooted v2 checkpoint.
+
+The Safe owner signs and uploads prices in `/admin`, then loads the computed
+epoch from the API to fund it and set its root. The Action sends no transaction
+and receives no signing key. Prod and mainnet remain manual;
+`--stage prod` refuses with `pipeline-off` until Kris enables it.
+
+The workflow uses `MONAD_RPC_URL`, `HYPERSYNC_API_TOKEN`,
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. It serializes runs in
+`mining-dev` without cancelling an active run. Stdout and `$GITHUB_STEP_SUMMARY`
+show epoch, status, exact total SIDE, leaves, short root/sha256 and the owner's
+next step. Statuses are `waiting-prices`, `pending`, `empty`, `funded`, `rooted`,
+`published`, `abandoned` or `failed:<code>`. A not-yet-ended epoch or nonfinal
+funding waits with exit 0; other refusals exit 1. Provider bodies, RPC URLs and
+tokens are excluded from the summary.
 
 `bun run mining:epoch <n>` computes epoch `n`'s rewards from chain data alone, then writes the Merkle tree the
 `EpochDistributor` pays from, plus the Safe's two calls. It never reads the indexer or D1. Rules: ADR-0011, D12 #2, D17
@@ -50,7 +105,7 @@ bun run mining:epoch <n> --recompute <published epoch-n.json> [--network ...] [-
   halved and retried.
 - **Tests.** `bun test scripts/mining` runs the fixture tests. The anvil fork run is step 7 of
   `contracts/script/rehearse-launch.sh`.
-  - **Test floor:** 186 passed / 3 skipped across 24 files, recorded on 11 October 2026 with
+  - **Test floor:** 215 passed / 3 skipped across 27 files, recorded on 11 October 2026 with
     `heavy bun --no-env-file test scripts/mining` and RPC variables unset. The coordinator runs the three fork tests;
     the backer-share and credit fork tests check that a backer claim grows `positionOf(backer, backer)`.
   - **Testnet runner floor:** 13 passed / 9 skipped across 4 files with
