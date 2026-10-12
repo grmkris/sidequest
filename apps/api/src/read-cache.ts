@@ -34,8 +34,9 @@ export function responseCacheControl(request: CacheRequest, response: HttpServer
   // Wallet-filtered discovery stays uncached even though the chain facts are public.
   if (url.searchParams.has('wallet')) return 'no-store'
   const seconds = PUBLIC_TTL[path]
-  if (seconds !== undefined && response.status === 200)
-    return `public, max-age=${seconds}, s-maxage=${seconds}, stale-while-revalidate=${seconds}`
+  // Shared caches may hold public discovery briefly; browsers must not, or the refetch Explore makes right after a
+  // viewer's own action (approve, cancel, back) would read the copy from before it.
+  if (seconds !== undefined && response.status === 200) return `public, max-age=0, s-maxage=${seconds}`
   // Preserve established immutable asset/offer and verified preview policies.
   if (
     /^\/(?:avatars|offers|profiles)\//.test(path) ||

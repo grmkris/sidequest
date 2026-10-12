@@ -10,9 +10,9 @@ const read = (path: string, headers: Record<string, string> = {}, method = 'GET'
   responseCacheControl({ method, url: `https://api.example${path}`, headers }, response)
 
 it('gives bounded freshness only to allowlisted public discovery replies, including tenant lists', () => {
-  expect(read('/data/boards')).toBe('public, max-age=60, s-maxage=60, stale-while-revalidate=60')
-  expect(read('/b/team/data/jobs?cursor=50')).toBe('public, max-age=10, s-maxage=10, stale-while-revalidate=10')
-  expect(read('/data/directory?after=50')).toContain('max-age=30')
+  expect(read('/data/boards')).toBe('public, max-age=0, s-maxage=60')
+  expect(read('/b/team/data/jobs?cursor=50')).toBe('public, max-age=0, s-maxage=10')
+  expect(read('/data/directory?after=50')).toContain('s-maxage=30')
 })
 
 it('bypasses credentials, personalized data, errors, mutations and live economic reads', () => {
@@ -61,7 +61,7 @@ it('composes timing with the cache policy and varies on every bypass credential 
       ),
     ),
   )
-  expect(response.headers['cache-control']).toContain('max-age=10')
+  expect(response.headers['cache-control']).toBe('public, max-age=0, s-maxage=10')
   expect(response.headers.vary).toBe('origin, accept-encoding, authorization, cookie, mcp-session-id, x-privy-token')
   expect(response.headers['x-request-id']).toMatch(/^[a-f\d-]{36}$/)
   expect(response.headers['server-timing']).toMatch(/^api;dur=/)
