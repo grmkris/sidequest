@@ -149,3 +149,22 @@ loop:
     tail -f .crew/activity/state/events.jsonl                 # the same, as JSON
     docker exec sq-hirers /opt/bin/bun crew/bin/hirers.ts status
     docker rm -f sq-hirers sq-backers                         # stop
+
+## Roles: the arbiter, the moderator and the maintainer
+
+`bin/roles.ts` runs the ecosystem roles as always-on containers of the crew image, from a detached worktree pinned to a
+released commit (`agent-jobs.wt/roles`), never the shared checkout:
+
+- `sq-arbiter` rules disputes on both testnet boards (dev and prod);
+- `sq-moderator` and `sq-maintainer` keep dev's Commons (moderation, and the CTO bot's triage and shipping).
+
+Each role's keys and model key reach its container through its own env file (mode 600, `.crew/roles/env/`) holding
+only the variables that role reads, from `.env.local`, `~/.config/secrets.env`, `~/.config/cliproxy.env` and the dev
+stage env; nothing is printed. The moderator's and maintainer's cursors live in `.crew/roles/state`.
+
+    bun crew/bin/roles.ts up <released sha> [arbiter|moderator|maintainer…]   # pin, install once, start
+    bun crew/bin/roles.ts status
+    docker logs -f sq-arbiter
+    bun crew/bin/roles.ts down
+
+Run one arbiter at a time: stop any other arbiter for the same key before starting `sq-arbiter`.
