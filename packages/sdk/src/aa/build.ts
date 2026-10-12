@@ -286,6 +286,15 @@ function scaledPreVerification(op: UserOperation, unpaidLimits: bigint): UserOpe
   return { ...op, preVerificationGas: (op.preVerificationGas * paid + unpaidLimits - 1n) / unpaidLimits }
 }
 
+/**
+ * The bound shown and pulled for is the one signed: final paymaster limits above the bounded ones would raise what the
+ * operation can cost (found in the pre-launch review, 13 Oct).
+ */
+function keptBound(op: UserOperation, tokenQuote: TokenQuote, maxCost: bigint): void {
+  if (maxTokenCost(op, tokenQuote) > maxCost)
+    throw new AaError('mismatch', 'the paymaster raised its gas limits after the cost was bounded')
+}
+
 /** Checks the lane is free and the paymaster is configured; returns the paymaster. */
 async function preflight(input: BuildInput): Promise<Address | null> {
   const paymaster = input.aa.paymaster
@@ -331,6 +340,7 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
   const final = await input.paymaster('pm_getPaymasterData', params(op))
   op = withPaymaster(op, final, sponsored ? null : paymaster)
   if (sponsored) op = withSponsorGas(op, final)
+  else if (tokenQuote !== null) keptBound(op, tokenQuote, maxCost)
   return {
     op,
     authorization: input.authorization,

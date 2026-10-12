@@ -78,6 +78,17 @@ function services(
   return { node, bundler, paymaster, log }
 }
 
+/** Services whose final paymaster answer carries these limits on top of the stub's. */
+function raised(limits: Record<string, string>) {
+  const s = services()
+  const paymaster = s.paymaster
+  s.paymaster = async (method, params) => {
+    const answer = await paymaster(method, params)
+    return method === 'pm_getPaymasterData' ? { ...Object(answer), ...limits } : answer
+  }
+  return s
+}
+
 const build = (s: ReturnType<typeof services>, extra: Partial<Parameters<typeof buildUserOp>[0]> = {}) =>
   buildUserOp({
     aa,
@@ -197,6 +208,16 @@ describe('building a user operation', () => {
       code: 'ceiling',
     })
     expect(capped.log).not.toContain('paymaster:pm_getPaymasterData')
+  })
+
+  it("refuses final paymaster limits that would cost more than the bound, and keeps the bound when they don't", async () => {
+    // Pre-launch review (13 Oct): the cost was bounded before the final answer's limits were merged.
+    await expect(build(raised({ paymasterPostOpGasLimit: toHex(900_000n) }))).rejects.toMatchObject({
+      code: 'mismatch',
+    })
+    const same = await build(raised({ paymasterVerificationGasLimit: '0xb000', paymasterPostOpGasLimit: '0xa000' }))
+    const quote = { paymaster: PAYMASTER, exchangeRate: 27_888n, postOpGas: 0x907en }
+    expect(same.maxCost).toBe(maxTokenCost(same.op, quote))
   })
 
   it("asks a sponsor to sign the padded pre-verification gas, then keeps the sponsor's own value", async () => {
