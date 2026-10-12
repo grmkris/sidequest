@@ -44,6 +44,8 @@ const call = (tool: string, args: Record<string, unknown>, result: unknown) => (
   now,
 })
 
+/** The task's publish transaction: only its report announces picks and invitations. */
+const PUBLISH = '0xabababababababababababababababababababababababababababababababab'
 describe('board feed hook', () => {
   it.each(['public', 'team'])('links %s task notices to their draft resume or published chain job', async (boardId) => {
     const { board } = await setup()
@@ -63,7 +65,9 @@ describe('board feed hook', () => {
       expect(url.searchParams.get('resume')).toBe('t1')
       expect(url.searchParams.get('board')).toBe(boardId)
     }
-    board.run("UPDATE tasks SET job_id = '42' WHERE id = 't1'")
+    board.run(
+      "UPDATE tasks SET job_id = '42', publish_tx = '0xabababababababababababababababababababababababababababababababab' WHERE id = 't1'",
+    )
     const publishedNotices = notices()
     expect(publishedNotices).toHaveLength(2)
     for (const event of publishedNotices)
@@ -122,8 +126,10 @@ describe('board feed hook', () => {
     board.run("UPDATE applications SET note = 'picked quote q1' WHERE id = 'a1'")
     expect(boardFeedEvents(board, call('pick_quote', { requestId: 'r1', quoteId: 'q1' }, { taskId: 't1' }))).toEqual([])
     expect(boardFeedEvents(board, call('report_transaction', { taskId: 't1' }, {}))).toEqual([])
-    board.run("UPDATE tasks SET job_id = '42' WHERE id = 't1'")
-    const events = boardFeedEvents(board, call('report_transaction', { taskId: 't1' }, {}))
+    board.run(
+      "UPDATE tasks SET job_id = '42', publish_tx = '0xabababababababababababababababababababababababababababababababab' WHERE id = 't1'",
+    )
+    const events = boardFeedEvents(board, call('report_transaction', { taskId: 't1', txHash: PUBLISH }, {}))
     expect(events.filter((e) => e.kind === 'request.picked')).toEqual([
       expect.objectContaining({
         id: `board:public:picked:r1:${creator}`,
@@ -152,8 +158,11 @@ describe('board feed hook', () => {
     const { board, d1 } = await setup()
     board.run("UPDATE quote_requests SET task_id = 't1' WHERE id = 'r1'")
     board.run("UPDATE applications SET note = 'picked quote q1' WHERE id = 'a1'")
-    board.run("UPDATE tasks SET job_id = '42' WHERE id = 't1'")
-    for (let i = 0; i < 2; i++) await recordBoardEvent(board, d1, call('report_transaction', { taskId: 't1' }, {}))
+    board.run(
+      "UPDATE tasks SET job_id = '42', publish_tx = '0xabababababababababababababababababababababababababababababababab' WHERE id = 't1'",
+    )
+    for (let i = 0; i < 2; i++)
+      await recordBoardEvent(board, d1, call('report_transaction', { taskId: 't1', txHash: PUBLISH }, {}))
     const inbox = await readInbox(d1, { network, address: creator, kinds: ['request.picked'], now })
     // The creator's inbox holds its own notice and the public one, each once.
     const ids = inbox.events.filter((e) => e.kind === 'request.picked').map((e) => e.id)
@@ -163,8 +172,14 @@ describe('board feed hook', () => {
   it('tells an invited worker only once the offer is escrowed on chain', async () => {
     const { board } = await setup()
     expect(boardFeedEvents(board, call('report_transaction', { taskId: 't1' }, {}))).toEqual([])
-    board.run("UPDATE tasks SET job_id = '42' WHERE id = 't1'")
-    expect(boardFeedEvents(board, call('report_transaction', { taskId: 't1' }, {}))).toEqual([
+    board.run(
+      "UPDATE tasks SET job_id = '42', publish_tx = '0xabababababababababababababababababababababababababababababababab' WHERE id = 't1'",
+    )
+    // A later report for the same task (an approval, a delivery) announces nothing again.
+    expect(
+      boardFeedEvents(board, call('report_transaction', { taskId: 't1', txHash: `0x${'cd'.repeat(32)}` }, {})),
+    ).toEqual([])
+    expect(boardFeedEvents(board, call('report_transaction', { taskId: 't1', txHash: PUBLISH }, {}))).toEqual([
       expect.objectContaining({
         id: `board:public:invite:t1:${worker}`,
         address: worker,

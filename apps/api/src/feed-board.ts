@@ -33,8 +33,8 @@ export function boardFeedEvents(board: Sql, input: BoardToolEvent): FeedEvent[] 
   const task = (taskId: string | undefined) =>
     taskId === undefined
       ? undefined
-      : board.all<{ id: string; creator: string; job_id: string | null }>(
-          'SELECT id, creator, job_id FROM tasks WHERE id = ?',
+      : board.all<{ id: string; creator: string; job_id: string | null; publish_tx: string | null }>(
+          'SELECT id, creator, job_id, publish_tx FROM tasks WHERE id = ?',
           taskId,
         )[0]
   const requestLink = (taskId: string) => {
@@ -158,6 +158,10 @@ export function boardFeedEvents(board: Sql, input: BoardToolEvent): FeedEvent[] 
     // an over-budget pick its operator rejects never publishes, so it is never announced.
     const target = task(text(args.taskId))
     if (target === undefined || target.job_id === null) return []
+    // Only the publish's own report announces: later reports for the same task (approvals, deliveries, settlement)
+    // would re-notify once the feed prunes the first notices. A job matched without a recorded publish keeps the old
+    // rule, so its pick is still announced.
+    if (target.publish_tx !== null && text(args.txHash)?.toLowerCase() !== target.publish_tx.toLowerCase()) return []
     const invited = board
       .all<{ worker: string }>(
         "SELECT worker FROM applications WHERE task_id = ? AND (note = 'direct hire invitation' OR note LIKE 'picked quote %')",
