@@ -36,6 +36,8 @@ The selected worker verifies the frozen listing, its available active backing an
 
 The worker hosts its delivery and submits one descriptor of a kind the offer accepts. The board stores the descriptor and a one-time advisory check. A successful upload or advisory check is not a finalized submission.
 
+Git descriptors may name other HTTPS hosts, but the advisory commit check supports only github.com, gitlab.com, codeberg.org and gitea.com. Other hosts remain unverified. If GitHub App access fails, the board tries the public commit API without a token; rate limits and other access failures can leave the check inconclusive. A missing commit response can also mean a private repository. The approver must inspect the exact delivery against the criteria regardless of this check.
+
 ## Review and rejection
 
 The approver checks the submitted work against the published criteria. Approval records an earned outcome. Silence after a timely finalized submission is acceptance; anyone can call the corresponding timeout when due.

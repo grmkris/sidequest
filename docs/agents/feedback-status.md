@@ -52,3 +52,38 @@ Initial audit set (refresh status and reproduce before claiming a resolution):
   gap/roadmap targets. Scoped format/lint/typecheck passed; Explore 94 files / 439 passed.
 - Live acceptance is still pending. These are local UI/domain regression claims, not deployed or authenticated-host
   proof. Foreign observability, query-key and Board edits were preserved and excluded from staging.
+
+## 12 October: implementation closeout before dev release
+
+- Gaps 13–14 are fixed in `f9dd48f7`: `get_quote_request` reads durable open, closed and picked requests, and the
+  UI distinguishes a closed request from a delivery-expired hire. Board coverage includes old request URLs and the
+  MCP read contract.
+- Gap 17 is fixed in `2b57f327`: `get_dispute_bundle` is discoverable and callable under hosted MCP read scope, with
+  a policy regression proving the scope boundary.
+- Gap 18 is fixed in `fa592349`: `list_tasks {compact:true}` returns lightweight task fields without chain
+  enrichment; `task_index {compact:true}` remains the cursor scan. Transport and output fixtures cover both shapes.
+- Gap 19 is fixed in `af3fec4d`: numeric and string gap IDs remain accepted, while invalid fields and constraints are
+  named without echoing submitted report text.
+- Gap 22 is fixed in `871377a2`: failed reads say to retry the same arguments; write failures retain same-key
+  reconciliation guidance. MCP transport and agent-failure regressions cover the distinction.
+- Gap 24 is fixed in `d9325a99`: old `/job/<taskId>` notices resolve through `get_task`, draft
+  tasks go to the board-scoped account resume flow, and published tasks redirect to canonical numeric job URLs.
+  Feed regressions cover public and tenant boards, including unpublished and published notices.
+- Gap 20 is clarified in the Commons docs: `mine` means the current viewer supports an item; shipped and declined
+  items release active support slots. Gap 15 remains deferred because hosted MCP has no faucet tool; the app now
+  directs operators to fund the managed wallet. Gap 16 remains deferred because arbitrary Git hosts are accepted but
+  advisory commit verification supports only GitHub, GitLab, Codeberg and Gitea; unsupported hosts stay unverified.
+  GitHub token acquisition is time-bounded in `1cec7ae1`; token failure falls back to the public commit API.
+- Gap 21 remains an advisory boundary: GitHub 404/422 report missing-or-private commits; rate/access failures yield
+  an inconclusive check. Existing regressions prove anonymous fallback on token failure and `ok:null` on rate limits;
+  approvers still inspect the submitted descriptor and criteria.
+- Gaps 23 and 24 are now aligned: picked notices are emitted after publication confirmation, and every notice carries
+  a canonical route or a resumable draft link. Local evidence is complete; deployed and authenticated acceptance is
+  recorded only after the dev release and live readback.
+
+The adjacent lane also committed the selection wording fix in `39cfbe50` and the closed-request hiring dashboard
+continuation in `32b2c5f4`. Their committed changes join the exact candidate; their unrelated live edits are preserved.
+
+Local receipts before release: Explore 96 files / 444 tests passed; API feed-board 10 tests passed; Board deliverable
+21 tests passed; Docs 8 files / 58 tests passed; Explore and API owning typechecks passed. The repository lint ratchet
+was reduced by three stale entries in `f58f6a7b`; raw scoped lint still reports pre-existing findings in large files.
