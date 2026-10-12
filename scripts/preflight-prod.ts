@@ -9,14 +9,15 @@ import {
   validateProdConfig,
   type ProdArtifact,
 } from '../apps/api/src/prod-config.ts'
-import { probeRelease, rpcReader } from '../apps/api/src/deploy-preflight.ts'
+import { probeRelease, rpcReader, sameOrigin } from '../apps/api/src/deploy-preflight.ts'
 import { MAINNET_LIVE } from '../apps/explore/src/release.ts'
 import mainnet from '../contracts/config/monad-mainnet.json' with { type: 'json' }
 
 // bun scripts/preflight-prod.ts <artifact> [--live | --probe <origin>]
 //   (none)            structural: the artifact against the mainnet config, and Explore's pinned MAINNET_LIVE against
 //                     apps/explore/src/release.ts and the admission mode (PROD-GATE-006);
-//   --live            then the D16 launch gate, read-only, through the artifact's public RPC;
+//   --live            then the D16 launch gate, read-only, through the artifact's RPC provider (MONAD_MAINNET_RPC_URL
+//                     when that keyed URL is on the provider's origin);
 //   --probe <origin>  after a deploy: <origin>/release.json must equal the artifact's network and mainnetLive.
 const path = process.argv[2]
 const live = process.argv.includes('--live')
@@ -54,11 +55,14 @@ if (failures.length > 0) {
     'Sidequest v1 production structural preflight passed (single main pair, Safe, vault, fees and mining, Explore release flag); run with --live for the D16 launch gate',
   )
 } else if (process.exitCode !== 1 && artifact !== undefined) {
-  // D16 live launch gate, read-only, against the artifact's reviewed public RPC.
-  const reader = rpcReader(artifact.rpc.url)
+  // D16 live launch gate, read-only, against the artifact's reviewed RPC provider. The artifact names it by origin; a
+  // keyed URL on that provider (MONAD_MAINNET_RPC_URL, as the runbook's reads use) stays in the environment, unprinted.
+  const keyed = process.env.MONAD_MAINNET_RPC_URL
+  const rpcUrl = keyed !== undefined && sameOrigin(keyed, artifact.rpc.url) ? keyed : artifact.rpc.url
+  const reader = rpcReader(rpcUrl)
   let gate: string[]
   try {
-    const chain = await fetch(artifact.rpc.url, {
+    const chain = await fetch(rpcUrl, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }),

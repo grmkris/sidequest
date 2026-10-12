@@ -4,7 +4,7 @@ import { stageProfile, validateStageProfile } from '../../../infra/stage.ts'
 import testnet from '../../../contracts/config/monad-testnet.json' with { type: 'json' }
 import { deploymentFromConfig, type DeploymentConfig } from '@sidequest/sdk'
 import { rpcUrlForNetwork } from '../src/network.ts'
-import { assertDeployConfig, assertTestnetProdConfig } from '../src/deploy-preflight.ts'
+import { assertDeployConfig, assertTestnetProdConfig, sameOrigin } from '../src/deploy-preflight.ts'
 import { validateReleaseProbe } from '../src/prod-config.ts'
 import { assertLiveRelease, stateMode } from '../../../scripts/sidequest/state.ts'
 
@@ -117,4 +117,13 @@ test('testnet prod release probe permits open writes with mainnetLive false', ()
       { network: 'monad-testnet', mainnetLive: false, writesOpen: true },
     ),
   ).toEqual([])
+})
+
+test('the reviewed artifact names the RPC provider by origin, so the keyed URL stays in the secret', () => {
+  const provider = 'https://monad-mainnet.provider.example'
+  expect(sameOrigin(`${provider}/v2/a-key`, provider)).toBe(true)
+  expect(sameOrigin(`${provider}/v2/a-key`, `${provider}/`)).toBe(true)
+  expect(sameOrigin('https://rpc.monad.xyz', provider)).toBe(false)
+  expect(sameOrigin(`http://monad-mainnet.provider.example/v2/a-key`, provider)).toBe(false)
+  expect(sameOrigin('not a url', 'not a url')).toBe(false)
 })

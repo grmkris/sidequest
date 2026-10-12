@@ -50,6 +50,16 @@ export function rpcReader(url: string): LaunchReader {
   }
 }
 
+/** Whether two URLs share an origin. The committed artifact names an RPC provider by its origin; the keyed URL for it
+ *  stays in a secret. A URL that does not parse matches nothing. */
+export function sameOrigin(a: string, b: string): boolean {
+  try {
+    return new URL(a).origin === new URL(b).origin
+  } catch {
+    return false
+  }
+}
+
 /** D16: refuse a deploy that would open production admission unless the live launch predicates hold. A deploy that pins
  *  an explicit drained `PROD_ADMISSION_DRAIN` (setup or emergency) does not need them. Runs before any resource. */
 export async function assertLaunchGate(
@@ -115,7 +125,8 @@ export async function assertDeployConfig(stage: string, profile = stageProfile(s
     if (!matches) throw new Error(`production signing address mismatch: ${role}`)
   }
   const rpc = process.env.MONAD_RPC_URL
-  if (rpc !== artifact.rpc.url) throw new Error('production RPC runtime mapping mismatch')
+  if (rpc === undefined || !sameOrigin(rpc, artifact.rpc.url))
+    throw new Error('production RPC runtime mapping mismatch')
   try {
     const response = await fetch(rpc, {
       method: 'POST',
