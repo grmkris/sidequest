@@ -4,7 +4,7 @@
 #   1. a 1-of-1 Safe (the launch shape, note 22 on 12 Oct) from the canonical v1.4.1 SafeProxyFactory + SafeL2
 #      singleton (their code is checked first);
 #   2. SIDE created through the real nad.fun router (Kris's wallet at launch; a dev key here) with the 5% dev buy in the
-#      creation transaction and the creator-fee vault paying the Safe; no burn; transfers to 0x…dEaD work; the dev buy
+#      creation transaction and the creator-fee vault paying the Safe; no burn; transfers to the slash recipient work; the dev buy
 #      goes to the Safe, keeping what funds the rehearsal's hires;
 #   3. DeploySidequest with a fresh core and MAINNET_GO, against that SIDE; PromoteSidequest (no transactions), then the
 #      D16 launch gate, which must refuse: the four are only pending;
@@ -13,7 +13,7 @@
 #   5. the 2-of-3 due by 20 Oct, in place: two addOwnerWithThreshold calls through execTransaction from the owner; the
 #      gate refuses the 1-of-1 pin and passes the 2-of-3 one (after launch day, so outside the launch budget);
 #   6. two hires paid in SIDE: one delivered, accepted and settled; one never delivered, slashed after its deadline, the
-#      worker bond landing in the sink;
+#      worker bond landing in the vault's slash recipient (the Safe);
 #   7. a small buy and sell of SIDE through the router;
 #   8. the creator-fee vault names the Safe as SIDE's recipient.
 # Every step's gas (the limits actually sent, which Monad charges, and gasUsed) is printed as the launch budget.
@@ -43,8 +43,6 @@ REPO="$(cd .. && pwd)"
 NADFUN_ROUTER=$(jq -r .nadfun.router config/monad-mainnet.json)
 WMON=$(jq -r .nadfun.wmon config/monad-mainnet.json)
 CREATOR_FEE_VAULT=$(jq -r .nadfun.creatorFeeVault config/monad-mainnet.json)
-# SidequestConstants.SLASH_SINK: where a slash sends SIDE, which has no burn.
-SINK=0x000000000000000000000000000000000000dEaD
 
 # Canonical Safe v1.4.1 on chain 143.
 SAFE_SIDE=0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67
@@ -160,17 +158,17 @@ SIDE=$(cast parse-bytes32-address "$SIDE")
   || fail "SIDE supply is not 1e9"
 [[ "$(cast call --rpc-url "$LOCAL" "$SIDE" "decimals()(uint8)")" == 18 ]] || fail "SIDE decimals"
 cast call --rpc-url "$LOCAL" "$SIDE" "nonces(address)(uint256)" "$KRIS" >/dev/null || fail "SIDE has no permit nonces"
-cast call --rpc-url "$LOCAL" --from "$KRIS" "$SIDE" "burn(uint256)" 1 >/dev/null 2>&1 && fail "SIDE has a burn; the slash sink is not needed"
+cast call --rpc-url "$LOCAL" --from "$KRIS" "$SIDE" "burn(uint256)" 1 >/dev/null 2>&1 && fail "SIDE unexpectedly has a burn"
 BOUGHT=$(cast call --rpc-url "$LOCAL" "$SIDE" "balanceOf(address)(uint256)" "$KRIS" | awk '{print $1}')
 python3 -c "import sys; b=int(sys.argv[1]); sys.exit(0 if 45_000_000*10**18 <= b <= 55_000_000*10**18 else 1)" "$BOUGHT" \
   || fail "the dev buy got $BOUGHT SIDE wei, not about 5% of the supply"
-cast send --rpc-url "$LOCAL" --private-key $K_KRIS "$SIDE" "transfer(address,uint256)" $SINK 1 >/dev/null \
-  || fail "a transfer to the slash sink reverts before graduation"
+cast send --rpc-url "$LOCAL" --private-key $K_KRIS "$SIDE" "transfer(address,uint256)" "$SAFE" 1 >/dev/null \
+  || fail "a transfer to the slash recipient reverts before graduation"
 # The Safe gets the dev buy; Kris's wallet keeps 10M here to fund the rehearsal's hires (at launch the Safe does).
 TO_SAFE=$(python3 -c "import sys; print(int(sys.argv[1]) - 1 - 10_000_000 * 10**18)" "$BOUGHT")
 TX2=$(cast send --rpc-url "$LOCAL" --private-key $K_KRIS --json "$SIDE" "transfer(address,uint256)" "$SAFE" "$TO_SAFE" | jq -r .transactionHash)
 budget_hashes "2. dev buy to the Safe" "$TX2"
-ok "SIDE $SIDE on nad.fun: 1e9 supply, 18 decimals, permit, no burn; dev buy $BOUGHT wei (~5%), $TO_SAFE to the Safe; the sink accepts SIDE"
+ok "SIDE $SIDE on nad.fun: 1e9 supply, 18 decimals, permit, no burn; dev buy $BOUGHT wei (~5%), $TO_SAFE to the Safe; the slash recipient accepts SIDE"
 
 # The scratch config: mainnet's, with the fork's roles, the Safe and a v1 sidequest block. Mainnet's own sidequest keys
 # (the creator-bond policy) are kept, so R7 deploys the launch values.
@@ -178,7 +176,7 @@ jq --arg safe "$SAFE" --arg admin "$DEPLOYER" --arg relay "$RELAY" --arg atteste
   --arg arbitrator "$ARBITRATOR" --arg side "$SIDE" '
   .roles = { admin: $admin, relay: $relay, attester: $attester, arbitrator: $arbitrator }
   | .sidequest = (.sidequest // {}) + {
-      safe: $safe, defaultArbitrator: $arbitrator, margin: 3600,
+      safe: $safe, slashRecipient: $safe, defaultArbitrator: $arbitrator, margin: 3600,
       schedule: { thresholds: [0, 1000000, 10000000, 50000000], bps: [3000, 1000, 300, 100], treasury: $safe },
       token: $side }
   | .knownTokens = [.x402.usdc, $side]
@@ -195,6 +193,9 @@ log /tmp/r7-promote.log forge script script/PromoteSidequest.s.sol --rpc-url "$L
 record "3. PromoteSidequest (reads; writes config)" 0 0 0
 [[ "$(jq -r .deployment.main.kind "$CONFIG")" == "sidequest-v1" ]] || fail "promotion did not record the v1 pair"
 [[ "$(jq -r .deployment.sidequest.safe "$CONFIG")" == "$SAFE" ]] || fail "promotion did not record the Safe"
+[[ "$(jq -r .deployment.sidequest.slashRecipient "$CONFIG")" == "$SAFE" ]] || fail "promotion did not record the slash recipient"
+VAULT=$(jq -r .deployment.sidequest.vault "$CONFIG")
+[[ "$(cast call --rpc-url "$LOCAL" "$VAULT" "slashRecipient()(address)")" == "$SAFE" ]] || fail "vault slash recipient is not the Safe"
 set +e; REFUSED=$(gate); CODE=$?; set -e
 [[ $CODE -eq 3 ]] || fail "D16 gate opened before the Safe accepted ($REFUSED)"
 [[ "$(jq length <<<"$REFUSED")" == 4 && "$(jq '[.[] | select(endswith("is not the Safe"))] | length' <<<"$REFUSED")" == 4 ]] \
@@ -257,7 +258,7 @@ log /tmp/r7-slash.log env MAINNET_GO=yes CREATOR_KEY=$K_CREATOR \
   forge script script/RehearseHire.s.sol --tc RehearseSlash --sig "run(uint256)" "$MISSED" --rpc-url "$LOCAL" \
   --broadcast --slow || fail "missed-delivery slash"
 budget_run "6. Missed delivery (rejectAfterDeliveryDeadline, settle)" RehearseHire
-ok "job $MISSED missed its deadline; $(grep -o 'slashed to the sink [0-9]*' /tmp/r7-slash.log) SIDE wei"
+ok "job $MISSED missed its deadline; $(grep -o 'slashed to the recipient [0-9]*' /tmp/r7-slash.log) SIDE wei"
 
 # 7. A small buy and sell of SIDE through the router: the exit path works.
 NOW=$(cast block --rpc-url "$LOCAL" latest -f timestamp)

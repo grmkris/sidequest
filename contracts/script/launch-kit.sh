@@ -87,6 +87,24 @@ check_safe() {
   [[ "$(lower "$owners")" == "[$(lower "$(addr owner)")]" ]] || die "Safe $safe owners are $owners, not the owner keystore"
 }
 
+# New launch vaults record their recipient; old testnet vaults have neither the field nor the getter.
+check_slash_recipient() {
+  local vault recipient live
+  vault=$(cfg .deployment.sidequest.vault)
+  [[ -n "$vault" ]] || die "no promoted StakeVault in the config"
+  recipient=$(cfg .deployment.sidequest.slashRecipient)
+  if [[ -z "$recipient" ]]; then
+    mainnet && die "the promoted vault has no slash recipient: pull the promotion commit"
+    say "  legacy testnet StakeVault $vault: slashes go to the dead address"
+    return 0
+  fi
+  [[ "$(lower "$recipient")" == "$(lower "$(cfg .sidequest.slashRecipient)")" ]] \
+    || die "the promoted slash recipient differs from the recipe input"
+  live=$(cast call --rpc-url "$RPC" "$vault" 'slashRecipient()(address)')
+  [[ "$(lower "$live")" == "$(lower "$recipient")" ]] || die "the vault's slash recipient differs from the config"
+  say "  StakeVault $vault slash recipient: $live"
+}
+
 # Keystore passwords: macOS Keychain items with no trusted application, so every read shows Kris a prompt. Elsewhere
 # (the agent's testnet dry run on netcup), mode-600 files under $KIT_HOME/secrets.
 secret_store() {
@@ -342,6 +360,7 @@ cmd_accept() {
   # SafeAccept.s.sol reads the promoted Safe from the config; it must be the kit's Safe.
   [[ "$(lower "$(cfg .deployment.sidequest.safe)")" == "$(lower "$safe")" ]] \
     || die "the config's promoted Safe ($(cfg .deployment.sidequest.safe)) is not $safe: pull the promotion commit"
+  check_slash_recipient
   if [[ "${1:-}" != send ]]; then
     (cd "$ROOT/contracts" && NETWORK=$NETWORK forge script script/SafeAccept.s.sol --rpc-url "$RPC" --sender "$owner")
     return 0
@@ -366,6 +385,7 @@ cmd_backing() {
   token=$(side_token)
   vault=$(cfg .deployment.sidequest.vault)
   [[ -n "$vault" ]] || die "no promoted StakeVault in the config"
+  check_slash_recipient
   multisend=$(cfg .launchKit.safe.multiSendCallOnly)
   rows=$(jq length "$file")
   for ((i = 0; i < rows; i++)); do
