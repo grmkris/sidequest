@@ -17,7 +17,7 @@ import { refreshBalances } from '../../query-refresh.ts'
 import { type Edited, type SideTrade, fillText, sideTrade, tradeAmounts, wholeUp } from '../../side-sheet.ts'
 import { stakeContext } from '../../stake-context.ts'
 import { friendlyError } from '../../txErrors.ts'
-import { chain, deployed, deployment, privyAppId, writesOpen } from '../../wallet.ts'
+import { chain, deployed, deployment, getSideLink, isMainnet, privyAppId, writesOpen } from '../../wallet.ts'
 import { GasWarning, SWAP_GAS } from '../GasWarning.tsx'
 import { AddressRow, Segmented } from '../kit.tsx'
 import { AmountField } from '../money/AmountField.tsx'
@@ -105,10 +105,24 @@ function ctaLabel(state: SideTrade, trade: Trade, amounts: ReturnType<typeof tra
 /** Why the amount paid is too much: Monad's reserve in an upgraded wallet, gas, or more SIDE than the wallet holds. */
 function shortHint(trade: Trade, cap: { max: bigint; reserve: boolean } | undefined): string {
   if (trade === 'sell') return 'More SIDE than your wallet holds.'
+  if (cap?.max === 0n) return cantBuy(cap.reserve)
   const max = `${formatAmount(cap?.max ?? 0n, 18)} ${MON}`
   return cap?.reserve === true
     ? `Monad keeps 10 ${MON} in upgraded wallets: up to ${max} now.`
     : `Up to ${max}: the rest of your wallet pays the gas.`
+}
+
+/** A wallet with no MON to spend on a buy: why, and what it can do instead. */
+function cantBuy(reserve: boolean): string {
+  const why = reserve
+    ? `Monad keeps 10 ${MON} in upgraded wallets, so this one can’t buy yet.`
+    : `A buy is paid in ${MON}.`
+  const instead = isMainnet
+    ? getSideLink === null
+      ? ''
+      : ' Or buy on nad.fun from a wallet of your own and send the SIDE here.'
+    : ' Or claim free test SIDE below.'
+  return `${why} Add ${MON} to buy here.${instead}`
 }
 
 /**
@@ -281,7 +295,10 @@ function gasReady(trade: Trade, wallet: ReturnType<typeof useWallet>): boolean {
 function formView(state: SideTrade, form: ReturnType<typeof useTradeForm>, wallet: ReturnType<typeof useWallet>) {
   const { trade, amounts } = form
   const max = trade === 'buy' ? wallet.cap?.max : wallet.side
-  const short = amounts !== null && max !== undefined && amounts.amountIn > max
+  // A buy with no MON to spend says so before anything is typed, not only once an amount is too much.
+  const short =
+    (amounts !== null && max !== undefined && amounts.amountIn > max) ||
+    (trade === 'buy' && state === 'trade' && max === 0n)
   const out = trade === 'buy' ? 'SIDE' : MON
   return {
     open: state !== 'closed' && state !== 'unavailable',
