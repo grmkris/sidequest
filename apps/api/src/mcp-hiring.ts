@@ -41,6 +41,13 @@ const row = (value: unknown): Row =>
 const rows = (value: unknown): Row[] => (Array.isArray(value) ? value.map(row) : [])
 type Read = (name: string, args: Row, agentId: string) => Promise<unknown>
 
+/** An open request's dashboard group: accepting quotes; quotes closed, so the creator picks before delivery; or expired. */
+function requestGroup(status: string): string {
+  if (status.startsWith('Accepting')) return 'accepting quotes'
+  if (status.startsWith('Expired')) return 'finished'
+  return 'needs your action'
+}
+
 /** Public display data only. Never forward grants, signatures, headers or arbitrary nested metadata to the App. */
 function termsView(value: unknown) {
   const v = row(value)
@@ -140,8 +147,7 @@ export async function renderHiring(name: string, args: Row, agentId: string, cal
       review: [],
       finished: [],
     }
-    for (const request of openRequests)
-      groups[String(request.status).startsWith('Expired') ? 'finished' : 'accepting quotes']!.push(request)
+    for (const request of openRequests) groups[requestGroup(String(request.status))]!.push(request)
     for (const task of tasks) {
       const state = row(task.chain).status
       const stage = ['completed', 'rejected', 'cancelled', 'expired'].includes(String(state))

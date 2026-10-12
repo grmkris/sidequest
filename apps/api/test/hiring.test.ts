@@ -112,7 +112,13 @@ it('groups by chain stage and keeps funding separate from confirmed operations',
     ok: true,
     result:
       name === 'list_quote_requests'
-        ? { requests: [{ requestId: 'r', taskId: null, status: 'Accepting quotes — reward not escrowed' }] }
+        ? {
+            requests: [
+              { requestId: 'r', taskId: null, status: 'Accepting quotes — reward not escrowed' },
+              { requestId: 'closed', taskId: null, status: 'Quotes closed — reward not escrowed' },
+              { requestId: 'old', taskId: null, status: 'Expired — reward not escrowed' },
+            ],
+          }
         : name === 'list_quotes'
           ? { quotes: [] }
           : [
@@ -127,8 +133,11 @@ it('groups by chain stage and keeps funding separate from confirmed operations',
             ],
   }))) as { result: { groups: Record<string, Record<string, unknown>[]> } }
   expect(data.result.groups.review).toHaveLength(1)
-  expect(data.result.groups['accepting quotes']).toHaveLength(1)
-  expect(data.result.groups['needs your action']![0]).toMatchObject({
+  // Closed quotes still wait for the creator's pick; expired requests are finished.
+  expect(data.result.groups['accepting quotes']!.map((r) => r.requestId)).toEqual(['r'])
+  expect(data.result.groups['needs your action']!.map((r) => r.requestId)).toContain('closed')
+  expect(data.result.groups.finished!.map((r) => r.requestId)).toContain('old')
+  expect(data.result.groups['needs your action']!.find((r) => r.taskId === 'open')).toMatchObject({
     funding: { state: 'not-escrowed' },
     operationStatus: 'confirmed',
   })
