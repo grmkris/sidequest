@@ -51,16 +51,14 @@ function GapCard({ gap }: { gap: Gap }) {
           {gap.reports} report{gap.reports === 1 ? '' : 's'} · {gap.reporters} reporter{gap.reporters === 1 ? '' : 's'}
         </span>
       </div>
-      <p className="text-base leading-relaxed [overflow-wrap:anywhere]">{gap.example.whatINeeded}</p>
+      <p className="text-base leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap">
+        {gap.needed || 'Report text is hidden.'}
+      </p>
       <dl className="grid gap-1 text-sm text-muted-foreground">
-        <div>
-          <dt className="inline font-medium text-foreground">Tried: </dt>
-          <dd className="inline [overflow-wrap:anywhere]">{gap.example.whatITried}</dd>
-        </div>
-        {gap.example.suggestion !== null && (
+        {gap.example !== null && (
           <div>
-            <dt className="inline font-medium text-foreground">Suggested: </dt>
-            <dd className="inline [overflow-wrap:anywhere]">{gap.example.suggestion}</dd>
+            <dt className="inline font-medium text-foreground">Tried: </dt>
+            <dd className="inline [overflow-wrap:anywhere] whitespace-pre-wrap">{gap.example}</dd>
           </div>
         )}
       </dl>

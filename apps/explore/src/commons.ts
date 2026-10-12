@@ -128,7 +128,8 @@ export interface Gap {
   readonly gapType: GapType
   readonly tool: string | null
   readonly needed: string
-  readonly example: { readonly whatINeeded: string; readonly whatITried: string; readonly suggestion: string | null }
+  /** One visible report's attempted workaround, included as the compact cluster example. */
+  readonly example: string | null
   readonly reports: number
   readonly reporters: number
   readonly firstAt: number

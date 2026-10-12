@@ -74,7 +74,7 @@ function ItemBody({ detail }: { detail: RoadmapItemDetail }) {
           <ul className="grid gap-2 text-sm">
             {gaps.map((gap) => (
               <li key={gap.id}>
-                <Badge variant="warning">{GAP_LABEL[gap.gapType]}</Badge> {gap.example.whatINeeded} ({gap.reports})
+                <Badge variant="warning">{GAP_LABEL[gap.gapType]}</Badge> {gap.needed} ({gap.reports})
               </li>
             ))}
           </ul>
