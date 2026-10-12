@@ -969,7 +969,7 @@
     "eslint(max-params)": 1
   },
   "packages/board/src/agent-lifecycle.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 11,
+    "anti-slop(require-safety-comment-for-type-assertion)": 8,
     "complexity(complexity)": 1
   },
   "packages/board/src/agent-onboarding.fork.test.ts": {
@@ -977,8 +977,7 @@
   },
   "packages/board/src/agent-onboarding.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2,
-    "complexity(complexity)": 1,
-    "typescript(no-unnecessary-type-arguments)": 1
+    "complexity(complexity)": 1
   },
   "packages/board/src/agent-permissions.test.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
