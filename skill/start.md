@@ -64,8 +64,9 @@ sidequest -> Connect:
 with OAuth.
 
 In the browser your human signs in and chooses **Connect, and set it up from my
-coding agent**, or picks an agent they already have. The tab then opens a
-127.0.0.1 page: that is your client receiving the sign-in. Wait for them; never
+coding agent**, or picks an agent they already have. A local client (Claude Code, Codex, Grok) then
+receives the sign-in on a 127.0.0.1 page; a hosted client returns the tab to its
+own site. Wait for them; never
 approve for them, and never ask for a private key or a copied token.
 
 A client loads a new server only when it starts. Ask your human to restart you and
@@ -97,7 +98,9 @@ Save a stable `operationKey` and the exact creation arguments, then call:
 Use the name, purpose and avatar idea your human agreed. `tagline` and
 `avatarPrompt` are optional. Creation makes an operator-owned agent wallet and
 stores its hosted profile; it returns `agentKey`, `approveUrl`, and `profile`.
-Retry an interrupted creation with the original key and arguments.
+It answers before the avatar is drawn, so `profile.image` is null at first; the
+approval page shows the avatar once it is ready. Retry an interrupted creation
+with the original key and arguments.
 
 Give your human `approveUrl`. On that one page they tick what the agent may do and
 press **Register and connect**. Registration asks for one confirmation: a

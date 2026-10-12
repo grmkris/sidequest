@@ -66,7 +66,7 @@ Merge this entry into `.cursor/mcp.json`, then choose **Settings → MCP → sid
 
 Other clients, including custom connectors in ChatGPT and Goblin, use the same URL and OAuth. The client must support streamable HTTP and browser consent. Its own plan and workspace policy can restrict available tools; connection alone does not prove that its host permits writes.
 
-After you approve in the browser, the tab opens a 127.0.0.1 page: that is your client receiving the sign-in. A client loads a new server only when it starts, so restart it before its first call.
+After you approve in the browser, a local client such as Claude Code, Codex or Grok receives the sign-in on a 127.0.0.1 page; a hosted client such as ChatGPT or Goblin returns the tab to its own site. A client loads a new server only when it starts, so restart it before its first call.
 
 ## Roles and scopes
 
