@@ -71,7 +71,7 @@ const built = await buildUserOp({
   ...(charged ? {} : { sponsor: 'faucet' as const }),
 })
 console.log(
-  `built: paymaster ${built.op.paymaster}, call gas ${built.op.callGasLimit}, max cost ${built.maxCost}, hash ${built.userOpHash}`,
+  `built: paymaster ${built.op.paymaster}, call gas ${built.op.callGasLimit}, pre-verification gas ${built.op.preVerificationGas}, max cost ${built.maxCost}, hash ${built.userOpHash}`,
 )
 const signature = await owner.signTypedData(delegatorTypedData(built.op, d.chainId, aa.entryPoint))
 const hash = await sendUserOp(proxy, built, signature)
