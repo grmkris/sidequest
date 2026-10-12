@@ -52,7 +52,7 @@
   },
   "apps/api/src/deploy-preflight.ts": {
     "anti-slop(no-runtime-typeof)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 9,
+    "anti-slop(require-safety-comment-for-type-assertion)": 7,
     "complexity(complexity)": 2
   },
   "apps/api/src/directory-admission.ts": {
@@ -316,8 +316,8 @@
   },
   "apps/api/test/stage-profile.test.ts": {
     "anti-slop(no-chained-type-assertions)": 3,
-    "anti-slop(require-safety-comment-for-type-assertion)": 9,
-    "typescript(no-unnecessary-type-assertion)": 3
+    "anti-slop(require-safety-comment-for-type-assertion)": 8,
+    "typescript(no-unnecessary-type-assertion)": 2
   },
   "apps/api/test/staking.fork.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2

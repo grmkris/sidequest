@@ -4,6 +4,8 @@ import { privateKeyToAccount } from 'viem/accounts'
 import mainnet from '../../../contracts/config/monad-mainnet.json' with { type: 'json' }
 import testnet from '../../../contracts/config/monad-testnet.json' with { type: 'json' }
 import { stageProfile } from '../../../infra/stage.ts'
+import { aaFromConfig } from '@sidequest/sdk'
+import { assertAccountAbstraction } from './aa-preflight.ts'
 import { MAINNET_LIVE } from '@sidequest/sdk'
 import {
   liveLaunchGate,
@@ -48,6 +50,19 @@ export function rpcReader(url: string): LaunchReader {
     balance: async (address) => BigInt(await rpc('eth_getBalance', [address, 'latest'])),
     storage: async (address, slot) => (await rpc('eth_getStorageAt', [address, slot, 'latest'])) as `0x${string}`,
   }
+}
+
+/** The chain an RPC answers for (`eth_chainId`); throws on any transport or HTTP failure. */
+async function rpcChainId(rpc: string, fetcher: typeof fetch): Promise<number> {
+  const response = await fetcher(rpc, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }),
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (!response.ok) throw new Error('RPC failed')
+  // SAFETY: a JSON-RPC answer is an object; a missing or malformed result becomes NaN, which matches no chain.
+  return Number(((await response.json()) as { result?: string }).result)
 }
 
 /** Whether two URLs share an origin. The committed artifact names an RPC provider by its origin; the keyed URL for it
@@ -127,18 +142,16 @@ export async function assertDeployConfig(stage: string, profile = stageProfile(s
   const rpc = process.env.MONAD_RPC_URL
   if (rpc === undefined || !sameOrigin(rpc, artifact.rpc.url))
     throw new Error('production RPC runtime mapping mismatch')
-  try {
-    const response = await fetch(rpc, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }),
-      signal: AbortSignal.timeout(15_000),
-    })
-    const body = (await response.json()) as { result?: string }
-    if (!response.ok || Number(body.result) !== 143) throw new Error('chain mismatch')
-  } catch {
+  if ((await rpcChainId(rpc, fetch).catch(() => undefined)) !== 143)
     throw new Error('production read-only RPC chain proof failed')
-  }
+  const aa = aaFromConfig(mainnet)
+  await assertAccountAbstraction('production', {
+    aa,
+    chainId: 143,
+    env: process.env,
+    fetcher: fetch,
+    reader: rpcReader(rpc),
+  })
   await assertLaunchGate(
     mainnet,
     process.env.PROD_ADMISSION_DRAIN,
@@ -162,15 +175,7 @@ export async function assertTestnetProdConfig(
   if (rpc === undefined || rpc === '') throw new Error('testnet production needs MONAD_RPC_URL')
   let chainId: number
   try {
-    const response = await fetcher(rpc, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }),
-      signal: AbortSignal.timeout(15_000),
-    })
-    const body = (await response.json()) as { result?: string }
-    if (!response.ok) throw new Error('RPC failed')
-    chainId = Number(body.result)
+    chainId = await rpcChainId(rpc, fetcher)
   } catch {
     throw new Error('testnet production RPC chain proof failed')
   }
@@ -206,6 +211,13 @@ export async function assertTestnetProdConfig(
       throw new Error(`testnet production Safe ownership check failed: ${label}`)
     }
   }
+  await assertAccountAbstraction('testnet production', {
+    aa: aaFromConfig(config),
+    chainId: 10143,
+    env,
+    fetcher,
+    reader,
+  })
 }
 
 /** Post-deploy (PROD-GATE-006): GET `<origin>/release.json` and compare it to the artifact. A failed fetch or a body that
