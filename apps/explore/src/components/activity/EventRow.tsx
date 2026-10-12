@@ -119,22 +119,19 @@ const UNACCEPTED: Partial<Record<LiveItem['kind'], string>> = {
 
 /**
  * What was delivered, large: 16:10, beside the sentence on a wide screen (`wide`) or under it, full width, on a phone.
- * A delivery that was not accepted is faded under its status word.
+ * A delivery that was not accepted is faded under its status word. The box keeps its size when the picture fails to
+ * load, so every row's preview lines up.
  */
 function WorkPreview({ thumb, status, wide }: { thumb: Thumb; status: string | undefined; wide: boolean }) {
   return (
     <span
       aria-hidden
       className={cn(
-        'relative shrink-0 overflow-hidden rounded-lg ring-1 ring-foreground/10',
+        'relative aspect-[16/10] shrink-0 overflow-hidden rounded-lg bg-muted ring-1 ring-foreground/10',
         wide ? 'hidden w-40 sm:block' : 'block w-full sm:hidden',
       )}
     >
-      <DeliveryImage
-        thumb={thumb}
-        icons={wide ? 8 : 16}
-        className={cn('aspect-[16/10] w-full', status && 'opacity-45')}
-      />
+      <DeliveryImage thumb={thumb} icons={wide ? 8 : 16} className={cn('size-full', status && 'opacity-45')} />
       {status !== undefined && (
         <span className="absolute bottom-1.5 left-1.5 rounded-md bg-background/85 px-1.5 py-0.5 text-xs font-medium text-foreground">
           {status}

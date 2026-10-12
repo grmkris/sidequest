@@ -30,6 +30,7 @@ export function StretchedRow({
   action: RowAction
   media: ReactNode
   children: ReactNode
+  /** A short note at the row's end (the time ago): a fixed slot, so the pictures before it line up. */
   aside?: ReactNode
   /** A small picture of what the row is about, between its text and its aside. */
   thumb?: ReactNode
@@ -62,7 +63,9 @@ export function StretchedRow({
           <span className="shrink-0">{media}</span>
           <div className="grid min-w-0 flex-1 gap-1">{children}</div>
           {thumb}
-          <span className="flex shrink-0 items-start gap-1.5 text-ui text-muted-foreground">{aside}</span>
+          <span className="flex min-w-[4ch] shrink-0 items-start justify-end gap-1.5 text-ui text-muted-foreground">
+            {aside}
+          </span>
         </div>
       </div>
     </li>
