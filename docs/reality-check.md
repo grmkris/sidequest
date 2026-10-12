@@ -1162,3 +1162,37 @@ carries `f24803d9`) and [run 38191086153](https://github.com/grmkris/sidequest/a
   MCP notifications, templates and setup events.
 - **The rejected-hire drill:** the request reopens, with exactly one picked and one lost notice after the re-pick.
 - **Explore views:** the connection roles text, the confirm sheets and the hosted-client hand-back note.
+
+## 12 October 2026 — RPC read batching probe and local Explore change
+
+**Scope:** anonymous read-only requests to the default Monad testnet RPC, using
+Viem 2.56.9 and Sidequest's SDK ABIs/deployment config. No signature or transaction
+was submitted. This does not establish a deployed Explore performance improvement.
+
+- **Chain evidence:** chain 10143, pinned block `70263059`; `eth_getCode` at the
+  chain definition's Multicall3 address returned 3,808 bytes. Across three rounds,
+  SDK backing/position results matched between raw parallel reads, automatic
+  Multicall3, explicit Multicall3, and JSON-RPC array batching.
+- **Request counts:** raw SDK helpers used 4 POSTs / 4 RPC items; automatic and
+  explicit Multicall3 each used 1 POST / 1 RPC item; JSON-RPC batching used
+  1 POST / 4 RPC items. These exclude the two setup reads for head and code.
+- **Timing boundary:** raw rounds were 61/17/17 ms; automatic Multicall3
+  23/19/19 ms; explicit Multicall3 21/18/20 ms; JSON-RPC batching 20/19/19 ms.
+  This demonstrates reduced request count, not an established latency gain.
+- **Implemented locally:** `a07261ab` enables `batch.multicall` on Explore's
+  shared staking client. Existing Wagmi defaults and transaction batching are
+  unchanged. Scoped format/lint/typecheck passed; Explore passed 91 files /
+  430 tests. No new test was added just to mirror a configuration value.
+- **Documentation:** `c1b2e401` expands the architecture review. The Tailscale
+  HTML returned HTTP 200 at 390 and 1440 px in light/dark themes, with no document
+  overflow or page errors; the new disclosure opened/closed by keyboard.
+- **Release boundary:** full `heavy ... bun --no-env-file run check` stopped
+  at formatting of the pre-existing, ignored `.claude/settings.local.json`.
+  That local configuration was left untouched. These changes were not pushed
+  or deployed by this review; subsequent full-gate stages were not reached.
+
+Probe script: `/tmp/sidequest-rpc-review/probe.ts`; HTML receipts:
+`/tmp/sidequest-rpc-review/html-check.json`; full-gate log:
+`/tmp/sidequest-rpc-review/full-check.log`. These scratch files are local and
+ephemeral. The durable values, boundaries and recommendations are also in the
+[architecture review](architecture-review.md#what-the-supplied-rpc-batching-references-mean-here).
