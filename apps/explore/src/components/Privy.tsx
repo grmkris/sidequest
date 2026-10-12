@@ -12,14 +12,16 @@ import {
 import { type ReactNode, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { type EIP1193Provider, type Hex, createPublicClient, http, isHex, toHex } from 'viem'
 import { useConnect } from 'wagmi'
-import { type TxRequest, tool } from '../api.ts'
+import { type TxRequest } from '../api.ts'
 import { chain, deployment, privyAppId, setPrivyProvider } from '../wallet.ts'
+import { selfPaidUpgrade } from '../aa-upgrade.ts'
+import { walletTypedData } from '../wallet-prompt.ts'
 import { silentSignable } from '../sign-in.ts'
 
 /**
  * The site's only sign-in: email or social login (whatever the Privy dashboard enables: email, Google, X…) with a
  * Privy embedded wallet. Privy creates and holds the wallet; the app uses it for SIWE board sign-in, transaction
- * steps (batched through EIP-7702, the upgrade relayed by the board) and granting an execution budget.
+ * steps (USDC user operations or MON transactions) and granting an execution budget.
  * People fund it from their own wallets. Absent when the deploy has no PRIVY_APP_ID (the site is then read-only).
  */
 /** The deploy's chain in Privy's shape (its type is stricter than viem's about optional fields). */
@@ -241,8 +243,7 @@ export function usePrivyModalOpen(): boolean {
 
 /**
  * Several transactions as one from the Privy embedded wallet (EIP-7702): a call to ERC-7579 `execute` on the wallet
- * itself, once the wallet points at the deployment's DeleGator (the first batch upgrades it through the board's
- * relay). All or nothing, one confirmation. Null without Privy or for another wallet.
+ * itself, once the wallet points at the deployment's DeleGator. All or nothing, one confirmation. Null without Privy or for another wallet.
  */
 export type BatchSend = ((
   txs: TxRequest[],
@@ -260,9 +261,6 @@ export function usePrivyBatch(address: string | undefined): BatchSend | null {
   const send: BatchSend = (txs, gas, nonce, prompt) =>
     account.send(sdk.batchCalldata(txs.map((t) => ({ ...t, value: '0' as const }))), gas, nonce, prompt)
   send.prepare = async () => {
-    const hash = await account.upgrade()
-    if (hash !== null && (await reads.waitForTransactionReceipt({ hash })).status !== 'success')
-      throw new Error('Wallet upgrade reverted. No funding steps were sent.')
     if (!(await account.delegated()))
       throw new Error('Wallet upgrade is not confirmed. Reconcile it before sending funding.')
   }
@@ -271,20 +269,21 @@ export function usePrivyBatch(address: string | undefined): BatchSend | null {
 
 /**
  * Points the Privy embedded wallet's code at the deployment's DeleGator when it is not there yet: what a creator does
- * once before granting an execution budget. Resolves to the relay's transaction hash, or null when nothing had to be
+ * once before granting an execution budget. Resolves to the self-paid operation's transaction hash, or null when nothing had to be
  * sent. Null without Privy or for another wallet.
  */
 export function useDelegatorUpgrade(address: string | undefined): (() => Promise<Hex | null>) | null {
   const account = useDelegatorAccount(address)
   if (account === null) return null
-  return account.upgrade
+  return () => account.upgrade()
 }
 
 const reads = createPublicClient({ chain, transport: http() })
 
 interface DelegatorAccount {
   delegated(): Promise<boolean>
-  /** The DeleGator upgrade when the code is not there yet: the relay's transaction hash, or null. */
+  signAuthorization(): Promise<sdk.SignedAuthorization>
+  /** A journaled, self-paid upgrade, or null when already delegated. */
   upgrade(): Promise<Hex | null>
   /**
    * A call to self, after the upgrade when it is still needed; `gas` when the calls need more than an estimate. With a
@@ -320,26 +319,31 @@ function useDelegatorAccountInner(address: string | undefined): DelegatorAccount
     const current = await sdk.delegationOf(reads, me)
     return current !== null && current.toLowerCase() === delegate.toLowerCase()
   }
-  // Privy's embedded wallets run in Privy's TEE, whose transaction signing drops `authorizationList`: the wallet signs
-  // the authorization (for its current nonce, since it does not send the transaction) and the board's relay sends it.
-  const upgrade = async (): Promise<Hex | null> => {
-    if (await delegated()) return null
+  const authorize = async (): Promise<sdk.SignedAuthorization> => {
     const nonce = await reads.getTransactionCount({ address: me, blockTag: 'pending' })
     const a = await signAuthorization({ contractAddress: delegate, chainId: chain.id, nonce }, { address: me })
-    const r = await tool<{ txHash: Hex | null }>('upgrade_account', {
-      authorization: {
-        address: a.address,
-        chainId: a.chainId,
-        nonce: a.nonce,
-        r: a.r,
-        s: a.s,
-        yParity: a.yParity,
-      },
+    return { address: a.address, chainId: a.chainId, nonce: a.nonce, r: a.r, s: a.s, yParity: a.yParity }
+  }
+  const upgrade = async (): Promise<Hex | null> => {
+    if (await delegated()) return null
+    if (promptWallet === null || promptWallet.address.toLowerCase() !== me.toLowerCase())
+      throw new Error('Reconnect the operator wallet before enabling USDC gas.')
+    return selfPaidUpgrade({
+      deployment,
+      rpcUrl: chain.rpcUrls.default.http[0]!,
+      sender: me,
+      authorize,
+      sign: (typedData, description) =>
+        promptWallet.signTypedData(walletTypedData(typedData), {
+          title: 'Enable gas in USDC',
+          description,
+          buttonText: 'Enable',
+        }),
     })
-    return r.txHash
   }
   return {
     delegated,
+    signAuthorization: authorize,
     upgrade,
     send: async (data, gas, nonce, prompt) => {
       if (!(await delegated())) throw new Error('Prepare the wallet upgrade before capturing the send nonce.')
@@ -364,4 +368,12 @@ function useDelegatorAccountInner(address: string | undefined): DelegatorAccount
       })) as Hex
     },
   }
+}
+
+/** Privy can sign the first operation's EIP-7702 authorization; injected wallets use the MON fallback instead. */
+export function useDelegatorAuthorization(
+  address: string | undefined,
+): (() => Promise<sdk.SignedAuthorization>) | null {
+  const account = useDelegatorAccount(address)
+  return account === null ? null : () => account.signAuthorization()
 }

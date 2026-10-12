@@ -1,5 +1,4 @@
 import { agentEndpoint, type ManagedAgent } from './api.ts'
-import type { PreparedGrant } from './agent-grant.ts'
 
 export interface AgentStatus {
   /** A live OAuth family proves the coding agent has connected; activity is only presence data. */
@@ -42,4 +41,3 @@ const agentPath = (id: string, action = '') =>
 export const agentStatus = (id: string) => agentEndpoint<AgentStatus>(agentPath(id))
 export const agentAction = <T>(id: string, action: string, body: Record<string, unknown> = {}) =>
   agentEndpoint<T>(agentPath(id, action), 'POST', body)
-export const prepareRegistration = (id: string) => agentAction<PreparedGrant>(id, 'registration-prepare')

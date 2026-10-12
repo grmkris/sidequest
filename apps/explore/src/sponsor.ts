@@ -43,7 +43,7 @@ export interface SponsorRules {
   targets: Record<string, { name: string; abi: Abi }>
 }
 
-export function sponsorRules(): SponsorRules {
+function sponsorRules(): SponsorRules {
   return sponsorRulesFor(sidequest, deployment)
 }
 
@@ -218,9 +218,6 @@ export function sponsorable(
       methods.has(t.data.slice(0, 10).toLowerCase()),
   )
 }
-
-export const sponsorCalls = (txs: readonly TxRequest[]): SponsorCall[] =>
-  txs.map((t) => ({ to: t.to, data: t.data, value: '0' }))
 
 /**
  * What a failed `sponsor_submit` means for the steps. A refusal with a reason (or a 4xx-style code) is final and
