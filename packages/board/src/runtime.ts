@@ -9,6 +9,7 @@ export const prodSecretSources = {
   TELEGRAM_WEBHOOK_SECRET: 'TELEGRAM_WEBHOOK_SECRET',
   PRIVY_APP_SECRET: 'PRIVY_APP_SECRET',
   PRIVY_SIGNER_KEY: 'PRIVY_SIGNER_KEY',
+  PIMLICO_API_KEY: 'PIMLICO_API_KEY',
 } as const
 
 export function runtimeSecret(name: keyof typeof prodSecretSources): string | undefined {

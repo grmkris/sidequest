@@ -82,6 +82,8 @@ export function jsonRpc(url: string, label: string, fetcher: typeof fetch = fetc
     const body = await parse(response, label, method)
     const error = field(body, 'error')
     if (error !== undefined) {
+      if (field(field(error, 'data'), 'code') === 'unavailable' || field(error, 'code') === -32001)
+        throw new AaError('unavailable', `${label} did not answer ${method}`)
       const message = field(error, 'message')
       const text = message instanceof Object || message === undefined || message === null ? 'refused' : String(message)
       throw new AaError('refused', `${label} refused ${method}: ${text.slice(0, 240)}`)

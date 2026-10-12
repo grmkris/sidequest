@@ -20,7 +20,8 @@ import {
   encodeFunctionData,
   parseAbi,
 } from 'viem'
-import type { Wallet } from './actions.ts'
+import { sidequestEvaluatorAbi } from './abi/index.ts'
+import type { Ctx, Wallet } from './actions.ts'
 import type { TxRequest } from './board-client.ts'
 
 /** ERC-7579 `execute` as the DeleGator exposes it to its own account. */
@@ -87,6 +88,40 @@ export interface Call {
   readonly to: Address
   readonly value: bigint
   readonly data: Hex
+}
+
+export interface SignedEvidenceAttestation {
+  readonly attestation: {
+    readonly jobId: bigint | string
+    readonly submissionHash: Hex
+    readonly policyHash: Hex
+    readonly repo: Hex
+    readonly headSha: Hex
+    readonly testedSha: Hex
+    readonly checkRunsHash: Hex
+    readonly conclusion: number
+    readonly validUntil: bigint | string
+  }
+  readonly verifier: Address
+  readonly signature: Hex
+}
+
+/** Build the evaluator call that a worker may include beside its submit call. */
+export function attachEvidenceCall(ctx: Ctx, signed: SignedEvidenceAttestation): Call {
+  const attestation = {
+    ...signed.attestation,
+    jobId: BigInt(signed.attestation.jobId),
+    validUntil: BigInt(signed.attestation.validUntil),
+  }
+  return {
+    to: ctx.stack.evaluator,
+    value: 0n,
+    data: encodeFunctionData({
+      abi: sidequestEvaluatorAbi,
+      functionName: 'attachEvidence',
+      args: [attestation.jobId, attestation, signed.verifier, signed.signature],
+    }),
+  }
 }
 
 /** The DeleGator's `execute(batch mode, calls)`: every call lands, or none (a transaction to self, or a user op's call data). */

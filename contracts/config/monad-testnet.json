@@ -81,7 +81,8 @@
       "safe": "0x78d5A4DB279C6850a07278A5A8EE76296740E438",
       "vault": "0x795243DF7f2e84b6EaCF69811F20B4d36980c366"
     },
-    "testnetFaucet": "0x6b8AA596f30d765E4F3C6ec2B1e994F19098df33"
+    "testnetFaucet": "0x6b8AA596f30d765E4F3C6ec2B1e994F19098df33",
+    "agentSweep": "0x328Ab88D957D753e97956f424Bb3DFcFF74C2106"
   },
   "sidequest": {
     "clocks": {

@@ -54,6 +54,12 @@ Mode-600 `~/.config/sidequest/<stage>.env` files use plain names and mirror GitH
 CI stores `GITHUB_*` variables/secrets as `SQ_GITHUB_*`; the workflow and runner map them to provider names. The required
 release keys are declared by `REQUIRED_SECRETS` in `release.ts`. `.env.local` contains local and test keys only.
 
+`PIMLICO_API_KEY` is required in both stage environments and bound to the API as `secret_text`.
+`TESTNET_PAYMASTER_SIGNER_KEY` is a hex secp256k1 key required only for a `monad-testnet` profile (currently dev and
+prod-testnet). Release assembly removes it on a mainnet profile, and the API binds it only on testnet. The signer must
+match the deployed testnet paymaster's immutable signer; the coordinator verifies that before enabling charged ops.
+Missing or invalid AA secrets return an unavailable-service error; they do not crash unrelated Worker routes.
+
 Bun automatically loads checkout env files. The runner scrubs inherited stage/config values, assembles the selected
 stage environment, and starts inspection with `bun --no-env-file`. CLI deploy/drift use the tracked regular empty file
 `scripts/ci/empty.env` and `BUN_OPTIONS=--no-env-file`. Do not replace this with `/dev/null`: the CLI rejected that

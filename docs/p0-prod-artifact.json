@@ -25,6 +25,7 @@
     "mainnetLive": false
   },
   "secretSources": {
+    "PIMLICO_API_KEY": "PIMLICO_API_KEY",
     "MONAD_RPC_URL": "MONAD_RPC_URL",
     "RELAY_PRIVATE_KEY": "RELAY_PRIVATE_KEY",
     "ATTESTER_PRIVATE_KEY": "ATTESTER_PRIVATE_KEY",

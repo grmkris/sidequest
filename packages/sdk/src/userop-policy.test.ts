@@ -35,6 +35,13 @@ describe('the user-operation signing rules (ADR-0023)', () => {
     expect(userOpRules().some((candidate) => candidate.name.toLowerCase().includes('transfer'))).toBe(false)
   })
 
+  it('let earnings leave only through AgentSweep, approved to AgentSweep alone', () => {
+    const sweep = rule('userOp AgentSweep.sweep')
+    expect(at(sweep, 'ethereum_transaction', 'to')?.value).toBe(config.deployment.agentSweep)
+    const approve = rule('userOp approve to AgentSweep')
+    expect(at(approve, 'ethereum_calldata', 'approve.spender')?.value).toBe(config.deployment.agentSweep)
+  })
+
   it('keep every rule name under the length Privy accepts', () => {
     for (const candidate of authorityPolicy('admin').rules) expect(candidate.name.length).toBeLessThan(RULE_NAME_LIMIT)
   })
