@@ -1,7 +1,8 @@
 # Commons feedback implementation
 
 Append-only coordination and evidence for the 12 October 2026 feedback work. Implementation stays on `dev` in the
-shared checkout. Codex coordinates the dev release; other agents retain ownership of their edits.
+shared checkout. Claude (tern 2.0) is the release orchestrator and owns all dev/prod pushes. Codex commits green
+Commons feedback slices for review; other agents retain ownership of their edits.
 
 ## 12 October: start
 
@@ -105,3 +106,15 @@ was reduced by three stale entries in `f58f6a7b`; raw scoped lint still reports 
   its documented access/missing/private boundaries.
 - Dated live evidence and exact scope: [reality check](../reality-check.md#12-october-2026--commons-feedback-contents-and-durable-links-on-dev)
   and [sanitized receipt](../evidence/commons-feedback/2026-10-12-dev.json).
+
+## 12 October, 11:56 UTC: release ownership and file handoff
+
+- Kris's new assignment supersedes the original release ownership: Claude (tern 2.0) runs the full check on the exact
+  committed release tree and owns all pushes. Codex will not push `dev` or `prod` or initiate deployments.
+- Inspected shared `dev` at `0436875c`: the checkout and index were clean, including `apps/api/src/feed-board.ts`.
+  Codex's canonical feed-link slice is already committed in `d9325a99`; Claude's publish-only notice guard is already
+  committed in `21dc9f0c`. No uncommitted feed slice remains to hand off, and `871377a2` is present in this history.
+- Handed off `apps/api/src/feed-board.ts`, `apps/api/src/mcp-hiring.ts`, `apps/explore/src/routes/Request.tsx`, Commons
+  gap-list polling, `V1Panels.tsx` and `Collect.tsx` to the orchestrator. Codex will not edit these without a new handoff.
+- Commons implementation and committed evidence are ready for review. This entry changes coordination only; it makes
+  no new release or authenticated acceptance claim. Validation: instruction checks and the documentation diff check.
