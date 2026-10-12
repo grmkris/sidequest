@@ -770,10 +770,12 @@ Sources: [activity HTTP request](../apps/explore/src/components/activity/useActi
 
 ## Loading performance, route reliability and accessibility
 
-Added 12 October 2026. Source inspected through `548e33457bd38fabe77c5c64b38dd434c25d36e5`.
+Added 12 October 2026. Baseline source inspected through `548e33457bd38fabe77c5c64b38dd434c25d36e5`; read-batching follow-up is `a07261ab`.
 Anonymous browser observations below are from `https://dev.sidequest.exchange`
 on the same date; they are not a claim that this exact source revision was deployed.
-No runtime changes were made for this review.
+The baseline browser measurements below predate the read-batching follow-up in
+the Explore client; the other recommendations below remain proposed. The client change has local
+checks and read-only testnet evidence; deployed page performance has not been remeasured.
 
 ### Why an onchain-looking panel can be slow
 
@@ -820,6 +822,122 @@ Network timings include browser scheduling and download time, not just server
 execution. These samples do not isolate a provider outage or establish a p95.
 The full request-timing sample is saved locally at `/tmp/sidequest-data-timing.json`.
 
+### What the supplied RPC batching references mean here
+
+Reviewed 12 October 2026 against source `a07261ab`, Wagmi 3.7.7,
+`@wagmi/core` 3.6.5 and Viem 2.56.9. The references describe four different mechanisms. They should not be treated
+as interchangeable:
+
+| Mechanism | What it actually batches | Fit for Explore | Decision |
+| --- | --- | --- | --- |
+| Multicall3: Wagmi `readContracts`, Viem `multicall`, or automatic `batch.multicall` | Several contract reads become one `eth_call` to the Multicall3 contract | Balances, identity, fee policy and staking; explicit grouping or same-tick scheduling | **Use.** Balance and identity hooks already use it. The separate staking client now enables the scheduler. Wagmi's installed default already enables it. |
+| JSON-RPC array batching (`http(undefined, { batch: { wait: 0 } })`) | Several independent RPC messages in one HTTP POST | HTTP overhead; individual calls still execute separately and may use different heads with `latest` | **Measure first.** QuickNode counts each member toward its limit and warns that slow members delay the response. |
+| MetaMask `metamask_batch` | Wallet-provider requests, including contract calls, signatures, transactions or network changes | Specific to MetaMask Connect; each approval-requiring request still needs user approval | **No initial-load change.** Explore's anonymous reads already go to HTTP RPC and sign-in uses Privy. This is not a Multicall3 configuration or a guarantee of atomic transactions. |
+| Coinbase/Wagmi `sendCalls` | A wallet-supported sequence of onchain writes | Transaction and confirmation UX; support depends on wallet, chain and requested capabilities | **Separate work.** Explore already has guarded EIP-7702 batching for eligible zero-value sequences. Funding would need its own journal and receipt/effect verification. |
+
+Wagmi discussion [#2752](https://github.com/wevm/wagmi/discussions/2752)
+is useful because it explains why Wagmi's Multicall aggregation does not look
+like Ethers' JSON-RPC batch provider: the browser may still show one
+`eth_call`, because the calls are encoded inside Multicall3. The current Viem
+client defaults to a zero-delay scheduler and a 1,024-byte calldata batch limit; adding an
+artificial 32 ms wait would trade away first-render latency unless a measured
+waterfall shows cross-component reads arriving in separate ticks.
+
+The other references support the same boundary: Wagmi's
+[`readContracts`](https://wagmi.sh/core/api/actions/readContracts) is the
+React/config-level primitive; the EVMQuery
+[Multicall3 guide](https://evmquery.com/blog/multicall3-batching-evm-contract-reads)
+and BoltRPC's [Viem guide](https://boltrpc.io/blog/how-to-use-viem-with-custom-rpc)
+describe the contract-level primitive; MetaMask's
+[batch requests](https://docs.metamask.io/metamask-connect/evm/guides/metamask-exclusive/batch-requests)
+and Coinbase's [Wagmi batch transactions](https://docs.cdp.coinbase.com/coinbase-wallet/framework-integrations/wagmi/batch-transactions)
+describe wallet-specific APIs, with Coinbase focused on writes. QuickNode's
+[efficient RPC guide](https://www.quicknode.com/guides/quicknode-products/apis/guide-to-efficient-rpc-requests)
+correctly adds filtering, pagination, caching, bounded retries and provider
+rate limits, but its JSON-RPC batching advice is not a reason to replace
+Multicall3.
+
+#### Read-only testnet comparison
+
+A read-only probe on Monad testnet (chain 10143, block `70263059`) checked the
+same backing, schedule and position values through the current SDK helpers.
+Multicall3 was deployed at the chain definition's address and had bytecode.
+The probe observed these request shapes:
+
+| Client | HTTP POSTs | JSON-RPC items | Result |
+| --- | ---: | ---: | --- |
+| Unbatched Viem client, two helpers in parallel | 4 | 4 | Baseline |
+| Viem `batch: { multicall: true }` | 1 | 1 | Same values at the pinned block |
+| Explicit `publicClient.multicall` | 1 | 1 | Same values at the pinned block |
+| JSON-RPC transport batch | 1 | 4 | Same values, but four provider requests remain |
+
+Three alternating-order rounds took 61/17/17 ms for raw parallel reads,
+23/19/19 ms for automatic Multicall3, 21/18/20 ms for explicit Multicall3, and
+20/19/19 ms for JSON-RPC batching. Two setup requests (head and bytecode) are
+excluded from the table. No retry or signed transaction was sent. The warm
+samples were roughly 17–23 ms from this build box, so this is strong
+request-count evidence rather than a page-speed or p95 claim. The next browser
+measurement should count actual page waterfalls and panel-ready times after the
+change. The remaining small optimization is to avoid fetching the same
+`poolOf` value twice when `getBacking` and `getPosition` are requested together;
+batching currently removes the network round trips but not that duplicate EVM
+work.
+
+#### Where the next reductions would come from
+
+1. **Browser staking:** the new scheduler combines the three reads after
+   `readDelegations` receives its validated API snapshot. It cannot remove that
+   preceding API wait: the response supplies the block the reads must use.
+   `useBacking` still issues duplicate `poolOf` reads. A combined SDK helper can
+   use one pool, one schedule and one position, then reuse the existing arithmetic.
+2. **API valuation:** `apps/api/src/board.ts` enables SDK batching for board
+   contexts, while `worker.ts` creates the general read context without it.
+   `backingCard` then calls multiple SDK readers. The SDK transport has a shared
+   per-process limiter at eight request starts per second (125 ms spacing).
+   Eliminating queued reads can help here; the actual queue delay still needs
+   instrumentation. Do not simply lift the limit or assume it enforces a global
+   quota across Cloudflare isolates. Commons already uses explicit multicalls.
+3. **Cache by meaning:** immutable content hashes and canonical block snapshots
+   can be reused much longer than latest balances. Use chain, deployment, method,
+   arguments and block identity in cache keys; handle reorgs for unfinalized data.
+   Ownership, allowances and pause state need fresh action checks. An indefinite
+   `localStorage` cache copied from a tutorial would be unsuitable for them.
+4. **Target queries:** QuickNode's filtering/pagination advice reinforces removing
+   the full jobs list from normal job-detail loading. Keep D1/indexer discovery;
+   scanning historical logs in each browser would increase work. Follow cursors
+   only as the user needs more rows.
+5. **Updates and providers:** subscriptions can invalidate relevant cached data;
+   they do not improve the initial fetch or replace indexing. Recover missed
+   events after reconnect and coalesce bursts. The 1-second Wagmi client polling
+   setting is not a promise that every hook refetches each second: balances use
+   10 seconds, backing 15 seconds, pause 30 seconds. Measure each independently.
+   Compare provider error rates and latency on Monad before changing endpoints.
+
+Multicall targets see Multicall3 as `msg.sender`, so use it for caller-independent
+views such as `balanceOf(address)`. Keep caller-sensitive simulations direct;
+Viem's automatic scheduler excludes calls with a supplied `from` or other
+transaction fields. A single `eth_call` has one block context, but chunking or
+separate requests with `latest` can cross blocks. Pin related economic reads to
+one block, preserve the API's checkpoint/hash/finality checks, and never replace
+an unavailable safety read with zero. Use partial successes for independent
+balance rows and fail closed when a composite economic result needs every read.
+
+The provider remains replaceable infrastructure: Multicall3 adds no new hosted
+service or custody. A paid RPC or read proxy can still observe queried addresses
+and refuse service. Keep credentials server-side, use a bounded read service if
+needed, and retain the SDK's configurable RPC path. A provider change alone
+cannot remove D1/DO availability or indexer lag; the broader trust review below
+continues to apply.
+
+Sources: [staking client](../apps/explore/src/stake-context.ts),
+[browser composition](../apps/explore/src/delegation-query.ts),
+[SDK reads](../packages/sdk/src/staking.ts),
+[SDK client and limiter](../packages/sdk/src/client.ts),
+[board contexts](../apps/api/src/board.ts),
+[API read context](../apps/api/src/worker.ts),
+[checkpoint and backing card](../apps/api/src/staking-index.ts),
+[Commons multicall](../apps/api/src/commons/stake-live.ts).
+
 ### Common strategies, applied to this app
 
 1. **Show useful cached display data while refreshing.** Give public queries
@@ -836,14 +954,13 @@ The full request-timing sample is saved locally at `/tmp/sidequest-data-timing.j
    Share a query factory or derive a first-page selector; do not simply assign
    the same key to different single-page and infinite-query result shapes.
 3. **Batch independent contract reads and share their inputs.** Wallet balances
-   and agent identity already use Wagmi `useReadContracts`; batching is not
-   missing everywhere. The separate staking Viem client has no explicit batching.
-   `useBacking(account, delegator)` runs `getBacking` and `getPosition` together,
-   and both read the same `poolOf` at the same block. A combined reader can fetch
-   that pool once. `readDelegations` also waits for an API snapshot, then three
-   RPC reads before returning any positions. Display the validated position
-   snapshot separately where possible, while retaining all required checks for
-   actions. Keep dependent economic reads pinned to one block.
+   and agent identity already use Wagmi `useReadContracts`; the separate staking
+   client now explicitly enables the same Multicall3 behavior. `useBacking(account, delegator)` still fetches the same `poolOf` twice at the same block, so a
+   combined reader can remove that duplicate EVM work. `readDelegations` waits
+   for an API snapshot, then its three current-state reads can share one
+   Multicall3 call. Display the validated position snapshot separately where
+   possible, while retaining all required checks for actions. Keep dependent
+   economic reads pinned to one block.
 4. **Reduce work per route.** Replace whole-list enrichment on job detail with a
    targeted task lookup. Paginate visible lists instead of continually fetching
    up to 10,000 chain jobs. Lazy-load route components, starting with admin,
