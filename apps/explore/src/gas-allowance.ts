@@ -42,6 +42,19 @@ export function gasBudgetAmount(amount = '5'): bigint {
   return units
 }
 
+/** An allowance is usable only after the operator's account has the configured DeleGator code. */
+export async function prepareGasBudgetWallet(input: {
+  deployment: sdk.Deployment
+  operator: Address
+  node: sdk.JsonRpc
+  upgrade: (() => Promise<Hex | null>) | null
+}): Promise<void> {
+  await input.upgrade?.()
+  const code = Schema.decodeUnknownSync(HexText)(await input.node('eth_getCode', [input.operator, 'latest']))
+  if (code.toLowerCase() !== `0xef0100${input.deployment.delegation.delegator.slice(2).toLowerCase()}`)
+    throw new Error('Enable USDC gas with your Sidequest wallet before signing a gas budget.')
+}
+
 export function readGasBudgetIntent(storage: Pick<Storage, 'getItem'>, key: string): GasBudgetIntent | null {
   const saved = storage.getItem(key)
   return saved === null ? null : parseGasBudgetIntent(JSON.parse(saved))

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   gasBudgetAmount,
   gasBudgetDisables,
+  prepareGasBudgetWallet,
   readGasBudgetIntent,
   readPreparedGasBudget,
   reviewGasBudget,
@@ -34,6 +35,35 @@ const prepared = readPreparedGasBudget({
 })
 
 describe('separate USDC gas budget', () => {
+  it('allows an already-delegated injected operator without an upgrade hook', async () => {
+    const node: sdk.JsonRpc = async (method, params) => {
+      expect(method).toBe('eth_getCode')
+      expect(params).toEqual([operator, 'latest'])
+      return `0xef0100${deployment.delegation.delegator.slice(2)}`
+    }
+    await expect(prepareGasBudgetWallet({ deployment, operator, node, upgrade: null })).resolves.toBeUndefined()
+  })
+  it('refuses an undelegated or differently-delegated operator before signing the grant', async () => {
+    for (const code of ['0x', `0xef0100${deployment.core.slice(2)}`]) {
+      const node: sdk.JsonRpc = async () => code
+      await expect(prepareGasBudgetWallet({ deployment, operator, node, upgrade: null })).rejects.toThrow(
+        /Enable USDC gas/,
+      )
+    }
+  })
+  it('finishes the self-paid upgrade then requires chain code proof', async () => {
+    const calls: string[] = []
+    const upgrade = async () => {
+      calls.push('upgrade')
+      return null
+    }
+    const node: sdk.JsonRpc = async () => {
+      calls.push('read-code')
+      return '0x'
+    }
+    await expect(prepareGasBudgetWallet({ deployment, operator, node, upgrade })).rejects.toThrow(/Enable USDC gas/)
+    expect(calls).toEqual(['upgrade', 'read-code'])
+  })
   it('defaults to five USDC and refuses zero, exponent notation or excess precision', () => {
     expect(gasBudgetAmount()).toBe(5_000_000n)
     expect(gasBudgetAmount('0.000001')).toBe(1n)

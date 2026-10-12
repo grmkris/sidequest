@@ -2,9 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { isAddress } from 'viem'
 import { agentAction, agentStatus } from '../agent-api.ts'
+import { browserAaRpc } from '../aa-request.ts'
 import type { ManagedAgent } from '../api.ts'
 import {
   gasBudgetAmount,
+  prepareGasBudgetWallet,
   parseGasBudgetIntent,
   gasBudgetDisables,
   readGasBudgetIntent,
@@ -16,7 +18,7 @@ import {
   type PreparedGasBudget,
 } from '../gas-allowance.ts'
 import { friendlyError } from '../txErrors.ts'
-import { deployment } from '../wallet.ts'
+import { chain, deployment } from '../wallet.ts'
 import { prompts, useSignTypedDataWithPrompt } from '../wallet-prompt.ts'
 import { typedDataArgs } from '../typed-data.ts'
 import { useDelegatorUpgrade } from './Privy.tsx'
@@ -156,7 +158,13 @@ function useGasBudgetActions(state: BudgetState) {
       const saved = readGasBudgetIntent(localStorage, state.storageKey)
       if (JSON.stringify(saved) !== JSON.stringify(intent))
         throw new Error('The gas-budget journal changed. Reload to reconcile it.')
-      await upgrade?.()
+      if (state.operator === undefined) throw new Error('Reconnect the operator wallet before signing a gas budget.')
+      await prepareGasBudgetWallet({
+        deployment,
+        operator: state.operator,
+        node: browserAaRpc(chain.rpcUrls.default.http[0]!).node,
+        upgrade,
+      })
       const signature = await sign(typedDataArgs(review.typedData), prompts.gasBudget(state.agent.name, intent.amount))
       await agentAction(state.agent.id, 'gas-allowance-confirm', { key: intent.key, hash: review.hash, signature })
       await state.finish()
