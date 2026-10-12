@@ -5,7 +5,7 @@ import { Link } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
 import { Details, Address, CopyButton, Section, textLinkClass } from './kit.tsx'
 import { TestnetFaucet } from './TestnetFaucet.tsx'
-import { BuyButtons } from './Buy.tsx'
+import { SideChip, useSideSheet } from './side/SideToken.tsx'
 import { Fragment, useState } from 'react'
 import { zeroAddress } from 'viem'
 import { useBalance, useReadContracts } from 'wagmi'
@@ -174,10 +174,11 @@ function StakedRow({ value, usd }: { value: bigint; usd: number | undefined }) {
 
 /**
  * The wallet as a section of Account: the full address to fund, live balances with dollar estimates (`usd.ts`), SIDE
- * staked behind agents once the index answers, and where testnet tokens come from.
+ * staked behind agents once the index answers, where testnet tokens come from, and the SIDE sheet to buy or sell SIDE.
  */
 export function WalletCard({ address }: { address: `0x${string}` }) {
   const { rows, staked, totalUsd } = useWalletBalances(address)
+  const sheet = useSideSheet()
   return (
     <Section
       id="wallet"
@@ -211,7 +212,7 @@ export function WalletCard({ address }: { address: `0x${string}` }) {
           <Fragment key={row.token ?? row.symbol}>
             <Item>
               <ItemContent className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-                {row.symbol}
+                {row.role === 'bond' && sheet !== null ? <SideChip variant="compact" className="w-fit" /> : row.symbol}
                 <ItemDescription className="block text-xs text-muted-foreground">{WHAT[row.role]}</ItemDescription>
               </ItemContent>
               <Amount token={row.token} value={row.value} decimals={row.decimals} text={shown(row)} usd={row.usd} />
@@ -234,7 +235,7 @@ export function WalletCard({ address }: { address: `0x${string}` }) {
       {/* Getting tokens sits with the balances it fills, as the card's foot. */}
       <div className="grid gap-4 rounded-xl bg-muted/40 p-4">
         <TestnetFaucet address={address} />
-        <BuyButtons address={address} />
+        <SideChip variant="action">Buy or sell SIDE</SideChip>
       </div>
     </Section>
   )

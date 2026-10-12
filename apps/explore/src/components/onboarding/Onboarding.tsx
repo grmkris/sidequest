@@ -15,6 +15,7 @@ import {
   welcomeDismissed,
   welcomeShown,
 } from '../../onboarding.ts'
+import { useSideSheet } from '../side/SideToken.tsx'
 import { useOnboardingFacts } from './useOnboardingFacts.ts'
 
 /** Opens Welcome when it should; renders nothing. Mount it only for a signed-in operator. */
@@ -22,11 +23,13 @@ export function WelcomeOpener({ address }: { address: Address }) {
   const facts = useOnboardingFacts(address)
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  const side = useSideSheet()
   const open = shouldWelcome({
     facts,
     pathname,
     dismissed: welcomeDismissed(address),
     shown: welcomeShown(address),
+    sideOpen: side?.showing === true,
   })
   useEffect(() => {
     if (!open) return

@@ -33,6 +33,7 @@ describe('onboarding', () => {
     expect(open({ pathname: '/agents/approve/abc' })).toBe(false)
     expect(open({ dismissed: true })).toBe(false)
     expect(open({ shown: true })).toBe(false)
+    expect(open({ sideOpen: true })).toBe(false)
     expect(open({ facts: facts(true, true, true) })).toBe(false)
     expect(open({ facts: facts(null, null, null) })).toBe(false)
   })

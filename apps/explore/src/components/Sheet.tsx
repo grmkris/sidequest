@@ -128,7 +128,7 @@ export function Sheet({
         if (e.target === ref.current) dismiss()
       }}
       data-leaving={leaving ? '' : undefined}
-      className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-overlay backdrop:transition-opacity backdrop:duration-(--dur-slow) data-leaving:backdrop:opacity-0 sm:open:grid sm:open:place-items-center"
+      className="fixed inset-0 z-40 m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-overlay backdrop:transition-opacity backdrop:duration-(--dur-slow) data-leaving:backdrop:opacity-0 sm:open:grid sm:open:place-items-center"
     >
       <div
         ref={panel}

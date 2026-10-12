@@ -225,6 +225,13 @@ export function usePrivyLogout(): () => Promise<void> {
   }
 }
 
+/** Whether someone is logged in to Privy, whose wallet connects to wagmi a moment later (false without Privy). */
+export function usePrivyAuthenticated(): boolean {
+  if (privyAppId === '') return false
+  // oxlint-disable-next-line react-hooks/rules-of-hooks -- the branch above is a build-time constant, so hook order never changes
+  return usePrivy().authenticated
+}
+
 /** Whether Privy's own modal is showing (false without Privy). */
 export function usePrivyModalOpen(): boolean {
   if (privyAppId === '') return false

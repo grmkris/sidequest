@@ -486,12 +486,6 @@
     "eslint(max-lines-per-function)": 1,
     "react-hooks(rules-of-hooks)": 1
   },
-  "apps/explore/src/components/Buy.tsx": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1,
-    "complexity(complexity)": 1,
-    "eslint(max-lines-per-function)": 1,
-    "typescript(no-unnecessary-type-assertion)": 1
-  },
   "apps/explore/src/components/DelegationForm.tsx": {
     "complexity(complexity)": 1,
     "eslint(max-lines-per-function)": 1,

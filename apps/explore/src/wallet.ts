@@ -40,6 +40,8 @@ export const xLink: string | null = links.x ?? null
 export const firstParty: sdk.NetworkMeta['firstParty'] = sdk.networkMeta(network).firstParty
 /** SIDE's page on its launcher (nad.fun on mainnet), where people get SIDE while it has no market of ours; or null. */
 export const getSideLink: string | null = sdk.networkMeta(network).getSide ?? null
+/** SIDE's other pages (MonadVision, DEX Screener once graduated) from the network config; empty while SIDE is unknown. */
+export const sidePages: sdk.NetworkMeta['sidePages'] = sdk.networkMeta(network).sidePages
 /** The deploy's chain; testnet with the explorer overridden (the chain's default testnet explorer entry is stale). */
 export const chain: Chain = isMainnet
   ? monad
@@ -174,8 +176,14 @@ export function usePaused(): boolean {
   return data === true
 }
 
-export const explorer = (kind: 'tx' | 'address' | 'nft', value: string) =>
+export const explorer = (kind: 'tx' | 'address' | 'nft' | 'token', value: string) =>
   `${chain.blockExplorers?.default.url ?? ''}/${kind}/${value}`
+
+/**
+ * SIDE's address, for the SIDE control: the deployment's once deployed, else the one the config names (mainnet between
+ * the token's creation and launch day's promotion, when only links work); null while neither is known.
+ */
+export const sideToken: `0x${string}` | null = deployed ? deployment.factory : (sdk.networkMeta(network).side ?? null)
 
 /** An agent's ERC-8004 identity off this site: its NFT on Monadscan and its profile on 8004scan. */
 export const agentExplorerLinks = (agentId: string) =>

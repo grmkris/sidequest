@@ -22,6 +22,7 @@ import { AuthProvider, useAuth } from './components/Wallet.tsx'
 import { LaunchGate } from './components/LaunchGate.tsx'
 import { Shell } from './components/Shell.tsx'
 import { LandingShell } from './components/LandingShell.tsx'
+import { SideTokenProvider } from './components/side/SideToken.tsx'
 import { ServicesPage } from './routes/Services.tsx'
 import { ServicePage } from './routes/Service.tsx'
 import { WelcomePage } from './routes/Welcome.tsx'
@@ -55,16 +56,14 @@ function Layout() {
   useRouteAccessibility()
   // The embedded widget (ADR-0008) has no site chrome: the host page is the chrome.
   if (location.pathname.startsWith('/embed/')) return <Outlet />
-  if (location.pathname === '/')
-    return (
-      <LandingShell>
-        <Outlet />
-      </LandingShell>
-    )
+  // One SIDE sheet above both shells: a navigation while one of its trades is pending keeps it on screen.
+  const Frame = location.pathname === '/' ? LandingShell : Shell
   return (
-    <Shell>
-      <Outlet />
-    </Shell>
+    <SideTokenProvider>
+      <Frame>
+        <Outlet />
+      </Frame>
+    </SideTokenProvider>
   )
 }
 

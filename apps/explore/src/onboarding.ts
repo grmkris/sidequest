@@ -54,8 +54,16 @@ export function shouldWelcome(input: {
   dismissed: boolean
   /** Welcome already opened in this tab for this wallet. */
   shown: boolean
+  /** The SIDE sheet is on screen (someone signing in to buy SIDE): Welcome waits rather than taking the page. */
+  sideOpen?: boolean
 }): boolean {
-  return onboardingDone(input.facts) === false && WELCOME_FROM.has(input.pathname) && !input.dismissed && !input.shown
+  return (
+    onboardingDone(input.facts) === false &&
+    WELCOME_FROM.has(input.pathname) &&
+    !input.dismissed &&
+    !input.shown &&
+    input.sideOpen !== true
+  )
 }
 
 const laterKey = (address: string) => `sq:welcome-later:${address.toLowerCase()}`

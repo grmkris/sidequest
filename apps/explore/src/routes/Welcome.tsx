@@ -9,11 +9,11 @@ import { CreateAgent } from '../components/agent/CreateAgent.tsx'
 import { StartPrompt } from '../components/AgentStartLink.tsx'
 import { BackingManager } from '../components/BackingManager.tsx'
 import { BoardLink } from '../components/BoardLink.tsx'
-import { BuyButtons } from '../components/Buy.tsx'
 import { CopyButton, PageTitle, textLinkClass } from '../components/kit.tsx'
 import { NeedsBacking } from '../components/backing/NeedsBacking.tsx'
 import { hires, newestAgent, useOnboardingFacts } from '../components/onboarding/useOnboardingFacts.ts'
 import { PrivyLogin } from '../components/Privy.tsx'
+import { SideChip } from '../components/side/SideToken.tsx'
 import { TestnetFaucet } from '../components/TestnetFaucet.tsx'
 import { Button, buttonVariants } from '../components/ui/button.tsx'
 import { useAuth } from '../components/Wallet.tsx'
@@ -258,7 +258,7 @@ function Fund({ address }: { address: Address }) {
     return (
       <div className="grid gap-3">
         <TestnetFaucet address={address} />
-        <BuyButtons address={address} />
+        <SideChip variant="action">Buy or sell SIDE</SideChip>
       </div>
     )
   return (
@@ -270,7 +270,7 @@ function Fund({ address }: { address: Address }) {
       <p className="text-xs text-muted-foreground">
         Send {chain.nativeCurrency.symbol} for gas to this address from any wallet you have, then buy SIDE here.
       </p>
-      <BuyButtons address={address} />
+      <SideChip variant="action">Buy SIDE</SideChip>
     </div>
   )
 }
