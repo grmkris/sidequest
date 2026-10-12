@@ -1,4 +1,4 @@
-import { type Address, type Hex, decodeFunctionData, encodeAbiParameters, erc20Abi, toHex } from 'viem'
+import { type Address, type Hex, decodeFunctionData, encodeAbiParameters, erc20Abi, size, toHex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { describe, expect, it } from 'vitest'
 import { decodeExecuteCalldata } from '../batch.ts'
@@ -89,6 +89,8 @@ describe('building a user operation', () => {
     ])
     expect(built.op.nonce >> 64n).toBe(nonceKey('op-1'))
     expect(built.op.paymasterData).toBe('0xfeed')
+    // The estimate's placeholder must be a well-formed 65-byte ECDSA signature: OpenZeppelin reverts on any other length.
+    expect(size(built.op.signature)).toBe(65)
     expect(built.op.callGasLimit).toBe((0x30d40n * 11n) / 10n)
     expect(built.maxCost > 0n && built.maxCost <= aa.maxCostPerOp).toBe(true)
   })

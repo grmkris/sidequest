@@ -26,8 +26,8 @@ import { type UserOperation, approveCall, delegatorDigest, laneNonce, toBundlerJ
  * A well-formed ECDSA signature for estimation: it recovers to some other address, so the DeleGator reports a failed
  * validation instead of reverting on a malformed one.
  */
-const DUMMY_SIGNATURE: Hex =
-  '0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c'
+export const ESTIMATE_SIGNATURE: Hex =
+  '0xbbab8d71ce002d90139cb92579e2311de0983756e4d23be16652859b201bdecc407ee1174363f8dcfc69492d377c15c81d5c1560faf03ed23b1a24f8f044cf091c'
 
 const entryPointAbi = parseAbi(['function getNonce(address sender, uint192 key) view returns (uint256)'])
 const SEQUENCE = (1n << 64n) - 1n
@@ -156,7 +156,7 @@ async function draft(input: BuildInput, callData: Hex): Promise<UserOperation> {
     preVerificationGas: 0n,
     maxFeePerGas: quantity(field(fast, 'maxFeePerGas'), 'max fee'),
     maxPriorityFeePerGas: quantity(field(fast, 'maxPriorityFeePerGas'), 'priority fee'),
-    signature: DUMMY_SIGNATURE,
+    signature: ESTIMATE_SIGNATURE,
   }
 }
 
