@@ -12,7 +12,14 @@ import { AgentOrb } from '../components/agent/AgentOrb.tsx'
 import { CreateAgent } from '../components/agent/CreateAgent.tsx'
 import { NeedsBacking } from '../components/backing/NeedsBacking.tsx'
 import type { ManagedAgent } from '../api.ts'
-import { approveAgent, readProposal, type ApprovedAgent, type Proposal, type Role } from '../agent-setup-api.ts'
+import {
+  approveAgent,
+  proposalPoll,
+  readProposal,
+  type ApprovedAgent,
+  type Proposal,
+  type Role,
+} from '../agent-setup-api.ts'
 import { useManagedAgents } from '../managed.ts'
 
 /** What the coding agent proposed: its avatar (same origin only), name and description. */
@@ -120,7 +127,11 @@ export function AgentApprovePage() {
   const { agentKey } = useParams({ strict: false }) as { agentKey: string }
   const auth = useAuth()
   const agents = useManagedAgents()
-  const proposal = useQuery({ queryKey: ['proposal', agentKey], queryFn: () => readProposal(agentKey) })
+  const proposal = useQuery({
+    queryKey: ['proposal', agentKey],
+    queryFn: () => readProposal(agentKey),
+    refetchInterval: (query) => proposalPoll(query.state.data, query.state.dataUpdateCount),
+  })
   const agent = agents.data?.agents.find((row) => row.id === agentKey)
   const { roles, ticks } = useRoles(agent?.address == null ? undefined : getAddress(agent.address))
   const title = (

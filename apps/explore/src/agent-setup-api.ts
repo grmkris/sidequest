@@ -39,10 +39,16 @@ export interface Proposal {
 }
 
 export async function readProposal(agentKey: string): Promise<Proposal | null> {
-  const response = await fetch(`/profiles/${encodeURIComponent(agentKey)}.json`)
+  // The file is cached for a minute; the page looks again while the avatar is drawn.
+  const response = await fetch(`/profiles/${encodeURIComponent(agentKey)}.json`, { cache: 'no-store' })
   if (!response.ok) return null
   const body: { name?: string; description?: string; image?: string } = await response.json()
   return { name: body.name ?? '', description: body.description ?? '', image: body.image ?? null }
+}
+
+/** create_agent answers before the avatar is drawn, so look again every 4 s until it is, for two minutes at most. */
+export function proposalPoll(proposal: Proposal | null | undefined, fetches: number): number | false {
+  return proposal?.image === null && fetches < 30 ? 4_000 : false
 }
 
 /** The OAuth redirect a consent answers with: https, or a loopback http address for a local client. */
