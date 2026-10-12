@@ -116,12 +116,16 @@ describe('building a user operation', () => {
     await expect(build(services(), { aa: { ...aa, paymaster: null } })).rejects.toMatchObject({ code: 'no-paymaster' })
   })
 
-  it('sponsors a faucet claim without a quote, an approval or a cost', async () => {
+  it('sponsors a faucet claim through a different verifying paymaster, even before our paymaster is deployed', async () => {
     const s = services()
-    const built = await build(s, { sponsor: 'faucet' })
+    const built = await build(s, { sponsor: 'faucet', aa: { ...aa, paymaster: null } })
     expect(s.log).not.toContain('paymaster:pimlico_getTokenQuotes')
     expect(decodeExecuteCalldata(built.op.callData)).toHaveLength(1)
     expect(built.maxCost).toBe(0n)
+    expect(built.op.paymaster).toBe(PAYMASTER)
+    const other = await build(services(), { sponsor: 'faucet', aa: { ...aa, paymaster: WORK_TARGET } })
+    expect(other.op.paymaster).toBe(PAYMASTER)
+    await expect(build(services(), { sponsor: 'faucet', chainId: 143 })).rejects.toMatchObject({ code: 'refused' })
   })
 })
 

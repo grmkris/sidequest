@@ -1,4 +1,5 @@
 export * from './userop.ts'
 export * from './fees.ts'
 export * from './build.ts'
+export * from './testnet-paymaster.ts'
 export { AaError, type AaErrorCode, type JsonRpc, jsonRpc, pimlicoUrl } from './rpc.ts'

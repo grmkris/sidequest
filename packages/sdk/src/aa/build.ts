@@ -50,7 +50,7 @@ export interface BuildInput {
   readonly nonceKey: bigint
   /** The sender's 7702 authorization, when its code does not point at the DeleGator yet. */
   readonly authorization?: SignedAuthorization | undefined
-  /** Testnet only: our paymaster sponsors a faucet claim instead of charging the gas token. */
+  /** Testnet only: Pimlico sponsors a faucet claim instead of charging the gas token. */
   readonly sponsor?: 'faucet' | undefined
 }
 
@@ -122,11 +122,12 @@ function paymasterLimits(op: UserOperation, answer: Json | undefined): UserOpera
 }
 
 /** Merges a paymaster answer (stub or final) into the operation, refusing any other paymaster. */
-function withPaymaster(op: UserOperation, answer: Json, paymaster: Address): UserOperation {
-  if (!named(field(answer, 'paymaster'), paymaster))
+function withPaymaster(op: UserOperation, answer: Json, paymaster: Address | null): UserOperation {
+  const address = hexField(field(answer, 'paymaster'), 'paymaster')
+  if (address.length !== 42 || (paymaster !== null && !named(address, paymaster)))
     throw new AaError('mismatch', 'the paymaster service answered for another paymaster')
   return paymasterLimits(
-    { ...op, paymaster, paymasterData: hexField(field(answer, 'paymasterData'), 'paymaster data') },
+    { ...op, paymaster: address, paymasterData: hexField(field(answer, 'paymasterData'), 'paymaster data') },
     answer,
   )
 }
@@ -171,9 +172,12 @@ function batcher(input: BuildInput, paymaster: Address, approve: boolean) {
 }
 
 /** Checks the lane is free and the paymaster is configured; returns the paymaster. */
-async function preflight(input: BuildInput): Promise<Address> {
+async function preflight(input: BuildInput): Promise<Address | null> {
   const paymaster = input.aa.paymaster
-  if (paymaster === null) throw new AaError('no-paymaster', 'no paymaster is configured on this network yet')
+  if (input.sponsor !== undefined && input.chainId !== 10143)
+    throw new AaError('refused', 'faucet sponsorship is testnet only')
+  if (paymaster === null && input.sponsor === undefined)
+    throw new AaError('no-paymaster', 'no paymaster is configured on this network yet')
   if ((await laneSequence(input.node, input.aa.entryPoint, input.sender, input.nonceKey)) !== 0n)
     throw new AaError('landed', 'an operation already landed on this lane: reconcile it instead of building another')
   return paymaster
@@ -184,9 +188,12 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
   const { aa, chainId } = input
   const paymaster = await preflight(input)
   const sponsored = input.sponsor !== undefined
-  const tokenQuote = sponsored ? null : await quote(input, paymaster)
-  const approve = !sponsored && (await allowanceOf(input.node, aa.gasToken, input.sender, paymaster)) < aa.maxCostPerOp
-  const batch = batcher(input, paymaster, approve)
+  const tokenQuote = sponsored || paymaster === null ? null : await quote(input, paymaster)
+  const approve =
+    !sponsored &&
+    paymaster !== null &&
+    (await allowanceOf(input.node, aa.gasToken, input.sender, paymaster)) < aa.maxCostPerOp
+  const batch = batcher(input, paymaster ?? aa.entryPoint, approve)
   const context = sponsored ? { sponsor: 'faucet' } : { token: aa.gasToken }
   const params = (op: UserOperation): Json[] => [
     toBundlerJson(op, input.authorization),
@@ -195,7 +202,7 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
     context,
   ]
   let op = await draft(input, await batch(aa.maxCostPerOp))
-  op = withPaymaster(op, await input.paymaster('pm_getPaymasterStubData', params(op)), paymaster)
+  op = withPaymaster(op, await input.paymaster('pm_getPaymasterStubData', params(op)), sponsored ? null : paymaster)
   op = withEstimate(
     op,
     await input.bundler('eth_estimateUserOperationGas', [toBundlerJson(op, input.authorization), aa.entryPoint]),
@@ -204,7 +211,7 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
   if (maxCost > aa.maxCostPerOp)
     throw new AaError('ceiling', `the gas could cost up to ${maxCost} base units, above the ${aa.maxCostPerOp} ceiling`)
   if (!sponsored) op = { ...op, callData: await batch(maxCost) }
-  op = withPaymaster(op, await input.paymaster('pm_getPaymasterData', params(op)), paymaster)
+  op = withPaymaster(op, await input.paymaster('pm_getPaymasterData', params(op)), sponsored ? null : paymaster)
   return {
     op,
     authorization: input.authorization,
