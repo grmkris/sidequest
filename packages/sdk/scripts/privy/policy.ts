@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
-import { zeroAddress } from 'viem'
-import { DELEGATION_TYPES } from '../../src/delegation/index.ts'
+import { type Abi, type AbiFunction, erc20Abi, toHex, zeroAddress } from 'viem'
+import { coreAbi, sidequestEvaluatorAbi, sidequestHoldingAbi, stakeVaultAbi } from '../../src/abi/index.ts'
+import { DELEGATION_TYPES, delegationManagerAbi } from '../../src/delegation/index.ts'
 import { directoryDomainFields, directoryDomainName, directoryRecordFields } from '../../src/directory.ts'
 import { stageProfile } from '../../../../infra/stage.ts'
 import { selectionTypes, setBudgetTypes, submitTypes } from '../../src/typed-data.ts'
@@ -141,6 +142,124 @@ export function schema(shape: SigningShape): {
   return { types: { EIP712Domain: shape.domain ?? domainTypes, ...shape.types }, primary_type: shape.primaryType }
 }
 
+/**
+ * Every call a hosted agent's user operation may contain (ADR-0023), as one target and its methods: the protocol's
+ * work methods (D15, the B1 grant's lists plus the worker's own `attachEvidence` and the operator-approved
+ * `requestUndelegate`), redemptions of the allowances operators sign to the agent, and disabling them. Privy decodes the
+ * DeleGator's `execute` batch and every inner call must match one of these rules.
+ */
+export const userOpTargets: readonly { name: string; to: string; abi: Abi; methods: readonly string[] }[] = [
+  {
+    name: 'SidequestHolding',
+    to: config.deployment.main.holding,
+    abi: sidequestHoldingAbi,
+    methods: ['activate', 'cancel', 'cancelSelection', 'claimTopUpRefund', 'settle', 'withdraw', 'publish'],
+  },
+  {
+    name: 'SidequestEvaluator',
+    to: config.deployment.main.evaluator,
+    abi: sidequestEvaluatorAbi,
+    methods: [
+      'accept',
+      'reject',
+      'dispute',
+      'completeAfterSilence',
+      'rejectAfterDeliveryDeadline',
+      'rejectAfterWindow',
+      'refundAfterArbitrationTimeout',
+      'retryDeferred',
+      'attachEvidence',
+    ],
+  },
+  {
+    name: 'StakeVault',
+    to: config.deployment.sidequest.vault,
+    abi: stakeVaultAbi,
+    methods: ['cancelUndelegate', 'withdraw', 'requestUndelegate'],
+  },
+  { name: 'ERC8183', to: config.deployment.core, abi: coreAbi, methods: ['submit', 'submitClaim', 'claimRefund'] },
+  {
+    name: 'DelegationManager',
+    to: config.delegation.manager,
+    abi: delegationManagerAbi,
+    methods: ['redeemDelegations', 'disableDelegation'],
+  },
+]
+
+const fragment = (abi: Abi, method: string): AbiFunction => {
+  const found = abi.find((item): item is AbiFunction => item.type === 'function' && item.name === method)
+  if (found === undefined) throw new Error(`User-op rule method ${method} is missing from its ABI`)
+  return found
+}
+
+const onChain = {
+  field_source: 'ethereum_transaction',
+  field: 'chain_id',
+  operator: 'eq',
+  value: String(config.chainId),
+}
+const noValue = { field_source: 'ethereum_transaction', field: 'value', operator: 'lte', value: '0x0' }
+const calling = (abi: Abi, method: string, field: string, operator: string, value: string) => ({
+  field_source: 'ethereum_calldata',
+  abi: [fragment(abi, method)],
+  field,
+  operator,
+  value,
+})
+
+/**
+ * The `eth_signUserOperation` rules: each pins the chain, the target, no native value and the function. Approvals pin
+ * their spender: any token to the Holding (a hire's reward and bond), and the gas token to the paymaster, at most its
+ * standing approval. Privy cannot see the paymaster or the gas fields of the operation; the application checks those.
+ */
+export function userOpRules() {
+  const calls = userOpTargets.flatMap((target) =>
+    target.methods.map((method) => ({
+      name: `Allow userOp ${target.name}.${method}`,
+      method: 'eth_signUserOperation',
+      action: 'ALLOW',
+      conditions: [
+        onChain,
+        { field_source: 'ethereum_transaction', field: 'to', operator: 'eq', value: target.to },
+        noValue,
+        calling(target.abi, method, 'function_name', 'eq', method),
+      ],
+    })),
+  )
+  const aa = config.accountAbstraction
+  const paymaster =
+    aa?.paymaster === undefined
+      ? []
+      : [
+          {
+            name: 'Allow userOp gas token approve to the paymaster',
+            method: 'eth_signUserOperation',
+            action: 'ALLOW',
+            conditions: [
+              onChain,
+              { field_source: 'ethereum_transaction', field: 'to', operator: 'eq', value: aa.gasToken },
+              noValue,
+              calling(erc20Abi, 'approve', 'approve.spender', 'eq', aa.paymaster),
+              calling(erc20Abi, 'approve', 'approve.amount', 'lte', toHex(BigInt(aa.standingApproval))),
+            ],
+          },
+        ]
+  return [
+    ...calls,
+    {
+      name: 'Allow userOp approve to the Holding',
+      method: 'eth_signUserOperation',
+      action: 'ALLOW',
+      conditions: [
+        onChain,
+        noValue,
+        calling(erc20Abi, 'approve', 'approve.spender', 'eq', config.deployment.main.holding),
+      ],
+    },
+    ...paymaster,
+  ]
+}
+
 export function authorityPolicy(ownerId: string) {
   const rules = signingShapes.map((shape) => ({
     name: `Allow ${shape.primaryType}`,
@@ -170,6 +289,7 @@ export function authorityPolicy(ownerId: string) {
     owner_id: ownerId,
     rules: [
       ...rules,
+      ...userOpRules(),
       {
         name: 'Allow DeleGator upgrade',
         method: 'eth_sign7702Authorization',
