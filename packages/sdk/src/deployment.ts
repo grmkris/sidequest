@@ -172,6 +172,8 @@ export interface Deployment {
   readonly launcher: Launcher | null
   /** User operations and their USDC paymaster (config `accountAbstraction`); null where none is configured. */
   readonly aa: AccountAbstraction | null
+  /** Stateless earnings sweep contract; absent until its deployment is recorded. */
+  readonly agentSweep: Address | null
   /** The block the recipe deployed at: where an indexer starts and a rebuild restarts. */
   readonly deployBlock: bigint
 }
@@ -260,6 +262,7 @@ export interface DeploymentConfig {
     }
     rewardTokens?: string[]
     testnetFaucet?: string
+    agentSweep?: string
     main?: StackEntry
   }
 }
@@ -483,6 +486,7 @@ export function deploymentFromConfig(network: Network, c: DeploymentConfig): Dep
     launcher:
       validAddress(c.nadfun?.router) && validAddress(d.factory) ? { router: c.nadfun.router, side: d.factory } : null,
     aa: aaFromConfig(c),
+    agentSweep: agentSweepFromConfig(c),
     deployBlock: BigInt(d.block ?? 0),
   }
 }
@@ -515,6 +519,13 @@ export function aaFromConfig(c: Pick<DeploymentConfig, 'chainId' | 'accountAbstr
     standingApproval,
     maxCostPerOp,
   }
+}
+
+function agentSweepFromConfig(c: DeploymentConfig): Address | null {
+  const address = c.deployment.agentSweep
+  if (address === undefined) return null
+  if (!validAddress(address)) throw new Error('Deployment agentSweep must be an address')
+  return address
 }
 
 function marketFromConfig(side: Address, l: LiquidityConfig | undefined): Market | null {

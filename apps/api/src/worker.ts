@@ -158,6 +158,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
         sdk.deployment((process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') as sdk.Network).relay,
       TELEGRAM_BOT_USERNAME: stageProfile()?.telegram.botUsername ?? '',
       DEPLOY_STAGE: process.env.SIDEQUEST_STAGE ?? 'local',
+      HOSTED_SEND: process.env.HOSTED_SEND === 'userop' ? 'userop' : 'relay',
       MONAD_RPC_URL: Redacted.make(rpcUrlForNetwork() || 'unset'),
       SCREENING_BASE_URL: process.env.ARBITER_MODEL_BASE_URL || 'https://ai-gateway.vercel.sh/v1',
       SCREENING_MODEL: process.env.SCREENING_MODEL || 'anthropic/claude-haiku-4.5',
