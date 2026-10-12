@@ -132,7 +132,7 @@
     <p class="stamp">Original review: <code>840226e</code><br>Frontend data extension: <code>216173a0</code><br>12 October 2026<br>Source and configuration review<br><a href="architecture-review.md">Read the detailed review</a></p>
   </header>
 
-  <nav aria-label="Review sections" class="controls"><a href="#map-title">Runtime map</a><a href="#data-title">Frontend data</a><a href="#flow-title">Request flows</a><a href="#money-title">Contracts and money</a><a href="#trust-title">Trust</a><a href="#findings-title">Findings</a></nav>
+  <nav aria-label="Review sections" class="controls"><a href="#map-title">Runtime map</a><a href="#data-title">Frontend data</a><a href="#speed-title">Speed and accessibility</a><a href="#flow-title">Request flows</a><a href="#money-title">Contracts and money</a><a href="#trust-title">Trust</a><a href="#findings-title">Findings</a></nav>
   <section class="section" aria-labelledby="planes-title">
     <div class="section-head"><div><h2 id="planes-title">The four authority planes</h2></div><p>Follow the arrows to see where a request is handled, where state is stored, and where the final authority lives.</p></div>
     <div class="plane-grid">
@@ -327,6 +327,51 @@
 
     <p class="provenance"><strong>Read the detailed map.</strong> The written review explains each route, entity, cache interval, stale boundary and the safe places where a fallback using only RPC could help. An empty indexed result can mean “not found” or “not indexed yet”; the UI must keep those states separate.</p>
     <p class="source">Key code: <a href="https://github.com/grmkris/sidequest/blob/216173a0fcb064a41ec0593a3682afbe35b2bcb6/apps/explore/src/routes/Jobs.tsx">Jobs</a> · <a href="https://github.com/grmkris/sidequest/blob/216173a0fcb064a41ec0593a3682afbe35b2bcb6/apps/explore/src/routes/Job.tsx">Job</a> · <a href="https://github.com/grmkris/sidequest/blob/216173a0fcb064a41ec0593a3682afbe35b2bcb6/apps/explore/src/delegation-query.ts">backing</a> · <a href="https://github.com/grmkris/sidequest/blob/216173a0fcb064a41ec0593a3682afbe35b2bcb6/apps/api/src/worker.ts">API data routes</a> · <a href="https://github.com/grmkris/sidequest/blob/216173a0fcb064a41ec0593a3682afbe35b2bcb6/packages/indexer/src/read.ts">indexer reads</a></p>
+  </section>
+
+  <section class="section" aria-labelledby="speed-title">
+    <div class="section-head"><div><h2 id="speed-title">Make pages feel faster</h2></div><p>Measure when each useful part becomes readable. A panel with onchain numbers can be waiting on JavaScript, our API, RPC or indexing.</p></div>
+    <p class="provenance"><strong>Observed on dev, 12 October 2026.</strong> Anonymous Chromium checks at a 390 × 844 viewport, on the build box without CPU or network throttling. These are exploratory samples, not phone benchmarks or production percentiles. Recommendations below have not been implemented.</p>
+    <div class="source-grid">
+      <article class="source-card" style="--tone:var(--read)"><h3>86 script requests</h3><p>Six different routes each requested about 1.34 MB of script transfer. The deployed HTML preloaded 51 modules; the source eagerly imports every route. Check startup work alongside RPC.</p></article>
+      <article class="source-card" style="--tone:var(--chain)"><h3>RPC: 0.13–0.27 seconds</h3><p>That was the range of captured direct contract reads in the Activity, Job and Agent timing samples. Some composed API reads took 1–3 seconds. A faster node alone cannot remove those waits.</p></article>
+      <article class="source-card" style="--tone:var(--hosted)"><h3>Detail pages read whole lists</h3><p>A job page also mounts the full jobs list and task index, polling them every 10 seconds. Its indexed detail already supplies the normal board/task mapping. Keep a targeted recovery path for unpublished metadata.</p></article>
+      <article class="source-card" style="--tone:var(--ops)"><h3>3 accessibility findings</h3><p>Axe reported one violation on each of Boards, Job detail and Agent detail. Five other route snapshots had none. Automated scans still need keyboard, screen-reader and authenticated checks.</p></article>
+    </div>
+    <h3 class="data-subheading">The first improvements I would make</h3>
+    <div class="finding" style="--tone:var(--hosted)"><div class="priority">Small</div><div><h3>Share public queries</h3><p>Boards uses <code>boards</code> while the token registry uses <code>data-boards</code> for the same endpoint. Directory readers also use different cache shapes. Reuse one query definition or a first-page selector; never give incompatible result shapes the same cache key.</p></div></div>
+    <div class="finding" style="--tone:var(--chain)"><div class="priority">Small</div><div><h3>Reuse the staking pool read</h3><p>Wagmi already batches balances and identity. The separate staking client can do better: backing and a known position both fetch the same pool at the same block. Combine those reads and keep all related values pinned to that block.</p></div></div>
+    <div class="finding" style="--tone:var(--read)"><div class="priority">Small</div><div><h3>Preserve useful data during refresh</h3><p>Give public display queries explicit freshness budgets; show the last successful value with its age while refreshing. Keep unavailable separate from zero. Recheck balance, allowance, ownership and permission when preparing an action.</p></div></div>
+    <div class="finding" style="--tone:var(--ops)"><div class="priority">Small</div><div><h3>Correct semantics and navigation</h3><p>Fix list children on Boards and Job detail, and make the token inside the fee meter static or move it outside. Add route-specific browser titles, a skip-to-main link and deliberate focus behavior after navigation. Announce loading once per region.</p></div></div>
+    <div class="finding" style="--tone:var(--hosted)"><div class="priority">Medium</div><div><h3>Make detail reads specific</h3><p>Fetch one job and its task instead of subscribing to whole lists. Let independent sections resolve separately, reserve their space, and prefetch known detail data on navigation intent. Keep caller-specific permissions out of public caches.</p></div></div>
+    <div class="finding" style="--tone:var(--read)"><div class="priority">Measure</div><div><h3>Split route code, then compare providers</h3><p>Start by deferring infrequent admin and sponsorship routes. Authentication loading needs more care because it owns session restoration. Compare RPC tail latency, throttling and failures before choosing a primary/fallback; bound retries across all layers.</p></div></div>
+    <details data-performance="rpc"><summary>What caching and an RPC proxy can—and cannot—do</summary><div class="entity-body">
+      <p>Cache display data according to how quickly it changes. Candidate starting budgets to test are 10–30 seconds for display balances or identity, with longer reuse for stable metadata. A cached display value is not permission to spend; authorization and money-moving preparation still require fresh checks.</p>
+      <p>A server read endpoint can hide provider credentials, coalesce identical public requests and cache immutable block-pinned results across visitors. It also adds a hop and our availability dependency. Restrict methods/contracts and rate-limit it; avoid an arbitrary open RPC proxy.</p>
+      <p>RPC fallback helps when a node is slow or failing. It does not make the indexer run sooner. After a transaction, show its confirmed receipt and a separate indexing-pending state until history catches up.</p>
+    </div></details>
+    <details data-performance="accessibility"><summary>The accessibility findings and their exact causes</summary><div class="entity-body">
+      <p><strong>Boards and Job detail:</strong> axe reported <code>aria-required-children</code>. The shared <code>ItemGroup</code> exposes a list, but its children do not consistently expose list items. Prefer proper list wrappers with links and buttons inside, or use a neutral group for content that is not a list.</p>
+      <p><strong>Agent detail:</strong> axe reported <code>nested-interactive</code>. The fee-progress meter contains a clickable <code>TokenAmount</code>. There is already a static token option; alternatively place the explanation beside the meter.</p>
+      <p><strong>Navigation:</strong> all eight routes used the browser title “Sidequest.” Keyboard navigation to Services worked, but focus stayed on the navigation link. No skip link was present in the checked shell. Give each route a meaningful title and a predictable way to reach its main content.</p>
+      <p><strong>Loading:</strong> skeletons are hidden from assistive technology, which is appropriate, but the shared loading rows provide no status. Add a concise loading message and <code>aria-busy</code> to the containing region; avoid announcing every poll.</p>
+    </div></details>
+    <details data-performance="routes"><summary>Route reliability: a 200 response is not enough</summary><div class="entity-body">
+      <p><code>/job/not-a-number</code> rendered “not indexed yet” with a retry button and no main heading. Reject invalid IDs before fetching and distinguish them from a real job waiting for indexing or an unavailable dependency.</p>
+      <p>The invalid agent page correctly rejected its ID. An unknown route showed “Page not found.” The old <code>/quotes</code> URL redirected to Activity's open filter. All received the SPA shell with HTTP 200, so a route check must assert the final URL and visible result too.</p>
+      <p>Exercise direct links, browser back, query filters, aliases and representative tenant URLs. Check loaded, empty, error and delayed states. Include job and agent IDs with real records, alongside deliberately invalid values.</p>
+    </div></details>
+    <details data-performance="checks"><summary>A repeatable performance and accessibility check plan</summary><div class="entity-body">
+      <ol>
+        <li><strong>Route smoke:</strong> public pages and tenant variants, correct headings and states, no failed JavaScript assets or unexpected document overflow.</li>
+        <li><strong>Performance:</strong> fixed cold/warm device and network profiles; record script bytes, main-thread work, first useful content, panel-ready times, layout shifts and interactions. Repeat samples before claiming improvement.</li>
+        <li><strong>API timing:</strong> separate D1, Durable Object queue/service time and RPC with trace spans or <code>Server-Timing</code>. Count duplicates, retries, timeouts and 429s.</li>
+        <li><strong>Failure recovery:</strong> delay or fail each dependency independently. Keep unaffected content readable; show stale/unknown explicitly; verify retry and post-receipt refresh without weakening action checks.</li>
+        <li><strong>Accessibility:</strong> axe on mobile/desktop and both themes; keyboard navigation, dialog focus/Escape/return, input errors, zoom, reduced motion and real screen-reader testing.</li>
+        <li><strong>Authenticated pages:</strong> separately test an authorized account's approvals, ownership and wallet prompts. Public snapshots do not cover these flows.</li>
+      </ol>
+    </div></details>
+    <p class="source">Source review through <code>548e3345</code>. Live checks: eight anonymous accessibility routes, six initial loading snapshots, three request waterfalls, a keyboard navigation check and four route-edge checks. No production performance or full accessibility conformance claim. <a href="architecture-review.md">The written review includes the source pointers and full recommendations.</a></p>
   </section>
 
   <section class="section" aria-labelledby="flow-title">

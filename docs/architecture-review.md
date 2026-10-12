@@ -768,6 +768,168 @@ Sources: [activity HTTP request](../apps/explore/src/components/activity/useActi
 [activity API filter](../apps/api/src/worker.ts),
 [delivery query](../apps/explore/src/delivery-preview.ts).
 
+## Loading performance, route reliability and accessibility
+
+Added 12 October 2026. Source inspected through `548e33457bd38fabe77c5c64b38dd434c25d36e5`.
+Anonymous browser observations below are from `https://dev.sidequest.exchange`
+on the same date; they are not a claim that this exact source revision was deployed.
+No runtime changes were made for this review.
+
+### Why an onchain-looking panel can be slow
+
+A screen can wait for JavaScript, an API response, RPC, indexing, or a sequence
+of those. The visible number does not reveal which layer delayed it. In particular,
+agent backing normally comes from our API's indexed-discovery-plus-RPC reader.
+
+The tested job page follows this chain:
+
+```mermaid
+flowchart LR
+  J["Load / execute JavaScript"] --> D["GET indexed job detail"]
+  D --> B["Resolve board and task"]
+  B --> T["get_task: DO + RPC"]
+  D --> P["Preview and job thread"]
+  J --> L["Full jobs list + task index"]
+  L --> B
+```
+
+The last path is an existing fallback for local/not-yet-indexed task metadata;
+it is also a performance opportunity. Loading one job currently mounts `useJobs`,
+which fetches full lists and polls them every 10 seconds. The normal indexed
+response already carries its board/task mapping. A targeted fallback could
+preserve the recovery behavior without making every detail page a list reader.
+
+### What the live samples showed
+
+These are cold, anonymous Chromium contexts on the build box, with a 390 × 844
+viewport and no network or CPU throttling. A mobile viewport does not emulate a
+phone's CPU or connection. Samples are exploratory, not percentiles, Lighthouse
+scores or field Core Web Vitals.
+
+| Observation | Evidence | What it suggests |
+| --- | --- | --- |
+| Large common startup payload | Six routes each requested 86 scripts and approximately 1.34 MB of script transfer in the observation window; deployed HTML had 51 module-preload links | Investigate the common dependency graph before assuming RPC dominates startup |
+| Eager route imports | `main.tsx` imports all route components; Privy wraps the whole app | Route splitting is a substantial opportunity; deferring authentication needs more care than deferring an admin page |
+| Small direct RPC waits in these samples | Captured Monad `eth_call` requests on Activity, Job and Agent pages took roughly 129–271 ms | A faster RPC alone would not remove the observed API or JavaScript waits |
+| Slower composed API reads | One job detail took 2.17 s, its full-list task index 3.14 s; one backing response took 1.83 s | Add timings inside API readers to separate DO queueing, SQL and upstream RPC |
+| Sequential detail enrichment | In that job sample, `get_task`, thread and preview began after indexed detail returned | Reduce optional dependencies and prefetch known mappings; preserve caller-specific authorization |
+| Duplicate public requests | `/data/boards` was requested twice on Boards and Activity; directory first-page reads also duplicated on some pages | Share query definitions and compatible cached results |
+| Layout movement | Visible job/agent sections changed size as late data arrived; the timing observer recorded layout shifts | Reserve appropriate space and inspect a controlled trace before claiming a CLS improvement |
+
+Network timings include browser scheduling and download time, not just server
+execution. These samples do not isolate a provider outage or establish a p95.
+The full request-timing sample is saved locally at `/tmp/sidequest-data-timing.json`.
+
+### Common strategies, applied to this app
+
+1. **Show useful cached display data while refreshing.** Give public queries
+   explicit freshness budgets by data class. As starting hypotheses, test 10–30 s
+   for display balances or identities and longer for configuration/metadata.
+   These are proposed budgets, not current settings or permission to use stale
+   authority. Keep the last successful value with its age/source during a
+   background refresh; distinguish stale, unavailable and zero. Revalidate
+   balances, allowance, identity and permissions when preparing a transaction.
+   Private query keys must include the operator and be cleared on logout.
+2. **Reuse reads before adding infrastructure.** `['boards']` and
+   `['data-boards']` fetch the same endpoint. The directory has both a
+   `['directory-first']` query and an infinite `['data-directory']` query.
+   Share a query factory or derive a first-page selector; do not simply assign
+   the same key to different single-page and infinite-query result shapes.
+3. **Batch independent contract reads and share their inputs.** Wallet balances
+   and agent identity already use Wagmi `useReadContracts`; batching is not
+   missing everywhere. The separate staking Viem client has no explicit batching.
+   `useBacking(account, delegator)` runs `getBacking` and `getPosition` together,
+   and both read the same `poolOf` at the same block. A combined reader can fetch
+   that pool once. `readDelegations` also waits for an API snapshot, then three
+   RPC reads before returning any positions. Display the validated position
+   snapshot separately where possible, while retaining all required checks for
+   actions. Keep dependent economic reads pinned to one block.
+4. **Reduce work per route.** Replace whole-list enrichment on job detail with a
+   targeted task lookup. Paginate visible lists instead of continually fetching
+   up to 10,000 chain jobs. Lazy-load route components, starting with admin,
+   sponsorship and other infrequently visited pages; measure which imports still
+   pull them into the main graph. Existing near-viewport delivery fetching and
+   lazy 3D code are useful and should be retained.
+5. **Make the RPC transport deliberate.** The browser uses chain-default
+   `http()` transports, while the API uses server configuration. Measure endpoint
+   p50/p95, errors and throttling before choosing a primary and independent
+   fallback. Bound timeouts and retries across both transport and Query layers;
+   multiple retry layers can turn a short outage into a long spinner. A backend
+   read endpoint can conceal provider credentials and coalesce public reads,
+   but adds a network hop and our availability dependency. It should be bounded,
+   keyed by chain/contract/block and rate-limited, rather than an open RPC proxy.
+6. **Use index snapshots for discovery and fast initial summaries.** Refresh
+   economic values through RPC where needed. Increasing frontend polling cannot
+   make the minute indexer advance sooner. After a receipt, show the confirmed
+   transaction and an explicit indexing-pending state; invalidate affected
+   queries. Event subscriptions may trigger invalidation but do not replace
+   finality, reorg handling or durable history.
+
+Source: [route imports/providers](../apps/explore/src/main.tsx),
+[job detail](../apps/explore/src/routes/Job.tsx),
+[list reader](../apps/explore/src/routes/Jobs.tsx),
+[board query](../apps/explore/src/routes/Boards.tsx),
+[token registry query](../apps/explore/src/useTokens.ts),
+[directory query](../apps/explore/src/directory-query.ts),
+[staking client](../apps/explore/src/stake-context.ts),
+[delegation composition](../apps/explore/src/delegation-query.ts),
+[SDK pool reads](../packages/sdk/src/staking.ts),
+[near-viewport previews](../apps/explore/src/components/activity/useNear.ts).
+
+### Accessibility and route findings
+
+Axe-core 4.10.3 ran on eight anonymous routes at 390 × 844:
+`/`, `/jobs`, `/services`, `/commons`, `/boards`, `/job/84`, `/agent/2036`,
+and the public wallet route for the address ending `0001`.
+Five route snapshots had no automated violations; three had one reported rule
+violation each. This is a bounded automated result, not full WCAG conformance.
+
+| Finding | Observed result | Suggested change |
+| --- | --- | --- |
+| List semantics on Boards and Job | Axe `aria-required-children`; severity label `critical` | `ItemGroup` sets `role=list`, but its content is not consistently list items. Use semantic `ul/li` wrappers where it is a list, keeping links/buttons inside each item; use a neutral container for non-list groups. Do not remove a link's semantics merely to make it a list item |
+| Agent fee-progress meter | Axe `nested-interactive`; severity label `serious` | `BackingStrip` puts an interactive `TokenAmount` inside the meter. Move explanatory text outside the meter or use the existing static token option there |
+| Page titles | All eight visited routes had document title `Sidequest` | Set route-specific titles, including job/agent identity where known |
+| Route keyboard orientation | Keyboard navigation from Activity to Services worked, but focus stayed on the sidebar link; no skip link was present in the checked shell | Add a skip-to-main link and deliberate focus/announcement behavior after client navigation; avoid announcing every background poll |
+| Loading announcements | Shared skeletons are correctly hidden from assistive technology, but `LoadingRows` supplies no loading status | Give the containing region `aria-busy` and one concise status message; leave decorative skeletons hidden |
+| Invalid job ID | `/job/not-a-number` showed “not indexed yet,” no main heading, and a retry button | Validate route parameters first; distinguish invalid ID, missing job, indexing delay and unavailable service |
+
+The invalid agent route correctly identified an invalid ID. The unknown route
+rendered “Page not found,” and `/quotes` redirected to `/jobs` with its open
+filter. Their HTTP document status was 200 because the host served the SPA shell;
+route checks must also verify the rendered result and final URL. The six-route
+initial pass found no unnamed controls or horizontal document overflow in the
+checked mobile snapshots.
+
+Source: [list primitives](../apps/explore/src/components/ui/item.tsx),
+[backing meter](../apps/explore/src/components/agent/BackingStrip.tsx),
+[static token option](../apps/explore/src/components/token/TokenAmount.tsx),
+[loading/title helpers](../apps/explore/src/components/kit.tsx),
+[shell](../apps/explore/src/components/Shell.tsx),
+[job error handling](../apps/explore/src/routes/Job.tsx).
+
+### Repeatable checks to add
+
+| Check | Coverage and assertion |
+| --- | --- |
+| Public route smoke | Home, Activity, Job, Agent, Services, Commons, Boards, wallet and representative tenant URLs; hard reload, navigation and browser back; assert final route, heading, correct empty/error state, and no failed JS assets |
+| Parameter and compatibility checks | Invalid and missing IDs, retired aliases, query filters, tenant boundaries and unknown routes; distinguish an SPA's HTTP 200 from a working page |
+| Performance trace | Cold and warm loads, fixed device/network profiles and representative populated records; record startup script bytes, main-thread work, first useful content, each critical panel's ready time, LCP/layout shifts and interaction latency; repeat and report distributions |
+| API/RPC timing | Add `Server-Timing` or trace spans for D1, DO queue/service time and RPC; count requests, duplicates, retries, 429s and timeouts by route/source; exclude secrets and authorization headers |
+| Slow/failing dependency checks | Delay or fail RPC, D1-facing routes and board requests independently in a browser test; stale values remain labeled, unknown never becomes zero, unaffected content stays usable, retry recovers, and actions retain fresh authorization |
+| Automated accessibility | Axe on mobile/desktop, light/dark, populated/loading/empty/error states and open dialogs; fail new serious/critical violations and review lower-severity findings |
+| Keyboard and assistive technology | Tab order, visible focus, skip link, navigation announcement, dialog focus trap/Escape/return, combobox/radio keys, named inputs/errors, 200–400% zoom, reduced motion, and a real screen-reader pass |
+| Authenticated acceptance | Separately exercise operator-owned pages, approvals and wallet prompts with an authorized test account; anonymous scans do not cover them |
+
+Existing good foundations include query caching, batched Wagmi reads, separate
+loading/error states, native modal dialogs, visible focus styles, coarse-pointer
+hit areas and near-viewport media loading. Improve these incrementally.
+
+**Suggested order:** first fix query duplication, invalid-ID handling and the
+three reproducible accessibility violations, plus titles/loading announcements.
+Then remove full-list dependencies from detail routes and consolidate SDK reads.
+Follow with measured route splitting and explicit RPC fallback/cache policies.
+The provider choice should follow the waterfall evidence, not precede it.
+
 ## Security and trust review (CROPS)
 
 **Recommended default:** keep chain settlement, bounded wallet permissions and
