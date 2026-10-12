@@ -7,14 +7,34 @@
 import { BaseError, UserRejectedRequestError } from 'viem'
 import { parseSiweMessage } from 'viem/siwe'
 
-/** Whether a sign-in message may be signed without a prompt: it names this site, this wallet and this chain. */
-export function silentSignable(message: string, expected: { address: string; host: string; chainId: number }) {
+/** The longest a silently signed sign-in may stay valid: the board's challenge expires in ten minutes. */
+const SILENT_MAX_MS = 15 * 60_000
+
+/**
+ * Whether a sign-in message may be signed without a prompt: SIWE version 1 for this site (domain and URI origin),
+ * this wallet and this chain, with a nonce and an expiry no further than fifteen minutes away.
+ */
+export function silentSignable(
+  message: string,
+  expected: { address: string; host: string; origin: string; chainId: number },
+  now = Date.now(),
+) {
   const siwe = parseSiweMessage(message)
+  const expires = siwe.expirationTime?.getTime()
   return (
+    siwe.version === '1' &&
     siwe.domain === expected.host &&
+    siwe.uri !== undefined &&
+    URL.canParse(siwe.uri) &&
+    new URL(siwe.uri).origin === expected.origin &&
     siwe.address !== undefined &&
     siwe.address.toLowerCase() === expected.address.toLowerCase() &&
-    siwe.chainId === expected.chainId
+    siwe.chainId === expected.chainId &&
+    siwe.nonce !== undefined &&
+    siwe.nonce !== '' &&
+    expires !== undefined &&
+    expires > now &&
+    expires <= now + SILENT_MAX_MS
   )
 }
 

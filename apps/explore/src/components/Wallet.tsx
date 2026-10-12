@@ -46,7 +46,9 @@ export function useSignedIn() {
     if (address === undefined) throw new Error('log in first')
     const { message } = await tool<{ message: string }>('auth_challenge', { address })
     const signature =
-      silent && silentSigner !== null && silentSignable(message, { address, host: location.host, chainId: chain.id })
+      silent &&
+      silentSigner !== null &&
+      silentSignable(message, { address, host: location.host, origin: location.origin, chainId: chain.id })
         ? await silentSigner(address, message)
         : await signMessageAsync({ message })
     const r = await tool<{ session: string; address: string; expiresAt: number }>('auth_login', { message, signature })
@@ -100,7 +102,7 @@ export function useAutoSignIn(auth: ReturnType<typeof useSignedIn>) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   /** Whether the sign-in ran to an answer: signed, or refused by the person (a fault leaves it to ask again). */
-  const signIn = async (silent = false): Promise<boolean> => {
+  const signIn = async ({ silent = false }: { silent?: boolean } = {}): Promise<boolean> => {
     setBusy(true)
     setError(null)
     try {
@@ -128,7 +130,7 @@ export function useAutoSignIn(auth: ReturnType<typeof useSignedIn>) {
       // no sessionStorage: ask once per page load
     }
     // Remembered only once answered, so a crash or a dropped request mid-way asks again after a reload.
-    void signIn(true).then((answered) => {
+    void signIn({ silent: true }).then((answered) => {
       try {
         if (answered) sessionStorage.setItem(askedKey(a), '1')
       } catch {

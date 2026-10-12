@@ -14,6 +14,7 @@ import { type EIP1193Provider, type Hex, createPublicClient, http, isHex, toHex 
 import { useConnect } from 'wagmi'
 import { type TxRequest, tool } from '../api.ts'
 import { chain, deployment, privyAppId, setPrivyProvider } from '../wallet.ts'
+import { silentSignable } from '../sign-in.ts'
 
 /**
  * The site's only sign-in: email or social login (whatever the Privy dashboard enables: email, Google, X…) with a
@@ -54,6 +55,25 @@ export function PrivyRoot({ children }: { children: ReactNode }) {
  * sign-in, see sign-in.ts); null without Privy.
  */
 export type SilentSigner = (address: string, message: string) => Promise<Hex>
+
+/**
+ * Signs without Privy's screen for the login wallet only, and only a message that is this site's own board sign-in:
+ * the signer checks that itself, whoever calls it.
+ */
+function silentSigner(
+  address: string | undefined,
+  signMessage: ReturnType<typeof useSignMessage>['signMessage'],
+): SilentSigner {
+  return async (signer, message) => {
+    if (address === undefined || signer.toLowerCase() !== address.toLowerCase())
+      throw new Error('Only the login wallet signs without a prompt.')
+    if (!silentSignable(message, { address, host: location.host, origin: location.origin, chainId: chain.id }))
+      throw new Error('Only the board sign-in for this site signs without a prompt.')
+    const { signature } = await signMessage({ message }, { address, uiOptions: { showWalletUIs: false } })
+    if (!isHex(signature)) throw new Error('The wallet returned no signature.')
+    return signature
+  }
+}
 const SilentSignerContext = createContext<SilentSigner | null>(null)
 
 export function usePrivySilentSigner(): SilentSigner | null {
@@ -151,13 +171,7 @@ function OperatorBridge({ children }: { children: ReactNode }) {
         pending.current = false
       })
   }, [authenticated, address, operator?.address, connectAsync])
-  const signSilently: SilentSigner = async (signer, message) => {
-    if (address === undefined || signer.toLowerCase() !== address.toLowerCase())
-      throw new Error('Only the login wallet signs without a prompt.')
-    const { signature } = await signMessage({ message }, { address, uiOptions: { showWalletUIs: false } })
-    if (!isHex(signature)) throw new Error('The wallet returned no signature.')
-    return signature
-  }
+  const signSilently = silentSigner(address, signMessage)
   const promptWallet = useMemo<PromptWallet | null>(() => {
     if (!authenticated || address === undefined) return null
     return {
