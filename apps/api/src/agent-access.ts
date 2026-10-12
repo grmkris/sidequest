@@ -1,8 +1,9 @@
 /** The operator's controls over a hosted agent's access: its roles, and the clients connected as it (ADR-0021). */
-import { AGENT_ROLES, AgentStore, BoardError, agentRoles, type Sql } from '@sidequest/board'
+import { AGENT_ROLES, AgentStore, BoardError, agentRoles, type AgentRole, type Sql } from '@sidequest/board'
 import { fromD1 } from '@sidequest/indexer'
 import { Schema } from 'effect'
 import type { Address } from 'viem'
+import { effectiveRoles } from './mcp-policy.ts'
 import type { AgentRouteRequest } from './routes/agents.ts'
 import { terminateGrantSubscriptions } from './webhooks.ts'
 
@@ -15,6 +16,8 @@ export interface AgentConnection {
   readonly resource: string
   /** The roles this client asked for: the most it can do, whatever the agent's roles allow. */
   readonly scopes: readonly string[]
+  /** What it may do now: the roles its scopes cover and the agent holds (what its tools follow). */
+  readonly roles: readonly AgentRole[]
   readonly createdAt: number
   readonly lastUsedAt: number | null
 }
@@ -40,18 +43,23 @@ export function agentConnections(sql: Sql, agentId: string, now: number): AgentC
       agentId,
       now,
     )
+  const held = new AgentStore(sql, () => now).roles(agentId)
   return [
     ...select('agent_oauth_families', 'agent_oauth_tokens'),
     ...select('agent_oauth_setup_families', 'agent_oauth_setup_tokens'),
   ]
-    .map((row) => ({
-      id: row.id,
-      client: row.name,
-      resource: row.resource,
-      scopes: strings(JSON.parse(row.scopes_json)),
-      createdAt: row.created_at,
-      lastUsedAt: row.last_used_at,
-    }))
+    .map((row) => {
+      const scopes = strings(JSON.parse(row.scopes_json))
+      return {
+        id: row.id,
+        client: row.name,
+        resource: row.resource,
+        scopes,
+        roles: effectiveRoles({ scopes, roles: held }),
+        createdAt: row.created_at,
+        lastUsedAt: row.last_used_at,
+      }
+    })
     .toSorted((a, b) => (b.lastUsedAt ?? b.createdAt) - (a.lastUsedAt ?? a.createdAt))
 }
 

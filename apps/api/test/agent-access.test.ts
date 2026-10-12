@@ -65,6 +65,16 @@ it('lists both kinds of live connection with their client and scope, and disconn
   await expect(f.access('disconnect', { familyId: setupFamily })).rejects.toMatchObject({ code: 'not-found' })
 })
 
+// The goblin run: "may work and hire" stayed after Work was unticked, because the card showed the sign-in's scope.
+it('reports what each connection may do now: its scope and the agent’s roles together', async () => {
+  const f = await fixture()
+  const byScope = () =>
+    Object.fromEntries(agentConnections(f.sql, 'quill', f.now()).map((c) => [c.scopes.join(' '), c.roles]))
+  expect(byScope()).toEqual({ 'sidequest:hire sidequest:read': ['hire'], 'sidequest:read sidequest:work': ['work'] })
+  await f.access('roles', { roles: ['hire'] })
+  expect(byScope()).toEqual({ 'sidequest:hire sidequest:read': ['hire'], 'sidequest:read sidequest:work': [] })
+})
+
 // ADR-0021: a listening connection is told its tools changed exactly when this value does.
 it('a connection’s access follows its agent’s roles and ends when it is disconnected', async () => {
   const f = await fixture()
