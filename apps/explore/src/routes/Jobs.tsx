@@ -42,6 +42,7 @@ import { useManagedAgents } from '../managed.ts'
 import { useQuoteRequests } from '../quote-requests.ts'
 import { useToken } from '../useTokens.ts'
 import { HostedBy } from '../job-offer.tsx'
+import { useReplaceSearch } from '../page-search.ts'
 
 export type { JobListItem } from '../job-list.ts'
 
@@ -191,6 +192,7 @@ export function JobsPage() {
   const minute = useMinute()
   const [{ view, q, tags }, setFilter] = useState(readView)
   // Filters live in the URL, so a link or a reload keeps them.
+  const replaceSearch = useReplaceSearch()
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
     if (view === 'all') p.delete('view')
@@ -200,7 +202,7 @@ export function JobsPage() {
     if (tags.length === 0) p.delete('tags')
     else p.set('tags', tags.toSorted().join(','))
     const s = p.toString()
-    window.history.replaceState(window.history.state, '', `${window.location.pathname}${s === '' ? '' : `?${s}`}`)
+    replaceSearch(s === '' ? '' : `?${s}`)
   }, [view, q, tags])
 
   const me = address?.toLowerCase()

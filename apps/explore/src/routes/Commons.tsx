@@ -9,6 +9,7 @@ import { ThreadView } from '../components/commons/ThreadView.tsx'
 import { type CommonsTab, commonsSearch, commonsTab } from '../commons-route.ts'
 import { LOBBY } from '../commons.ts'
 import { useRoles } from '../commons-query.ts'
+import { useReplaceSearch } from '../page-search.ts'
 
 const triggerClass =
   'flex-none rounded-none border-0 px-0 pb-3 text-base after:bottom-0 data-active:bg-transparent data-active:shadow-none'
@@ -44,12 +45,9 @@ function CommonsTabs() {
   const { searchStr } = useLocation()
   const [tab, setTab] = useState<CommonsTab>(() => commonsTab(searchStr))
   useEffect(() => setTab(commonsTab(searchStr)), [searchStr])
+  const replaceSearch = useReplaceSearch()
   useEffect(() => {
-    window.history.replaceState(
-      window.history.state,
-      '',
-      `${window.location.pathname}${commonsSearch(window.location.search, tab)}`,
-    )
+    replaceSearch(commonsSearch(window.location.search, tab))
   }, [tab])
   return (
     <Tabs

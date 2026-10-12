@@ -18,6 +18,7 @@ import { AccessCards } from './AccessCards.tsx'
 import { ManagedAgentCard } from './ManagedAgentCard.tsx'
 import { NeedsYouStrip } from './NeedsYouStrip.tsx'
 import { PastApprovals } from './PastApprovals.tsx'
+import { useReplaceSearch } from '../../page-search.ts'
 
 const triggerClass = 'flex-none px-0 min-h-9 pointer-coarse:min-h-11 group-data-horizontal/tabs:after:bottom-[-1px]'
 
@@ -64,12 +65,9 @@ export function OwnerTabs({
     onchainDisabled: status.data?.revocation.onchainPermissionsDisabled === true,
     now,
   })
+  const replaceSearch = useReplaceSearch()
   useEffect(() => {
-    window.history.replaceState(
-      window.history.state,
-      '',
-      `${window.location.pathname}${ownerSearch(window.location.search, tab)}`,
-    )
+    replaceSearch(ownerSearch(window.location.search, tab))
   }, [tab])
   useEffect(() => {
     if (scrollTo === null) return

@@ -28,6 +28,7 @@ import { ItemGroup } from '../components/ui/item.tsx'
 import { dayLabel } from '../format.ts'
 import { rowPhase } from '../job-list.ts'
 import { JobRow } from './Jobs.tsx'
+import { useReplaceSearch } from '../page-search.ts'
 
 /** How many rows the feed wants before it stops loading older pages by itself, and how many pages it loads so. */
 const ENOUGH_ROWS = 20
@@ -40,9 +41,10 @@ const readView = (): FeedFilter => readFilter(new URLSearchParams(window.locatio
 /** The filters live in the URL, so a link or a reload keeps them. */
 function useView(): [FeedFilter, (filter: FeedFilter) => void] {
   const [filter, setFilter] = useState(readView)
+  const replaceSearch = useReplaceSearch()
   useEffect(() => {
     const s = writeFilter(filter, new URLSearchParams(window.location.search)).toString()
-    window.history.replaceState(window.history.state, '', `${window.location.pathname}${s === '' ? '' : `?${s}`}`)
+    replaceSearch(s === '' ? '' : `?${s}`)
   }, [filter])
   return [filter, setFilter]
 }

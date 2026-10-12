@@ -25,6 +25,7 @@ import { useCollectActions } from '../collect.ts'
 import { useSponsorStatus } from '../sponsor.ts'
 import { isMainnet, otherNetwork, writesOpen } from '../wallet.ts'
 import { useSafeOwner } from './Admin.tsx'
+import { useReplaceSearch } from '../page-search.ts'
 
 /**
  * The signed-in person's account, in four tabs: Wallet (balances, test tokens, buying, what is ready to collect),
@@ -94,12 +95,9 @@ function AccountTabs({ address }: { address: Address }) {
   const { searchStr, hash, state } = useLocation()
   const [tab, setTab] = useState<AccountTab>(() => accountTab(searchStr, hash))
   useEffect(() => setTab(accountTab(searchStr, hash)), [searchStr, hash, state])
+  const replaceSearch = useReplaceSearch()
   useEffect(() => {
-    window.history.replaceState(
-      window.history.state,
-      '',
-      `${window.location.pathname}${accountSearch(window.location.search, tab)}`,
-    )
+    replaceSearch(accountSearch(window.location.search, tab))
   }, [tab])
   // Nothing is counted when unknown.
   const collect = useCollectActions(auth.address, auth.signedIn).data?.length ?? 0
