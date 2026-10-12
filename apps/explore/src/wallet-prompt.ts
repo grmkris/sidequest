@@ -5,20 +5,54 @@
  */
 import { useCallback } from 'react'
 import { type Hex, type TypedDataDefinition, serializeTypedData } from 'viem'
-import { useSignTypedData } from 'wagmi'
-import { type WalletPrompt, usePrivyPromptSigner } from './components/Privy.tsx'
+import { useSendTransaction, useSignTypedData } from 'wagmi'
+import { type WalletPrompt, usePrivyPromptWallet } from './components/Privy.tsx'
+import type { walletStepRequest } from './components/txOperation.ts'
 
 export type { WalletPrompt }
+/** A transaction's screen has no title of its own: Privy names the network and the amount. */
+export type TxPrompt = Pick<WalletPrompt, 'description' | 'buttonText'>
 
 export function useSignTypedDataWithPrompt() {
-  const privy = usePrivyPromptSigner()
+  const privy = usePrivyPromptWallet()
   const { mutateAsync: signTypedDataAsync } = useSignTypedData()
   return useCallback(
     // The same serialization wagmi sends a JSON-RPC wallet, so the signature is the one it would have asked for.
     async (typedData: TypedDataDefinition, prompt: WalletPrompt): Promise<Hex> =>
-      privy === null ? signTypedDataAsync(typedData) : privy(serializeTypedData(typedData), prompt),
+      privy === null ? signTypedDataAsync(typedData) : privy.signTypedData(serializeTypedData(typedData), prompt),
     [privy, signTypedDataAsync],
   )
+}
+
+/** One journaled step from the login wallet with its prompt on Privy's screen; another wallet sends through wagmi. */
+export function useSendTransactionWithPrompt() {
+  const privy = usePrivyPromptWallet()
+  const { mutateAsync: sendTransactionAsync } = useSendTransaction()
+  return useCallback(
+    async (request: ReturnType<typeof walletStepRequest> & { gas?: bigint }, prompt: TxPrompt): Promise<Hex> => {
+      if (privy === null || privy.address.toLowerCase() !== request.account.toLowerCase())
+        return sendTransactionAsync(request)
+      const { to, data, value, nonce, gas } = request
+      return privy.sendTransaction(
+        { to, data, value, ...(nonce === undefined ? {} : { nonce }), ...(gas === undefined ? {} : { gas }) },
+        prompt,
+      )
+    },
+    [privy, sendTransactionAsync],
+  )
+}
+
+/**
+ * What a transaction does, from its steps' own descriptions. A call the wallet sends to itself runs the steps inside
+ * it, so the screen says so (11 Oct showcase: backing showed only "To: your own address").
+ */
+export function stepsPrompt(steps: readonly { description: string }[], toSelf: boolean): TxPrompt {
+  const said = steps.map((step) => step.description.replace(/\.$/, ''))
+  const what = said.length === 1 ? `${said[0]}.` : `${said.length} steps in one transaction: ${said.join('; ')}.`
+  return {
+    description: toSelf ? `${what} Your wallet sends this to itself and runs it in one go.` : what,
+    buttonText: 'Send',
+  }
 }
 
 /** What each signature says on Privy's screen: what it allows, who it is for and its limit, never the raw typed data. */

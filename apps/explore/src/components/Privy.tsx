@@ -4,11 +4,12 @@ import {
   PrivyProvider,
   usePrivy,
   useSign7702Authorization,
+  useSendTransaction as usePrivySendTransaction,
   useSignMessage,
   useSignTypedData as usePrivySignTypedData,
   useWallets,
 } from '@privy-io/react-auth'
-import { type ReactNode, createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { type ReactNode, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { type EIP1193Provider, type Hex, createPublicClient, http, isHex, toHex } from 'viem'
 import { useConnect } from 'wagmi'
 import { type TxRequest, tool } from '../api.ts'
@@ -66,15 +67,40 @@ export interface WalletPrompt {
   buttonText: string
 }
 
-/**
- * Signs serialized EIP-712 typed data (viem's `serializeTypedData`, what wagmi sends a wallet) with the login wallet,
- * on Privy's screen with `prompt` in place of a bare "Sign". Null without Privy or before login.
- */
-export type PromptSigner = (typedData: string, prompt: WalletPrompt) => Promise<Hex>
-const PromptSignerContext = createContext<PromptSigner | null>(null)
+/** One transaction from the login wallet, as TxSteps journals it: the exact nonce and gas limit it chose. */
+interface PromptedTransaction {
+  to: Hex
+  data: Hex
+  value: bigint
+  nonce?: number
+  gas?: bigint
+}
 
-export function usePrivyPromptSigner(): PromptSigner | null {
-  return useContext(PromptSignerContext)
+/**
+ * The login wallet on Privy's own screens, with a prompt in place of a bare "Sign" or a bare transaction. `signTypedData`
+ * takes viem's `serializeTypedData` output (what wagmi sends a wallet). Null without Privy or before login.
+ */
+export interface PromptWallet {
+  address: string
+  signTypedData(typedData: string, prompt: WalletPrompt): Promise<Hex>
+  sendTransaction(tx: PromptedTransaction, prompt: Pick<WalletPrompt, 'description' | 'buttonText'>): Promise<Hex>
+}
+const PromptWalletContext = createContext<PromptWallet | null>(null)
+
+export function usePrivyPromptWallet(): PromptWallet | null {
+  return useContext(PromptWalletContext)
+}
+
+/** Privy's transaction screen: the step's own description, our button, and the deploy's chain. */
+function privyTransaction(tx: PromptedTransaction) {
+  return {
+    to: tx.to,
+    data: tx.data,
+    value: tx.value,
+    chainId: chain.id,
+    ...(tx.nonce === undefined ? {} : { nonce: tx.nonce }),
+    ...(tx.gas === undefined ? {} : { gasLimit: tx.gas }),
+  }
 }
 
 /** Connect the login wallet only. No agent address can be selected through wagmi. */
@@ -83,6 +109,7 @@ function OperatorBridge({ children }: { children: ReactNode }) {
   const { wallets } = useWallets()
   const { signMessage } = useSignMessage()
   const { signTypedData } = usePrivySignTypedData()
+  const { sendTransaction } = usePrivySendTransaction()
   const { connectors, connectAsync } = useConnect()
   const connected = useRef<string | undefined>(undefined)
   const pending = useRef(false)
@@ -131,23 +158,29 @@ function OperatorBridge({ children }: { children: ReactNode }) {
     if (!isHex(signature)) throw new Error('The wallet returned no signature.')
     return signature
   }
-  const signWithPrompt = useCallback<PromptSigner>(
-    async (typedData, prompt) => {
-      if (address === undefined) throw new Error('Sign in before signing.')
-      // SAFETY: the caller serialized it with viem's serializeTypedData, which validated it as EIP-712 typed data.
-      const input = JSON.parse(typedData) as Parameters<typeof signTypedData>[0]
-      const { signature } = await signTypedData(input, { address, uiOptions: prompt })
-      if (!isHex(signature)) throw new Error('The wallet returned no signature.')
-      return signature
-    },
-    [address, signTypedData],
-  )
+  const promptWallet = useMemo<PromptWallet | null>(() => {
+    if (!authenticated || address === undefined) return null
+    return {
+      address,
+      signTypedData: async (typedData, prompt) => {
+        // SAFETY: the caller serialized it with viem's serializeTypedData, which validated it as EIP-712 typed data.
+        const input = JSON.parse(typedData) as Parameters<typeof signTypedData>[0]
+        const { signature } = await signTypedData(input, { address, uiOptions: prompt })
+        if (!isHex(signature)) throw new Error('The wallet returned no signature.')
+        return signature
+      },
+      sendTransaction: async (tx, prompt) => {
+        const { hash } = await sendTransaction(privyTransaction(tx), { address, uiOptions: prompt })
+        return hash
+      },
+    }
+  }, [authenticated, address, signTypedData, sendTransaction])
   return (
     <SilentSignerContext value={signSilently}>
-      <PromptSignerContext value={authenticated && address !== undefined ? signWithPrompt : null}>
+      <PromptWalletContext value={promptWallet}>
         {error !== null && <p role="alert">{error}</p>}
         {children}
-      </PromptSignerContext>
+      </PromptWalletContext>
     </SilentSignerContext>
   )
 }
@@ -190,7 +223,12 @@ export function usePrivyModalOpen(): boolean {
  * itself, once the wallet points at the deployment's DeleGator (the first batch upgrades it through the board's
  * relay). All or nothing, one confirmation. Null without Privy or for another wallet.
  */
-export type BatchSend = ((txs: TxRequest[], gas?: bigint, nonce?: number) => Promise<Hex>) & {
+export type BatchSend = ((
+  txs: TxRequest[],
+  gas?: bigint,
+  nonce?: number,
+  prompt?: Pick<WalletPrompt, 'description' | 'buttonText'>,
+) => Promise<Hex>) & {
   /** Finish any authorization transaction before the caller captures the funding nonce. */
   prepare?: () => Promise<void>
 }
@@ -198,8 +236,8 @@ export type BatchSend = ((txs: TxRequest[], gas?: bigint, nonce?: number) => Pro
 export function usePrivyBatch(address: string | undefined): BatchSend | null {
   const account = useDelegatorAccount(address)
   if (account === null) return null
-  const send: BatchSend = (txs, gas, nonce) =>
-    account.send(sdk.batchCalldata(txs.map((t) => ({ ...t, value: '0' as const }))), gas, nonce)
+  const send: BatchSend = (txs, gas, nonce, prompt) =>
+    account.send(sdk.batchCalldata(txs.map((t) => ({ ...t, value: '0' as const }))), gas, nonce, prompt)
   send.prepare = async () => {
     const hash = await account.upgrade()
     if (hash !== null && (await reads.waitForTransactionReceipt({ hash })).status !== 'success')
@@ -227,8 +265,11 @@ interface DelegatorAccount {
   delegated(): Promise<boolean>
   /** The DeleGator upgrade when the code is not there yet: the relay's transaction hash, or null. */
   upgrade(): Promise<Hex | null>
-  /** A call to self, after the upgrade when it is still needed; `gas` when the calls need more than an estimate. */
-  send(data: Hex, gas?: bigint, nonce?: number): Promise<Hex>
+  /**
+   * A call to self, after the upgrade when it is still needed; `gas` when the calls need more than an estimate. With a
+   * prompt, Privy's screen says what the call does instead of only "To: your own address".
+   */
+  send(data: Hex, gas?: bigint, nonce?: number, prompt?: Pick<WalletPrompt, 'description' | 'buttonText'>): Promise<Hex>
 }
 
 function useDelegatorAccount(address: string | undefined): DelegatorAccount | null {
@@ -241,6 +282,7 @@ function useDelegatorAccountInner(address: string | undefined): DelegatorAccount
   const { authenticated } = usePrivy()
   const { wallets } = useWallets()
   const { signAuthorization } = useSign7702Authorization()
+  const promptWallet = usePrivyPromptWallet()
   const embedded = wallets.find(
     (wallet) => wallet.walletClientType === 'privy' && wallet.address.toLowerCase() === address?.toLowerCase(),
   )
@@ -278,8 +320,13 @@ function useDelegatorAccountInner(address: string | undefined): DelegatorAccount
   return {
     delegated,
     upgrade,
-    send: async (data, gas, nonce) => {
+    send: async (data, gas, nonce, prompt) => {
       if (!(await delegated())) throw new Error('Prepare the wallet upgrade before capturing the send nonce.')
+      if (prompt !== undefined && promptWallet?.address.toLowerCase() === me.toLowerCase())
+        return promptWallet.sendTransaction(
+          { to: me, data, value: 0n, ...(gas === undefined ? {} : { gas }), ...(nonce === undefined ? {} : { nonce }) },
+          prompt,
+        )
       const provider = (await embedded.getEthereumProvider()) as EIP1193Provider
       const request = {
         from: me,

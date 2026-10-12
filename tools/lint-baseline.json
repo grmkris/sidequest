@@ -565,7 +565,7 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "jsx-a11y(prefer-tag-over-role)": 3,
-    "typescript(no-deprecated)": 3,
+    "typescript(no-deprecated)": 2,
     "typescript(no-misused-promises)": 1,
     "typescript(no-unnecessary-boolean-literal-compare)": 1,
     "typescript(no-unnecessary-type-assertion)": 2

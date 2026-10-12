@@ -1,3 +1,4 @@
+import { Schema } from 'effect'
 import type { Hex } from 'viem'
 import type { TxRequest } from '../api.ts'
 
@@ -62,11 +63,15 @@ export function retryAction(status: TxStatus): 'send' | 'receipt' | 'report' | '
   return 'wait'
 }
 
+const isText = Schema.is(Schema.String)
+
 export function walletRefused(error: unknown): boolean {
   let current = error
   for (let depth = 0; depth < 8 && current !== null && typeof current === 'object'; depth++) {
-    const failure = current as { code?: unknown; cause?: unknown }
+    const failure = current as { code?: unknown; cause?: unknown; message?: unknown }
     if (failure.code === 4001 || failure.code === 'ACTION_REJECTED') return true
+    // Privy's own transaction screen, closed or declined, says exactly this.
+    if (isText(failure.message) && /^the user rejected the request\.?$/i.test(failure.message)) return true
     current = failure.cause
   }
   return false

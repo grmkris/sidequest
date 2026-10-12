@@ -144,6 +144,8 @@ describe('wallet step retry reconciliation', () => {
     expect(walletRefused({ code: 'ACTION_REJECTED' })).toBe(true)
     expect(walletRefused(new Error('Transport failed after broadcast'))).toBe(false)
     expect(walletRefused(new Error('Request cancelled after submission'))).toBe(false)
+    expect(walletRefused({ cause: new Error('The user rejected the request') })).toBe(true)
+    expect(walletRefused(new Error('The user rejected the request after it was sent'))).toBe(false)
   })
 })
 

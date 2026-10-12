@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { prompts } from './wallet-prompt.ts'
+import { prompts, stepsPrompt } from './wallet-prompt.ts'
 
 it('every wallet prompt names what it allows, briefly, with a short button', () => {
   const all = [
@@ -20,4 +20,17 @@ it('every wallet prompt names what it allows, briefly, with a short button', () 
   }
   expect(prompts.hire('Quill', '9 mUSD').description).toContain('exactly 9 mUSD')
   expect(prompts.backingPermit('Quill', '1,000').title).toBe('Back Quill')
+})
+
+it('a transaction says what its steps do, and why a call to itself goes to your own address', () => {
+  expect(stepsPrompt([{ description: 'Back with 1,000 SIDE to Quill' }], true)).toEqual({
+    description: 'Back with 1,000 SIDE to Quill. Your wallet sends this to itself and runs it in one go.',
+    buttonText: 'Send',
+  })
+  expect(
+    stepsPrompt([{ description: 'Approve SIDE for the vault.' }, { description: 'Back this wallet' }], false),
+  ).toEqual({
+    description: '2 steps in one transaction: Approve SIDE for the vault; Back this wallet.',
+    buttonText: 'Send',
+  })
 })

@@ -8,7 +8,8 @@ import * as sdk from '@sidequest/sdk'
 import { Check, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { Hex, TransactionReceipt } from 'viem'
-import { useAccount, useSendTransaction, useSwitchChain } from 'wagmi'
+import { useAccount, useSwitchChain } from 'wagmi'
+import { stepsPrompt, useSendTransactionWithPrompt } from '../wallet-prompt.ts'
 import { getBlock, getBlockNumber, getTransaction, getTransactionCount, waitForTransactionReceipt } from 'wagmi/actions'
 import { type TxRequest, boardApi } from '../api.ts'
 import { batchGasLimit, gasLimit } from '../gas.ts'
@@ -167,7 +168,7 @@ export function TxSteps({
   const canSponsor =
     allowSponsorship && zeroValue && sponsorship.live !== null && sponsorable(boardSteps, sponsorship.live, chain.id)
   const { switchChainAsync } = useSwitchChain()
-  const { sendTransactionAsync } = useSendTransaction()
+  const sendTransactionAsync = useSendTransactionWithPrompt()
   const key = txJournalKey(taskId, txs)
   const loadDurable = async (required = false) =>
     durableJournal ? readTxJournalDurable(localStorage, key, required) : load(key, required)
@@ -726,14 +727,17 @@ export function TxSteps({
     try {
       if (authoritative.batch) {
         if (batch === null) throw new Error('This wallet cannot send a batch; send them one at a time.')
-        hash = await batch(boardSteps, batchGasLimit(txs, sidequest), snapshot.nonce)
+        hash = await batch(boardSteps, batchGasLimit(txs, sidequest), snapshot.nonce, stepsPrompt(boardSteps, true))
       } else {
         const tx = txs[i]!
         const gas = gasLimit(tx, sidequest)
-        hash = await sendTransactionAsync({
-          ...walletStepRequest(tx, from, chain.id, snapshot.nonce),
-          ...(gas === undefined ? {} : { gas }),
-        })
+        hash = await sendTransactionAsync(
+          {
+            ...walletStepRequest(tx, from, chain.id, snapshot.nonce),
+            ...(gas === undefined ? {} : { gas }),
+          },
+          stepsPrompt([tx], tx.to.toLowerCase() === from.toLowerCase()),
+        )
       }
     } catch (e) {
       sending.current = false
