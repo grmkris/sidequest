@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest'
 import * as Effect from 'effect/Effect'
+import * as Fiber from 'effect/Fiber'
 import * as Tracer from 'effect/Tracer'
 import * as Option from 'effect/Option'
 import * as HttpServerResponse from 'effect/http/HttpServerResponse'
@@ -92,4 +93,22 @@ it('uses the current request for RPC spans across overlapping invocations', asyn
   expect(second).toBe('two')
   expect(parents).toEqual(['two', 'one'])
   expect(await Effect.runPromise(Effect.fail('refused').pipe(withRpcTracing, Effect.flip))).toBe('refused')
+})
+
+it('stops the traced request when its caller is interrupted', async () => {
+  let finished = false
+  const fiber = Effect.runFork(
+    Effect.sleep('1 second').pipe(
+      Effect.tap(() =>
+        Effect.sync(() => {
+          finished = true
+        }),
+      ),
+      withRpcTracing,
+    ),
+  )
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  await Effect.runPromise(Fiber.interrupt(fiber))
+  await new Promise((resolve) => setTimeout(resolve, 1100))
+  expect(finished).toBe(false)
 })

@@ -16,6 +16,10 @@ export const withRpcTracing = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
     const run = Effect.runPromiseWith(context)
     const trace: RpcTrace = (phase, attempt, action) =>
       run(Effect.promise(action).pipe(Effect.withSpan(phase, { attributes: { 'rpc.attempt': attempt } })))
-    const result = yield* Effect.promise(() => current.run(trace, () => Effect.runPromiseExitWith(context)(effect)))
+    // The request runs inside the async context that cached SDK clients read. Interrupting this fiber (a client that
+    // aborts) aborts that inner run too, so the handler stops as it did before tracing.
+    const result = yield* Effect.promise((signal) =>
+      current.run(trace, () => Effect.runPromiseExitWith(context)(effect, { signal })),
+    )
     return yield* result
   })
