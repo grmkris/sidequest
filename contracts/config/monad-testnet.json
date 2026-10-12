@@ -25,13 +25,21 @@
       "timestamp": "0x1046bb45C8d673d4ea75321280DB34899413c069"
     }
   },
+  "accountAbstraction": {
+    "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+    "paymasterKind": "sidequest-testnet",
+    "gasToken": "0x534b2f3A21130d7a60830c2Df862319e593943A3",
+    "standingApproval": "1000000",
+    "maxCostPerOp": "100000"
+  },
   "x402": {
     "usdc": "0x534b2f3A21130d7a60830c2Df862319e593943A3",
     "facilitator": "https://x402-facilitator.molandak.org"
   },
   "knownTokens": [
     "0x6b56d64150818f91f5112b285e806ec6c78eade8",
-    "0x7523106f742b1445b14b0992ee2ea41a3691dc24"
+    "0x7523106f742b1445b14b0992ee2ea41a3691dc24",
+    "0x534b2f3a21130d7a60830c2df862319e593943a3"
   ],
   "usdPegged": [
     "0x6B56D64150818f91f5112B285e806ec6C78EADe8",

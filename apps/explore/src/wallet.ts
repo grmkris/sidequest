@@ -109,6 +109,7 @@ function undeployed(): V1Deployment {
     testnetFaucet: null,
     market: null,
     launcher: null,
+    aa: null,
     deployBlock: 0n,
   }
 }

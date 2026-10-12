@@ -96,6 +96,41 @@ describe('v1 deployment config', () => {
   })
 })
 
+describe('account abstraction config', () => {
+  it("reads the EntryPoint, USDC and Pimlico's paymaster on mainnet, and testnet's own paymaster kind", () => {
+    const m = mainnet.accountAbstraction
+    expect(m).toMatchObject({ paymasterKind: 'pimlico-erc20', paymaster: '0x777777777777AeC03fd955926DbF81597e66834C' })
+    const t = deployment('monad-testnet').aa!
+    expect(t).toMatchObject({
+      entryPoint: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
+      paymasterKind: 'sidequest-testnet',
+      gasToken: testnet.x402.usdc,
+      standingApproval: 1_000_000n,
+      maxCostPerOp: 100_000n,
+    })
+  })
+
+  it('refuses a malformed block and the testnet paymaster on mainnet', () => {
+    const at = (patch: Record<string, unknown>, chainId = 10143) => {
+      const c = currentConfig()
+      c.chainId = chainId
+      // Testnet's fast clocks would fail mainnet's clock check first.
+      if (chainId === 143) delete c.deployment.sidequest!.clocks
+      c.accountAbstraction = { ...c.accountAbstraction!, ...patch }
+      return () => deploymentFromConfig('monad-testnet', c)
+    }
+    expect(at({ entryPoint: 'nope' })).toThrow('entryPoint')
+    expect(at({ paymaster: '0x0' })).toThrow('paymaster must be an address')
+    expect(at({ paymasterKind: 'relay' })).toThrow('paymasterKind is unknown')
+    expect(at({ standingApproval: '0' })).toThrow('positive base units')
+    expect(at({ maxCostPerOp: '2000000' })).toThrow('fit in the standing approval')
+    expect(at({}, 143)).toThrow('never runs on mainnet')
+    const c = currentConfig()
+    delete c.accountAbstraction
+    expect(deploymentFromConfig('monad-testnet', c).aa).toBeNull()
+  })
+})
+
 describe('network meta', () => {
   it('reads the testnet link and the X profile before mainnet is deployed', () => {
     const meta = networkMeta('monad-mainnet')

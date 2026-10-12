@@ -25,6 +25,14 @@
       "timestamp": "0x1046bb45C8d673d4ea75321280DB34899413c069"
     }
   },
+  "accountAbstraction": {
+    "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+    "paymaster": "0x777777777777AeC03fd955926DbF81597e66834C",
+    "paymasterKind": "pimlico-erc20",
+    "gasToken": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+    "standingApproval": "1000000",
+    "maxCostPerOp": "100000"
+  },
   "x402": {
     "usdc": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
     "facilitator": "https://x402-facilitator.molandak.org"

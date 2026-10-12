@@ -104,6 +104,23 @@ export interface DelegationDeployment {
   readonly enforcers: DelegationEnforcers
 }
 
+/**
+ * ERC-4337 on this chain (ADR-0023): the EntryPoint (v0.7) every account's user operations go through, and the ERC-20
+ * paymaster that takes their gas in `gasToken` (USDC). Mainnet uses Pimlico's paymaster; testnet our own, which also
+ * sponsors faucet claims. Amounts are the gas token's base units.
+ */
+export interface AccountAbstraction {
+  readonly entryPoint: Address
+  /** Null until the paymaster is deployed (testnet) — no user operation is built before then. */
+  readonly paymaster: Address | null
+  readonly paymasterKind: 'pimlico-erc20' | 'sidequest-testnet'
+  readonly gasToken: Address
+  /** The standing approval an account gives the paymaster: a batch tops it up only when it runs short. */
+  readonly standingApproval: bigint
+  /** The most one operation's gas may cost; above it nothing is signed. */
+  readonly maxCostPerOp: bigint
+}
+
 export interface Deployment {
   readonly network: Network
   readonly chainId: number
@@ -153,6 +170,8 @@ export interface Deployment {
    * there is no market of ours: the same calls on testnet and mainnet. Null until both exist.
    */
   readonly launcher: Launcher | null
+  /** User operations and their USDC paymaster (config `accountAbstraction`); null where none is configured. */
+  readonly aa: AccountAbstraction | null
   /** The block the recipe deployed at: where an indexer starts and a rebuild restarts. */
   readonly deployBlock: bigint
 }
@@ -207,6 +226,15 @@ export interface DeploymentConfig {
   erc8004: { identity: string; reputation: string }
   delegation: { manager: string; delegator: string; enforcers: Record<keyof DelegationEnforcers, string> }
   x402?: { usdc: string; facilitator: string }
+  /** See `AccountAbstraction`; quantities are decimal strings. */
+  accountAbstraction?: {
+    entryPoint: string
+    paymaster?: string
+    paymasterKind: string
+    gasToken: string
+    standingApproval: string
+    maxCostPerOp: string
+  }
   /** See `NetworkMeta`. */
   links?: { testnet?: string; mainnet?: string; x?: string }
   /** The launcher SIDE trades on (mainnet): its app's origin; the token's page is `<app>/tokens/<SIDE>`. */
@@ -424,7 +452,38 @@ export function deploymentFromConfig(network: Network, c: DeploymentConfig): Dep
     market: marketFromConfig(d.factory as Address, c.liquidity),
     launcher:
       validAddress(c.nadfun?.router) && validAddress(d.factory) ? { router: c.nadfun.router, side: d.factory } : null,
+    aa: aaFromConfig(c),
     deployBlock: BigInt(d.block ?? 0),
+  }
+}
+
+const UNITS = /^[1-9][0-9]{0,30}$/
+
+/** Config `accountAbstraction`, checked; null when absent. Our own paymaster never runs on mainnet. */
+function aaFromConfig(c: DeploymentConfig): AccountAbstraction | null {
+  const a = c.accountAbstraction
+  if (a === undefined) return null
+  if (!validAddress(a.entryPoint) || !validAddress(a.gasToken))
+    throw new Error('Network config accountAbstraction needs an entryPoint and a gasToken')
+  if (a.paymaster !== undefined && !validAddress(a.paymaster))
+    throw new Error('Network config accountAbstraction.paymaster must be an address')
+  if (a.paymasterKind !== 'pimlico-erc20' && a.paymasterKind !== 'sidequest-testnet')
+    throw new Error('Network config accountAbstraction.paymasterKind is unknown')
+  if (a.paymasterKind === 'sidequest-testnet' && c.chainId === 143)
+    throw new Error('The testnet paymaster never runs on mainnet')
+  if (!UNITS.test(a.standingApproval) || !UNITS.test(a.maxCostPerOp))
+    throw new Error('Network config accountAbstraction amounts must be positive base units')
+  const standingApproval = BigInt(a.standingApproval)
+  const maxCostPerOp = BigInt(a.maxCostPerOp)
+  if (maxCostPerOp > standingApproval)
+    throw new Error('Network config accountAbstraction.maxCostPerOp must fit in the standing approval')
+  return {
+    entryPoint: a.entryPoint,
+    paymaster: a.paymaster === undefined ? null : a.paymaster,
+    paymasterKind: a.paymasterKind,
+    gasToken: a.gasToken,
+    standingApproval,
+    maxCostPerOp,
   }
 }
 
