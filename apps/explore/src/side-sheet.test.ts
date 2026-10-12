@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { fillMon, fillText, sideRequest, sideShort, sideTrade, tradeAmounts, wholeUp, withoutSide } from './side-sheet.ts'
+import {
+  fillMon,
+  fillText,
+  sideRequest,
+  sideShort,
+  sideTrade,
+  tradeAmounts,
+  wholeUp,
+  withoutSide,
+} from './side-sheet.ts'
 
 const side = (n: bigint) => n * 10n ** 18n
 
