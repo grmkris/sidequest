@@ -107,13 +107,17 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
   const requests = useQuoteRequests()
   // The recent discovery list intentionally expires old requests. Read the durable record as a fallback so a
   // bookmarked request (or an event link) still renders its brief and status after it leaves that list.
+  // The polled list is the fresher copy while the request is in it; the direct read stands in after it leaves, and
+  // polls too, so a pick or close shows without a reload.
+  const listed = requests.data?.find((x) => x.requestId === requestId)
   const direct = useQuery({
     queryKey: boardKey(boardId, 'get_quote_request', boardId, requestId),
     queryFn: () => tool<Request>('get_quote_request', { requestId }),
-    enabled: requestId !== '',
+    enabled: requestId !== '' && listed === undefined,
+    refetchInterval: 15_000,
     retry: false,
   })
-  const r: Request | undefined = direct.data ?? requests.data?.find((x) => x.requestId === requestId)
+  const r: Request | undefined = listed ?? direct.data
   const posters = usePosterAgents()
   const quotes = useQuery({
     queryKey: boardKey(boardId, 'list_quotes', boardId, requestId, viewerKey(auth.address, auth.signedIn)),
