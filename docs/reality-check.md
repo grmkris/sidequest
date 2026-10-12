@@ -1432,6 +1432,22 @@ Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archi
     `0x481b09e02bfb8a5ba479901c7448549ba529515b6a4470a3dfe8faa1583258a1`: success, 200 SIDE received, code
     `0xef0100…63c0c19a…`.
 
+- **The browser path, live on dev (`dcee9297`).** A new Privy user signed up by email
+  (`sq-aa-tester-1012@myinbox.lol`, embedded wallet `0xFb80F26BB0EBc4034985A4542e3D45e6F9383fA7`) and claimed from the
+  faucet on Welcome holding 0 MON.
+  - Explore built the user op through `/aa/rpc`. Privy's modal showed the DeleGator's `PackedUserOperation`, and the
+    Privy wallet signed both the op and its 7702 authorization.
+  - Pimlico sponsored the gas. userOp `0x0eb2fd82e81d189342f148ba3446aaf02367c5466fe5342a077f518e4a06b82c`, tx
+    `0xa49e40cc22adb447da9a657287a64978e4a4fed475678011ce5d92b3f04c1042`: success. The account now has the DeleGator
+    code and 200 SIDE, and still 0 MON.
+  - **Two bugs found and fixed on the way:**
+    - The bundler refused every send (`-32500`) although the op passed a `handleOps` simulation. Its
+      pre-verification gas was 38 gas short, because the placeholder signature and stub paymaster data hold more zero
+      bytes than the real ones. Sponsored ops now get the same 10% margin as charged ones (`db26ba7b`); Pimlico signs
+      the higher value.
+    - Recovery called `eth_getLogs` over more than Monad's 100-block limit. Logs are now read only for a spent lane,
+      in bounded windows, and a refused op is rebuilt and re-signed (`aa-fix`, `a43dd0b6`).
+
 **Implemented and tested, not yet live:**
 - Hosted agents' Privy `signUserOperation` (`3166ff35`).
 - The paymaster's Worker quote signer.
