@@ -142,6 +142,25 @@ it('reads no chain state for tasks a role filter excludes', async () => {
   expect(read.mock.calls.length).toBeLessThanOrEqual(2)
 })
 
+it('keeps compact task scans small and skips enrichment while preserving filters', async () => {
+  const { board, read } = fixture()
+  const compact = await board.listTasks({}, { compact: true, limit: 2 })
+  expect(compact).toHaveLength(2)
+  expect(compact[0]).toMatchObject({
+    taskId: 'applied',
+    title: 'applied',
+    reward: '5',
+    chain: { status: 'awaiting-publish' },
+  })
+  expect(compact[0]).not.toHaveProperty('executionBudget')
+  expect(compact[0]).not.toHaveProperty('deliverable')
+  expect(read).not.toHaveBeenCalledWith(expect.objectContaining({ functionName: 'paused' }))
+  expect(
+    ids(await board.listTasks({ address: alice }, { compact: true, role: 'creator', status: ['awaiting-publish'] })),
+  ).toEqual(['alice-own'])
+  expect(await board.listTasks({}, { compact: true, status: ['open'] })).toEqual([])
+})
+
 it('owned requests include picked and expired history and page identical timestamps without leaks', async () => {
   const { board, sql } = fixture()
   for (let i = 0; i < 53; i++) {

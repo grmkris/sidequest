@@ -104,6 +104,8 @@ beforeAll(async () => {
   }
   for (const [name, args] of [
     ['list_tasks', { role: 'creator' }],
+    ['list_tasks', { compact: true, limit: 2 }],
+    ['task_index', { compact: true, limit: 2 }],
     ['get_task', { taskId: task.taskId }],
     ['list_quote_requests', {}],
     ['list_quote_requests', { recent: true }],

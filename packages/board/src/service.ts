@@ -3558,7 +3558,9 @@ export class Board {
    * come from board records (no RPC). A status needs each task's chain view, so a status filter reads at most the
    * newest LIST_STATUS_SCAN role-matching tasks and may return fewer than `limit`.
    */
-  async listTasks(caller: Caller, input: { limit?: number; role?: TaskRole; status?: readonly TaskStatus[] }) {
+  listTasks(caller: Caller, input: ListTasksInput & { compact: true }): Promise<CompactTaskSummary[]>
+  listTasks(caller: Caller, input: ListTasksInput & { compact?: false }): Promise<TaskSummary[]>
+  async listTasks(caller: Caller, input: ListTasksInput & { compact?: boolean }) {
     const limit = Math.min(input.limit ?? 20, 50)
     const withdrawn = this.#withdrawnTasks()
     let rows = this.#sql
@@ -3613,7 +3615,13 @@ export class Board {
     const out = []
     for (let at = 0; at < candidates.length && out.length < limit; at += LIST_CONCURRENCY) {
       const summaries = await Promise.all(
-        candidates.slice(at, at + LIST_CONCURRENCY).map((row) => this.#summary(row, caller)),
+        candidates
+          .slice(at, at + LIST_CONCURRENCY)
+          .map(async (row) =>
+            input.compact === true
+              ? { ...compactIndexEntry(row, this.#taskCtx(row).stack.kind), chain: await this.#chainView(row) }
+              : this.#summary(row, caller),
+          ),
       )
       out.push(
         ...summaries.filter(
@@ -4001,6 +4009,17 @@ function compactIndexEntry(t: TaskRow, kind: string) {
 
 export const TASK_ROLES = ['creator', 'approver', 'worker', 'invited', 'holder'] as const
 export type TaskRole = (typeof TASK_ROLES)[number]
+
+interface ListTasksInput {
+  limit?: number
+  role?: TaskRole
+  status?: readonly TaskStatus[]
+}
+type CompactTaskSummary = ReturnType<typeof compactIndexEntry> & { chain: ChainView }
+type TaskSummary = Omit<
+  Awaited<ReturnType<Board['getTask']>>,
+  'terms' | 'mine' | 'selection' | 'deliverables' | 'onchainSubmission' | 'evidence' | 'operations'
+>
 
 /** The most tasks a status filter reads chain views for in one list_tasks call. */
 const LIST_STATUS_SCAN = 40

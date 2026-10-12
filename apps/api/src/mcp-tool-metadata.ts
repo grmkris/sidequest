@@ -50,6 +50,7 @@ const PUBLISHER_OUTPUT_SCHEMAS: Readonly<Record<string, Record<string, unknown>>
     }),
   ),
   agent_status: envelope(objectOutput({ state: stringOutput, allowances: listOutput })),
+  task_index: envelope(listOutput),
   list_tasks: envelope({
     type: 'array',
     items: objectOutput({

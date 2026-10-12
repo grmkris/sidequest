@@ -196,11 +196,12 @@ export const tools: Record<string, Tool> = {
 
   list_tasks: {
     description:
-      'Recent tasks with their live on-chain status, newest first. role keeps tasks where you are the creator, approver, a worker (any application), invited (a direct invite or a picked quote) or holder (the job you activated and hold on chain); status keeps chain statuses. A status or holder filter reads at most the newest 40 matches.',
+      'Recent tasks with their live on-chain status, newest first. compact=true skips funding, selection and token-display enrichment; read get_task for full terms and next actions. For a scan without chain reads, use task_index with compact=true. role keeps tasks where you are the creator, approver, a worker (any application), invited (a direct invite or a picked quote) or holder (the job you activated and hold on chain); status keeps chain statuses. A status or holder filter reads at most the newest 40 matches.',
     inputSchema: {
       type: 'object',
       properties: {
         limit: num('At most 50; default 20.'),
+        compact: { type: 'boolean', description: 'Optional: compact display fields and live chain status only.' },
         role: {
           type: 'string',
           enum: [...TASK_ROLES],
@@ -213,14 +214,18 @@ export const tools: Record<string, Tool> = {
         },
       },
     },
-    run: (board, caller, a) =>
-      board.listTasks(caller, {
+    run: (board, caller, a) => {
+      const filters = {
         ...(a.limit === undefined ? {} : { limit: n(a, 'limit') }),
         ...(a.role === undefined ? {} : { role: s(a, 'role') as TaskRole }),
         ...(a.status === undefined
           ? {}
           : { status: (Array.isArray(a.status) ? a.status : [a.status]) as TaskStatus[] }),
-      }),
+      }
+      return a.compact === true
+        ? board.listTasks(caller, { ...filters, compact: true })
+        : board.listTasks(caller, filters)
+    },
   },
 
   get_task: {
