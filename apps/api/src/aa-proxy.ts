@@ -95,7 +95,7 @@ async function boundedBody(stream: ReadableStream<Uint8Array> | null, limit: num
  * request body in the provider's message never comes through.
  */
 const REASONS = [
-  /\bAA\d{2}(?: (?!https?\b|www\b)[a-z]+){1,8}/,
+  /\bAA\d{2}(?: (?!https?\b|www\b)[A-Za-z]+){1,8}(?:[: ]+0x[0-9a-fA-F]{8,264})?/,
   /\b(?:preVerificationGas|maxFeePerGas|maxPriorityFeePerGas|callGasLimit|verificationGasLimit)[a-zA-Z ,:]{0,40}[0-9x ,a-fA-F:]{0,40}/,
 ]
 function safeReason(message: Json | undefined): string | null {

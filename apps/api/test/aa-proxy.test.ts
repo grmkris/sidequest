@@ -226,6 +226,12 @@ describe('public POST /aa/rpc', () => {
       'error.message',
       'AA provider refused the request: AA31 paymaster deposit too low',
     )
+    const reverted = answering({ code: -32500, message: 'reason: AA50 postOp reverted 0x08c379a0deadbeef' }, true)
+    const body = await (await aaRpcRoute(request(rpcBody()), bindings, {}, reverted.fetcher)).json()
+    expect(body).toHaveProperty(
+      'error.message',
+      'AA provider refused the request: AA50 postOp reverted 0x08c379a0deadbeef',
+    )
   })
 
   it('limits canonical hashed client IPs per isolate and allows them again after the minute', async () => {
