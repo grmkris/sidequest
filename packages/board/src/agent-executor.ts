@@ -10,7 +10,7 @@ import { mapAgentCalls, type ApprovedAgentAction } from './agent-call-mapper.ts'
 import { SponsorDesk, type NamedSponsorEntry, type SponsorResult } from './sponsor.ts'
 import type { Sql } from './store.ts'
 import { AgentLifecycle } from './agent-lifecycle.ts'
-import { AgentFailure, agentFailureReply } from './agent-failure.ts'
+import { AgentFailure, agentFailureReply, errorDiagnostics } from './agent-failure.ts'
 import { AgentX402 } from './agent-x402.ts'
 import { x402Deployment } from './x402.ts'
 
@@ -47,7 +47,13 @@ export interface AgentExecuteInput {
 }
 
 export type AgentExecuteResult =
-  | { readonly status: 'confirmed' | 'rejected'; readonly operationId: Hex; readonly result: unknown }
+  | {
+      readonly status: 'confirmed' | 'rejected'
+      readonly operationId: Hex
+      readonly result: unknown
+      /** A declined pick reopened its quote request: pick again from its quotes, with a new operationKey. */
+      readonly next?: { readonly tool: 'list_quotes'; readonly args: { readonly requestId: string } }
+    }
   | { readonly status: 'approval'; readonly operationId: Hex; readonly approval: ApprovalRow }
   | { readonly status: 'pending' | 'reverted' | 'dropped'; readonly operationId: Hex; readonly result: SponsorResult }
 
@@ -205,6 +211,36 @@ export class AgentExecutor {
       : { approvalHash: prepared.hash, allowanceHash: decision.allowanceHash }
   }
 
+  /**
+   * A declined over-budget pick never reached the chain: its quote request opens again so the hirer can pick anew.
+   * Best effort and idempotent: a failure is retried on the agent's next call with the same key, and the answer stays
+   * `rejected` either way.
+   */
+  async #reopen(operation: AgentOperationRow, approval: ApprovalRow, address: Address) {
+    if (
+      operation.tool !== 'pick_quote' ||
+      approval.kind !== 'hire-over-limit' ||
+      operation.sponsor_operation_id !== null
+    )
+      return {}
+    const prepared = this.agents.step<AgentPreparedCall>(operation.id, 'prepared')
+    const requestId: unknown = JSON.parse(operation.intent_json).requestId
+    const taskId = prepared?.taskId
+    if (!isText(requestId) || !isText(taskId)) return {}
+    const next = { tool: 'list_quotes', args: { requestId } } as const
+    if (this.agents.step(operation.id, 'reopened') !== undefined) return { next }
+    try {
+      await this.deps.prepareTool({ tool: 'release_pick', args: { requestId, taskId }, caller: { address } })
+    } catch (error) {
+      console.error(
+        JSON.stringify({ event: 'pick-reopen-failed', operationId: operation.id, ...errorDiagnostics(error) }),
+      )
+      return {}
+    }
+    this.agents.freezeStep(operation.id, 'reopened', true)
+    return { next }
+  }
+
   async #action(input: AgentExecuteInput, operation: AgentOperationRow, address: Address): Promise<AgentPreparedCall> {
     const saved = this.agents.step<AgentPreparedCall>(operation.id, 'action')
     if (saved !== undefined) return saved
@@ -331,7 +367,12 @@ export class AgentExecutor {
       operation.id,
     )[0]
     if (operation.stage === 'failed' && declined !== undefined)
-      return { status: 'rejected', operationId: operation.id, result: declined }
+      return {
+        status: 'rejected',
+        operationId: operation.id,
+        result: declined,
+        ...(await this.#reopen(operation, declined, agent.address)),
+      }
     if (operation.stage === 'failed')
       throw new AgentFailure(
         'conflict',
@@ -369,7 +410,8 @@ export class AgentExecutor {
       if (approval.status === 'pending') return { status: 'approval', operationId: operation.id, approval }
       if (approval.status === 'rejected') {
         this.agents.saveOperation(operation.id, 'failed', { result: approval })
-        return { status: 'rejected', operationId: operation.id, result: approval }
+        const reopened = await this.#reopen(operation, approval, agent.address)
+        return { status: 'rejected', operationId: operation.id, result: approval, ...reopened }
       }
     }
     await this.deps.sponsor.ready()
@@ -439,4 +481,8 @@ export class AgentExecutor {
     const sent = await this.deps.sponsor.submit(agent.address, entries, operation.action_key, operation.id)
     return this.#finish(this.agents.operation(operation.id), agent.address, sent)
   }
+}
+
+function isText(value: unknown): value is string {
+  return typeof value === 'string'
 }
