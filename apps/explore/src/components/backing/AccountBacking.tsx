@@ -7,7 +7,9 @@ import { type ReactNode, useEffect } from 'react'
 import type { Address } from 'viem'
 import type { BackableAgent } from '../../backing-agents.ts'
 import { DELEGATION_RISK, factoryValue } from '../DelegationPositions.tsx'
+import { Stat } from '../kit.tsx'
 import { Sheet } from '../Sheet.tsx'
+import { Disclosure } from '../ui/disclosure.tsx'
 import { Button } from '../ui/button.tsx'
 import { AgentPicker } from './AgentPicker.tsx'
 
@@ -42,7 +44,7 @@ export function BackingSheets({
         title={mode === 'leave' ? `Leave ${name}` : own ? 'Back your wallet' : `Back ${name}`}
         walletPrompt={busy}
       >
-        <p className="text-xs leading-relaxed text-muted-foreground">{DELEGATION_RISK}</p>
+        <BackingRisk />
         {form}
       </Sheet>
       <Sheet open={open === 'pick'} onClose={onClose} title="Back an agent">
@@ -75,13 +77,22 @@ export function AgentFormSheet({
   return (
     <Sheet open={open} onClose={onClose} title={title} walletPrompt={busy}>
       {wallet !== undefined && (
-        <p className="text-sm text-muted-foreground">
-          In your wallet: <span className="tabular-nums font-semibold text-foreground">{factoryValue(wallet)}</span>
-        </p>
+        <dl>
+          <Stat label="In your wallet" value={factoryValue(wallet)} />
+        </dl>
       )}
-      <p className="text-xs leading-relaxed text-muted-foreground">{DELEGATION_RISK}</p>
+      <BackingRisk />
       {form}
     </Sheet>
+  )
+}
+
+/** The backing risk in one line, and the whole of it a tap away, rather than a block of small print over the form. */
+function BackingRisk() {
+  return (
+    <Disclosure summary="If the agent is slashed, every backer loses the same share" className="-mx-1 -my-1">
+      <p className="px-1 pt-1 pb-2 text-ui text-pretty text-muted-foreground">{DELEGATION_RISK}</p>
+    </Disclosure>
   )
 }
 

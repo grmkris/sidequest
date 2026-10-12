@@ -1,11 +1,14 @@
 import { Button } from './ui/button.tsx'
-import { Input } from './ui/input.tsx'
 import { Alert, AlertDescription } from './ui/alert.tsx'
 import { Address as AddressText, Section, Segmented } from './kit.tsx'
 import type { Address } from 'viem'
 import { duration } from '../duration.ts'
 import { factoryAmount } from '../stake.ts'
-import { formatNumber } from '../format.ts'
+import { formatAmount } from '../format.ts'
+import { cn } from '../lib/cn.ts'
+import { sideToken } from '../wallet.ts'
+import { AmountField } from './money/AmountField.tsx'
+import { wholeUp } from '../side-sheet.ts'
 import { SideChip } from './side/SideToken.tsx'
 
 import { factoryValue } from './DelegationPositions.tsx'
@@ -52,31 +55,50 @@ export function DelegationForm({
   const invalid = text.trim() !== '' && value === null
   const tooMuch = value !== null && maximum !== undefined && value > maximum
   /** The SIDE the wallet lacks for this backing, which the SIDE sheet offers to buy. */
-  const lacking = mode === 'add' && value !== null && wallet !== undefined && value > wallet ? value - wallet : null
+  const lacking =
+    mode === 'add' && value !== null && wallet !== undefined && value > wallet ? wholeUp(value - wallet) : null
   const own = account.toLowerCase() === owner.toLowerCase()
+  const hint = invalid ? (
+    'Enter a positive amount with up to 18 decimal places.'
+  ) : tooMuch ? (
+    mode === 'add' ? (
+      <>
+        More than your wallet holds.
+        {lacking !== null && (
+          <>
+            {' '}
+            <SideChip variant="link" need={lacking} onOpen={onGetSide}>
+              Get {formatAmount(lacking, 18)} SIDE
+            </SideChip>
+          </>
+        )}
+      </>
+    ) : (
+      'More than your active position.'
+    )
+  ) : mode === 'add' ? (
+    'You review the exact amount, then confirm it in your wallet, which pays the gas.'
+  ) : (
+    `Leaving starts ${cooldown === undefined ? 'the vault cooldown' : `a ${duration(cooldown)} cooldown`} for all your queued shares, including any already leaving. Deposits at risk do not prevent requesting to leave; they may delay withdrawal.`
+  )
   const form = (
     <form
-      className="grid gap-3 rounded-xl bg-card p-4"
+      className={cn('grid gap-4', framed && 'rounded-xl bg-card p-4')}
       onSubmit={(event) => {
         event.preventDefault()
         onSubmit()
       }}
     >
-      {own ? (
-        <p className="text-sm text-muted-foreground">
-          Your own wallet: the jobs you post reserve their deposit from this backing. Only you can leave and withdraw
-          it.
-        </p>
-      ) : (
-        <div className="grid gap-1 text-sm text-muted-foreground">
-          <span>
+      <p className="text-ui text-pretty text-muted-foreground">
+        {own ? (
+          'Your own wallet: the jobs you post reserve their deposit from this backing.'
+        ) : (
+          <>
             Backing wallet <AddressText value={account} />
-          </span>
-          <span>
-            Your position belongs to <AddressText value={owner} />. Only you can leave and withdraw it.
-          </span>
-        </div>
-      )}
+          </>
+        )}{' '}
+        Only you can leave and withdraw it.
+      </p>
       <Segmented
         label="Add or leave"
         value={mode}
@@ -86,64 +108,25 @@ export function DelegationForm({
           ['leave', 'Leave'],
         ]}
       />
-      <label className="grid gap-1.5 text-sm">
-        <span>Amount of SIDE</span>
-        <span className="flex gap-2">
-          <Input
-            id="stake-amount"
-            inputMode="decimal"
-            autoComplete="off"
-            value={text}
-            placeholder="0"
-            onChange={(event) => onText(event.target.value)}
-            className="min-w-0 flex-1 tabular-nums"
-          />
-          <Button
-            variant="secondary"
-            disabled={disabled || maximum === undefined}
-            onClick={() => maximum !== undefined && onText(exactFactory(maximum))}
-          >
-            Max
-          </Button>
-        </span>
-      </label>
-      <p className="text-sm text-muted-foreground">
-        {mode === 'add'
-          ? 'Review the exact amount, then confirm the backing in your wallet. Your wallet pays the gas in MON.'
-          : `Leaving starts ${cooldown === undefined ? 'the vault cooldown' : `a ${duration(cooldown)} cooldown`} for all your queued shares, including any already leaving. Deposits at risk do not prevent requesting to leave; they may delay withdrawal.`}
-      </p>
-      {mode === 'add' && reserved !== undefined && (
-        <p className="text-sm text-muted-foreground">
+      <AmountField
+        id="stake-amount"
+        label={mode === 'add' ? 'Back with' : 'Leave'}
+        value={text}
+        onChange={onText}
+        token={sideToken}
+        symbol="SIDE"
+        balance={maximum === undefined ? undefined : formatAmount(maximum, 18)}
+        onMax={disabled || maximum === undefined ? undefined : () => onText(exactFactory(maximum))}
+        hint={hint}
+        tone={invalid ? 'destructive' : tooMuch ? 'warning' : 'neutral'}
+        disabled={disabled}
+      />
+      {mode === 'add' && reserved !== undefined && reserved > 0n && (
+        <p className="text-ui text-pretty text-muted-foreground">
           Currently bonded behind this account:{' '}
           <span className="font-medium text-foreground">{factoryValue(reserved)}</span>. New backing shares open-bond
           exposure pro-rata until those jobs settle.
         </p>
-      )}
-      {invalid && (
-        <Alert variant="destructive">
-          <AlertDescription>Enter a positive SIDE amount with up to 18 decimal places.</AlertDescription>
-        </Alert>
-      )}
-      {tooMuch && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            {mode === 'add' ? (
-              <>
-                That is more SIDE than your wallet holds.
-                {lacking !== null && (
-                  <>
-                    {' '}
-                    <SideChip variant="link" need={lacking} onOpen={onGetSide}>
-                      Get {formatNumber(lacking, 18)} SIDE
-                    </SideChip>
-                  </>
-                )}
-              </>
-            ) : (
-              'That is more than your active position.'
-            )}
-          </AlertDescription>
-        </Alert>
       )}
       {error !== null && (
         <Alert variant="destructive">

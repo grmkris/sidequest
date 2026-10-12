@@ -8,22 +8,25 @@ import { Bot } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { formatEther } from 'viem'
 import { type SummaryEntry, backingSummary } from '../../backing-summary.ts'
-import { textLinkClass } from '../kit.tsx'
+import { Stat, textLinkClass } from '../kit.tsx'
 import { Countdown, useNow } from '../Time.tsx'
 import { Button } from '../ui/button.tsx'
 
 const side = (value: bigint) => Number(formatEther(value))
 
+/** A SIDE figure that rolls to its new value. */
 function Figure({ value, label, hint }: { value: bigint; label: string; hint?: ReactNode }) {
   return (
-    <div className="grid min-w-0 content-start gap-0.5">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="text-lg leading-tight font-semibold tracking-tight tabular-nums">
-        <NumberFlow value={side(value)} format={{ maximumFractionDigits: 2 }} />
-        <span className="ml-1 text-xs font-normal text-muted-foreground">SIDE</span>
-      </dd>
-      {hint !== undefined && <dd className="text-xs text-muted-foreground">{hint}</dd>}
-    </div>
+    <Stat
+      label={label}
+      value={
+        <>
+          <NumberFlow value={side(value)} format={{ maximumFractionDigits: 2 }} />
+          <span className="ml-1 text-xs font-normal text-muted-foreground">SIDE</span>
+        </>
+      }
+      sub={hint}
+    />
   )
 }
 
