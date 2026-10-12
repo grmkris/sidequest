@@ -11,6 +11,15 @@ export interface HeldTask {
   readonly nextAction?: { readonly actor?: string } | null
 }
 
+/**
+ * A held job wakes the worker when the board names it as the next to act; when the board names someone else (the
+ * approver reviewing, the arbitrator ruling), it waits; when the board names no one, it wakes only while the job is
+ * not done.
+ */
 export function openHeld<T extends HeldTask>(tasks: readonly T[]): T[] {
-  return tasks.filter((task) => task.nextAction?.actor === 'worker' || !HELD_DONE.has(task.chain?.status ?? ''))
+  return tasks.filter((task) => {
+    const actor = task.nextAction?.actor
+    if (actor !== undefined) return actor === 'worker'
+    return !HELD_DONE.has(task.chain?.status ?? '')
+  })
 }
