@@ -253,9 +253,16 @@ const limitsOf = (op: UserOperation): bigint =>
   (op.paymasterVerificationGasLimit ?? 0n) +
   (op.paymasterPostOpGasLimit ?? 0n)
 
-/** After an unpaid estimate: the stub's paymaster limits, then pre-verification gas priced for them. */
-function withStubLimits(op: UserOperation, stub: UserOperation): UserOperation {
-  const unpaidLimits = op.verificationGasLimit + op.callGasLimit
+/** The limits the bundler priced its pre-verification gas for: its own measurement, before our margin and floor. */
+const measuredLimits = (gas: Json): bigint =>
+  quantity(field(gas, 'verificationGasLimit'), 'verification gas') + quantity(field(gas, 'callGasLimit'), 'call gas')
+
+/**
+ * After an unpaid estimate: the stub's paymaster limits, then pre-verification gas priced for every limit the operation
+ * now names, against the limits the bundler measured. Scaling from our raised call gas instead under-priced a SIDE sale
+ * whose batch floor (1.03M) is far above its estimate (614k): 573535 sent, 715771 required (live on dev, 13 Oct).
+ */
+function withStubLimits(op: UserOperation, stub: UserOperation, unpaidLimits: bigint): UserOperation {
   const verification = stub.paymasterVerificationGasLimit ?? op.paymasterVerificationGasLimit
   const postOp = stub.paymasterPostOpGasLimit ?? op.paymasterPostOpGasLimit
   return scaledPreVerification(
@@ -313,12 +320,9 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
   let op = await draft(input, await batch(aa.maxCostPerOp))
   op = withPaymaster(op, await input.paymaster('pm_getPaymasterStubData', params(op)), sponsored ? null : paymaster)
   const stub = op
-  op = withEstimate(
-    op,
-    await input.bundler('eth_estimateUserOperationGas', estimateParams(input, op, unpaid)),
-    input.minCallGas ?? 0n,
-  )
-  if (unpaid) op = withStubLimits(op, stub)
+  const gas = await input.bundler('eth_estimateUserOperationGas', estimateParams(input, op, unpaid))
+  op = withEstimate(op, gas, input.minCallGas ?? 0n)
+  if (unpaid) op = withStubLimits(op, stub, measuredLimits(gas))
   op = withPreVerificationMargin(op)
   const maxCost = tokenQuote === null ? 0n : maxTokenCost(op, tokenQuote)
   if (maxCost > aa.maxCostPerOp)

@@ -133,8 +133,21 @@ describe('building a user operation', () => {
     expect(field(field(estimated[2], key.address), 'balance')).toBe(toHex(10n ** 24n))
     expect(built.op.paymasterVerificationGasLimit).toBe(100_000n)
     expect(built.op.paymasterPostOpGasLimit).toBe(200_000n)
-    const unpaid = 0xf000n + (0x30d40n * 11n) / 10n
-    const scaled = (0x19000n * (unpaid + 300_000n) + unpaid - 1n) / unpaid
+    const measured = 0xf000n + 0x30d40n
+    const paid = 0xf000n + (0x30d40n * 11n) / 10n + 300_000n
+    const scaled = (0x19000n * paid + measured - 1n) / measured
+    expect(built.op.preVerificationGas).toBe((scaled * 110n + 99n) / 100n)
+  })
+
+  it('prices pre-verification gas for the batch floor, against the limits the bundler measured', async () => {
+    // Live on dev, 13 Oct: a SIDE sale's floor (1.03M) far above its estimate was sent 573535 where 715771 was required.
+    const s = services({
+      answer: { paymasterVerificationGasLimit: toHex(100_000n), paymasterPostOpGasLimit: toHex(200_000n) },
+    })
+    const built = await build(s, { aa: { ...aa, paymasterKind: 'sidequest-testnet' }, minCallGas: 1_030_000n })
+    expect(built.op.callGasLimit).toBe(1_030_000n)
+    const measured = 0xf000n + 0x30d40n
+    const scaled = (0x19000n * (0xf000n + 1_030_000n + 300_000n) + measured - 1n) / measured
     expect(built.op.preVerificationGas).toBe((scaled * 110n + 99n) / 100n)
   })
 
