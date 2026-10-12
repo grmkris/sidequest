@@ -1,6 +1,8 @@
 export * from './userop.ts'
 export * from './fees.ts'
 export * from './build.ts'
+export * from './testnet-paymaster.ts'
+export * from './config.ts'
 export {
   AaError,
   type AaErrorCode,
@@ -8,7 +10,7 @@ export {
   type JsonRpc,
   field,
   hexField,
+  quantity,
   jsonRpc,
   pimlicoUrl,
-  quantity,
 } from './rpc.ts'

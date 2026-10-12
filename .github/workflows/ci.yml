@@ -90,6 +90,8 @@ jobs:
           ATTESTER_PRIVATE_KEY: ${{ secrets.ATTESTER_PRIVATE_KEY }}
           PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
           PRIVY_SIGNER_KEY: ${{ secrets.PRIVY_SIGNER_KEY }}
+          PIMLICO_API_KEY: ${{ secrets.PIMLICO_API_KEY }}
+          TESTNET_PAYMASTER_SIGNER_KEY: ${{ secrets.TESTNET_PAYMASTER_SIGNER_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
@@ -150,6 +152,8 @@ jobs:
           ATTESTER_PRIVATE_KEY: ${{ secrets.ATTESTER_PRIVATE_KEY }}
           PRIVY_APP_SECRET: ${{ secrets.PRIVY_APP_SECRET }}
           PRIVY_SIGNER_KEY: ${{ secrets.PRIVY_SIGNER_KEY }}
+          PIMLICO_API_KEY: ${{ secrets.PIMLICO_API_KEY }}
+          TESTNET_PAYMASTER_SIGNER_KEY: ${{ secrets.TESTNET_PAYMASTER_SIGNER_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}

@@ -77,6 +77,7 @@ import { isProfilePath, profileRoute } from './routes/profiles.ts'
 import { MAX_AVATAR_BYTES, type AvatarBucket } from './avatars.ts'
 import { avatarRouteRequest } from './agent-profile-management.ts'
 import { objectFor } from './commons/route.ts'
+import { aaRpcRoute } from './aa-proxy.ts'
 
 const STATUS: Record<string, number> = {
   unauthenticated: 401,
@@ -171,6 +172,10 @@ export default class Api extends Cloudflare.Worker<Api>()(
       PRIVY_POLICY_ID: process.env.PRIVY_POLICY_ID || '',
       PRIVY_APP_SECRET: Redacted.make(runtimeSecret('PRIVY_APP_SECRET') || 'unset'),
       PRIVY_SIGNER_KEY: Redacted.make(runtimeSecret('PRIVY_SIGNER_KEY') || 'unset'),
+      PIMLICO_API_KEY: Redacted.make(runtimeSecret('PIMLICO_API_KEY') || 'unset'),
+      ...((stageProfile()?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') === 'monad-testnet'
+        ? { TESTNET_PAYMASTER_SIGNER_KEY: Redacted.make(process.env.TESTNET_PAYMASTER_SIGNER_KEY || 'unset') }
+        : {}),
       TELEGRAM_BOT_TOKEN: Redacted.make(runtimeSecret('TELEGRAM_BOT_TOKEN') || 'unset'),
       TELEGRAM_WEBHOOK_SECRET: Redacted.make(runtimeSecret('TELEGRAM_WEBHOOK_SECRET') || 'unset'),
       // Retain existing binding names for guarded staging updates; these obsolete lists are ignored.
@@ -211,6 +216,19 @@ export default class Api extends Cloudflare.Worker<Api>()(
             { status: 503 },
           )
         const rpcUrl = yield* secret('MONAD_RPC_URL')
+        if (url.pathname === '/aa/rpc') {
+          const origin = request.headers.origin
+          const publicOrigin = yield* Config.String('PUBLIC_ORIGIN')
+          const cors = corsHeaders(origin, origin === publicOrigin || origin === url.origin)
+          const webRequest = request.source
+          if (!(webRequest instanceof Request))
+            return HttpServerResponse.jsonUnsafe(
+              { jsonrpc: '2.0', id: null, error: { code: -32001, message: 'AA request unavailable' } },
+              { status: 503, headers: cors },
+            )
+          const response = yield* Effect.promise(() => aaRpcRoute(webRequest, runtimeEnv, cors))
+          return HttpServerResponse.fromWeb(response)
+        }
         const relayKey = yield* secret('RELAY_PRIVATE_KEY')
         if (url.pathname === '/x402/demo' && request.method === 'GET') {
           if (network !== 'monad-testnet') return HttpServerResponse.text('not found', { status: 404 })

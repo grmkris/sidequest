@@ -49,6 +49,7 @@ const REQUIRED_SECRETS = [
   'ATTESTER_PRIVATE_KEY',
   'PRIVY_APP_SECRET',
   'PRIVY_SIGNER_KEY',
+  'PIMLICO_API_KEY',
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_WEBHOOK_SECRET',
   'AI_GATEWAY_API_KEY',
@@ -151,6 +152,7 @@ export const assembleEnv = (
   const localRun = base.CI !== 'true' && base.CI !== '1'
   const settings = new Set<string>([
     ...REQUIRED_SECRETS,
+    'TESTNET_PAYMASTER_SIGNER_KEY',
     'PRIVY_APP_ID',
     'PRIVY_SIGNER_ID',
     'PRIVY_POLICY_ID',
@@ -182,12 +184,15 @@ export const assembleEnv = (
   if (env.SQ_GITHUB_APP_INSTALLATION_ID !== undefined)
     env.GITHUB_APP_INSTALLATION_ID = env.SQ_GITHUB_APP_INSTALLATION_ID
   if (env.SQ_GITHUB_APP_PRIVATE_KEY !== undefined) env.GITHUB_APP_PRIVATE_KEY = env.SQ_GITHUB_APP_PRIVATE_KEY
+  if (infra.network === 'monad-mainnet') delete env.TESTNET_PAYMASTER_SIGNER_KEY
   return env
 }
 
 export const validateEnv = (env: Record<string, string>, required: readonly string[] = REQUIRED_SECRETS): void => {
   if (Object.keys(env).some((key) => key.startsWith('DISTILLED_DEBUG'))) fail('DISTILLED_DEBUG settings are refused')
-  const missing = required.filter(
+  const stageSecrets =
+    env.SIDEQUEST_NETWORK === 'monad-testnet' ? [...required, 'TESTNET_PAYMASTER_SIGNER_KEY'] : required
+  const missing = stageSecrets.filter(
     (name) => env[name] === undefined || env[name]?.trim() === '' || env[name]?.trim().toLowerCase() === 'unset',
   )
   if (missing.length > 0) fail(`required secrets missing: ${missing.join(', ')}`)
