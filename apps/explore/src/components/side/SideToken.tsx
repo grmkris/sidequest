@@ -12,32 +12,20 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { erc20Abi } from 'viem'
 import { useBalance, useReadContract } from 'wagmi'
 import { useBondPolicy } from '../../bond-policy.ts'
-import { formatNumber } from '../../format.ts'
+import { formatAmount } from '../../format.ts'
 import { cn } from '../../lib/cn.ts'
 import { markWelcomeShown } from '../../onboarding.ts'
 import { useReplaceSearch } from '../../page-search.ts'
 import { publicKey } from '../../queries.ts'
-import { fillMon, sideRequest, sideTrade, withoutSide } from '../../side-sheet.ts'
+import { sideRequest, wholeUp, withoutSide } from '../../side-sheet.ts'
 import { stakeContext } from '../../stake-context.ts'
-import {
-  chain,
-  deployed,
-  deployment,
-  explorer,
-  getSideLink,
-  isMainnet,
-  sidePages,
-  sideToken,
-  writesOpen,
-} from '../../wallet.ts'
-import { LauncherPanel, type Trade } from '../Buy.tsx'
-import { SWAP_GAS } from '../GasWarning.tsx'
-import { CopyButton, Segmented, shortAddress, textLinkClass } from '../kit.tsx'
-import { PrivyLogin, usePrivyAuthenticated, usePrivyModalOpen } from '../Privy.tsx'
+import { chain, deployed, deployment, explorer, getSideLink, isMainnet, sidePages, sideToken } from '../../wallet.ts'
+import { TradeCard } from './TradeCard.tsx'
+import { AddressRow, CopyButton, Stat, shortAddress, textLinkClass } from '../kit.tsx'
+import { usePrivyModalOpen } from '../Privy.tsx'
 import { Sheet } from '../Sheet.tsx'
-import { TestnetFaucet } from '../TestnetFaucet.tsx'
 import { TokenIcon } from '../token/TokenIcon.tsx'
-import { Button, buttonVariants } from '../ui/button.tsx'
+import { Button } from '../ui/button.tsx'
 import { useAuth } from '../Wallet.tsx'
 
 interface SideOpen {
@@ -141,6 +129,7 @@ export function SideTokenProvider({ children }: { children: ReactNode }) {
               onSignIn={() => {
                 signInHere.current = true
               }}
+              onClose={() => setState((current) => ({ ...current, open: false }))}
             />
           )}
         </Sheet>
@@ -154,51 +143,32 @@ function SideSheetBody({
   need,
   onBusyChange,
   onSignIn,
+  onClose,
 }: {
   side: `0x${string}`
   need: bigint | null
   onBusyChange: (busy: boolean) => void
   onSignIn: () => void
+  onClose: () => void
 }) {
-  const [trade, setTrade] = useState<Trade>('buy')
-  const [text, setText] = useState('')
   return (
     <>
-      <p className="-mt-2 leading-snug text-pretty text-muted-foreground">
-        The token Sidequest&apos;s bonds and backing are held in.
-      </p>
-      <div className="flex min-w-0 items-center gap-2 rounded-xl bg-muted/60 py-1.5 pr-1.5 pl-3">
-        <code className="min-w-0 flex-1 font-mono text-ui [overflow-wrap:anywhere]">{side}</code>
-        <CopyButton value={side} label="Copy SIDE contract address" />
+      <div className="-mt-2 grid gap-2">
+        <p className="leading-snug text-pretty text-muted-foreground">Bonds and backing on Sidequest</p>
+        <AddressRow value={side} kind="token" short copyLabel="Copy SIDE contract address" className="w-fit" />
       </div>
-      {deployed && (
-        <BondCost
-          side={side}
-          need={need}
-          onFill={(mon) => {
-            setTrade('buy')
-            setText(mon)
-          }}
-        />
-      )}
-      <TradeSection
-        trade={trade}
-        onTrade={(next) => {
-          setTrade(next)
-          setText('')
-        }}
-        text={text}
-        onText={setText}
-        onBusyChange={onBusyChange}
-        onSignIn={onSignIn}
-      />
+      {deployed && <BondCost side={side} need={need} />}
+      <TradeCard need={need} onBusyChange={onBusyChange} onSignIn={onSignIn} onClose={onClose} />
       <Elsewhere side={side} />
     </>
   )
 }
 
-/** What SIDE is for, in MON: the posting bond's cost now, the wallet's SIDE, and any SIDE still needed with its cost. */
-function BondCost({ side, need, onFill }: { side: `0x${string}`; need: bigint | null; onFill: (mon: string) => void }) {
+/**
+ * What SIDE is for and what the wallet has, as two figures: the posting bond with its cost in MON now, and the wallet's
+ * SIDE and MON. Then any SIDE still needed, with its cost and a Fill for the buy.
+ */
+function BondCost({ side, need }: { side: `0x${string}`; need: bigint | null }) {
   const ctx = stakeContext()
   const launcher = deployment.launcher
   const { address } = useAuth()
@@ -225,169 +195,41 @@ function BondCost({ side, need, onFill }: { side: `0x${string}`; need: bigint | 
     chainId: chain.id,
     query: { enabled: address !== undefined, refetchInterval: 10_000 },
   }).data
+  const gas = useBalance({
+    address,
+    chainId: chain.id,
+    query: { enabled: address !== undefined, refetchInterval: 15_000 },
+  }).data?.value
   const mon = chain.nativeCurrency.symbol
-  // Fill only where the buy form shows: writes open, a launcher, a connected wallet.
-  const fill =
-    writesOpen && launcher !== null && address !== undefined && needCost.data !== undefined
-      ? fillMon(needCost.data)
-      : null
   return (
     <div className="grid gap-2">
-      {bond !== undefined && (
-        <p className="text-pretty">
-          Posting a job holds <span className="font-medium tabular-nums">{formatNumber(bond, 18)} SIDE</span> as its
-          bond
-          {cost.data !== undefined ? (
-            <>
-              : about{' '}
-              <span className="font-medium tabular-nums">
-                {formatNumber(cost.data, 18)} {mon}
-              </span>{' '}
-              on nad.fun now.
-            </>
-          ) : cost.isError ? (
-            <>. nad.fun can&apos;t quote SIDE right now.</>
-          ) : (
-            '.'
-          )}
-        </p>
-      )}
-      {held !== undefined && (
-        <p className="text-muted-foreground tabular-nums">You hold {formatNumber(held, 18)} SIDE.</p>
-      )}
+      <dl className="grid grid-cols-2 gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
+        <Stat
+          label="Posting bond"
+          value={bond === undefined ? '…' : `${formatAmount(bond, 18)} SIDE`}
+          sub={
+            cost.data !== undefined
+              ? `≈ ${formatAmount(cost.data, 18)} ${mon} on nad.fun`
+              : cost.isError
+                ? 'nad.fun can’t quote it now'
+                : undefined
+          }
+        />
+        {address !== undefined && (
+          <Stat
+            label="In your wallet"
+            value={held === undefined ? '…' : `${formatAmount(held, 18)} SIDE`}
+            sub={gas === undefined ? undefined : `${formatAmount(gas, 18)} ${mon}`}
+          />
+        )}
+      </dl>
       {need !== null && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-warning/14 py-2 pr-2 pl-3 text-warning-text">
-          <span className="tabular-nums">
-            You need {formatNumber(need, 18)} more SIDE
-            {needCost.data !== undefined && `: about ${formatNumber(needCost.data, 18)} ${mon}`}.
-          </span>
-          {fill !== null && (
-            <Button size="sm" variant="outline" onClick={() => onFill(fill)}>
-              Fill
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-/** Buy or sell from the connected wallet, or what stands in the way: launch, sign-in, a wallet still connecting. */
-function TradeSection(props: {
-  trade: Trade
-  onTrade: (trade: Trade) => void
-  text: string
-  onText: (text: string) => void
-  onBusyChange: (busy: boolean) => void
-  onSignIn: () => void
-}) {
-  const { address } = useAuth()
-  const authenticated = usePrivyAuthenticated()
-  const launcher = deployment.launcher
-  const state = sideTrade({ writesOpen, launcher: launcher !== null, address, authenticated })
-  if (state === 'closed') return <p className="text-muted-foreground">Buying and selling here opens at launch.</p>
-  if (state === 'unavailable')
-    return <p className="text-muted-foreground">Buying and selling here is not available on this network.</p>
-  if (state === 'sign-in')
-    return (
-      <div className="grid justify-items-start gap-2 rounded-xl bg-muted/50 p-3">
-        <p className="text-pretty">
-          Sign in to buy or sell SIDE here, with {chain.nativeCurrency.symbol} from your wallet.
+        <p className="text-pretty text-warning-text tabular-nums">
+          You need {formatAmount(wholeUp(need), 18)} more SIDE
+          {needCost.data !== undefined && `, about ${formatAmount(needCost.data, 18)} ${mon}`}. The buy below is filled
+          in.
         </p>
-        <span onClickCapture={props.onSignIn}>
-          <PrivyLogin />
-        </span>
-      </div>
-    )
-  if (state === 'connecting' || address === undefined || launcher === null)
-    return <output className="block text-muted-foreground">Connecting your wallet…</output>
-  return <Trading {...props} launcher={launcher} address={address} />
-}
-
-/** The Buy | Sell form over nad.fun's router; a finished trade says what it returned and starts a fresh form. */
-function Trading({
-  launcher,
-  address,
-  trade,
-  onTrade,
-  text,
-  onText,
-  onBusyChange,
-}: {
-  launcher: sdk.Launcher
-  address: `0x${string}`
-  trade: Trade
-  onTrade: (trade: Trade) => void
-  text: string
-  onText: (text: string) => void
-  onBusyChange: (busy: boolean) => void
-}) {
-  const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState<{ trade: Trade; out: bigint } | null>(null)
-  const [round, setRound] = useState(0)
-  const busyChange = useCallback(
-    (next: boolean) => {
-      setBusy(next)
-      onBusyChange(next)
-    },
-    [onBusyChange],
-  )
-  return (
-    <div className="grid gap-3">
-      <Segmented
-        label="Buy or sell SIDE"
-        value={trade}
-        options={[
-          ['buy', 'Buy'],
-          ['sell', 'Sell'],
-        ]}
-        onChange={(next) => {
-          if (busy || next === trade) return
-          setDone(null)
-          onTrade(next)
-        }}
-        className={cn('w-full', busy && 'pointer-events-none opacity-60')}
-      />
-      {done !== null && (
-        <output className="block text-success-text tabular-nums">
-          {done.trade === 'buy'
-            ? `Bought about ${formatNumber(done.out, 18)} SIDE.`
-            : `Sold for about ${formatNumber(done.out, 18)} ${chain.nativeCurrency.symbol}.`}
-        </output>
       )}
-      <LauncherPanel
-        key={`${trade}:${round}`}
-        launcher={launcher}
-        trade={trade}
-        address={address}
-        text={text}
-        onText={onText}
-        onBusyChange={busyChange}
-        onDone={(result) => {
-          setDone(result)
-          onText('')
-          setRound((r) => r + 1)
-        }}
-      />
-      <NoGas address={address} />
-      <TestnetFaucet address={address} />
-    </div>
-  )
-}
-
-/** A wallet without MON for gas cannot trade: where to send it. */
-function NoGas({ address }: { address: `0x${string}` }) {
-  const gas = useBalance({ address, chainId: chain.id, query: { refetchInterval: 15_000 } }).data?.value
-  if (gas === undefined || gas >= SWAP_GAS) return null
-  return (
-    <div className="grid gap-1.5">
-      <p className="text-muted-foreground">
-        Send {chain.nativeCurrency.symbol} to your wallet from any wallet you have:
-      </p>
-      <div className="flex min-w-0 items-center gap-2 rounded-xl bg-muted/60 py-1.5 pr-1.5 pl-3">
-        <code className="min-w-0 flex-1 font-mono text-ui [overflow-wrap:anywhere]">{address}</code>
-        <CopyButton value={address} label="Copy your address" />
-      </div>
     </div>
   )
 }
@@ -408,7 +250,9 @@ function Elsewhere({ side }: { side: `0x${string}` }) {
     { name: chain.blockExplorers?.default.name ?? 'Explorer', href: explorer('token', side) },
     ...sidePages.filter((p) => !p.graduated || graduated === true),
   ]
-  const link = cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-1.5')
+  const link = cn(
+    'inline-flex min-h-8 items-center gap-1 text-ui font-medium text-muted-foreground transition-colors duration-(--dur-fast) pointer-coarse:min-h-11 [@media(hover:hover)]:hover:text-foreground',
+  )
   return (
     <div className="grid gap-2.5 border-t pt-4">
       {graduated !== undefined && (
@@ -420,12 +264,12 @@ function Elsewhere({ side }: { side: `0x${string}` }) {
               : "Testnet SIDE trades on nad.fun's testnet curve, which has no website: buy and sell it here."}
         </p>
       )}
-      <ul className="flex flex-wrap gap-2" aria-label="SIDE elsewhere">
+      <ul className="flex flex-wrap gap-x-4 gap-y-0.5" aria-label="SIDE elsewhere">
         {links.map((l) => (
           <li key={l.name}>
             <a href={l.href} target="_blank" rel="noreferrer" className={link}>
               {l.name}
-              <ExternalLink aria-hidden className="size-3.5" />
+              <ExternalLink aria-hidden className="size-3" />
             </a>
           </li>
         ))}
@@ -479,7 +323,7 @@ export function SideChip({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full border text-xs text-muted-foreground',
+        'inline-flex items-center rounded-full bg-background text-xs text-muted-foreground shadow-chip',
         variant === 'full' && 'pr-0.5',
         className,
       )}

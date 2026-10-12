@@ -12,7 +12,14 @@ import type { WalletStep } from './txOperation.ts'
 import { Button } from './ui/button.tsx'
 
 /** Testnet-only single-call user operation. Circle supplies USDC for later self-paid actions. */
-export function TestnetFaucet({ address }: { address: `0x${string}` }) {
+export function TestnetFaucet({
+  address,
+  compact = false,
+}: {
+  address: `0x${string}`
+  /** One quiet line with a secondary button, for inside a sheet whose main button is something else. */
+  compact?: boolean
+}) {
   const faucet = deployment.testnetFaucet
   const qc = useQueryClient()
   const toast = useToast()
@@ -47,23 +54,15 @@ export function TestnetFaucet({ address }: { address: `0x${string}` }) {
     stake === undefined || payment === undefined
       ? 'SIDE and each test payment token'
       : `${formatNumber(stake, 18)} SIDE and ${formatNumber(payment, 6)} of each test payment token`
+  const disabled = waiting || steps !== null || last === undefined
+  const when = waiting ? relative(Number(next)) : null
   return (
     <div className="grid gap-2">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button onClick={claim} busy={busy} disabled={waiting || steps !== null || last === undefined}>
-          Get test tokens
-        </Button>
-        <span className="text-sm text-muted-foreground">
-          {waiting ? `Next claim ${relative(Number(next))}` : `${amounts}, once a day. Test tokens have no value.`}
-        </span>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Gas is covered for this testnet claim. For later actions, get USDC from{' '}
-        <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="underline">
-          Circle’s faucet
-        </a>{' '}
-        (Monad Testnet, 20 USDC every 2 hours), or add MON.
-      </p>
+      {compact ? (
+        <CompactClaim when={when} amounts={amounts} busy={busy} disabled={disabled} onClaim={claim} />
+      ) : (
+        <FullClaim when={when} amounts={amounts} busy={busy} disabled={disabled} onClaim={claim} />
+      )}
       {steps !== null && (
         <TxSteps
           taskId={steps.id}
@@ -81,5 +80,49 @@ export function TestnetFaucet({ address }: { address: `0x${string}` }) {
         />
       )}
     </div>
+  )
+}
+
+interface ClaimProps {
+  /** When the next claim opens, or null when one can be claimed now. */
+  when: string | null
+  amounts: string
+  busy: boolean
+  disabled: boolean
+  onClaim: () => void
+}
+
+/** One quiet line and a secondary button, inside a sheet whose main button is something else. */
+function CompactClaim({ when, amounts, busy, disabled, onClaim }: ClaimProps) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-ui text-muted-foreground">
+      <span>{when === null ? `Testnet: ${amounts}, free once a day` : `Next free claim ${when}`}</span>
+      <Button size="sm" variant="secondary" onClick={onClaim} busy={busy} disabled={disabled}>
+        Get test tokens
+      </Button>
+    </div>
+  )
+}
+
+/** The claim as Account shows it, with where USDC for later gas comes from. */
+function FullClaim({ when, amounts, busy, disabled, onClaim }: ClaimProps) {
+  return (
+    <>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={onClaim} busy={busy} disabled={disabled}>
+          Get test tokens
+        </Button>
+        <span className="text-sm text-muted-foreground">
+          {when === null ? `${amounts}, once a day. Test tokens have no value.` : `Next claim ${when}`}
+        </span>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Gas is covered for this testnet claim. For later actions, get USDC from{' '}
+        <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="underline">
+          Circle’s faucet
+        </a>{' '}
+        (Monad Testnet, 20 USDC every 2 hours), or add MON.
+      </p>
+    </>
   )
 }

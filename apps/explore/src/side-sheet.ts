@@ -25,17 +25,6 @@ export function sideTrade(input: {
   return input.authenticated ? 'connecting' : 'sign-in'
 }
 
-const STEP = 10n ** 14n
-
-/**
- * The MON a Fill puts in the buy for a quoted cost: 2% over it for the curve moving before the buy lands, rounded up to
- * four decimals so the field stays readable. The form quotes the exact SIDE out before anything is sent.
- */
-export function fillMon(cost: bigint): string {
-  const padded = (cost * 102n + 99n) / 100n
-  return formatUnits(((padded + STEP - 1n) / STEP) * STEP, 18)
-}
-
 const DECIMAL = /^\d+(\.\d{1,18})?$/
 
 /**

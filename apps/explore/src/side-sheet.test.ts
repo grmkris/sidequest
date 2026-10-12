@@ -1,14 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  fillMon,
-  fillText,
-  sideRequest,
-  sideShort,
-  sideTrade,
-  tradeAmounts,
-  wholeUp,
-  withoutSide,
-} from './side-sheet.ts'
+import { fillText, sideRequest, sideShort, sideTrade, tradeAmounts, wholeUp, withoutSide } from './side-sheet.ts'
 
 const side = (n: bigint) => n * 10n ** 18n
 
@@ -27,12 +18,6 @@ describe('the SIDE sheet', () => {
   it('shows links only before writes open or without a launcher', () => {
     expect(sideTrade({ ...open, writesOpen: false, address: '0xabc' })).toBe('closed')
     expect(sideTrade({ ...open, launcher: false, address: '0xabc' })).toBe('unavailable')
-  })
-
-  it('fills 2% over the quoted cost, rounded up to four decimals', () => {
-    expect(fillMon(67_430_796_541_204_365_692n)).toBe('68.7795')
-    expect(fillMon(10n ** 18n)).toBe('1.02')
-    expect(fillMon(1n)).toBe('0.0001')
   })
 
   it('reads ?side with or without an amount and drops it after', () => {
@@ -67,6 +52,15 @@ describe('the SIDE sheet', () => {
     expect(tradeAmounts({ edited: 'pay', typed: null, quoted: 1n })).toBeNull()
     expect(tradeAmounts({ edited: 'get', typed: 5n, quoted: undefined })).toBeNull()
     expect(tradeAmounts({ edited: 'get', typed: 5n, quoted: 0n })).toBeNull()
+  })
+
+  it('sells the SIDE that a typed amount of MON takes, keeping the floor on the MON', () => {
+    // Typed "You get 0.5 MON" on a sale: getAmountIn quotes the SIDE that goes in.
+    expect(tradeAmounts({ edited: 'get', typed: 5n * 10n ** 17n, quoted: side(7_400n) })).toEqual({
+      amountIn: side(7_400n),
+      expectedOut: 5n * 10n ** 17n,
+      minOut: 495n * 10n ** 15n,
+    })
   })
 
   it('asks for whole SIDE, rounded up, and fills amounts in grouped', () => {
