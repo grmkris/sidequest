@@ -1,5 +1,6 @@
 /** User-owned agent wallets. This client has no policy administration or transaction-send method. */
-import { type Address, type Hex, type SignedAuthorization, isAddress } from 'viem'
+import { type Address, type Hex, type SignedAuthorization, isAddress, isHex, size, toHex } from 'viem'
+import { type UserOperation, toPrivyJson } from './aa/userop.ts'
 import { formatPrivyAuthorizationPayload } from './privy.ts'
 
 export interface PrivyServerConfig {
@@ -23,6 +24,13 @@ export class PrivyServerError extends Error {
   ) {
     super(`Privy request refused: HTTP ${status} (${code})`)
   }
+}
+
+/** A 65-byte signature from a provider reply's `data.signature`. */
+function signatureOf(result: Record<string, unknown>): Hex {
+  const signature = String(new Map(Object.entries(Object(result.data))).get('signature'))
+  if (!isHex(signature) || size(signature) !== 65) throw new PrivyServerError(200, 'invalid_signature_response')
+  return signature
 }
 
 function identifier(value: string): string {
@@ -169,10 +177,33 @@ export class PrivyServer {
       operationKey,
       true,
     )
-    const data = result.data as { signature?: unknown } | undefined
-    if (typeof data?.signature !== 'string' || !/^0x[0-9a-fA-F]{130}$/.test(data.signature))
-      throw new PrivyServerError(200, 'invalid_signature_response')
-    return data.signature as Hex
+    return signatureOf(result)
+  }
+
+  /**
+   * The account's signature over one ERC-4337 user operation. `contract` is the implementation the account delegates
+   * to, and Privy signs that contract's own digest of the operation (for the DeleGator, its EIP-712 PackedUserOperation).
+   */
+  async signUserOperation(
+    walletId: string,
+    contract: Address,
+    chainId: number,
+    op: UserOperation,
+    operationKey: string,
+  ): Promise<Hex> {
+    if (!isAddress(contract) || !Number.isSafeInteger(chainId) || chainId <= 0)
+      throw new Error('Invalid user operation')
+    const result = await this.#request(
+      'POST',
+      `/wallets/${identifier(walletId)}/rpc`,
+      {
+        method: 'eth_signUserOperation',
+        params: { contract, chain_id: toHex(chainId), user_operation: toPrivyJson(op) },
+      },
+      operationKey,
+      true,
+    )
+    return signatureOf(result)
   }
 
   async signAuthorization(

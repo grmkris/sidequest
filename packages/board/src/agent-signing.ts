@@ -1,6 +1,6 @@
 /** Persist each provider request before signing and recover its exact result after restarts. */
 import * as sdk from '@sidequest/sdk'
-import { type Hex, type SignedAuthorization, recoverTypedDataAddress } from 'viem'
+import { type Hex, type SignedAuthorization, isAddressEqual, recoverTypedDataAddress } from 'viem'
 import { recoverAuthorizationAddress } from 'viem/utils'
 import { AgentStore } from './agents.ts'
 import { type DirectoryBinding, assertAgentEnvelope, assertExactAgentTypedData } from './agent-signing-scope.ts'
@@ -18,6 +18,14 @@ export interface RoutineSigner {
     nonce: number,
     operationKey: string,
   ): Promise<SignedAuthorization<number>>
+  /** Absent where no provider signs user operations; `signUserOperation` then refuses. */
+  signUserOperation?(
+    walletId: string,
+    contract: `0x${string}`,
+    chainId: number,
+    op: sdk.UserOperation,
+    operationKey: string,
+  ): Promise<Hex>
 }
 
 export class AgentSigning {
@@ -204,6 +212,52 @@ export class AgentSigning {
         throw new Error('Registry owner differs from the operator')
       return sdk.agentWalletTypedData(this.context.deployment, consent)
     })
+  }
+
+  /**
+   * The agent's signature over one user operation (ADR-0023). The operation must be the agent's own, on the nonce lane
+   * of `operationId`, paid through the configured paymaster and carrying no native value; `check` is the board's scope
+   * check of every inner call. Journaled per digest, so a retry of the same operation gets the same signature, while a
+   * repriced attempt shares the nonce and at most one attempt can land.
+   */
+  async signUserOperation(
+    id: string,
+    operationId: string,
+    op: sdk.UserOperation,
+    check: (calls: readonly sdk.Call[]) => void | Promise<void>,
+  ): Promise<Hex> {
+    const agent = this.#agent(id)
+    const { chainId, aa, delegation } = this.context.deployment
+    if (aa === null || aa.paymaster === null || this.provider.signUserOperation === undefined)
+      throw new Error('User operations are unavailable on this deployment')
+    if (!isAddressEqual(op.sender, agent.address)) throw new Error('User operation is not this agent account')
+    if (op.nonce !== sdk.laneNonce(sdk.nonceKey(operationId)))
+      throw new Error('User operation is off its operation nonce lane')
+    if (op.paymaster === undefined || !isAddressEqual(op.paymaster, aa.paymaster))
+      throw new Error('User operation must pay through the configured paymaster')
+    const calls = sdk.decodeExecuteCalldata(op.callData)
+    if (calls === null || calls.length === 0 || calls.some((call) => call.value !== 0n))
+      throw new Error('User operation calls are outside routine authority')
+    await check(calls)
+    const typed = sdk.delegatorTypedData(op, chainId, aa.entryPoint)
+    const digest = sdk.delegatorDigest(op, chainId, aa.entryPoint)
+    const row = this.#request(id, `userop:${digest}`, { method: 'eth_signUserOperation', operationId, digest })
+    if (row.result_json !== null) {
+      // SAFETY: this row stores only the recovered signature saved below.
+      return JSON.parse(row.result_json) as Hex
+    }
+    this.#agent(id)
+    const signature = await this.provider.signUserOperation(
+      agent.privy_wallet_id,
+      delegation.delegator,
+      chainId,
+      op,
+      row.id,
+    )
+    if (!isAddressEqual(await recoverTypedDataAddress({ ...typed, signature }), agent.address))
+      throw new Error('Routine signature does not recover to the bound agent')
+    this.#save(row, signature)
+    return signature
   }
 
   async signUpgrade(id: string, nonce: number): Promise<SignedAuthorization<number>> {

@@ -1002,7 +1002,6 @@
   },
   "packages/board/src/agent-signing.test.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 2,
     "anti-slop-effect(prefer-effect-match)": 1,
     "complexity(complexity)": 1
   },
@@ -1639,8 +1638,8 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "packages/sdk/src/privy-server.ts": {
-    "anti-slop(no-runtime-typeof)": 7,
-    "anti-slop(require-safety-comment-for-type-assertion)": 9,
+    "anti-slop(no-runtime-typeof)": 6,
+    "anti-slop(require-safety-comment-for-type-assertion)": 7,
     "typescript(no-unnecessary-type-arguments)": 1
   },
   "packages/sdk/src/privy.ts": {

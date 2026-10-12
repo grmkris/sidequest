@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { describe, expect, it } from 'vitest'
 import * as sdk from '@sidequest/sdk'
+import type { Address } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { AgentSigning } from './agent-signing.ts'
 import { AgentStore } from './agents.ts'
@@ -10,6 +11,9 @@ import { finishAgentSignRequest, prepareAgentSignRequest } from './agent-signing
 
 const deployment = sdk.deployment('monad-testnet')
 const context = { deployment, stack: sdk.stack(deployment, 'main') }
+// SAFETY: the signing paths under test never read the chain, so their context carries an empty client.
+const offline = (d: sdk.Deployment = deployment) =>
+  ({ ...context, deployment: d, publicClient: {} }) as unknown as sdk.Ctx
 const agent = '0x1111111111111111111111111111111111111111'
 const worker = '0x2222222222222222222222222222222222222222'
 const selection = sdk.typedDataJson(
@@ -217,7 +221,7 @@ describe('directory records an agent signs for its own listing', () => {
     let calls = 0
     const signing = new AgentSigning(
       sql,
-      { ...context, publicClient: {} } as unknown as sdk.Ctx,
+      offline(),
       {
         signTypedData: async (_wallet, typedData) => {
           calls++
@@ -287,5 +291,102 @@ describe('signer request and continuation journals on real SQLite', () => {
     })
     expect(() => agents.freezeStep(operation.id, 'continuation', { transactions: [] })).toThrow('cannot change')
     db.close()
+  })
+})
+
+describe('user-operation signing (ADR-0023)', () => {
+  const key = privateKeyToAccount(`0x${'43'.repeat(32)}`)
+  const other = privateKeyToAccount(`0x${'44'.repeat(32)}`)
+  const paymaster: Address = '0x3333333333333333333333333333333333333333'
+  const aa = { ...deployment.aa!, paymaster }
+  const operationId = 'op-hire-1'
+  const work = { to: context.stack.holding, value: 0n, data: '0x12345678' as const }
+  const op: sdk.UserOperation = {
+    sender: key.address,
+    nonce: sdk.laneNonce(sdk.nonceKey(operationId)),
+    callData: sdk.executeCalldata([work]),
+    callGasLimit: 200_000n,
+    verificationGasLimit: 120_000n,
+    preVerificationGas: 60_000n,
+    maxFeePerGas: 102_000_000_000n,
+    maxPriorityFeePerGas: 2_000_000_000n,
+    paymaster,
+    paymasterVerificationGasLimit: 50_000n,
+    paymasterPostOpGasLimit: 40_000n,
+    paymasterData: '0x',
+    signature: '0x',
+  }
+
+  function setup(signer = key) {
+    const sql = fromNodeSqlite(new DatabaseSync(':memory:'))
+    const agents = new AgentStore(sql, () => 1_800_000_000)
+    agents.create({
+      id: 'hirer',
+      operator: worker,
+      privyUserId: 'did:privy:hirer',
+      name: 'Hirer',
+      registry: deployment.identity,
+      chainId: deployment.chainId,
+    })
+    agents.bindWallet('hirer', 'hirer-wallet', key.address)
+    const requests: { contract: string; chainId: number }[] = []
+    const signing = new AgentSigning(
+      sql,
+      offline({ ...deployment, aa }),
+      {
+        signTypedData: async () => {
+          throw new Error('unused')
+        },
+        signAuthorization: async () => {
+          throw new Error('unused')
+        },
+        signUserOperation: async (_wallet, contract, chainId, signed) => {
+          requests.push({ contract, chainId })
+          return signer.signTypedData(sdk.delegatorTypedData(signed, chainId, aa.entryPoint))
+        },
+      },
+      () => 1_800_000_000,
+    )
+    return { signing, requests }
+  }
+
+  it("signs the DeleGator's digest once through the journal, after the board's call check", async () => {
+    const { signing, requests } = setup()
+    const checked: (readonly sdk.Call[])[] = []
+    const signature = await signing.signUserOperation('hirer', operationId, op, (calls) => void checked.push(calls))
+    expect(await signing.signUserOperation('hirer', operationId, op, () => {})).toBe(signature)
+    expect(requests).toEqual([{ contract: deployment.delegation.delegator, chainId: deployment.chainId }])
+    expect(checked).toEqual([[work]])
+    const repriced = { ...op, maxFeePerGas: op.maxFeePerGas + 1n }
+    expect(await signing.signUserOperation('hirer', operationId, repriced, () => {})).not.toBe(signature)
+    expect(requests).toHaveLength(2)
+  })
+
+  const { paymaster: _paymaster, ...unpaid } = op
+  it.each([
+    ['another sender', { ...op, sender: other.address }, 'not this agent'],
+    ['a nonce off its lane', { ...op, nonce: sdk.laneNonce(sdk.nonceKey('op-other')) }, 'nonce lane'],
+    ['another paymaster', { ...op, paymaster: other.address }, 'configured paymaster'],
+    ['no paymaster', unpaid, 'configured paymaster'],
+    ['native value', { ...op, callData: sdk.executeCalldata([{ ...work, value: 1n }]) }, 'outside routine authority'],
+    ['an empty batch', { ...op, callData: sdk.executeCalldata([]) }, 'outside routine authority'],
+    ['a single execute', { ...op, callData: '0xe9ae5c53' as const }, 'outside routine authority'],
+  ])('refuses %s before asking the provider', async (_name, refused: sdk.UserOperation, message) => {
+    const { signing, requests } = setup()
+    await expect(signing.signUserOperation('hirer', operationId, refused, () => {})).rejects.toThrow(message)
+    expect(requests).toHaveLength(0)
+  })
+
+  it('refuses when the board check refuses a call, or the signature recovers to another key', async () => {
+    const refused = setup()
+    await expect(
+      refused.signing.signUserOperation('hirer', operationId, op, () => {
+        throw new Error('call outside scope')
+      }),
+    ).rejects.toThrow('call outside scope')
+    expect(refused.requests).toHaveLength(0)
+    await expect(setup(other).signing.signUserOperation('hirer', operationId, op, () => {})).rejects.toThrow(
+      'does not recover',
+    )
   })
 })
