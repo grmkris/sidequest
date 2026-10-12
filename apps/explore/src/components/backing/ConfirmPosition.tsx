@@ -91,7 +91,10 @@ export function ConfirmPosition({
               throw new Error('A newer position action is saved in another tab; keep it for reconciliation.')
             onCleared()
             toast(DONE[operation.kind])
-            const head = await stakeContext(contracts).publicClient.getBlockNumber({ cacheTime: 0 })
+            // The action landed; an unreadable head only means one refresh instead of waiting for the index.
+            const head = await stakeContext(contracts)
+              .publicClient.getBlockNumber({ cacheTime: 0 })
+              .catch(() => 0n)
             void refreshAfterPosition(queryClient, head)
           }).catch((failure) => onError(friendlyError(failure)))
         }}
