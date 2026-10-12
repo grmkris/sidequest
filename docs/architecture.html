@@ -132,7 +132,7 @@
     <p class="stamp">Original review: <code>840226e</code><br>Frontend data extension: <code>216173a0</code><br>12 October 2026<br>Source and configuration review<br><a href="architecture-review.md">Read the detailed review</a></p>
   </header>
 
-  <nav aria-label="Review sections" class="controls"><a href="#map-title">Runtime map</a><a href="#data-title">Frontend data</a><a href="#speed-title">Speed and accessibility</a><a href="#flow-title">Request flows</a><a href="#money-title">Contracts and money</a><a href="#trust-title">Trust</a><a href="#findings-title">Findings</a></nav>
+  <nav aria-label="Review sections" class="controls"><a href="#map-title">Runtime map</a><a href="#data-title">Frontend data</a><a href="#cleanup-title">Implemented cleanup</a><a href="#speed-title">Speed and accessibility</a><a href="#flow-title">Request flows</a><a href="#money-title">Contracts and money</a><a href="#trust-title">Trust</a><a href="#findings-title">Findings</a></nav>
   <section class="section" aria-labelledby="planes-title">
     <div class="section-head"><div><h2 id="planes-title">The four authority planes</h2></div><p>Follow the arrows to see where a request is handled, where state is stored, and where the final authority lives.</p></div>
     <div class="plane-grid">
@@ -293,7 +293,7 @@
         <p class="route-line"><code>/offers/:hash.json → R2</code><br><code>/data/deliverables/:taskId/:hash/preview → D1 + Board DO + external host + edge cache</code></p>
         <p>Frozen offers are canonical R2 JSON addressed by terms hash, served with a one-year immutable cache lifetime. Chain state records the commitment; it does not serve the full brief. Hosted tasks also retain their frozen terms.</p>
         <p>A delivery preview checks that D1 recorded the requested submission hash for the task, asks the board for its descriptor, then fetches external <code>deliverable.json</code> or page metadata. The browser can load posters, images and model bytes from the delivery host separately.</p>
-        <p><strong>Cache boundaries.</strong> The server caches a successful preview for one hour, a miss for ten minutes, and no unavailable dependency result. The browser caches a successful response—including a 404 mapped to <code>null</code>—with infinite stale time by board/task/hash. A first read that races indexing can therefore require explicit invalidation to recover.</p>
+        <p><strong>Cache boundaries, updated.</strong> The server retains successful previews for one hour and internal misses for 30 seconds; unavailable results are uncached. Browser previews become stale after five minutes, or 30 seconds for a missing delivery or URL metadata. Foreground recovery polling is bounded to six data/error updates, with one retry per fetch. An outgoing 404 is <code>no-store</code>.</p>
         <p><strong>RPC alternative.</strong> Verify the submission hash, job state and content commitment. Retrieve and verify bytes through the content source. A preview, chain URI or hash cannot guarantee ongoing file availability.</p>
       </div></details>
       <details data-entity="commons"><summary>Commons and job threads — hosted text, computed eligibility</summary><div class="entity-body">
@@ -306,7 +306,7 @@
         <p class="route-line"><code>/data/activity + /data/stats → indexed D1; inbox → hosted + chain feed rows</code></p>
         <p>Public activity joins chain events, jobs, block timestamps and board attribution. Headline totals and agent histories aggregate indexed outcomes. The personal inbox instead reads wallet-scoped D1 feed rows produced by both hosted actions and chain ingestion; it is not the same ledger as the public timeline.</p>
         <p>Activity reads 50 rows at a time. Its first page polls every 20 seconds; loading more pages disables interval polling until the list is refreshed. Personal inbox polling is 60 seconds with bounded pagination. A browser response timestamp is not the indexed-through block or transaction time.</p>
-        <p><strong>Scope observation.</strong> The activity cache key includes the board prefix, but its HTTP helper currently calls global <code>/data/activity</code> without <code>?board=</code>. The API supports a board filter. A scoped cache key alone does not scope a request; tenant event behavior needs a targeted check.</p>
+        <p><strong>Scope observation.</strong> The activity helper calls global <code>/data/activity</code> without <code>?board=</code>; its updated cache identity now reflects that global source. The API supports a board filter. Board-local activity needs an explicit request filter and matching cache identity.</p>
         <p><strong>RPC alternative.</strong> A receipt or bounded recent-log query verifies specific events. Full timelines, earnings aggregates and offchain notifications need the index/feed owners.</p>
       </div></details>
       <details data-entity="boards"><summary>Board configuration, token registry and admin controls</summary><div class="entity-body">
@@ -329,9 +329,65 @@
     <p class="source">Key code: <a href="https://github.com/grmkris/sidequest/blob/216173a0fcb064a41ec0593a3682afbe35b2bcb6/apps/explore/src/routes/Jobs.tsx">Jobs</a> · <a href="https://github.com/grmkris/sidequest/blob/216173a0fcb064a41ec0593a3682afbe35b2bcb6/apps/explore/src/routes/Job.tsx">Job</a> · <a href="https://github.com/grmkris/sidequest/blob/216173a0fcb064a41ec0593a3682afbe35b2bcb6/apps/explore/src/delegation-query.ts">backing</a> · <a href="https://github.com/grmkris/sidequest/blob/216173a0fcb064a41ec0593a3682afbe35b2bcb6/apps/api/src/worker.ts">API data routes</a> · <a href="https://github.com/grmkris/sidequest/blob/216173a0fcb064a41ec0593a3682afbe35b2bcb6/packages/indexer/src/read.ts">indexer reads</a></p>
   </section>
 
+  <section class="section" aria-labelledby="cleanup-title">
+    <div class="section-head"><div><h2 id="cleanup-title">What the cleanup implements</h2></div><p>12 October 2026: trace the waits, reuse the right data, batch compatible reads, and give public responses bounded freshness.</p></div>
+    <p class="provenance"><strong>Implemented and locally tested.</strong> These changes are in source, with unit and local Worker binding checks. Live Cloudflare trace export, CDN hits and page-speed gains still need measurement after a dev release. The older audit samples below are a separate baseline.</p>
+
+    <h3 class="data-subheading">Follow the time, from the page to the provider</h3>
+    <div class="step-grid">
+      <article class="step" style="--tone:var(--read)"><strong>Browser</strong><p>Opt-in query and resource timings show when data became available. The recorder keeps 200 local entries and uploads nothing.</p></article>
+      <article class="step" style="--tone:var(--hosted)"><strong>API and storage</strong><p><code>api.request</code> includes setup and response construction. A request ID connects the response to its span; native traces cover supported service and storage boundaries.</p></article>
+      <article class="step" style="--tone:var(--ops)"><strong>Object queue</strong><p><code>board.queue.wait</code> separates time behind earlier calls from <code>board.queue.execute</code>. Each submission retains its own trace context.</p></article>
+      <article class="step" style="--tone:var(--chain)"><strong>RPC</strong><p><code>rpc.queue</code>, <code>rpc.attempt</code> and <code>rpc.backoff</code> separate our limiter, the fetch to response headers and rate-limit delay.</p></article>
+    </div>
+    <p>The response exposes <code>x-request-id</code> and <code>Server-Timing: api;dur=…</code>. The API duration ends when the response is constructed; it excludes browser rendering and a streaming response's lifetime. A cache hit replays the original response's ID and timing.</p>
+
+    <details data-performance="implementation-traces" open><summary>Cloudflare, Effect and Alchemy: how they fit together</summary><div class="entity-body">
+      <p><strong>We already had the foundations.</strong> Cloudflare hosts the Workers and storage, Effect models the backend work, and the Alchemy infrastructure library builds the deployment. Alchemy here is separate from the blockchain RPC provider with the same name.</p>
+      <p>The cleanup enables native Worker traces and connects Effect spans through <code>Cloudflare.Telemetry</code>. Initial sampling is explicitly <strong>100% in dev and prod</strong>. Indexer phases separate migration, ingestion, feed, webhooks, notifications and lease release.</p>
+      <p>Application-added attributes use fixed phase names, status, queue labels, attempt numbers and a generated request ID. Cached SDK clients resolve the current invocation when tracing; they do not retain the first request's parent.</p>
+      <p><strong>Evidence still needed.</strong> Confirm native parent links and binding spans in the deployed dashboard. The installed Alchemy type does not expose <code>redactQueryString</code>, so platform URL-query redaction is not established. Application span attributes and platform metadata have different boundaries. Reassess 100% sampling cost after collecting useful traces.</p>
+    </div></details>
+
+    <details data-performance="implementation-queries"><summary>The query and RPC pattern to reuse</summary><div class="entity-body">
+      <ol>
+        <li><strong>Define one query per response shape.</strong> Boards and token readers share <code>boardsQuery</code>. Directory first-page and infinite queries retain separate keys.</li>
+        <li><strong>Key by scope.</strong> Include origin, chain and board; private queries also include wallet and signed-in state. Headless React tracks session revision without exposing tokens.</li>
+        <li><strong>Invalidate what changed.</strong> Refresh affected job/task and resource families after a mutation. Keep unrelated directories and profiles warm. Balance refresh still covers Wagmi read families broadly.</li>
+        <li><strong>Recover missing previews.</strong> A miss is temporary. Use 30-second freshness and bounded foreground retries; a complete browser preview has five-minute freshness.</li>
+        <li><strong>Batch compatible reads.</strong> Read-only API, Board, Directory and Commons contexts opt into same-tick Viem Multicall3. Keep block-pinned valuation and fresh action checks. Wallet writes and SDK defaults retain their prior behavior.</li>
+      </ol>
+      <p>The shared limiter still spaces request starts by 125 ms per process/isolate. The new spans let us see its actual delay. Multicall3 reduces compatible calls; it cannot remove sequential API dependencies or accelerate indexing.</p>
+    </div></details>
+
+    <h3 class="data-subheading">Public caching, without a new CDN layer</h3>
+    <div class="read-table" tabindex="0" role="region" aria-label="Public response cache budgets">
+      <table><thead><tr><th scope="col">Anonymous public list</th><th scope="col">Freshness</th><th scope="col">Policy</th></tr></thead><tbody>
+        <tr><td>Boards and profiles</td><td>60 seconds</td><td>Same browser/shared-cache lifetime and stale-while-revalidate window</td></tr>
+        <tr><td>Stats, agents, services, directory</td><td>30 seconds</td><td>List routes only; known job/agent detail stays uncached by this policy</td></tr>
+        <tr><td>Activity</td><td>15 seconds</td><td>Wallet-filtered results bypass this policy</td></tr>
+        <tr><td>Jobs</td><td>10 seconds</td><td>Discovery can lag a receipt; actions still need fresh checks</td></tr>
+        <tr><td>Credentials, cookies, writes, errors, economic snapshots</td><td>No storage</td><td><code>no-store</code>; Vary separates origin and credential headers</td></tr>
+      </tbody></table>
+    </div>
+    <p>Existing immutable assets, offers, profiles, successful previews and metadata keep their established policies. No cache-all rule or new Workers Cache API layer was added. HTTP headers do not prove that Cloudflare caches dynamic JSON: verify actual cache hits and origin traffic before adding that layer.</p>
+    <p>Query cache age, HTTP response age and indexer lag can add up. Invalidating a browser query does not purge an HTTP cache or advance the index. A cached number is useful for display; a receipt and current authorization checks govern actions.</p>
+
+    <details data-performance="implementation-browser"><summary>Try the local browser diagnostics</summary><div class="entity-body">
+      <p>In the <strong>app's</strong> browser console, enable the recorder for the current tab, then reload:</p>
+      <p class="route-line"><code>sessionStorage.setItem('sidequest:diagnostics', '1')</code><br><code>location.reload()</code></p>
+      <p>Load a page or navigate, then inspect or reset the record:</p>
+      <p class="route-line"><code>console.table(window.sidequestDiagnostics.snapshot().entries)</code><br><code>window.sidequestDiagnostics.clear()</code><br><code>window.sidequestDiagnostics.stop()</code></p>
+      <p>Stopping also removes the opt-in. The dynamically loaded recorder retains fixed query/route/resource labels and numeric durations. It excludes raw URLs, query arguments, wallet addresses, response/error text and timing descriptions. There is no telemetry endpoint.</p>
+      <p>Query duration includes retries and waiting. Resource <code>apiMs</code> comes from Server-Timing when the browser exposes it. Cross-origin restrictions can hide timing detail. Queries already running before the recorder loads are omitted; resource labels describe the page at observation time. Use the Network panel's request ID for a particular API trace.</p>
+    </div></details>
+
+    <p class="source">Local checks: API 681 passed / 17 skipped; Explore 444 passed; SDK 317 passed / 33 skipped; React 8 passed; indexer Worker 9 passed. Owning typechecks passed. No new live, browser or mainnet acceptance claim. Pagination, snapshot redesign, bootstrap restructuring, detail-read simplification and provider selection remain separate follow-ups. <a href="architecture-review.md#implemented-performance-cleanup">Detailed implementation, source links and evidence limits</a>.</p>
+  </section>
+
   <section class="section" aria-labelledby="speed-title">
     <div class="section-head"><div><h2 id="speed-title">Make pages feel faster</h2></div><p>Measure when each useful part becomes readable. A panel with onchain numbers can be waiting on JavaScript, our API, RPC or indexing.</p></div>
-    <p class="provenance"><strong>Observed on dev, 12 October 2026.</strong> Anonymous Chromium checks at a 390 × 844 viewport, on the build box without CPU or network throttling. These are exploratory samples, not phone benchmarks or production percentiles. The baseline measurements predate the read-batching follow-up in the Explore client; the other recommendations remain unimplemented.</p>
+    <p class="provenance"><strong>Observed on dev, 12 October 2026.</strong> Anonymous Chromium checks at a 390 × 844 viewport, on the build box without CPU or network throttling. These are exploratory baseline samples, not phone benchmarks or production percentiles. They predate the cleanup; see <a href="#cleanup-title">the implementation section</a> for current status.</p>
     <div class="source-grid">
       <article class="source-card" style="--tone:var(--read)"><h3>86 script requests</h3><p>Six different routes each requested about 1.34 MB of script transfer. The deployed HTML preloaded 51 modules; the source eagerly imports every route. Check startup work alongside RPC.</p></article>
       <article class="source-card" style="--tone:var(--chain)"><h3>RPC: 0.13–0.27 seconds</h3><p>That was the range of captured direct contract reads in the Activity, Job and Agent timing samples. Some composed API reads took 1–3 seconds. A faster node alone cannot remove those waits.</p></article>
@@ -339,7 +395,7 @@
       <article class="source-card" style="--tone:var(--ops)"><h3>3 accessibility findings</h3><p>Axe reported one violation on each of Boards, Job detail and Agent detail. Five other route snapshots had none. Automated scans still need keyboard, screen-reader and authenticated checks.</p></article>
     </div>
     <h3 class="data-subheading">The first improvements I would make</h3>
-    <div class="finding" style="--tone:var(--hosted)"><div class="priority">Small</div><div><h3>Share public queries</h3><p>Boards uses <code>boards</code> while the token registry uses <code>data-boards</code> for the same endpoint. Directory readers also use different cache shapes. Reuse one query definition or a first-page selector; never give incompatible result shapes the same cache key.</p></div></div>
+    <div class="finding" style="--tone:var(--hosted)"><div class="priority">Implemented</div><div><h3>Share public queries</h3><p>Boards and token readers now share one query definition. Common list readers reuse scoped keys; first-page and infinite directory responses retain separate shapes. See the cleanup section for validation.</p></div></div>
     <div class="finding" style="--tone:var(--chain)"><div class="priority">Small</div><div><h3>Reuse the staking pool read</h3><p>Wagmi already batches balances and identity. The separate staking client can do better: backing and a known position both fetch the same pool at the same block. Combine those reads and keep all related values pinned to that block.</p></div></div>
     <div class="finding" style="--tone:var(--read)"><div class="priority">Small</div><div><h3>Preserve useful data during refresh</h3><p>Give public display queries explicit freshness budgets; show the last successful value with its age while refreshing. Keep unavailable separate from zero. Recheck balance, allowance, ownership and permission when preparing an action.</p></div></div>
     <div class="finding" style="--tone:var(--ops)"><div class="priority">Small</div><div><h3>Correct semantics and navigation</h3><p>Fix list children on Boards and Job detail, and make the token inside the fee meter static or move it outside. Add route-specific browser titles, a skip-to-main link and deliberate focus behavior after navigation. Announce loading once per region.</p></div></div>
@@ -356,7 +412,7 @@
       <p><strong>MetaMask requests:</strong> <code>metamask_batch</code> can group reads, signatures and sends through MetaMask Connect, with individual approvals where needed. Our anonymous reads already use HTTP RPC and sign-in uses Privy, so this does not optimize the current page-loading path.</p>
       <p><strong>Coinbase transactions:</strong> Wagmi <code>sendCalls</code> batches wallet writes. It can improve confirmation UX in supported wallets. Explore's existing EIP-7702 transaction batching keeps its own journal and receipt/effect verification.</p>
       <p><strong>Read-only Monad probe:</strong> at block <code>70263059</code>, two staking helpers used 4 HTTP/RPC requests without batching and 1 Multicall3 request with it. Explicit Multicall3 returned the same values; JSON-RPC transport batching used 1 POST but still carried 4 RPC items. Warm timings were 17–23 ms in this environment, so the probe proves request reduction, not a page-speed or p95 improvement.</p>
-      <p><strong>Next priorities:</strong> remove the duplicate pool read; batch API valuation where it is still unbatched; share public query caches; remove whole-list loading from job detail. Our SDK limiter spaces request starts by 125 ms, so fewer reads may also mean less server queueing. Measure that queue before changing limits.</p>
+      <p><strong>Current status:</strong> public queries are shared and read-only API contexts now enable Multicall3. Queue, request and backoff timings are instrumented. Remaining reductions include duplicate pool reads and whole-list loading from job detail; measure them before changing limits.</p>
       <p><strong>Keep the checks:</strong> pin economic reads to one block, keep caller-sensitive simulations direct, and show unavailable separately from zero. Cache display data with its age; recheck authority before acting. The full review includes the three-round timings, installed library versions and source pointers.</p>
       <p class="source">References: <a href="https://github.com/wevm/wagmi/discussions/2752">Wagmi #2752</a>, <a href="https://wagmi.sh/core/api/actions/readContracts">readContracts</a>, <a href="https://evmquery.com/blog/multicall3-batching-evm-contract-reads">Multicall3</a>, <a href="https://boltrpc.io/blog/how-to-use-viem-with-custom-rpc">Viem</a>, <a href="https://www.quicknode.com/guides/quicknode-products/apis/guide-to-efficient-rpc-requests">QuickNode RPC guidance</a>, <a href="https://docs.metamask.io/metamask-connect/evm/guides/metamask-exclusive/batch-requests">MetaMask batch requests</a> and <a href="https://docs.cdp.coinbase.com/coinbase-wallet/framework-integrations/wagmi/batch-transactions">Coinbase batch transactions</a>.</p>
     </div></details>
@@ -446,7 +502,7 @@
     <div class="finding" style="--tone:var(--read)"><div class="priority">Medium</div><div><h3>Some events never reach the outbox</h3><p>Board actions can succeed before the D1 feed write fails. That failure is logged and swallowed without a board-side retry journal in this path. Use a transactional outbox at the DO boundary.</p></div></div>
     <div class="finding" style="--tone:var(--read)"><div class="priority">Medium</div><div><h3>Webhooks wait behind chain ingestion</h3><p>The indexer runs webhook delivery after runOnce. A HyperSync or RPC failure can delay already-recorded board notifications. Drain independent delivery work even when ingestion fails.</p></div></div>
     <div class="finding" style="--tone:var(--hosted)"><div class="priority">Capacity</div><div><h3>Global queues need measured limits</h3><p>Management serializes across all hosted agents; relay sends serialize a shared nonce. External calls consume that service time. Measure wait and pending age before choosing a sharding strategy.</p></div></div>
-    <div class="finding" style="--tone:var(--ops)"><div class="priority">Operations</div><div><h3>Restore and tracing need evidence</h3><p>The reviewed runbook lacks a cross-store restore drill. Logs default on in Alchemy; traces require opt-in. Hourly public smoke checks checkpoint age, not all signing or delivery dependencies.</p></div></div>
+    <div class="finding" style="--tone:var(--ops)"><div class="priority">Operations</div><div><h3>Restore and tracing need evidence</h3><p>The reviewed runbook lacks a cross-store restore drill. The cleanup now opts into native traces, with live export still to verify. Hourly public smoke checks checkpoint age, not all signing or delivery dependencies.</p></div></div>
     <details><summary>Source pointers</summary><p class="source">Deployment: <a href="https://github.com/grmkris/sidequest/blob/840226e6550c85c92df0e33338935b18664880d9/alchemy.run.ts">alchemy.run.ts</a> · API: <a href="https://github.com/grmkris/sidequest/blob/840226e6550c85c92df0e33338935b18664880d9/apps/api/src/worker.ts">worker.ts</a> · DO serialization: <a href="https://github.com/grmkris/sidequest/blob/840226e6550c85c92df0e33338935b18664880d9/apps/api/src/board.ts">board.ts</a> · Indexer: <a href="https://github.com/grmkris/sidequest/blob/840226e6550c85c92df0e33338935b18664880d9/packages/indexer/src/indexer.ts">indexer.ts</a> · Relay recovery: <a href="https://github.com/grmkris/sidequest/blob/840226e6550c85c92df0e33338935b18664880d9/packages/board/src/relay.ts">relay.ts</a> · Contract authority: <a href="https://github.com/grmkris/sidequest/blob/840226e6550c85c92df0e33338935b18664880d9/contracts/SURFACE.md">SURFACE.md</a> · Managed agent policy: <a href="https://github.com/grmkris/sidequest/blob/840226e6550c85c92df0e33338935b18664880d9/docs/adr/0013-agent-authority.md">ADR-0013</a></p></details>
   </section>
 

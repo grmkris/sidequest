@@ -15,6 +15,200 @@ creator-bond configuration and protocol law also need to agree.
 The expanded [frontend data-flow section](#how-data-reaches-the-frontend) maps
 each entity to its database, object, indexer or direct RPC source.
 
+The [implemented performance cleanup](#implemented-performance-cleanup) records
+the later tracing, cache and diagnostics changes. Its implementation status
+supersedes the corresponding recommendations in the original audit; the earlier
+browser/RPC measurements remain historical samples.
+
+## Implemented performance cleanup
+
+Implemented locally on 12 October 2026. Native telemetry is configured at **100%
+initial sampling for dev and prod**, as approved. This is configuration and local
+test evidence; no production rollout, trace readback or new latency benchmark
+was performed by this cleanup lane.
+
+### Follow one slow request
+
+```mermaid
+flowchart TD
+  Browser[Browser resource and query duration] --> Explore[Explore Worker service binding]
+  Explore --> API[api.request: request ID and Server-Timing]
+  API --> Setup[api.migrations / retire-fleet / management-migrations / tenant]
+  API --> Storage[D1 / R2 / Durable Object bindings]
+  Storage --> Wait[board.queue.wait]
+  Wait --> Execute[board.queue.execute]
+  Execute --> RPCQueue[rpc.queue: local shared limiter]
+  API --> RPCQueue
+  RPCQueue --> Attempt[rpc.attempt: fetch to response headers]
+  Attempt --> Backoff[rpc.backoff: rate-limit delay]
+  Backoff --> RPCQueue
+```
+
+Cloudflare already hosts the app; Effect already models backend work. Alchemy's
+`Cloudflare.Telemetry` now connects Effect spans to native Worker traces, and
+Explore enables the platform trace channel. This uses the installed Alchemy
+package, not Alchemy's unrelated blockchain RPC product. The existing
+`2026-09-01` compatibility date supports native tracing.
+
+The API adds `x-request-id` and `Server-Timing: api;dur=...` to normal responses.
+The latter measures from request handling to response construction, including
+setup; it does not measure browser download/render time or the lifetime of an
+MCP stream. CORS exposes both headers. Use the request ID to find its
+`api.request` span. A cached response retains the ID/timing of the original
+response, so it is not evidence of a new Worker invocation.
+
+Board call, management and relay queues retain FIFO behavior and capture the
+Effect context for each submission. RPC clients may be cached, but the tracing
+callback resolves the current invocation through async-local context. Queue
+wait, fetch attempt and retry delay have separate spans. `rpc.attempt` ends at
+response headers; JSON body parsing and subsequent work are included in the
+enclosing phase. Native binding/subrequest coverage and parent links still need
+verification in the deployed Cloudflare trace view.
+
+The indexer has an `indexer.run` span and named phases for migrations, ingestion,
+feed, webhooks, notifications, notification delivery and lease release. This
+helps distinguish a slow provider from delayed post-ingestion work. It does not
+change the cron interval, indexing semantics or webhook ordering.
+
+Application-added attributes contain fixed phase names, queue labels, attempt
+numbers, status and a generated request ID. They do not add URLs, RPC bodies,
+wallets, credentials or query arguments. **Native platform metadata is a separate
+boundary:** the installed Alchemy `WorkerObservability` type does not expose
+`redactQueryString`. No unsupported field, cast or dependency patch was added;
+platform URL-query redaction is not established by these changes. Inspect the
+actual exported native metadata before treating it as sanitized. Initial 100%
+sampling is explicit; reassess volume and cost after obtaining useful traces.
+
+Sources: [request/queue timing](../apps/api/src/observability.ts),
+[RPC invocation adapter](../apps/api/src/rpc-observability.ts),
+[SDK limiter](../packages/sdk/src/client.ts),
+[indexer phases](../apps/indexer/src/worker.ts), [stack](../alchemy.run.ts).
+
+### Query and RPC pattern
+
+| Concern | Implemented pattern | Boundary |
+| --- | --- | --- |
+| Shared discovery | Reuse `boardsQuery`, `directoryFirstQuery`, `chainJobsQuery` and `taskIndexQuery` | A first directory page and infinite pages keep different keys and shapes |
+| Cache identity | Origin, chain and board scope; wallet and signed-in state on private reads | Credentials never enter keys; headless React additionally tracks session revision |
+| After a mutation | Refresh affected resource families and the known job/task | Balance refresh still refreshes Wagmi read families broadly; unrelated directories/profiles stay warm |
+| Delivery preview races | Missing delivery or URL metadata stale after 30 s; foreground polling stops after six data/error updates; one retry per fetch | Successful browser previews stale after 5 min; server MISS TTL is 30 s, cache version is v2; no background polling |
+| API contract reads | Opt read-only Worker, Board, Directory and Commons contexts into same-tick Viem Multicall3 | SDK default and wallet writes unchanged; caller-sensitive/money-operation contexts were not broadly opted in |
+| Provider pressure | Preserve the shared eight-starts/second limiter and current retries, measure its wait/backoff | Per isolate/process, not a global provider quota; no new provider or JSON-RPC array batching |
+
+This reduces duplicate browser queries, avoids indefinitely retaining a preview
+miss and allows compatible reads to share a transport request. It does not
+collapse sequential dependencies, prove a latency gain, replace the indexer or
+make an indexed balance authoritative. Existing block-pinned valuation and fresh
+authorization/action checks remain necessary.
+
+Sources: [query definitions](../apps/explore/src/queries.ts),
+[targeted refresh](../apps/explore/src/query-refresh.ts),
+[React cache identity](../packages/react/src/query.ts),
+[preview recovery](../apps/explore/src/delivery-preview.ts).
+
+### Public caching and Cloudflare
+
+The API now applies one explicit response policy. Only anonymous successful
+GET/HEAD discovery replies receive the following budgets, including their
+tenant-prefixed equivalents. `max-age`, `s-maxage` and the
+`stale-while-revalidate` window each use the listed number of seconds.
+
+| Public route | Freshness budget |
+| --- | ---: |
+| `/data/boards`, `/data/profiles` | 60 s |
+| `/data/stats`, `/data/agents`, `/data/services`, `/data/directory` | 30 s |
+| `/data/activity` | 15 s |
+| `/data/jobs` | 10 s |
+
+These are list routes, not job/agent detail routes. Requests with Authorization,
+Cookie, MCP-session-id or x-privy-token, wallet-filtered discovery, responses
+setting cookies (including Effect's structured cookies), mutations, errors and
+live economic snapshots receive `no-store`. `Vary` includes origin and all four
+credential headers. Existing public avatar, offer, profile, preview and metadata
+policies are preserved for successful anonymous responses, including conditional
+metadata `304`s. The existing preview cache can still retain a negative result
+for 30 s internally; the global policy marks an outgoing `404` as `no-store`.
+
+**No new CDN/cache-all rule or Workers Cache API layer was installed.** Explore
+assets and existing content caches keep their established paths. These headers
+allow compliant browser/shared caches to reuse explicitly public responses;
+they do not prove that Cloudflare caches dynamic JSON. Verify actual cache
+status, credential separation and origin traffic after a dev rollout before
+adding an edge-cache implementation. An edge hit also replays origin headers,
+so correlate its age and request ID appropriately.
+
+Freshness layers add up: a browser query can reuse a response that was already
+cached, and D1 may lag the chain. Invalidating TanStack Query does not purge HTTP
+caches or advance the indexer. Receipts and fresh action checks remain separate
+from these public display budgets. Pagination, a snapshot redesign, API bootstrap
+restructuring and an RPC proxy remain deferred.
+
+Source: [read policy and exact allowlist](../apps/api/src/read-cache.ts),
+[policy regression tests](../apps/api/test/read-cache.test.ts).
+
+### Inspect browser timings locally
+
+Open the app's browser console, opt in for the current tab and reload:
+
+```js
+sessionStorage.setItem('sidequest:diagnostics', '1')
+location.reload()
+```
+
+After loading or navigating, inspect the latest entries:
+
+```js
+console.table(window.sidequestDiagnostics.snapshot().entries)
+window.sidequestDiagnostics.clear()
+// Stop collection and remove the opt-in for the next reload:
+window.sidequestDiagnostics.stop()
+```
+
+The recorder is dynamically imported only when enabled. It retains at most 200
+entries, reports how many older entries were dropped, and never uploads them.
+Query durations cover a logical fetch, including its retry/wait time. Resource
+durations come from the browser Performance API; `apiMs` is the `api`
+Server-Timing entry when available. RPC is classified using the configured chain
+RPC origin; other external services share one generic label.
+
+Only fixed query/route/resource families and numeric timings are retained. Raw
+URLs, query keys/arguments, wallet addresses, bodies, errors, provider keys and
+Server-Timing descriptions are excluded. Look at `x-request-id` in the Network
+panel to correlate a specific API response; the recorder does not intercept
+fetch or collect response headers. Cross-origin timing restrictions can hide
+details. Queries already running when the lazy module loads are omitted;
+buffered resource entries can still appear. A resource's route label describes
+the page when it was observed, not necessarily when its fetch started. This is a
+bounded debugging aid, not full browser distributed tracing or a Web Vitals
+benchmark.
+
+Source: [local recorder](../apps/explore/src/diagnostics.ts).
+
+### Local validation and rollout boundary
+
+| Suite | Result |
+| --- | --- |
+| API unit + local Worker bindings | 681 passed, 17 skipped; 78 files passed, 2 skipped |
+| API unit subset | 662 passed, 12 skipped; 71 files passed, 2 skipped |
+| Explore | 444 passed; 96 files |
+| SDK | 317 passed, 33 skipped; 39 files passed, 4 skipped |
+| React hooks | 8 passed; 3 files |
+| Indexer Worker | 9 passed |
+
+Owning typechecks passed. New helpers/tests passed scoped format and lint. The
+repository lint collection found no increases after removing two unused query
+exports; the Board queue refactor lowered one existing baseline count. Two
+baseline reductions from the concurrently committed Request-page lane were kept
+outside this lane's baseline edit. Raw whole-file lint still reports recorded
+legacy findings, so it is not a zero-debt lint result.
+
+No live/fork/browser/end-to-end suite was run for this cleanup implementation.
+The earlier browser audit below is separate evidence. Deployment, native trace
+export/parentage, cache hits, sampling cost and cold/warm panel-ready distributions
+still need an accepted dev release and operator measurements. Use those results
+to choose between reducing API setup/queue time, simplifying detail reads,
+deduplicating pool reads, splitting routes or changing providers.
+
 ## What the system is
 
 Sidequest is a hosted marketplace and MCP service sitting in front of a
@@ -640,9 +834,10 @@ not every helper has a standalone route in the current router.
 a one-year HTTP cache lifetime. A delivery preview instead checks the indexed
 submission against the task/hash, asks the board for its descriptor, fetches
 external `deliverable.json` or page metadata, and uses the edge cache. Successful
-previews cache for an hour, misses for ten minutes, unavailable dependencies are
-not cached. Explore caches the result by board/task/hash with infinite
-`staleTime`; images and models can load separately from the delivery host. A
+previews cache for an hour, internal misses for 30 seconds, and unavailable
+dependencies are not cached. Explore keys by scoped board/task/normalized hash,
+with five-minute complete-preview freshness and 30-second incomplete freshness.
+Foreground recovery polling is bounded; images and models can load separately from the delivery host. A
 preview proves neither availability forever nor payment; the chain submission
 hash and the byte-level content verification have separate jobs.
 
@@ -682,7 +877,7 @@ streams and wallet-connection sockets are separate mechanisms.
 | Backing/delegations | Detailed hooks 15 s; compact agent cards use a 120 s stale time |
 | Commons | Thread 10 s; roadmap/item 30 s; gaps 60 s; roles stale after 60 s |
 | Personal inbox / collect | Inbox 60 s; collect 60 s with 30 s stale time |
-| Board registry / policy | `/data/boards` token registry stale after 5 min; board page polls 60 s; creator-bond policy stale after 10 min |
+| Board registry / policy | Shared `/data/boards` query stale after 60 s; board page polls 60 s; creator-bond policy stale after 10 min |
 
 Sources: the hooks linked above, [quote requests](../apps/explore/src/quote-requests.ts),
 [profiles cache](../apps/explore/src/agent-profiles.ts),
@@ -749,16 +944,15 @@ less complete freshness metadata.
 
 These are additional frontend-read observations, not new tested incidents:
 
-- **Tenant activity filter:** `useActivityFeed` includes the board prefix in its
-  query key, but `activityPage` calls global `data('activity?...')` without a board
-  filter. The API supports `?board=` and tenant-prefixed routes. A scoped cache
-  key alone does not scope the HTTP request; verify tenant event lists and wallet
-  filters before claiming board-local activity behavior.
-- **Preview recovery:** a 404 becomes a successful `null` value in
-  `useJobDelivery`, with infinite stale time and no interval. If the initial
-  request races indexing, that cached miss needs explicit invalidation rather
-  than being assumed permanent. This is separate from the server's finite
-  negative-cache TTL.
+- **Tenant activity filter:** `activityPage` calls global
+  `data('activity?...')` without a board filter. Its updated public query key
+  reflects that global source. The API supports `?board=` and tenant-prefixed
+  routes; board-local activity still needs an explicit filter and matching
+  cache identity.
+- **Preview recovery:** incomplete delivery/URL metadata now becomes stale
+  after 30 seconds and polls in the foreground for a bounded number of updates.
+  A complete preview is stale after five minutes. The server's internal negative
+  cache is 30 seconds; an outgoing 404 is `no-store` under the global policy.
 - **Completeness:** default 500-task enrichment, bounded chain pagination and
   known-ID registry ownership checks can omit older or unseen entities. Surface
   limits/cursors and distinguish a bounded result from a complete ledger.
@@ -1235,12 +1429,13 @@ is not proven usable until the cross-store restore and pending-operation
 reconciliation are rehearsed. This is a runbook evidence gap, not a claim that
 Cloudflare has no recovery features.
 
-Alchemy's installed Worker defaults enable logs but leave traces off. No trace
-opt-in is present in the reviewed stack. Public smoke checks index checkpoint age
-against 600 seconds and runs hourly at minute 17; it does not establish block
-lag, managed signing readiness or relay recovery. `indexer_runs` retains the
-latest result, not a history. Add independent freshness/pending-age alerts and
-sampled request-to-provider tracing without recording payloads or credentials.
+The cleanup now enables native traces in API, indexer and Explore with explicit
+100% head sampling and persistence in dev and prod configuration. Public smoke
+checks index checkpoint age against 600 seconds and runs hourly at minute 17;
+it does not establish block lag, managed signing readiness or relay recovery.
+`indexer_runs` retains the latest result, not a history. Native parent links,
+binding/subrequest coverage, retention and cost still need a dev rollout
+readback. Independent freshness/pending-age alerts remain follow-up work.
 
 Evidence: [deploy runbook](deploy.md), [smoke](../scripts/ci/smoke.ts),
 [scheduled workflow](../.github/workflows/smoke.yml),
