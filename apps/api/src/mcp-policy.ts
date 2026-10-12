@@ -263,6 +263,9 @@ function stepsUp(grant: PolicyGrant, name: string): boolean {
   return grant.roles.some((role) => scope === `sidequest:${role}`)
 }
 
+/** What a setup connection is told while its operator has not approved its agent yet. */
+export const SETUP_WAITING = 'waiting: your operator has not approved this agent yet.'
+
 /**
  * Why a connection may not call a tool, or undefined when it may: a tool result to answer with, or the scope a client
  * must step up to (MCP's 403 insufficient_scope). A setup connection asking for a tool its agent gets once approved is
@@ -281,7 +284,7 @@ export function toolRefusal(
         content: [
           {
             type: 'text',
-            text: 'waiting: your operator has not approved this agent yet. Poll setup_status; this tool works on this connection once it reports ready.',
+            text: `${SETUP_WAITING} Poll setup_status; this tool works on this connection once it reports ready.`,
           },
         ],
         isError: true,

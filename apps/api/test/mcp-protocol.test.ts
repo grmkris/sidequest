@@ -459,3 +459,51 @@ it('serves authenticated static skills with pagination and matching resource byt
     expect(unauth.status).toBe(401)
   }
 })
+
+const send = (body: Record<string, unknown>, overrides: Partial<Parameters<typeof mcpRoute>[0]> = {}) =>
+  mcpRoute({
+    method: 'POST',
+    pathname: '/mcp',
+    origin,
+    headers: {},
+    body,
+    grant,
+    tools,
+    call: async () => ({ ok: true }),
+    ...overrides,
+  })
+
+// The showcase run's logs: legacy clients' notifications/initialized and resources/templates/list both answered -32601.
+describe('protocol gaps from the goblin run', () => {
+  it.each(['notifications/initialized', 'notifications/cancelled', 'notifications/roots/list_changed'])(
+    'accepts the notification %s with 202 and no body',
+    async (method) => {
+      expect(await send({ jsonrpc: '2.0', method, params: {} })).toEqual({
+        status: 202,
+        headers: { 'cache-control': 'no-store' },
+      })
+    },
+  )
+
+  it('answers a notification sent with an id leniently, never as an unknown method', async () => {
+    expect((await send({ jsonrpc: '2.0', id: 3, method: 'notifications/initialized' })).body).toEqual({
+      jsonrpc: '2.0',
+      id: 3,
+      result: {},
+    })
+  })
+
+  it.each([{}, { _meta: meta }])('lists no resource templates (%o)', async (params) => {
+    expect(result(await route('resources/templates/list', params))).toMatchObject({ resourceTemplates: [] })
+  })
+
+  it('gives a setup connection the event catalog and tells it to wait for the rest', async () => {
+    const setup = { ...grant, setup: true, scopes: ['sidequest:setup'] }
+    const listed = await send({ jsonrpc: '2.0', id: 1, method: 'events/list', params: {} }, { grant: setup })
+    expect(listed.body).toMatchObject({
+      result: { events: expect.arrayContaining([expect.objectContaining({ name: 'sidequest.inbox' })]) },
+    })
+    const polled = await send({ jsonrpc: '2.0', id: 2, method: 'events/poll', params: {} }, { grant: setup })
+    expect(polled.body).toMatchObject({ error: { code: -32003, message: expect.stringContaining('waiting:') } })
+  })
+})

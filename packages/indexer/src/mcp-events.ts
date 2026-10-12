@@ -43,7 +43,8 @@ const payloadSchema = {
     next: { type: 'object' },
   },
 }
-const descriptors = [
+/** The events a connection may subscribe to: what events/list answers, also before a setup connection has an agent. */
+export const EVENT_DESCRIPTORS = [
   {
     name: 'sidequest.inbox',
     description:
@@ -64,7 +65,7 @@ const descriptors = [
 
 export function eventArguments(name: unknown, value: unknown): { name: string; args: Record<string, unknown> } {
   if (name === undefined) throw new EventRpcError(-32602, 'name is required: one of the events events/list returns')
-  if (typeof name !== 'string' || !descriptors.some((event) => event.name === name))
+  if (typeof name !== 'string' || !EVENT_DESCRIPTORS.some((event) => event.name === name))
     throw new EventRpcError(-32602, 'Unknown event name')
   const args = value === undefined ? {} : value
   if (typeof args !== 'object' || args === null || Array.isArray(args))
@@ -254,7 +255,7 @@ export class McpEvents {
     // Whole seconds, like the feed and the subscription table's INTEGER columns.
     const now = this.options.now?.() ?? Math.floor(Date.now() / 1000)
     const principal = grant.address.toLowerCase()
-    if (method === 'events/list') return { events: descriptors }
+    if (method === 'events/list') return { events: EVENT_DESCRIPTORS }
     if (method === 'events/poll') return pollEvents(this.sql, this.network, principal, params, now)
     if (method === 'events/subscribe')
       return subscribeWebhook(this.sql, this.network, principal, params, now, this.options.fetch, grant.grantId)

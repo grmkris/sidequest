@@ -1,7 +1,8 @@
 import { agentFailureReply } from '@sidequest/board'
+import { EVENT_DESCRIPTORS } from '@sidequest/indexer'
 import { Schema } from 'effect'
 import type { OAuthGrant } from './oauth.ts'
-import { effectiveRoles, listedTool, requiredToolScope, toolRefusal } from './mcp-policy.ts'
+import { SETUP_WAITING, effectiveRoles, listedTool, requiredToolScope, toolRefusal } from './mcp-policy.ts'
 import { toolWireMetadata } from './mcp-tool-metadata.ts'
 import { approvalRound, settledCreation } from './mcp-mrtr.ts'
 import type { ListenRequest } from './mcp-listen.ts'
@@ -132,8 +133,8 @@ export async function mcpRoute(input: {
           }
         : result,
     })
-  if (id === undefined && methodName !== 'notifications/initialized')
-    return { status: 202, headers: { 'cache-control': 'no-store' } }
+  // A notification (or a client's JSON-RPC response) has no id: accepted, nothing to answer.
+  if (id === undefined) return { status: 202, headers: { 'cache-control': 'no-store' } }
   const capabilities = {
     tools: { listChanged: false },
     prompts: {},
@@ -166,7 +167,8 @@ export async function mcpRoute(input: {
       instructions: connectorInstructions(origin),
     })
   }
-  if (methodName === 'ping') return respond({})
+  // A notification sent with an id is answered leniently rather than as an unknown method.
+  if (methodName === 'ping' || methodName.startsWith('notifications/')) return respond({})
   if (modern && methodName === 'subscriptions/listen') {
     if (!Schema.is(Listen)(body)) return rpcError(-32602, 'subscriptions/listen needs a request id and notifications')
     const hearsTools = body.params.notifications?.toolsListChanged === true
@@ -252,6 +254,8 @@ export async function mcpRoute(input: {
         ...docsResources(),
       ],
     })
+  // Every resource is listed; none is parameterised, so there is no template.
+  if (methodName === 'resources/templates/list') return respond({ resourceTemplates: [] })
   if (methodName === 'skills/list') {
     const after =
       params.cursor === undefined
@@ -274,6 +278,11 @@ export async function mcpRoute(input: {
     const { raw: _raw, ...entry } = skill
     return respond({ skill: entry, ...SKILLS_CACHE })
   }
+  // A setup connection has no agent to receive events yet: it may read the catalog and is told to wait for the rest.
+  if (methodName.startsWith('events/') && input.events === undefined && grant.setup === true)
+    return methodName === 'events/list'
+      ? respond({ events: EVENT_DESCRIPTORS })
+      : rpcError(-32003, `${SETUP_WAITING} Poll setup_status; events work on this connection once it reports ready.`)
   if (methodName.startsWith('events/') && input.events !== undefined) {
     try {
       return respond(await input.events.handle(methodName, params, grant))
