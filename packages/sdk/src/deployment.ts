@@ -494,7 +494,7 @@ export function deploymentFromConfig(network: Network, c: DeploymentConfig): Dep
 const UNITS = /^[1-9][0-9]{0,30}$/
 
 /** Config `accountAbstraction`, checked; null when absent. Our own paymaster never runs on mainnet. */
-function aaFromConfig(c: DeploymentConfig): AccountAbstraction | null {
+export function aaFromConfig(c: Pick<DeploymentConfig, 'chainId' | 'accountAbstraction'>): AccountAbstraction | null {
   const a = c.accountAbstraction
   if (a === undefined) return null
   if (!validAddress(a.entryPoint) || !validAddress(a.gasToken))

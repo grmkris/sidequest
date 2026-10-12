@@ -199,12 +199,11 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
             }
             return JSON.parse(await namespace.get(id).hostedCreators({ env, query })) as HostedCreatorFacts
           },
-          ...(key32(env.attesterKey) && key32(env.relayKey)
+          // ADR-0023: the board signs the attestation and the worker attaches it in its own submit; no relay sends it.
+          ...(key32(env.attesterKey)
             ? {
                 evidence: {
                   attester: privateKeyToAccount(env.attesterKey as `0x${string}`),
-                  relay: privateKeyToAccount(env.relayKey as `0x${string}`),
-                  rpcUrl: env.rpcUrl,
                   ...(env.github.appId === '' ? {} : { github: env.github }),
                 },
               }

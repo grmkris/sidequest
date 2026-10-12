@@ -24,7 +24,16 @@ const WORK_DATA: Hex = '0x1234'
 const work = { to: WORK_TARGET, value: 0n, data: WORK_DATA }
 
 /** A node, bundler and paymaster that answer like Pimlico on Monad; `log` records every call in order. */
-function services(over: { sequence?: bigint; allowance?: bigint; quotedPaymaster?: Address; rate?: bigint } = {}) {
+function services(
+  over: {
+    sequence?: bigint
+    allowance?: bigint
+    quotedPaymaster?: Address
+    rate?: bigint
+    /** Extra fields every paymaster answer carries (a stub's limits, a sponsor's own gas). */
+    answer?: Record<string, string>
+  } = {},
+) {
   const log: string[] = []
   const node: JsonRpc = async (method, params) => {
     log.push(`node:${method}`)
@@ -58,7 +67,12 @@ function services(over: { sequence?: bigint; allowance?: bigint; quotedPaymaster
         ],
       }
     const context = params[3] ?? null
-    return { paymaster: PAYMASTER, paymasterData: method === 'pm_getPaymasterData' ? '0xfeed' : '0x00', context }
+    return {
+      paymaster: PAYMASTER,
+      paymasterData: method === 'pm_getPaymasterData' ? '0xfeed' : '0x00',
+      context,
+      ...over.answer,
+    }
   }
   return { node, bundler, paymaster, log }
 }
@@ -95,6 +109,11 @@ describe('building a user operation', () => {
     expect(built.maxCost > 0n && built.maxCost <= aa.maxCostPerOp).toBe(true)
   })
 
+  it("keeps the call gas at the batch's floor when the estimate is below it", async () => {
+    expect((await build(services(), { minCallGas: 300_000n })).op.callGasLimit).toBe(300_000n)
+    expect((await build(services(), { minCallGas: 100_000n })).op.callGasLimit).toBe((0x30d40n * 11n) / 10n)
+  })
+
   it('appends the standing approval only while the paymaster allowance is short', async () => {
     const short = decodeExecuteCalldata((await build(services({ allowance: 99_999n }))).op.callData)!
     expect(short).toHaveLength(2)
@@ -116,12 +135,35 @@ describe('building a user operation', () => {
     await expect(build(services(), { aa: { ...aa, paymaster: null } })).rejects.toMatchObject({ code: 'no-paymaster' })
   })
 
-  it('sponsors a faucet claim without a quote, an approval or a cost', async () => {
+  it("never lowers the paymaster's own limits below its stub's, whatever the bundler measured", async () => {
+    const stub = { paymasterVerificationGasLimit: '0x186a0', paymasterPostOpGasLimit: '0x30d40' }
+    const built = await build(services({ answer: stub }))
+    expect(built.op.paymasterVerificationGasLimit).toBe(100_000n)
+    expect(built.op.paymasterPostOpGasLimit).toBe(200_000n)
+  })
+
+  it("takes a sponsor's own gas limits from its final answer, since its signature covers them", async () => {
+    const sponsorGas = { callGasLimit: '0x11170', verificationGasLimit: '0x22270', preVerificationGas: '0x33370' }
+    const built = await build(services({ answer: sponsorGas }), { sponsor: 'faucet' })
+    expect([built.op.callGasLimit, built.op.verificationGasLimit, built.op.preVerificationGas]).toEqual([
+      0x11170n,
+      0x22270n,
+      0x33370n,
+    ])
+    const charged = await build(services({ answer: sponsorGas }))
+    expect(charged.op.callGasLimit).toBe((0x30d40n * 11n) / 10n)
+  })
+
+  it('sponsors a faucet claim through a different verifying paymaster, even before our paymaster is deployed', async () => {
     const s = services()
-    const built = await build(s, { sponsor: 'faucet' })
+    const built = await build(s, { sponsor: 'faucet', aa: { ...aa, paymaster: null } })
     expect(s.log).not.toContain('paymaster:pimlico_getTokenQuotes')
     expect(decodeExecuteCalldata(built.op.callData)).toHaveLength(1)
     expect(built.maxCost).toBe(0n)
+    expect(built.op.paymaster).toBe(PAYMASTER)
+    const other = await build(services(), { sponsor: 'faucet', aa: { ...aa, paymaster: WORK_TARGET } })
+    expect(other.op.paymaster).toBe(PAYMASTER)
+    await expect(build(services(), { sponsor: 'faucet', chainId: 143 })).rejects.toMatchObject({ code: 'refused' })
   })
 })
 

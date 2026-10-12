@@ -35,4 +35,12 @@ describe('JSON-RPC to the bundler and paymaster', () => {
     })
     await expect(jsonRpc(url, 'Pimlico', answering('{}', 503))('eth_chainId', [])).rejects.not.toThrow('secret-key')
   })
+
+  it('keeps proxy transport failures unavailable, so an unanswered browser send reconciles as uncertain', async () => {
+    const response =
+      '{"jsonrpc":"2.0","id":1,"error":{"code":-32001,"message":"AA unavailable","data":{"code":"unavailable"}}}'
+    await expect(
+      jsonRpc('https://api.example/aa/rpc', 'AA proxy', answering(response, 503))('eth_sendUserOperation', []),
+    ).rejects.toMatchObject({ code: 'unavailable' })
+  })
 })

@@ -19,6 +19,7 @@ import {
   telegramTransport,
 } from '@sidequest/indexer/telegram'
 import { reportRelayWatchFailure, watchRelay } from '@sidequest/indexer/relay-watch'
+import { gasWatches, reportGasWatchFailure, watchGas } from '@sidequest/indexer/gas-watch'
 import { feedFromChain, pruneFeed, reportFeedFailure } from '@sidequest/indexer/feed'
 import { deliverWebhooks, reportWebhookFailure } from '@sidequest/indexer/webhooks'
 import { recordIndexerRun, type IndexerRunOutcome } from './run-record.ts'
@@ -131,6 +132,9 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
               relay: deployment.relay,
               balance: () => client.getBalance({ address: deployment.relay }),
             }).catch(reportRelayWatchFailure)
+            // ADR-0023: owner alerts for the balances that pay gas without a relay (paymaster deposit, arbitrator MON).
+            for (const watch of gasWatches(deployment, client))
+              await watchGas(sql, { network, now, watch }).catch(reportGasWatchFailure)
           }
           return result
         } finally {

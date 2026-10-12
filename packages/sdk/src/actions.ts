@@ -32,6 +32,7 @@ import {
   testnetFaucetAbi,
 } from './abi/index.ts'
 import type { Deployment, Stack } from './deployment.ts'
+import type { SignedEvidenceAttestation } from './batch.ts'
 import { requireBondHorizon, readWindowBounds, validateOfferWindows } from './clocks.ts'
 import { readBondPolicy, requireCreatorBond } from './bond-policy.ts'
 import {
@@ -735,27 +736,18 @@ export function rulingDigest(ctx: Ctx, r: Ruling) {
   })
 }
 
-/** Attaches a verifier's signed evidence; the sender is only a relay (the evaluator checks the verifier's signature). */
+/** Attaches signed evidence from the worker wallet; use attachEvidenceCall to include it in the submit batch. */
 export function attachEvidence(
   ctx: Ctx,
-  relay: Wallet,
-  attestation: {
-    jobId: bigint
-    submissionHash: Hex
-    policyHash: Hex
-    repo: Hex
-    headSha: Hex
-    testedSha: Hex
-    checkRunsHash: Hex
-    conclusion: number
-    validUntil: bigint
-  },
+  worker: Wallet,
+  attestation: SignedEvidenceAttestation['attestation'],
   verifier: Address,
   sig: Hex,
 ) {
-  return write(ctx, relay, ctx.stack.evaluator, evaluatorAbi(ctx), 'attachEvidence', [
-    attestation.jobId,
-    attestation,
+  const normalized = { ...attestation, jobId: BigInt(attestation.jobId), validUntil: BigInt(attestation.validUntil) }
+  return write(ctx, worker, ctx.stack.evaluator, evaluatorAbi(ctx), 'attachEvidence', [
+    normalized.jobId,
+    normalized,
     verifier,
     sig,
   ])

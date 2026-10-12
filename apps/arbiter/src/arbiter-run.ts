@@ -3,7 +3,7 @@ import { ARBITER_PROMPT_VERSION, proposeRuling, type ModelEndpoint } from '@side
 import * as sdk from '@sidequest/sdk'
 import { arbitrateOnce } from './arbiter.ts'
 import type { RoleClient } from './role.ts'
-import { cancellationSender } from './runtime.ts'
+import { cancellationSender, rulingSender } from './runtime.ts'
 
 export interface ArbiterRunOptions {
   readonly network: sdk.Network
@@ -17,7 +17,12 @@ export async function runArbiterPass(client: RoleClient, options: ArbiterRunOpti
   const runner = env.ARBITER_RUNNER ?? `arbiter@${hostname()}`
   if (runner === '') throw new Error('ARBITER_RUNNER is not set')
   log(`signed in as ${client.account.address} (runner ${runner}, model ${endpoint.model})`)
+  const rpcUrl = env.MONAD_RPC_URL ?? (network === 'monad-testnet' ? env.MONAD_TESTNET_RPC_URL : undefined)
+  if (rpcUrl === undefined || rpcUrl === '') throw new Error('MONAD_RPC_URL is not set')
+  const funded = rulingSender(network, client.account, rpcUrl, env.ARBITER_RULING_DIR)
   const result = await arbitrateOnce({
+    sendRuling: funded.send,
+    resumeRuling: (taskId) => funded.resume(taskId),
     board: client.board,
     account: client.account,
     network,
@@ -27,8 +32,6 @@ export async function runArbiterPass(client: RoleClient, options: ArbiterRunOpti
     model: endpoint.model,
     promptVersion: ARBITER_PROMPT_VERSION,
     sendCancellation: async (transaction) => {
-      const rpcUrl = env.MONAD_RPC_URL ?? (network === 'monad-testnet' ? env.MONAD_TESTNET_RPC_URL : undefined)
-      if (rpcUrl === undefined || rpcUrl === '') throw new Error('MONAD_RPC_URL is not set')
       await cancellationSender(network, client.account, rpcUrl)(transaction)
     },
   })

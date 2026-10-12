@@ -10,6 +10,7 @@ import {
   censusOf,
   checkStateStore,
   expectedStateStoreVersion,
+  REQUIRED_SECRETS,
   validateEnv,
   validateFirstDeployCensus,
   type Census,
@@ -108,6 +109,31 @@ test("a deploy's launch inputs come from its command line or CI, never two diffe
 
 test('refuses unset required values by name', () => {
   expect(() => validateEnv({ RELAY_PRIVATE_KEY: 'unset' }, ['RELAY_PRIVATE_KEY'])).toThrow('RELAY_PRIVATE_KEY')
+})
+
+test('AA secrets are stage-scoped and the testnet signer never reaches a mainnet release', () => {
+  const secrets = Object.fromEntries(REQUIRED_SECRETS.map((name) => [name, 'unit-test-value']))
+  expect(REQUIRED_SECRETS).toContain('PIMLICO_API_KEY')
+  expect(() => validateEnv({ ...secrets, SIDEQUEST_NETWORK: 'monad-testnet' })).toThrow('TESTNET_PAYMASTER_SIGNER_KEY')
+  expect(() =>
+    validateEnv({ ...secrets, SIDEQUEST_NETWORK: 'monad-testnet', TESTNET_PAYMASTER_SIGNER_KEY: 'unset' }),
+  ).toThrow('TESTNET_PAYMASTER_SIGNER_KEY')
+  expect(() => validateEnv({ ...secrets, SIDEQUEST_NETWORK: 'monad-mainnet' })).not.toThrow()
+  const mainnet: StageFile = { ...infra, network: 'monad-mainnet', chainId: 143 }
+  expect(
+    assembleEnv(
+      'dev',
+      mainnet,
+      { CI: '1', TESTNET_PAYMASTER_SIGNER_KEY: 'test-key' },
+      { TESTNET_PAYMASTER_SIGNER_KEY: 'local-key' },
+    ).TESTNET_PAYMASTER_SIGNER_KEY,
+  ).toBeUndefined()
+  expect(
+    assembleEnv('dev', infra, { CI: '1', TESTNET_PAYMASTER_SIGNER_KEY: 'test-key' }).TESTNET_PAYMASTER_SIGNER_KEY,
+  ).toBe('test-key')
+  expect(
+    assembleEnv('dev', infra, { TESTNET_PAYMASTER_SIGNER_KEY: 'box-key' }).TESTNET_PAYMASTER_SIGNER_KEY,
+  ).toBeUndefined()
 })
 
 test('plan refusal rules cover destructive and adoption actions', () => {

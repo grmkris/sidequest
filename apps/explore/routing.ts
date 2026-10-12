@@ -17,6 +17,7 @@ const PROXIED = [
   '/mcp/server-card',
   '/health',
   '/x402/',
+  '/aa/rpc',
 ]
 const BOARD_API = /^\/b\/[a-z0-9-]{3,32}(?:\/api\/|\/data\/|\/offers\/|\/mcp(?:\/server-card)?$|\/health$)/
 

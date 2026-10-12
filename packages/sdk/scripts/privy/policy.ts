@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { type Abi, type AbiFunction, erc20Abi, toHex, zeroAddress } from 'viem'
+import { type Abi, type AbiFunction, erc20Abi, parseAbi, toHex, zeroAddress } from 'viem'
 import { coreAbi, sidequestEvaluatorAbi, sidequestHoldingAbi, stakeVaultAbi } from '../../src/abi/index.ts'
 import { DELEGATION_TYPES, delegationManagerAbi } from '../../src/delegation/index.ts'
 import { directoryDomainFields, directoryDomainName, directoryRecordFields } from '../../src/directory.ts'
@@ -148,6 +148,8 @@ export function schema(shape: SigningShape): {
  * `requestUndelegate`), redemptions of the allowances operators sign to the agent, and disabling them. Privy decodes the
  * DeleGator's `execute` batch and every inner call must match one of these rules.
  */
+const agentSweepAbi = parseAbi(['function sweep(address token, uint256 agentId, uint256 amount)'])
+
 export const userOpTargets: readonly { name: string; to: string; abi: Abi; methods: readonly string[] }[] = [
   {
     name: 'Holding',
@@ -184,6 +186,10 @@ export const userOpTargets: readonly { name: string; to: string; abi: Abi; metho
     abi: delegationManagerAbi,
     methods: ['redeemDelegations', 'disableDelegation'],
   },
+  // Earnings leave an agent only to its ERC-8004 owner; the contract checks the caller is the agent's wallet.
+  ...(config.deployment.agentSweep === undefined
+    ? []
+    : [{ name: 'AgentSweep', to: config.deployment.agentSweep, abi: agentSweepAbi, methods: ['sweep'] }]),
 ]
 
 const fragment = (abi: Abi, method: string): AbiFunction => {
@@ -260,6 +266,20 @@ export function userOpRules() {
       ],
     },
     ...paymaster,
+    ...(config.deployment.agentSweep === undefined
+      ? []
+      : [
+          {
+            name: 'userOp approve to AgentSweep',
+            method: 'eth_signUserOperation',
+            action: 'ALLOW',
+            conditions: [
+              onChain,
+              noValue,
+              calling(erc20Abi, 'approve', 'approve.spender', 'eq', config.deployment.agentSweep),
+            ],
+          },
+        ]),
   ]
 }
 

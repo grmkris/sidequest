@@ -57,8 +57,10 @@ const ROLES = {
     ARBITER_MODEL_API_KEY: e.CLIPROXY_API_KEY,
     ARBITER_RUNNER: 'sq-arbiter@netcup',
     ARBITER_INTERVAL_SECONDS: '60',
-    // Sends a dispute's cancellation transaction.
+    // Sends rulings (the arbitrator pays MON, ADR-0023) and dispute cancellations.
     MONAD_RPC_URL: e.MONAD_RPC_URL || e.MONAD_TESTNET_RPC_URL,
+    // The ruling send journal must outlive the container: `up` recreates it, and HOME is /tmp.
+    ARBITER_RULING_DIR: '/state/arbiter-rulings',
   }),
   moderator: (e: Env) => ({
     NETWORK: 'monad-testnet',

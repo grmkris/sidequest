@@ -66,6 +66,14 @@ describe('explore worker routing', () => {
     expect(e.api).toEqual(['/x402/demo'])
   })
 
+  it('proxies the public AA endpoint and leaves similarly named pages to the SPA', async () => {
+    const e = env()
+    expect(isApiPath('/aa/rpc')).toBe(true)
+    expect(isApiPath('/aa/rpc-extra')).toBe(false)
+    await get('/aa/rpc', e)
+    expect(e.api).toEqual(['/aa/rpc'])
+  })
+
   it('proxies public and tenant MCP cards instead of the SPA, without swallowing similar page paths', async () => {
     const e = env()
     for (const path of ['/mcp/server-card', '/b/monad-pet/mcp/server-card']) {

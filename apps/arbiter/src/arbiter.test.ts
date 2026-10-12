@@ -61,6 +61,7 @@ function fakeBoard(
   const disputeChainId = opts.chainId ?? chainId
   const calls: Array<{ tool: string; args: any }> = []
   let signed: Hex | undefined
+  let preparedRuling: sdk.Ruling
   const board: BoardLike = {
     async call(tool: string, args: any = {}) {
       calls.push({ tool, args })
@@ -114,12 +115,33 @@ function fakeBoard(
               nonce: '5',
             },
           }
+          preparedRuling = { ...td.message, jobId: 42n, deadline: BigInt(bundle.arbitrationEndsAt), nonce: 5n }
           opts.tamper?.(td)
           return { sign: { typedData: JSON.stringify(td) } } as any
         }
         case 'submit_ruling':
           signed = args.signature
-          return { relayed: true, txHash: '0xtx' } as any
+          return {
+            landed: false,
+            txHash: null,
+            nonce: '5',
+            transactions: [
+              {
+                chainId: disputeChainId,
+                to: main.evaluator,
+                data: encodeFunctionData({
+                  abi: sdk.sidequestEvaluatorAbi,
+                  functionName: 'ruleWithSignature',
+                  args: [preparedRuling!, signed!],
+                }),
+                value: '0',
+                description: 'Ruling',
+              },
+            ],
+          } as any
+        case 'report_transaction':
+          // SAFETY: the fake board returns the receipt acknowledgement requested by the caller.
+          return { ok: true } as any
       }
       throw new Error(`unexpected ${tool}`)
     },
@@ -134,10 +156,40 @@ const deps = (board: BoardLike, proposal: unknown) => ({
   runner: 'test',
   propose: async () => proposal,
   now: () => NOW,
+  sendRuling: async () => ({ txHash: '0xtx' as const }),
 })
 const reason = 'The "test" check passed on the on-chain deliverable; the rejection names no defect.'
 
 describe('arbitrateOnce', () => {
+  it('takes the hash from a board that still relays rulings itself, sending nothing', async () => {
+    const f = fakeBoard()
+    const relayingBoard: BoardLike = {
+      ...f.board,
+      call: async (tool, args) =>
+        // SAFETY: the fake board answers submit_ruling in the pre-ADR-0023 relayed shape.
+        tool === 'submit_ruling' ? ({ relayed: true, txHash: '0xrelayed' } as never) : f.board.call(tool, args),
+    }
+    const sendRuling = vi.fn(async () => ({ txHash: '0xtx' as const }))
+    const result = await arbitrateOnce({
+      ...deps(relayingBoard, {}),
+      propose: async () => ({ forWorker: true, slashLoser: false, reason }),
+      sendRuling,
+    })
+    expect(result.outcomes[0]).toMatchObject({ result: 'ruled', txHash: '0xrelayed' })
+    expect(sendRuling).not.toHaveBeenCalled()
+  })
+
+  it('sends the ruling with the evaluator gas floor, not an estimate', async () => {
+    const f = fakeBoard()
+    const sendRuling = vi.fn(async (_send: { transaction: { gas?: string } }) => ({ txHash: '0xtx' as const }))
+    await arbitrateOnce({
+      ...deps(f.board, {}),
+      propose: async () => ({ forWorker: true, slashLoser: false, reason }),
+      sendRuling,
+    })
+    expect(sendRuling.mock.calls[0]?.[0].transaction.gas).toBe(sdk.V1_GAS.evaluator.toString())
+  })
+
   it('passes public thread context through, defaulting to an empty thread', async () => {
     const thread: DisputeThread = [
       { id: 1, author: account.address, roles: ['worker'], text: 'Context', hidden: false, replyTo: null, at: NOW },
@@ -150,7 +202,7 @@ describe('arbitrateOnce', () => {
       expect(f.calls.find((c) => c.tool === 'prepare_ruling')?.args.bundleHash).toBe('0xbb')
     }
   })
-  it('signs exactly the validated proposal and hands it to the board to relay', async () => {
+  it('signs exactly the validated proposal and sends the locally rebuilt prepared ruling and reports its receipt', async () => {
     const f = fakeBoard()
     const { outcomes } = await arbitrateOnce(deps(f.board, { forWorker: true, slashLoser: true, reason }))
     expect(outcomes).toEqual([{ taskId: 't1', result: 'ruled', forWorker: true, slashLoser: true, txHash: '0xtx' }])
@@ -281,6 +333,7 @@ describe('arbitrateOnce', () => {
       'cancel_ruling',
       'prepare_ruling',
       'submit_ruling',
+      'report_transaction',
     ])
   })
 

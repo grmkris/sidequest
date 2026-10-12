@@ -50,8 +50,13 @@ export interface BuildInput {
   readonly nonceKey: bigint
   /** The sender's 7702 authorization, when its code does not point at the DeleGator yet. */
   readonly authorization?: SignedAuthorization | undefined
-  /** Testnet only: our paymaster sponsors a faucet claim instead of charging the gas token. */
+  /** Testnet only: Pimlico sponsors a faucet claim instead of charging the gas token. */
   readonly sponsor?: 'faucet' | undefined
+  /**
+   * The least call gas the batch needs, whatever the estimate says: calls that push payouts revert with
+   * `TransferGasTooLow` below a fixed reserve, which an estimate does not see (Explore's `gas.ts` floors).
+   */
+  readonly minCallGas?: bigint | undefined
 }
 
 /** An operation ready to sign, the most its gas may cost and the hash it will go by. */
@@ -122,26 +127,58 @@ function paymasterLimits(op: UserOperation, answer: Json | undefined): UserOpera
 }
 
 /** Merges a paymaster answer (stub or final) into the operation, refusing any other paymaster. */
-function withPaymaster(op: UserOperation, answer: Json, paymaster: Address): UserOperation {
-  if (!named(field(answer, 'paymaster'), paymaster))
+function withPaymaster(op: UserOperation, answer: Json, paymaster: Address | null): UserOperation {
+  const address = hexField(field(answer, 'paymaster'), 'paymaster')
+  if (address.length !== 42 || (paymaster !== null && !named(address, paymaster)))
     throw new AaError('mismatch', 'the paymaster service answered for another paymaster')
   return paymasterLimits(
-    { ...op, paymaster, paymasterData: hexField(field(answer, 'paymasterData'), 'paymaster data') },
+    { ...op, paymaster: address, paymasterData: hexField(field(answer, 'paymasterData'), 'paymaster data') },
     answer,
   )
 }
 
-/** The bundler's estimate into the operation. Monad bills the whole limit: the call gets 10% for state moving, no more. */
-function withEstimate(op: UserOperation, gas: Json): UserOperation {
-  return paymasterLimits(
+const atLeast = (value: bigint | undefined, floor: bigint | undefined): bigint | undefined =>
+  value === undefined || (floor !== undefined && floor > value) ? floor : value
+
+/**
+ * The bundler's estimate into the operation. Monad bills the whole limit: the call gets 10% for state moving, no more,
+ * and never less than the batch's own floor. The paymaster's own limits never drop below its stub's: its quote signer
+ * refuses a post-op limit too small to charge the token (ours needs 160k), whatever the bundler measured.
+ */
+function withEstimate(op: UserOperation, gas: Json, minCallGas: bigint): UserOperation {
+  const estimated = (quantity(field(gas, 'callGasLimit'), 'call gas') * 11n) / 10n
+  const merged = paymasterLimits(
     {
       ...op,
-      callGasLimit: (quantity(field(gas, 'callGasLimit'), 'call gas') * 11n) / 10n,
+      callGasLimit: estimated > minCallGas ? estimated : minCallGas,
       verificationGasLimit: quantity(field(gas, 'verificationGasLimit'), 'verification gas'),
       preVerificationGas: quantity(field(gas, 'preVerificationGas'), 'pre-verification gas'),
     },
     gas,
   )
+  const verification = atLeast(merged.paymasterVerificationGasLimit, op.paymasterVerificationGasLimit)
+  const postOp = atLeast(merged.paymasterPostOpGasLimit, op.paymasterPostOpGasLimit)
+  return {
+    ...merged,
+    ...(verification === undefined ? {} : { paymasterVerificationGasLimit: verification }),
+    ...(postOp === undefined ? {} : { paymasterPostOpGasLimit: postOp }),
+  }
+}
+
+/**
+ * A sponsoring paymaster (Pimlico's, for a testnet faucet claim) estimates the operation itself and signs over its own
+ * gas limits, so its final answer's limits replace ours: keeping ours would break its signature (AA34).
+ */
+function withSponsorGas(op: UserOperation, answer: Json): UserOperation {
+  const call = limit(answer, 'callGasLimit')
+  const verification = limit(answer, 'verificationGasLimit')
+  const preVerification = limit(answer, 'preVerificationGas')
+  return {
+    ...op,
+    ...(call === undefined ? {} : { callGasLimit: call }),
+    ...(verification === undefined ? {} : { verificationGasLimit: verification }),
+    ...(preVerification === undefined ? {} : { preVerificationGas: preVerification }),
+  }
 }
 
 /** The first draft: the lane's nonce, the bundler's fast price, a dummy signature. */
@@ -171,9 +208,12 @@ function batcher(input: BuildInput, paymaster: Address, approve: boolean) {
 }
 
 /** Checks the lane is free and the paymaster is configured; returns the paymaster. */
-async function preflight(input: BuildInput): Promise<Address> {
+async function preflight(input: BuildInput): Promise<Address | null> {
   const paymaster = input.aa.paymaster
-  if (paymaster === null) throw new AaError('no-paymaster', 'no paymaster is configured on this network yet')
+  if (input.sponsor !== undefined && input.chainId !== 10143)
+    throw new AaError('refused', 'faucet sponsorship is testnet only')
+  if (paymaster === null && input.sponsor === undefined)
+    throw new AaError('no-paymaster', 'no paymaster is configured on this network yet')
   if ((await laneSequence(input.node, input.aa.entryPoint, input.sender, input.nonceKey)) !== 0n)
     throw new AaError('landed', 'an operation already landed on this lane: reconcile it instead of building another')
   return paymaster
@@ -184,9 +224,12 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
   const { aa, chainId } = input
   const paymaster = await preflight(input)
   const sponsored = input.sponsor !== undefined
-  const tokenQuote = sponsored ? null : await quote(input, paymaster)
-  const approve = !sponsored && (await allowanceOf(input.node, aa.gasToken, input.sender, paymaster)) < aa.maxCostPerOp
-  const batch = batcher(input, paymaster, approve)
+  const tokenQuote = sponsored || paymaster === null ? null : await quote(input, paymaster)
+  const approve =
+    !sponsored &&
+    paymaster !== null &&
+    (await allowanceOf(input.node, aa.gasToken, input.sender, paymaster)) < aa.maxCostPerOp
+  const batch = batcher(input, paymaster ?? aa.entryPoint, approve)
   const context = sponsored ? { sponsor: 'faucet' } : { token: aa.gasToken }
   const params = (op: UserOperation): Json[] => [
     toBundlerJson(op, input.authorization),
@@ -195,16 +238,19 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
     context,
   ]
   let op = await draft(input, await batch(aa.maxCostPerOp))
-  op = withPaymaster(op, await input.paymaster('pm_getPaymasterStubData', params(op)), paymaster)
+  op = withPaymaster(op, await input.paymaster('pm_getPaymasterStubData', params(op)), sponsored ? null : paymaster)
   op = withEstimate(
     op,
     await input.bundler('eth_estimateUserOperationGas', [toBundlerJson(op, input.authorization), aa.entryPoint]),
+    input.minCallGas ?? 0n,
   )
   const maxCost = tokenQuote === null ? 0n : maxTokenCost(op, tokenQuote)
   if (maxCost > aa.maxCostPerOp)
     throw new AaError('ceiling', `the gas could cost up to ${maxCost} base units, above the ${aa.maxCostPerOp} ceiling`)
   if (!sponsored) op = { ...op, callData: await batch(maxCost) }
-  op = withPaymaster(op, await input.paymaster('pm_getPaymasterData', params(op)), paymaster)
+  const final = await input.paymaster('pm_getPaymasterData', params(op))
+  op = withPaymaster(op, final, sponsored ? null : paymaster)
+  if (sponsored) op = withSponsorGas(op, final)
   return {
     op,
     authorization: input.authorization,
