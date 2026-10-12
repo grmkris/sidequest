@@ -263,12 +263,16 @@ function tradeMessage(input: {
   short: boolean
   failed: boolean
   out: bigint | undefined
+  /** A buy's ceiling, and whether Monad's 10 MON reserve set it (a delegated wallet). */
+  cap: { max: bigint; reserve: boolean } | undefined
 }): string {
   const mon = chain.nativeCurrency.symbol
   const inSymbol = input.trade === 'buy' ? mon : 'SIDE'
   const outSymbol = input.trade === 'buy' ? 'SIDE' : mon
   if (input.amountIn === null)
     return `You hold ${input.balance === undefined ? '…' : formatNumber(input.balance, 18)} ${inSymbol}.`
+  if (input.short && input.trade === 'buy' && input.cap?.reserve)
+    return `Monad keeps 10 ${mon} in upgraded wallets. You can buy with up to ${formatNumber(input.cap.max, 18)} ${mon} now.`
   if (input.short)
     return input.trade === 'buy'
       ? `That leaves too little ${mon} for gas.`
@@ -311,12 +315,22 @@ function useLauncherTrade(l: sdk.Launcher, trade: Trade, address: `0x${string}`,
     enabled: amountIn !== null,
     retry: false,
   })
-  // A buy pays its MON and its gas from one balance; a sale needs MON only for gas. Never gas-sponsored.
-  const need = amountIn === null ? 0n : trade === 'buy' ? amountIn + SWAP_GAS : amountIn
-  const short = amountIn !== null && balance !== undefined && need > balance
+  // A delegated wallet (Explore upgrades it on its first batch) must keep Monad's 10 MON reserve after a buy, or the
+  // buy reverts and still pays gas; a sale sends no MON. Never gas-sponsored.
+  const delegated = useQuery({
+    queryKey: publicKey('delegation', address),
+    queryFn: async () => (await sdk.delegationOf(ctx.publicClient, address)) !== null,
+  }).data
+  const cap =
+    gas === undefined || delegated === undefined
+      ? undefined
+      : { max: sdk.nativeBuyCap({ balance: gas, gasCost: SWAP_GAS, delegated }), reserve: delegated }
+  const short =
+    amountIn !== null &&
+    (trade === 'buy' ? cap !== undefined && amountIn > cap.max : side !== undefined && amountIn > side)
   const out = quoted.data
   const ready = amountIn !== null && !short && out !== undefined && !(gas !== undefined && gas < SWAP_GAS)
-  return { gas, side, balance, short, out, failed: quoted.isError, ready }
+  return { gas, side, balance, cap, short, out, failed: quoted.isError, ready }
 }
 
 function LauncherPanel({
@@ -338,7 +352,7 @@ function LauncherPanel({
   const [steps, setSteps] = useState<{ id: string; txs: WalletStep[] } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { gas, side, balance, short, out, failed, ready } = useLauncherTrade(l, trade, address, amountIn)
+  const { gas, side, balance, cap, short, out, failed, ready } = useLauncherTrade(l, trade, address, amountIn)
   const review = async () => {
     if (amountIn === null || out === undefined) return
     setBusy(true)
@@ -361,7 +375,7 @@ function LauncherPanel({
     void refreshBalances(qc)
     onDone()
   }
-  const message = tradeMessage({ trade, amountIn, balance, short, failed, out })
+  const message = tradeMessage({ trade, amountIn, balance, short, failed, out, cap })
   return (
     <div className="grid gap-3 rounded-xl border border-border p-3">
       <p className="text-sm text-muted-foreground">Through nad.fun&apos;s router · up to 1% slippage</p>
@@ -370,7 +384,7 @@ function LauncherPanel({
           trade={trade}
           text={text}
           setText={setText}
-          side={side}
+          max={trade === 'buy' ? cap?.max : side}
           message={message}
           gas={gas}
           error={error}
@@ -397,7 +411,8 @@ function LauncherForm(props: {
   trade: Trade
   text: string
   setText: (text: string) => void
-  side: bigint | undefined
+  /** The most the wallet can trade: its SIDE for a sale; for a buy, its MON less gas and any reserve. */
+  max: bigint | undefined
   message: string
   gas: bigint | undefined
   error: string | null
@@ -406,7 +421,7 @@ function LauncherForm(props: {
   review: () => void
 }) {
   const inSymbol = props.trade === 'buy' ? chain.nativeCurrency.symbol : 'SIDE'
-  const { side } = props
+  const { max } = props
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
@@ -418,8 +433,8 @@ function LauncherForm(props: {
           inputMode="decimal"
           className="max-w-48"
         />
-        {props.trade === 'sell' && side !== undefined && side > 0n && (
-          <Button variant="link" onClick={() => props.setText(formatUnits(side, 18))}>
+        {max !== undefined && max > 0n && (
+          <Button variant="link" onClick={() => props.setText(formatUnits(max, 18))}>
             Max
           </Button>
         )}

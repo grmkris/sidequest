@@ -1,4 +1,4 @@
-import { encodeFunctionData, erc20Abi, parseAbi, type Address } from 'viem'
+import { encodeFunctionData, erc20Abi, parseAbi, parseEther, type Address } from 'viem'
 import type { Ctx } from './actions.ts'
 import type { TxRequest } from './board-client.ts'
 
@@ -21,6 +21,19 @@ export const nadRouterAbi = parseAbi([
 /** Gas limits with room over measured testnet trades (buy 714,573; sell 668,821): Monad charges the limit. */
 const BUY_GAS = '900000'
 const SELL_GAS = '850000'
+
+/**
+ * Monad's reserve balance: a 7702-delegated wallet (every Explore wallet after its first batch) can never take the
+ * emptying exception, so a transaction that sends MON and leaves it under 10 MON reverts and still pays its gas
+ * (docs.monad.xyz/developer-essentials/reserve-balance). Undelegated wallets may dip under once every 3 blocks.
+ */
+export const MONAD_RESERVE_BALANCE = parseEther('10')
+
+/** The most MON a wallet can put into a buy now: its balance less gas, and less the 10 MON reserve when delegated. */
+export function nativeBuyCap(input: { balance: bigint; gasCost: bigint; delegated: boolean }): bigint {
+  const cap = input.balance - input.gasCost - (input.delegated ? MONAD_RESERVE_BALANCE : 0n)
+  return cap > 0n ? cap : 0n
+}
 
 /** What `amountIn` returns now: SIDE for MON (`buy`) or MON for SIDE (`sell`), after the router's fees and any early-block penalty. */
 export function launcherQuote(ctx: Ctx, l: Launcher, side: 'buy' | 'sell', amountIn: bigint): Promise<bigint> {

@@ -3,7 +3,7 @@ import { createPublicClient, decodeFunctionData, erc20Abi, http, type Address } 
 import testnet from '../../../contracts/config/monad-testnet.json' with { type: 'json' }
 import type { Ctx } from './actions.ts'
 import { deployment, stack } from './deployment.ts'
-import { launcherQuote, launcherTransactions, nadRouterAbi } from './launcher.ts'
+import { launcherQuote, launcherTransactions, MONAD_RESERVE_BALANCE, nadRouterAbi, nativeBuyCap } from './launcher.ts'
 
 const d = deployment('monad-testnet')
 const l = d.launcher!
@@ -75,5 +75,14 @@ describe("SIDE on nad.fun's router", () => {
       deadline: 99,
     })
     expect(covered.map((tx) => tx.to)).toEqual([l.router])
+  })
+
+  it("keeps Monad's 10 MON reserve in a delegated wallet's buy, and none in a plain wallet's", () => {
+    const gasCost = 90n
+    expect(MONAD_RESERVE_BALANCE).toBe(10n ** 19n)
+    expect(nativeBuyCap({ balance: 25n * 10n ** 18n, gasCost, delegated: true })).toBe(15n * 10n ** 18n - gasCost)
+    expect(nativeBuyCap({ balance: 25n * 10n ** 18n, gasCost, delegated: false })).toBe(25n * 10n ** 18n - gasCost)
+    expect(nativeBuyCap({ balance: 9n * 10n ** 18n, gasCost, delegated: true })).toBe(0n)
+    expect(nativeBuyCap({ balance: 50n, gasCost, delegated: false })).toBe(0n)
   })
 })
