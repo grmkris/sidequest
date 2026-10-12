@@ -45,6 +45,7 @@ it('refuses an unregistered agent, and any amount but a decimal', async () => {
   const decode = Schema.decodeUnknownSync(BackingRequestInput)
   expect(decode({ amount: '7.5' })).toEqual({ amount: '7.5' })
   expect(() => decode({ amount: '1e3' })).toThrow()
+  expect(() => decode({ amount: '12345678901' })).toThrow()
   expect(() => decode({ amount: 10 })).toThrow()
   expect(() => decode({ amount: '1', role: 'hire' }, { onExcessProperty: 'error' })).toThrow()
 })

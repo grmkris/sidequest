@@ -79,7 +79,7 @@ export const agentTools = {
       properties: {
         amount: {
           type: 'string',
-          pattern: '^\\d+(\\.\\d{1,18})?$',
+          pattern: '^\\d{1,10}(\\.\\d{1,18})?$',
           description: 'SIDE you want free behind this agent, e.g. a creator bond above the floor; omitted: the floor.',
         },
       },

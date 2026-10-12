@@ -9,9 +9,9 @@ import { BoardError } from '@sidequest/board'
 import { Schema } from 'effect'
 import { formatEther, getAddress, parseEther } from 'viem'
 
-/** request_backing's arguments: an optional decimal SIDE amount, nothing else. */
+/** request_backing's arguments: an optional decimal SIDE amount below SIDE's supply (ten integer digits), nothing else. */
 export const BackingRequestInput = Schema.Struct({
-  amount: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^\d+(\.\d{1,18})?$/))),
+  amount: Schema.optionalKey(Schema.String.check(Schema.isPattern(/^\d{1,10}(\.\d{1,18})?$/))),
 })
 export type BackingRequest = typeof BackingRequestInput.Type
 
