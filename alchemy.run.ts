@@ -67,6 +67,8 @@ export default Alchemy.Stack(
       ...(profile ? { domain: { name: new URL(profile.origin).hostname } } : {}),
       observability: {
         enabled: true,
+        // Setting observability replaces Alchemy's default, so its logs block is spelled out beside the traces.
+        logs: { enabled: true, invocationLogs: true },
         traces: { enabled: true, headSamplingRate: 1, persist: true },
       },
       env: { API: api },

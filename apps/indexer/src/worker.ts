@@ -38,8 +38,8 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
     ...(stageProfile() ? { name: stageProfile()!.resources.Indexer } : {}),
     compatibility: { date: '2026-09-01', flags: ['nodejs_compat'] },
     // Cloudflare.Telemetry enables the trace channel in the Layer below, including
-    // cron and D1 spans. This Alchemy release exposes the supported metadata fields.
-    observability: { enabled: true },
+    // cron and D1 spans. Setting observability replaces Alchemy's whole default, so its logs block is spelled out.
+    observability: { enabled: true, logs: { enabled: true, invocationLogs: true } },
     dev: { port: 8789 },
     env: {
       NETWORK: stageProfile()?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet',
