@@ -210,6 +210,24 @@ describe('public POST /aa/rpc', () => {
     })
   })
 
+  it('passes on only an EntryPoint reason or a gas field from a refusal, never the rest of the message', async () => {
+    const up = answering(
+      {
+        code: -32500,
+        message: `UserOperation reverted during simulation with reason: AA31 paymaster deposit too low https://upstream.example/?apikey=${key}`,
+      },
+      true,
+    )
+    const response = await aaRpcRoute(request(rpcBody()), bindings, {}, up.fetcher)
+    const text = await response.text()
+    expect(text).not.toContain(key)
+    expect(text).not.toContain('upstream.example')
+    expect(JSON.parse(text)).toHaveProperty(
+      'error.message',
+      'AA provider refused the request: AA31 paymaster deposit too low',
+    )
+  })
+
   it('limits canonical hashed client IPs per isolate and allows them again after the minute', async () => {
     const up = answering(null)
     vi.useFakeTimers()

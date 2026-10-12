@@ -89,6 +89,24 @@ async function boundedBody(stream: ReadableStream<Uint8Array> | null, limit: num
   return new TextDecoder().decode(joined)
 }
 
+/**
+ * The part of a provider's refusal a sender can act on, and nothing else: an EntryPoint reason (`AA31 paymaster deposit
+ * too low`) or a gas field the bundler wants raised. Only text matching these patterns is copied, so a key, URL or
+ * request body in the provider's message never comes through.
+ */
+const REASONS = [
+  /\bAA\d{2}(?: (?!https?\b|www\b)[a-z]+){1,8}/,
+  /\b(?:preVerificationGas|maxFeePerGas|maxPriorityFeePerGas|callGasLimit|verificationGasLimit)[a-zA-Z ,:]{0,40}[0-9x ,a-fA-F:]{0,40}/,
+]
+function safeReason(message: Json | undefined): string | null {
+  if (!isString(message)) return null
+  for (const pattern of REASONS) {
+    const found = pattern.exec(message)?.[0].trim()
+    if (found !== undefined && found !== '') return found
+  }
+  return null
+}
+
 function upstream(url: string | undefined, fetcher: typeof fetch): JsonRpc {
   return async (method, params) => {
     if (url === undefined || url === '' || url === 'unset') throw new AaError('unavailable', 'AA provider unavailable')
@@ -104,10 +122,11 @@ function upstream(url: string | undefined, fetcher: typeof fetch): JsonRpc {
       const error = field(body, 'error')
       if (error !== undefined) {
         const code = field(error, 'code')
+        const reason = safeReason(field(error, 'message'))
         throw new RpcFailure(
           Number.isSafeInteger(code) ? Number(code) : -32500,
           'refused',
-          'AA provider refused the request',
+          reason === null ? 'AA provider refused the request' : `AA provider refused the request: ${reason}`,
         )
       }
       if (!response.ok || field(body, 'result') === undefined)
