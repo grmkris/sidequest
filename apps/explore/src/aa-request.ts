@@ -1,17 +1,5 @@
 import * as sdk from '@sidequest/sdk'
-import {
-  type Address,
-  type Hex,
-  decodeEventLog,
-  decodeFunctionData,
-  decodeFunctionResult,
-  encodeFunctionData,
-  erc20Abi,
-  parseAbi,
-  toHex,
-  toEventSelector,
-  pad,
-} from 'viem'
+import { type Address, type Hex, decodeFunctionData, decodeFunctionResult, encodeFunctionData, erc20Abi } from 'viem'
 import { Schema } from 'effect'
 import type { WalletStep } from './components/txOperation.ts'
 import { paymentMode, type PaymentMode } from './aa-mode.ts'
@@ -100,50 +88,27 @@ export function userOpCalls(txs: readonly WalletStep[], chainId: number): sdk.Ca
   })
 }
 
-const eventAbi = parseAbi([
-  'event UserOperationEvent(bytes32 indexed userOpHash, address indexed sender, address indexed paymaster, uint256 nonce, bool success, uint256 actualGasCost, uint256 actualGasUsed)',
-])
-const Log = Schema.Struct({
-  data: Schema.String,
-  topics: Schema.Array(Schema.String),
-  transactionHash: Schema.String,
-})
-
-async function laneEvent(rpc: BrowserAaRpc, built: sdk.BuiltUserOp, block: string) {
-  const logs = Schema.decodeUnknownSync(Schema.Array(Log))(
-    await rpc.node('eth_getLogs', [
-      {
-        address: built.entryPoint,
-        fromBlock: block,
-        toBlock: 'latest',
-        topics: [toEventSelector(eventAbi[0]), null, pad(built.op.sender, { size: 32 })],
-      },
-    ]),
-  )
-  for (const log of logs) {
-    try {
-      // SAFETY: decodeEventLog validates each topic and the ABI-encoded event before its args are used.
-      const event = decodeEventLog({ abi: eventAbi, data: log.data as Hex, topics: log.topics as [Hex, ...Hex[]] })
-      if (
-        event.args.userOpHash.toLowerCase() === built.userOpHash.toLowerCase() &&
-        event.args.sender.toLowerCase() === built.op.sender.toLowerCase() &&
-        event.args.nonce === built.op.nonce
-      ) {
-        // SAFETY: transactionHash comes from the node's event; a malformed hash is rejected before recording a receipt.
-        const txHash = log.transactionHash as Hex
-        if (!/^0x[0-9a-f]{64}$/i.test(txHash)) throw new Error('The operation event has no transaction hash.')
-        return { txHash, status: event.args.success ? ('success' as const) : ('reverted' as const) }
-      }
-    } catch {
-      // Other EntryPoint events are not receipt evidence for this action.
-    }
-  }
-  return null
-}
-
 export type AaReconciliation =
   | { readonly at: 'receipt'; readonly receipt: NonNullable<AaJournal['receipt']> }
-  | { readonly at: 'pending' | 'dropped' | 'unknown' }
+  | { readonly at: 'pending' | 'dropped' }
+  | { readonly at: 'unknown'; readonly spent?: true }
+
+async function spentUserOp(rpc: BrowserAaRpc, built: sdk.BuiltUserOp, saved: AaJournal): Promise<AaReconciliation> {
+  try {
+    const event = await sdk.findUserOpEvent(
+      rpc.node,
+      built.entryPoint,
+      built.op.sender,
+      built.op.nonce,
+      saved.block === undefined ? 0n : BigInt(saved.block),
+    )
+    if (event !== null)
+      return { at: 'receipt', receipt: { txHash: event.txHash, status: event.success ? 'success' : 'reverted' } }
+  } catch {
+    // A spent lane remains spent when event reads fail.
+  }
+  return { at: 'unknown', spent: true }
+}
 
 /** Receipts, then lane/event proof, then the 120-second pending window: never select a new nonce after an ambiguous send. */
 export async function reconcileUserOp(
@@ -160,12 +125,15 @@ export async function reconcileUserOp(
     receiptUnavailable = true
   }
   if (receipt !== null) return { at: 'receipt', receipt }
-  const sequence = await sdk.laneSequence(rpc.node, built.entryPoint, built.op.sender, sdk.nonceKey(saved.actionId))
-  const event = await laneEvent(rpc, built, saved.block ?? toHex(0))
-  if (event !== null) return { at: 'receipt', receipt: event }
-  if (sequence !== 0n || receiptUnavailable) return { at: 'unknown' }
-  if (saved.submittedAt === undefined) return { at: 'dropped' }
-  if (now - saved.submittedAt < 120_000) return { at: 'pending' }
-  const pending = await rpc.bundler('eth_getUserOperationByHash', [built.userOpHash])
-  return { at: pending === null ? 'dropped' : 'pending' }
+  if (saved.spent === true) return spentUserOp(rpc, built, saved)
+  try {
+    const sequence = await sdk.laneSequence(rpc.node, built.entryPoint, built.op.sender, sdk.nonceKey(saved.actionId))
+    if (sequence !== 0n) return spentUserOp(rpc, built, saved)
+  } catch {
+    // Without a lane read or event evidence an operation is never safe to rebuild.
+    return { at: 'unknown' }
+  }
+  if (receiptUnavailable) return { at: 'unknown' }
+  if (saved.submittedAt === undefined || now - saved.submittedAt >= 120_000) return { at: 'dropped' }
+  return { at: 'pending' }
 }
