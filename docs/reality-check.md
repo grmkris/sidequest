@@ -1470,3 +1470,34 @@ Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archi
 - **With a read-only injected wallet.** The "1 bond" chip fills You get 10 SIDE, the pay side quotes 0.0006736 MON, and the button reads "Buy 10 SIDE". The agent page's backing sheet is titled "Back Livepass Scout".
 
 **Not verified:** a signed buy or sell sent through Privy from the new card, which needs a real login. Also not verified: the USDC-gas path for a sale.
+
+## 13 October 2026 — gas charged in USDC, live on dev (ADR-0023)
+
+**Live-verified on Monad testnet (10143), through dev's `/aa/rpc` and our paymaster `0x998D…38C9`:**
+- **A script op charged in USDC** (dev `428e72f5`). A fresh account holding USDC and no MON sent one op;
+  the paymaster took 0.003216 USDC in postOp. Tx
+  `0xfdaea72a6cd59d516727e5e887e6f4384c225c8275a2fe40f2bf26e8f3cd2401`: success.
+  - Our paymaster can't be estimated with it attached (AA50: the bundler's inflated postOp outgrows the charge). Its
+    ops are estimated unpaid, with a native-balance override, and pre-verification gas is scaled for its limits
+    (`428e72f5`).
+- **A browser backing paid in USDC.** The Privy user `0xFb80…3fA7` backed agent 2223 (Probe Otter) with 10 SIDE.
+  Explore showed "up to $0.0084 gas in USDC"; Privy signed the DeleGator's `PackedUserOperation`. The paymaster took
+  0.00302 USDC (1.000000 → 0.996980), and MON stayed at 0.2708. Tx
+  `0x5b99ca9b0fa4d287e58d7fde0af16df0003c7b8beaa9eb899e57bba28469fcf8`: success. Explore then showed "Back it: done".
+- **A browser SIDE sale paid in USDC** (dev `a7e7ebfe`). The same user sold 10 SIDE from `/jobs?side` (approve + sell
+  in one op). The quote was "up to $0.0141 gas in USDC"; the actual charge was 0.004739 USDC, and MON rose only by the
+  proceeds (0.27078 → 0.27143). userOp `0xdc58374e8c4577c3d225a4b829b5883ca6321020661258e753d70324c930021c`, tx
+  `0xa6d41198fae2dc5f608eed46e8b11a55c0b650370086844a86928c2bd82d5c7b`: success. This closes the B3 card's
+  "signed sale" and "USDC-gas path for a sale" gaps.
+  - The first attempt on `428e72f5` was refused: "preVerificationGas is not enough, required: 715771" (573535 sent).
+    The SDK scaled pre-verification gas from the batch's call-gas floor (1.03M) instead of the limits the bundler
+    measured (614k). Fixed in `0b5637f9`. Explore showed "Gas prices moved before it went out; review and confirm
+    again.", and Review gas cost rebuilt the op as designed.
+- **The Buy tab on a delegated wallet with 0.27 MON** says why before any typing: "Monad keeps 10 MON in upgraded
+  wallets, so this one can't buy yet. Add MON to buy here. Or claim free test SIDE below." (`a7e7ebfe`).
+- **Paymaster deposit:** 5.5105 MON after these ops. Each op drew roughly 0.10–0.17 MON, because Monad bills gas
+  limits. Kris tops it up from the faucet.
+
+**Not verified yet:** hosted agents on user ops (`HOSTED_SEND=userop` is not on for dev), a sweep through AgentSweep,
+a ruling sent by the arbiter itself, Privy `eth_signUserOperation` for a hosted agent, and anything on prod-testnet or
+mainnet.
