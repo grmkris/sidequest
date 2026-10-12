@@ -11,6 +11,12 @@ import type { Gap, GapDetail, GapFilters, GapStatus, Roadmap, RoadmapItemDetail,
 
 const POLL_MS = 10_000
 
+/** An infinite list's poll: every `ms` while one page is loaded, none once more are (each poll re-reads them all). */
+export const firstPageOnly =
+  (ms: number) =>
+  (query: { state: { data?: { pages: readonly unknown[] } | undefined } }): number | false =>
+    (query.state.data?.pages.length ?? 0) > 1 ? false : ms
+
 const commonsKeys = {
   all: ['commons'] as const,
   thread: (subject: string, viewer: string | undefined) => ['commons', 'thread', subject, viewer ?? ''] as const,
@@ -72,7 +78,8 @@ export function useGaps(filters: GapFilters = {}) {
         ...(pageParam === undefined ? {} : { cursor: pageParam }),
       }),
     getNextPageParam: (page) => page.cursor ?? undefined,
-    refetchInterval: 60_000,
+    // A refetch re-reads every loaded page: poll the first page only, and stop once the viewer has paged further.
+    refetchInterval: firstPageOnly(60_000),
   })
 }
 
