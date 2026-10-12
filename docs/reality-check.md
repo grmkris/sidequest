@@ -1447,6 +1447,14 @@ Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archi
       the higher value.
     - Recovery called `eth_getLogs` over more than Monad's 100-block limit. Logs are now read only for a spent lane,
       in bounded windows, and a refused op is rebuilt and re-signed (`aa-fix`, `a43dd0b6`).
+- **The MON fallback, live on dev.**
+  - The same user, given 0.3 MON and no USDC (tx `0xe7e90f85…4c22`), created agent "Probe Otter" on Welcome.
+  - Explore picked the MON path. Privy showed one self-call: "2 steps in one transaction: Register the agent ID; Link
+    the agent's own wallet", with a fee under $0.01.
+  - Agent 2223 is registered to `0xFb80…3fA7` and linked to its own wallet `0xfB64A3a9C2e444D14d624C965983115581E08BB1`.
+    About 0.029 MON was spent.
+  - Privy's success screen must be closed ("All Done") before the page records the step.
+  - The avatar model refused this name as NSFW, a false positive (`/avatar/generate` 503); the agent has no avatar.
 
 **Implemented and tested, not yet live:**
 - Hosted agents' Privy `signUserOperation` (`3166ff35`).
