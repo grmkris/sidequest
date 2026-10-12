@@ -1,7 +1,7 @@
 import { ApiError } from '@sidequest/react'
 import { getAddress } from 'viem'
 import { describe, expect, it } from 'vitest'
-import { backAmount, backingRefusal } from './backing-refusal.ts'
+import { backAmount, backingRefusal, withoutBack } from './backing-refusal.ts'
 
 const agent = '0x8fc161723a85b996163c84b4fd1709e45a0f1f30'
 const refusal = (bond: string, available: string) =>
@@ -44,5 +44,13 @@ describe('backAmount', () => {
     expect(backAmount('?back=-1')).toBeNull()
     expect(backAmount('?back=1e3')).toBeNull()
     expect(backAmount('?back=ten')).toBeNull()
+  })
+})
+
+describe('withoutBack', () => {
+  it('drops only the back amount, so a reload does not reopen the sheet', () => {
+    expect(withoutBack('?back=10')).toBe('')
+    expect(withoutBack('?tab=manage&back=7.5')).toBe('?tab=manage')
+    expect(withoutBack('?tab=manage')).toBe('?tab=manage')
   })
 })

@@ -35,3 +35,11 @@ export function backAmount(search: string): string | null {
   if (back === null || !DECIMAL.test(back) || parseEther(back) === 0n) return null
   return back
 }
+
+/** The page's search without its `back` parameter (`''` or `?…`), once the sheet has taken the amount. */
+export function withoutBack(search: string): string {
+  const params = new URLSearchParams(search)
+  params.delete('back')
+  const rest = params.toString()
+  return rest === '' ? '' : `?${rest}`
+}

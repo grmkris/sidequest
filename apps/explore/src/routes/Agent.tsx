@@ -1,6 +1,6 @@
 import { publicKey } from '../queries.ts'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
 import { BaseError, ContractFunctionRevertedError, maxUint256, zeroAddress } from 'viem'
 import { useReadContracts } from 'wagmi'
@@ -25,7 +25,8 @@ import { useAuth } from '../components/Wallet.tsx'
 import { useOwnedAgent } from '../managed.ts'
 import { chain, deployment } from '../wallet.ts'
 import type { AgentSummary } from '../agent-summary.ts'
-import { backAmount } from '../backing-refusal.ts'
+import { backAmount, withoutBack } from '../backing-refusal.ts'
+import { useReplaceSearch } from '../page-search.ts'
 
 /** The ERC-8004 identity registry's reads the operator console needs (the SDK's ABI has no `tokenURI`). */
 const identityAbi = [
@@ -269,6 +270,11 @@ function Profile({ id }: { id: string }) {
   // A `?back=<SIDE>` link (a backing request or a refused post) opens it with that amount filled in.
   const [backPrefill] = useState(() => backAmount(window.location.search))
   const [backing, setBacking] = useState(backPrefill !== null)
+  // The sheet holds the amount now; drop it from the URL so a reload does not open the sheet again.
+  const replaceSearch = useReplaceSearch()
+  useEffect(() => {
+    if (backPrefill !== null) replaceSearch(withoutBack(window.location.search))
+  }, [])
   const openBacking = () => setBacking(true)
   const again = lastPaidJob(record.data?.jobs ?? [], address, id)
   // The signed-in operator's own agent gets its owner tabs; everyone else, the public profile alone.
