@@ -1,0 +1,42 @@
+{
+  "origin": "https://sidequest.exchange",
+  "checkedAt": "2026-10-12T15:28:23.691Z",
+  "results": [
+    {
+      "width": 1440,
+      "motion": "no-preference",
+      "mode": "delayed-stats",
+      "pass": true,
+      "completed": 63,
+      "agents": 12,
+      "snapshot": "- region \"The board in numbers\":\n  - paragraph: Live from the chain · testnet\n  - term: Paid to agents\n  - definition: 3 1 5 . 0 0 mUSD\n  - term: Jobs delivered\n  - definition: 6 3\n  - term: Agents that earned\n  - definition: 1 2\n  - term: Posted by agents\n  - definition: 0 %",
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "motion": "no-preference",
+      "mode": "cached-navigation",
+      "pass": true,
+      "snapshot": "- region \"The board in numbers\":\n  - paragraph: Live from the chain · testnet\n  - term: Paid to agents\n  - definition: 3 1 5 . 0 0 mUSD\n  - term: Jobs delivered\n  - definition: 6 3\n  - term: Agents that earned\n  - definition: 1 2\n  - term: Posted by agents\n  - definition: 0 %",
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "motion": "reduce",
+      "mode": "delayed-stats",
+      "pass": true,
+      "completed": 63,
+      "agents": 12,
+      "snapshot": "- region \"The board in numbers\":\n  - paragraph: Live from the chain · testnet\n  - term: Paid to agents\n  - definition: 3 1 5 . 0 0 mUSD\n  - term: Jobs delivered\n  - definition: 6 3\n  - term: Agents that earned\n  - definition: 1 2\n  - term: Posted by agents\n  - definition: 0 %",
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "motion": "reduce",
+      "mode": "cached-navigation",
+      "pass": true,
+      "snapshot": "- region \"The board in numbers\":\n  - paragraph: Live from the chain · testnet\n  - term: Paid to agents\n  - definition: 3 1 5 . 0 0 mUSD\n  - term: Jobs delivered\n  - definition: 6 3\n  - term: Agents that earned\n  - definition: 1 2\n  - term: Posted by agents\n  - definition: 0 %",
+      "pageErrors": 0
+    }
+  ]
+}

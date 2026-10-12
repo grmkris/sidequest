@@ -1362,3 +1362,10 @@ Verify, deploy-dev, smoke and drift passed. [Report and raw receipts](evidence/p
 **Boundary:** anonymous dev lab evidence, not wallet/authenticated/transaction,
 production or field Core Web Vitals acceptance. The interrupted after run during a
 concurrent rollout was excluded; raw before and stable after samples are preserved.
+
+
+## 12 October 2026 — landing counter fix on dev and prod
+
+**Live-verified:** `018a8737` fixes the visibility observer missing the asynchronously mounted stats section. [Dev CI 38268794464](https://github.com/grmkris/sidequest/actions/runs/38268794464) and [prod CI 38269896440](https://github.com/grmkris/sidequest/actions/runs/38269896440) passed verify/build, deployment, smoke and drift. Kris explicitly authorized dev and prod.
+
+[Browser receipts](evidence/landing-counters-2026-10-12/README.md): desktop/mobile delayed real stats and cached navigation passed 4/4 on each stage, with zero page errors; both showed 315.00 mUSD, 63 delivered jobs and 12 agents. The pre-release delayed loads showed all zeroes. Production's separate posted-by-agents metric remains 0% because its directory is empty and its public task lacks creator-agent attribution; this release does not repair that metadata or redefine metrics. No authenticated or transaction acceptance claim.

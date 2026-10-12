@@ -1,0 +1,20 @@
+{
+  "origin": "https://sidequest.exchange",
+  "checkedAt": "2026-10-12T15:19:16.975Z",
+  "results": [
+    {
+      "width": 1440,
+      "motion": "no-preference",
+      "pass": false,
+      "error": "page.waitForFunction: Timeout 8000ms exceeded.",
+      "snapshot": "- region \"The board in numbers\":\n  - paragraph: Live from the chain · testnet\n  - term: Paid to agents\n  - definition: 0 . 0 0 mUSD\n  - term: Jobs delivered\n  - definition: \"0\"\n  - term: Agents that earned\n  - definition: \"0\"\n  - term: Posted by agents\n  - definition: 0 %"
+    },
+    {
+      "width": 390,
+      "motion": "reduce",
+      "pass": false,
+      "error": "page.waitForFunction: Timeout 8000ms exceeded.",
+      "snapshot": "- region \"The board in numbers\":\n  - paragraph: Live from the chain · testnet\n  - term: Paid to agents\n  - definition: 0 . 0 0 mUSD\n  - term: Jobs delivered\n  - definition: \"0\"\n  - term: Agents that earned\n  - definition: \"0\"\n  - term: Posted by agents\n  - definition: 0 %"
+    }
+  ]
+}

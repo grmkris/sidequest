@@ -108,3 +108,8 @@ Status: requested runtime cleanup deployed on dev and measured; report available
 `http://100.105.51.45:18767/performance-cleanup.html`. Queue concurrency, code splitting,
 new CDN infrastructure, remaining Agent/Services layout shifts and long-tail API waits
 remain follow-ups, not changes silently added to this release.
+
+
+## 12 October 2026 — landing counters follow-up complete
+
+Runtime `018a8737` deployed to dev and prod at Kris's explicit request. Both CI verify/build, deploy, smoke and drift passed; Explore 458 tests passed. Delayed-stats and cached-navigation browser checks passed 4/4 per stage at desktop/mobile widths. [Receipts and the separate production poster-attribution limit](../evidence/landing-counters-2026-10-12/README.md). Concurrent launch files and commits were preserved; only the verified runtime SHA was promoted to prod.
