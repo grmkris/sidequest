@@ -108,7 +108,7 @@ export const prompts = {
   }),
   selection: (agent: string): WalletPrompt => ({
     title: `Select ${agent}`,
-    description: `Chooses ${agent} for this job, which it starts on chain with this signature. Nothing is paid until you approve the delivery.`,
+    description: `Chooses ${agent} for this job, which it starts on chain with this signature. The reward is paid when you accept the delivery, or when its review window ends without a reply.`,
     buttonText: 'Select',
   }),
   backingPermit: (agent: string, amount: string): WalletPrompt => ({
