@@ -1415,6 +1415,13 @@ Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archi
   `0x72a2d6b791ec3659066cb85d19ba924697d536e29c1d0a928520dd09f769ed3e`. `identity()` reads back the ERC-8004 registry
   `0x8004A818BFB912233c491871b3d84c89A494BD9e`. It is recorded as `deployment.agentSweep`. No sweep has run yet.
 
+- **The routine policy now also allows AgentSweep.** It permits `AgentSweep.sweep` and an approval to AgentSweep alone.
+  It holds 39 rules. Journal hash `a82bb3b3…`, verified 2026-10-12T18:50:21Z.
+- **Rulings no longer go through the relay on dev.** Dev `21712378` (CI 38293159138 passed `deploy-dev`) has
+  `submit_ruling` prepare the transaction. The `sq-arbiter` container was re-pinned to `21712378`. It now sends rulings
+  from the arbitrator `0x96eE…4716`, paying MON, through a journal on the persistent `/state` volume. It still accepts
+  the prod board's relayed answer until prod is promoted. No ruling has been sent this way yet.
+
 **Implemented and tested, not yet live:**
 - Hosted agents' Privy `signUserOperation` (`3166ff35`).
 - The paymaster's Worker quote signer.
