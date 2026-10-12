@@ -1408,6 +1408,8 @@ Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archi
   - EntryPoint deposit 1 MON (tx `0x8c177c16b663c0f64b65ab02818973b9d7b06a046e31fbcb3dd441343e327323`). Stake 1 MON
     with an 86400 s unstake delay (tx `0xc9721d7a7b85abe195ce4cde11da2fc229a4212b4aa0068aa88ac0f0f12821a3`).
   - It is recorded as `accountAbstraction.paymaster` in `contracts/config/monad-testnet.json`.
+  - Recording it adds the rule "gas token approve to the paymaster" (up to `standingApproval`). The live policy now
+    holds 37 rules, 26 of them user-operation rules. Journal hash `b7799828…`, verified 2026-10-12T18:06:23Z.
 
 **Implemented and tested, not yet live:**
 - Hosted agents' Privy `signUserOperation` (`3166ff35`).
