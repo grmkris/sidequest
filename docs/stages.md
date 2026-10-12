@@ -55,6 +55,16 @@ not authenticated host acceptance or a live mainnet proof.
 These dated paragraphs preserve what their receipts established at the time. Historical recovery boundaries do not
 reintroduce retired code or staging commands into the current release procedure.
 
+### Performance and launch-path fixes promoted to prod-testnet — 12 October 2026
+
+On Kris's go, prod moved from `15f1c177` to `52f1d6ae24a69f266feb2760bad9987e3a12285e`
+([CI 38265359410](https://github.com/grmkris/sidequest/actions/runs/38265359410)): Explore's job detail without
+full-list discovery, route accessibility and loading stability, the launch-path release fixes (launch inputs, smoke
+pinned to `MAINNET_LIVE`, RPC origin preflight) and the launch kit's bond command. Deploy updated three resources, the
+re-plan was a no-op, smoke passed under the new release expectations and drift was clean. Prod read Monad testnet,
+writes open, `mainnetLive:false`, anonymous MCP 401 and an indexer 5 s behind; `/job/84`, `/agent/2218` and `/jobs`
+rendered with their titles and no page errors. This is the commit A01–A08 test.
+
 ### Release review fixes on dev and prod-testnet — 12 October 2026
 
 The orchestrator released `15f1c17795f351274a6e71573a4b90b89b803749` to dev
