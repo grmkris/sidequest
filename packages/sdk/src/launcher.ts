@@ -57,14 +57,22 @@ export function launcherGraduated(ctx: Ctx, l: Launcher): Promise<boolean> {
   })
 }
 
-/** The MON a buy of exactly `side` SIDE takes now, after the router's fees: what Explore shows the bond costs. */
-export function launcherSideCost(ctx: Ctx, l: Launcher, side: bigint): Promise<bigint> {
+/**
+ * What it takes now to receive exactly `amountOut`, after the router's fees: the MON for that much SIDE (`buy`) or the
+ * SIDE for that much MON (`sell`). The other half of `launcherQuote`, for a form that lets people type either side.
+ */
+export function launcherQuoteIn(ctx: Ctx, l: Launcher, side: 'buy' | 'sell', amountOut: bigint): Promise<bigint> {
   return ctx.publicClient.readContract({
     address: l.router,
     abi: nadRouterAbi,
     functionName: 'getAmountIn',
-    args: [l.side, side, true],
+    args: [l.side, amountOut, side === 'buy'],
   })
+}
+
+/** The MON a buy of exactly `side` SIDE takes now, after the router's fees: what Explore shows the bond costs. */
+export function launcherSideCost(ctx: Ctx, l: Launcher, side: bigint): Promise<bigint> {
+  return launcherQuoteIn(ctx, l, 'buy', side)
 }
 
 /**

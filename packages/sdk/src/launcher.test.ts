@@ -6,6 +6,7 @@ import { deployment, stack } from './deployment.ts'
 import {
   launcherGraduated,
   launcherQuote,
+  launcherQuoteIn,
   launcherSideCost,
   launcherTransactions,
   MONAD_RESERVE_BALANCE,
@@ -92,6 +93,16 @@ describe("SIDE on nad.fun's router", () => {
     expect(read).toHaveBeenCalledWith(
       expect.objectContaining({ address: l.router, functionName: 'isGraduated', args: [l.side] }),
     )
+  })
+
+  it('quotes what a trade takes for an exact amount out through getAmountIn, either side', async () => {
+    const { c, read } = ctx({ amountOut: 5n })
+    expect(await launcherQuoteIn(c, l, 'sell', 2n)).toBe(5n)
+    expect(read).toHaveBeenLastCalledWith(
+      expect.objectContaining({ address: l.router, functionName: 'getAmountIn', args: [l.side, 2n, false] }),
+    )
+    await launcherQuoteIn(c, l, 'buy', 3n)
+    expect(read).toHaveBeenLastCalledWith(expect.objectContaining({ args: [l.side, 3n, true] }))
   })
 
   it('costs a SIDE amount in MON through getAmountIn, as a buy', async () => {
