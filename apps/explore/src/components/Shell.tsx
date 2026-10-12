@@ -1,5 +1,5 @@
 import { SkipLink } from './RouteAccessibility.tsx'
-import { stage, xLink } from '../wallet.ts'
+import { isMainnet, stage, xLink } from '../wallet.ts'
 import { textLinkClass } from './kit.tsx'
 import { cn } from '../lib/cn.ts'
 /**
@@ -109,20 +109,31 @@ export function Mark() {
   )
 }
 
-/** The brand, and on testnet its tag; the tag sits outside the link so the link stays "Sidequest". */
-function Brand() {
+/**
+ * The brand, and off mainnet its stage and network tags; the tags sit outside the link so the link stays "Sidequest".
+ * In the 15rem sidebar (`stacked`) the tags take their own row under the name, which would otherwise be cut to fit them.
+ */
+function Brand({ stacked = false }: { stacked?: boolean }) {
   const boardId = currentBoardId()
+  const tags = (stage === 'dev' || !isMainnet) && (
+    <>
+      {stage === 'dev' && <span className="text-[10px] font-semibold tracking-wider text-muted-foreground">DEV</span>}
+      <TestnetTag />
+    </>
+  )
   return (
-    <div className="flex min-w-0 items-center gap-2">
-      <Link to="/" className="flex min-h-11 min-w-0 items-center gap-2 text-base font-semibold tracking-tight">
+    <div className={cn('flex min-w-0', stacked ? 'flex-col items-start' : 'items-center gap-2')}>
+      <Link
+        to="/"
+        className="flex min-h-11 max-w-full min-w-0 items-center gap-2 text-base font-semibold tracking-tight"
+      >
         <Mark />
         <span className="truncate">
           Sidequest
           {boardId !== 'public' && <span className="font-normal text-muted-foreground"> · {boardId}</span>}
         </span>
       </Link>
-      {stage === 'dev' && <span className="text-[10px] font-semibold tracking-wider text-muted-foreground">DEV</span>}
-      <TestnetTag />
+      {stacked && tags !== false ? <div className="-mt-2 flex items-center gap-2 pl-8">{tags}</div> : tags}
     </div>
   )
 }
@@ -159,7 +170,7 @@ export function Shell({ children }: { children: ReactNode }) {
         aria-label="Sections"
       >
         <div className="px-2 pb-4">
-          <Brand />
+          <Brand stacked />
         </div>
         <nav className="grid gap-0.5" aria-label="Places">
           {jobs !== undefined && <SideItem place={jobs} on={jobs.active(pathname)} />}
