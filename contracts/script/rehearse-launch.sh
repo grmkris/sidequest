@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # R7: the mainnet launch, end to end, on a throwaway anvil fork of Monad mainnet (chain 143), Monad gas pricing.
 # Steps, in launch order (docs/mainnet-runbook.md, D16):
-#   1. a 1-of-3 Safe from the canonical v1.4.1 SafeProxyFactory + SafeL2 singleton (their code is checked first);
+#   1. a 1-of-1 Safe (the launch shape, note 22 on 12 Oct) from the canonical v1.4.1 SafeProxyFactory + SafeL2
+#      singleton (their code is checked first);
 #   2. SIDE created through the real nad.fun router (Kris's wallet at launch; a dev key here) with the 5% dev buy in the
 #      creation transaction and the creator-fee vault paying the Safe; no burn; transfers to 0x…dEaD work; the dev buy
 #      goes to the Safe, keeping what funds the rehearsal's hires;
@@ -9,7 +10,8 @@
 #      D16 launch gate, which must refuse: the four are only pending;
 #   4. SafeAccept (four execTransactions from an owner), then the D16 gate, which must pass with this Safe's owners and
 #      threshold pinned (LAUNCH-AUDIT-003), and refuse a wrong owner pin and a guard;
-#   5. the Safe goes to 2-of-3 (changeThreshold through execTransaction); the gate refuses the old pin, passes the new;
+#   5. the 2-of-3 due by 20 Oct, in place: two addOwnerWithThreshold calls through execTransaction from the owner; the
+#      gate refuses the 1-of-1 pin and passes the 2-of-3 one (after launch day, so outside the launch budget);
 #   6. two hires paid in SIDE: one delivered, accepted and settled; one never delivered, slashed after its deadline, the
 #      worker bond landing in the sink;
 #   7. a small buy and sell of SIDE through the router;
@@ -116,7 +118,7 @@ kill -0 "$ANVIL_PID" 2>/dev/null || fail "the anvil this run started is not runn
 
 DEPLOYER=$(addr $K_DEPLOYER); OWNER1=$(addr $K_OWNER1); OWNER2=$(addr $K_OWNER2); OWNER3=$(addr $K_OWNER3); KRIS=$(addr $K_KRIS)
 # The Safe policy an artifact would pin for this Safe (deployment.sidequest.safeOwners / safeThreshold), which D16 reads back.
-POLICY="{\"owners\":[\"$OWNER1\",\"$OWNER2\",\"$OWNER3\"],\"threshold\":1}"
+POLICY="{\"owners\":[\"$OWNER1\"],\"threshold\":1}"
 ARBITRATOR=$(addr $K_ARBITRATOR); RELAY=$(addr $K_RELAY); ATTESTER=$(addr $K_ATTESTER); TEAM=$(addr $K_TEAM)
 for k in $K_DEPLOYER $K_OWNER1 $K_OWNER2 $K_RELAY $K_CREATOR $K_WORKER $K_KRIS; do
   cast rpc --rpc-url "$LOCAL" anvil_setBalance "$(addr "$k")" 0x21e19e0c9bab2400000 >/dev/null # 10,000 MON
@@ -131,14 +133,14 @@ done
 for c in $SAFE_SIDE $SAFE_L2 $FALLBACK_HANDLER; do
   [[ "$(cast code --rpc-url "$LOCAL" $c)" != "0x" ]] || fail "no code at canonical Safe contract $c on chain 143"
 done
-SETUP=$(cast calldata "setup(address[],uint256,address,bytes,address,address,uint256,address)" "[$OWNER1,$OWNER2,$OWNER3]" 1 $ZERO 0x $FALLBACK_HANDLER $ZERO 0 $ZERO)
+SETUP=$(cast calldata "setup(address[],uint256,address,bytes,address,address,uint256,address)" "[$OWNER1]" 1 $ZERO 0x $FALLBACK_HANDLER $ZERO 0 $ZERO)
 SALT=$(date +%s)
 SAFE=$(cast call --rpc-url "$LOCAL" --from "$DEPLOYER" $SAFE_SIDE "createProxyWithNonce(address,bytes,uint256)(address)" $SAFE_L2 "$SETUP" "$SALT")
 TX=$(cast send --rpc-url "$LOCAL" --private-key $K_DEPLOYER --json $SAFE_SIDE "createProxyWithNonce(address,bytes,uint256)" $SAFE_L2 "$SETUP" "$SALT" | jq -r .transactionHash)
-budget_hashes "1. Safe (1-of-3, SafeProxyFactory)" "$TX"
+budget_hashes "1. Safe (1-of-1, SafeProxyFactory)" "$TX"
 [[ "$(cast call --rpc-url "$LOCAL" "$SAFE" "getThreshold()(uint256)")" == "1" ]] || fail "Safe threshold"
 [[ "$(cast call --rpc-url "$LOCAL" "$SAFE" "VERSION()(string)")" == '"1.4.1"' ]] || fail "Safe version"
-ok "Safe $SAFE (1.4.1, owners $OWNER1 $OWNER2 $OWNER3, threshold 1)"
+ok "Safe $SAFE (1.4.1, owner $OWNER1, threshold 1)"
 
 # 2. SIDE on nad.fun: created through the router with the 5% dev buy bundled into the creation transaction, the
 # creator fee paid to the Safe. 3,600 MON buys about 5% of the curve at launch; the check below holds it to 4.5–5.5%.
@@ -224,18 +226,23 @@ cast rpc --rpc-url "$LOCAL" anvil_setStorageAt "$SAFE" $GUARD_SLOT "$(cast to-ui
 gate >/tmp/r7-gate.log || fail "D16 gate refused once the guard was cleared: $(cat /tmp/r7-gate.log)"
 ok "D16 refuses a wrong pinned owner set and a Safe guard; passes again once cleared"
 
-# 5. The Safe goes to 2-of-3: changeThreshold(2) through execTransaction, signed by one owner while the threshold is 1.
+# 5. By 20 Oct the 1-of-1 Safe becomes 2-of-3 in place: two execTransactions from the owner while the threshold is 1.
+#    Not a launch-day step, so it is reported apart from the launch budget.
 SIG="0x$(printf '%064s' "${OWNER1#0x}" | tr ' ' 0)$(printf '%064d' 0)01"
 TX=$(cast send --rpc-url "$LOCAL" --private-key $K_OWNER1 --json "$SAFE" \
   "execTransaction(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,bytes)" \
-  "$SAFE" 0 "$(cast calldata 'changeThreshold(uint256)' 2)" 0 0 0 0 $ZERO $ZERO "$SIG" | jq -r .transactionHash)
-budget_hashes "5. Safe to 2-of-3 (changeThreshold)" "$TX"
+  "$SAFE" 0 "$(cast calldata 'addOwnerWithThreshold(address,uint256)' "$OWNER2" 1)" 0 0 0 0 $ZERO $ZERO "$SIG" | jq -r .transactionHash)
+TX2=$(cast send --rpc-url "$LOCAL" --private-key $K_OWNER1 --json "$SAFE" \
+  "execTransaction(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,bytes)" \
+  "$SAFE" 0 "$(cast calldata 'addOwnerWithThreshold(address,uint256)' "$OWNER3" 2)" 0 0 0 0 $ZERO $ZERO "$SIG" | jq -r .transactionHash)
+budget_hashes "5. after launch, by 20 Oct: Safe 1-of-1 to 2-of-3 (addOwnerWithThreshold x2)" "$TX" "$TX2"
 [[ "$(cast call --rpc-url "$LOCAL" "$SAFE" "getThreshold()(uint256)")" == "2" ]] || fail "the Safe threshold did not move to 2"
+[[ "$(cast call --rpc-url "$LOCAL" "$SAFE" "getOwners()(address[])" | tr -cd ',' | wc -c)" -eq 2 ]] || fail "the Safe does not have three owners"
 set +e; REFUSED=$(gate); CODE=$?; set -e
-[[ $CODE -eq 3 ]] || fail "D16 passed with the old threshold pin: $REFUSED"
-POLICY="{\"owners\":[\"$OWNER1\",\"$OWNER2\",\"$OWNER3\"],\"threshold\":2}"
+[[ $CODE -eq 3 ]] || fail "D16 passed with the 1-of-1 pin: $REFUSED"
+POLICY="{\"owners\":[\"$OWNER3\",\"$OWNER2\",\"$OWNER1\"],\"threshold\":2}"
 gate >/tmp/r7-gate.log || fail "D16 refused the 2-of-3 Safe with its new pin: $(cat /tmp/r7-gate.log)"
-ok "the Safe is 2-of-3; D16 refuses the stale threshold pin ($REFUSED) and passes the new one"
+ok "the Safe went 1-of-1 to 2-of-3 in place; D16 refuses the stale pin ($REFUSED) and passes the new one"
 
 # 6. One direct hire.
 log /tmp/r7-hire.log env MAINNET_GO=yes FUNDER_KEY=$K_KRIS CREATOR_KEY=$K_CREATOR WORKER_KEY=$K_WORKER \

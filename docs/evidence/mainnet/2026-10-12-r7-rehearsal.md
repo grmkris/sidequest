@@ -51,3 +51,14 @@ total                                                                           
 The deployer's share is DeploySidequest's 19 transactions: 23,965,192 gas limit, about 2.44 MON at 102 gwei. Kris's
 wallet pays the nad.fun creation, the 5% dev buy (about 3,600 MON plus about 0.19 MON gas) and the transfer to the
 Safe.
+
+## Rerun for the 1-of-1 launch Safe (12 Oct, afternoon)
+
+Kris chose a 1-of-1 Safe for launch, becoming 2-of-3 by 20 Oct (note 22). R7 now creates the Safe with one owner and
+pins `owners: [owner], threshold: 1` for the gate. Step 5 rehearses the later upgrade in place: two
+`addOwnerWithThreshold` calls through `execTransaction`, after which the gate refuses the stale 1-of-1 pin (owners and
+threshold differ) and passes the 2-of-3 pin. `LAUNCH REHEARSAL PASSED` with 48 transactions, a 37,188,134 gas limit and
+about 3.79 MON at 102 gwei. The two upgrade transactions (244,446 gas limit, about 0.025 MON) come after launch day.
+
+In the launch itself, the creator, dev buy and exit test sign from `contracts/script/launch-kit.sh` on Kris's MacBook,
+not from `0xB997…E471` (see `2026-10-12-launch-kit-dry-run.md`).
