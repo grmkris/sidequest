@@ -3,7 +3,7 @@ import { LoadingRows } from './kit.tsx'
 import * as sdk from '@sidequest/sdk'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { type Address, encodeFunctionData, erc20Abi, parseSignature } from 'viem'
 import { useBalance } from 'wagmi'
 import { prompts, useSignTypedDataWithPrompt } from '../wallet-prompt.ts'
@@ -144,7 +144,11 @@ function Stake({
     if (sheet === 'pick' && hasNextPage && !isFetchingNextPage) void fetchNextPage()
   }, [sheet, hasNextPage, isFetchingNextPage, fetchNextPage])
   const signTypedDataAsync = useSignTypedDataWithPrompt()
+  // A new target or mode starts the form empty; the first render keeps `initialAmount` (a `?back=` link's shortfall).
+  const formFor = useRef({ account, mode })
   useEffect(() => {
+    if (formFor.current.account === account && formFor.current.mode === mode) return
+    formFor.current = { account, mode }
     setError(null)
     setText('')
   }, [account, mode])
