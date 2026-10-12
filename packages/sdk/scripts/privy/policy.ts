@@ -150,13 +150,13 @@ export function schema(shape: SigningShape): {
  */
 export const userOpTargets: readonly { name: string; to: string; abi: Abi; methods: readonly string[] }[] = [
   {
-    name: 'SidequestHolding',
+    name: 'Holding',
     to: config.deployment.main.holding,
     abi: sidequestHoldingAbi,
     methods: ['activate', 'cancel', 'cancelSelection', 'claimTopUpRefund', 'settle', 'withdraw', 'publish'],
   },
   {
-    name: 'SidequestEvaluator',
+    name: 'Evaluator',
     to: config.deployment.main.evaluator,
     abi: sidequestEvaluatorAbi,
     methods: [
@@ -172,12 +172,12 @@ export const userOpTargets: readonly { name: string; to: string; abi: Abi; metho
     ],
   },
   {
-    name: 'StakeVault',
+    name: 'Vault',
     to: config.deployment.sidequest.vault,
     abi: stakeVaultAbi,
     methods: ['cancelUndelegate', 'withdraw', 'requestUndelegate'],
   },
-  { name: 'ERC8183', to: config.deployment.core, abi: coreAbi, methods: ['submit', 'submitClaim', 'claimRefund'] },
+  { name: 'Core', to: config.deployment.core, abi: coreAbi, methods: ['submit', 'submitClaim', 'claimRefund'] },
   {
     name: 'DelegationManager',
     to: config.delegation.manager,
@@ -207,6 +207,9 @@ const calling = (abi: Abi, method: string, field: string, operator: string, valu
   value,
 })
 
+/** Privy refuses a rule name of 50 characters or more. */
+export const RULE_NAME_LIMIT = 50
+
 /**
  * The `eth_signUserOperation` rules: each pins the chain, the target, no native value and the function. Approvals pin
  * their spender: any token to the Holding (a hire's reward and bond), and the gas token to the paymaster, at most its
@@ -215,7 +218,7 @@ const calling = (abi: Abi, method: string, field: string, operator: string, valu
 export function userOpRules() {
   const calls = userOpTargets.flatMap((target) =>
     target.methods.map((method) => ({
-      name: `Allow userOp ${target.name}.${method}`,
+      name: `userOp ${target.name}.${method}`,
       method: 'eth_signUserOperation',
       action: 'ALLOW',
       conditions: [
@@ -232,7 +235,7 @@ export function userOpRules() {
       ? []
       : [
           {
-            name: 'Allow userOp gas token approve to the paymaster',
+            name: 'userOp gas token approve to the paymaster',
             method: 'eth_signUserOperation',
             action: 'ALLOW',
             conditions: [
@@ -247,7 +250,7 @@ export function userOpRules() {
   return [
     ...calls,
     {
-      name: 'Allow userOp approve to the Holding',
+      name: 'userOp approve to the Holding',
       method: 'eth_signUserOperation',
       action: 'ALLOW',
       conditions: [
