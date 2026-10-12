@@ -217,6 +217,68 @@ function batcher(input: BuildInput, paymaster: Address, approve: boolean) {
     ])
 }
 
+/**
+ * Our testnet paymaster charges the gas token in postOp, and a bundler's estimate simulates postOp with inflated gas
+ * that the sender's funds can't cover, so estimating with it attached fails (AA50, seen live on dev, whatever overrides
+ * are given). So its ops are estimated unpaid, with only the sender's native balance overridden for the prefund. Its
+ * own fixed limits come from the stub afterwards.
+ */
+const unpaidEstimate = (input: BuildInput, paymaster: Address | null): boolean =>
+  input.aa.paymasterKind === 'sidequest-testnet' && paymaster !== null && input.sponsor === undefined
+
+/** A native balance the sender holds during an unpaid estimate, so the EntryPoint's prefund check passes. */
+const PREFUND_OVERRIDE = 10n ** 24n
+
+/** The bundler's estimate request, unpaid where `unpaidEstimate` says so. */
+function estimateParams(input: BuildInput, op: UserOperation, unpaid: boolean): Json[] {
+  if (!unpaid) return [toBundlerJson(op, input.authorization), input.aa.entryPoint]
+  const {
+    paymaster: _p,
+    paymasterData: _d,
+    paymasterVerificationGasLimit: _v,
+    paymasterPostOpGasLimit: _o,
+    ...bare
+  } = op
+  return [
+    toBundlerJson(bare, input.authorization),
+    input.aa.entryPoint,
+    { [input.sender]: { balance: toHex(PREFUND_OVERRIDE) } },
+  ]
+}
+
+/** Every gas unit the operation's limits name. */
+const limitsOf = (op: UserOperation): bigint =>
+  op.verificationGasLimit +
+  op.callGasLimit +
+  (op.paymasterVerificationGasLimit ?? 0n) +
+  (op.paymasterPostOpGasLimit ?? 0n)
+
+/** After an unpaid estimate: the stub's paymaster limits, then pre-verification gas priced for them. */
+function withStubLimits(op: UserOperation, stub: UserOperation): UserOperation {
+  const unpaidLimits = op.verificationGasLimit + op.callGasLimit
+  const verification = stub.paymasterVerificationGasLimit ?? op.paymasterVerificationGasLimit
+  const postOp = stub.paymasterPostOpGasLimit ?? op.paymasterPostOpGasLimit
+  return scaledPreVerification(
+    {
+      ...op,
+      ...(verification === undefined ? {} : { paymasterVerificationGasLimit: verification }),
+      ...(postOp === undefined ? {} : { paymasterPostOpGasLimit: postOp }),
+    },
+    unpaidLimits,
+  )
+}
+
+/**
+ * On Monad a bundler prices pre-verification gas from the operation's limits, because the chain bills the whole
+ * limit: attaching a paymaster's limits after an unpaid estimate raises what it requires (seen live: 342947 unpaid,
+ * 520126 required once our paymaster's limits were on). It is scaled by how much the limits grew.
+ */
+function scaledPreVerification(op: UserOperation, unpaidLimits: bigint): UserOperation {
+  const paid = limitsOf(op)
+  if (unpaidLimits === 0n || paid <= unpaidLimits) return op
+  return { ...op, preVerificationGas: (op.preVerificationGas * paid + unpaidLimits - 1n) / unpaidLimits }
+}
+
 /** Checks the lane is free and the paymaster is configured; returns the paymaster. */
 async function preflight(input: BuildInput): Promise<Address | null> {
   const paymaster = input.aa.paymaster
@@ -247,13 +309,16 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
     toHex(chainId),
     context,
   ]
+  const unpaid = unpaidEstimate(input, paymaster)
   let op = await draft(input, await batch(aa.maxCostPerOp))
   op = withPaymaster(op, await input.paymaster('pm_getPaymasterStubData', params(op)), sponsored ? null : paymaster)
+  const stub = op
   op = withEstimate(
     op,
-    await input.bundler('eth_estimateUserOperationGas', [toBundlerJson(op, input.authorization), aa.entryPoint]),
+    await input.bundler('eth_estimateUserOperationGas', estimateParams(input, op, unpaid)),
     input.minCallGas ?? 0n,
   )
+  if (unpaid) op = withStubLimits(op, stub)
   op = withPreVerificationMargin(op)
   const maxCost = tokenQuote === null ? 0n : maxTokenCost(op, tokenQuote)
   if (maxCost > aa.maxCostPerOp)

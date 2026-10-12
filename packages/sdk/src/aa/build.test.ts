@@ -5,7 +5,7 @@ import { decodeExecuteCalldata } from '../batch.ts'
 import type { AccountAbstraction } from '../deployment.ts'
 import { buildUserOp, sendUserOp, userOpReceipt } from './build.ts'
 import { maxTokenCost } from './fees.ts'
-import { AaError, field, quantity, type JsonRpc } from './rpc.ts'
+import { AaError, type Json, field, quantity, type JsonRpc } from './rpc.ts'
 import { delegatorTypedData, nonceKey } from './userop.ts'
 
 const key = privateKeyToAccount(`0x${'22'.repeat(32)}`)
@@ -14,7 +14,7 @@ const USDC: Address = '0x534b2f3A21130d7a60830c2Df862319e593943A3'
 const aa: AccountAbstraction = {
   entryPoint: '0x0000000071727De22E5E9d8BAf0edAc6f37da032',
   paymaster: PAYMASTER,
-  paymasterKind: 'sidequest-testnet',
+  paymasterKind: 'pimlico-erc20',
   gasToken: USDC,
   standingApproval: 1_000_000n,
   maxCostPerOp: 100_000n,
@@ -114,6 +114,41 @@ describe('building a user operation', () => {
   it("keeps the call gas at the batch's floor when the estimate is below it", async () => {
     expect((await build(services(), { minCallGas: 300_000n })).op.callGasLimit).toBe(300_000n)
     expect((await build(services(), { minCallGas: 100_000n })).op.callGasLimit).toBe((0x30d40n * 11n) / 10n)
+  })
+
+  it("estimates our testnet paymaster's ops unpaid, then prices pre-verification gas for its limits", async () => {
+    // Live on dev: estimating with it attached fails AA50, since the bundler's inflated simulation outgrows the charge.
+    const s = services({
+      answer: { paymasterVerificationGasLimit: toHex(100_000n), paymasterPostOpGasLimit: toHex(200_000n) },
+    })
+    const bundler = s.bundler
+    let estimated: readonly Json[] = []
+    s.bundler = async (method, params) => {
+      if (method === 'eth_estimateUserOperationGas') estimated = params
+      return bundler(method, params)
+    }
+    const built = await build(s, { aa: { ...aa, paymasterKind: 'sidequest-testnet' } })
+    expect(field(estimated[0], 'paymaster')).toBeUndefined()
+    expect(field(estimated[0], 'paymasterData')).toBeUndefined()
+    expect(field(field(estimated[2], key.address), 'balance')).toBe(toHex(10n ** 24n))
+    expect(built.op.paymasterVerificationGasLimit).toBe(100_000n)
+    expect(built.op.paymasterPostOpGasLimit).toBe(200_000n)
+    const unpaid = 0xf000n + (0x30d40n * 11n) / 10n
+    const scaled = (0x19000n * (unpaid + 300_000n) + unpaid - 1n) / unpaid
+    expect(built.op.preVerificationGas).toBe((scaled * 110n + 99n) / 100n)
+  })
+
+  it("estimates a Pimlico paymaster's ops with it attached", async () => {
+    const s = services()
+    const bundler = s.bundler
+    let estimated: readonly Json[] = []
+    s.bundler = async (method, params) => {
+      if (method === 'eth_estimateUserOperationGas') estimated = params
+      return bundler(method, params)
+    }
+    await build(s)
+    expect(field(estimated[0], 'paymaster')).toBe(PAYMASTER)
+    expect(estimated).toHaveLength(2)
   })
 
   it('appends the standing approval only while the paymaster allowance is short', async () => {
