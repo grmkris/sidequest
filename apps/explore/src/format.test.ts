@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { TOKENS, amount, dayLabel, formatNumber, registerTokens, shortAgo, shortSpan } from './format.ts'
+import { parseUnits } from 'viem'
+import { TOKENS, amount, dayLabel, formatAmount, formatNumber, registerTokens, shortAgo, shortSpan } from './format.ts'
 
 describe('token amount display', () => {
   it('does not guess decimals for unknown tokens', () => {
@@ -36,5 +37,20 @@ describe('list times', () => {
     expect(dayLabel(noon - 3600, noon)).toBe('Today')
     expect(dayLabel(noon - 86_400, noon)).toBe('Yesterday')
     expect(dayLabel(noon - 2 * 86_400, noon)).toMatch(/8/)
+  })
+})
+
+const e18 = (s: string) => parseUnits(s, 18)
+
+describe('formatAmount', () => {
+  it('reads whole units from 1,000, two decimals from 1, four significant digits below, never rounding up', () => {
+    expect(formatAmount(e18('29687.2033'), 18)).toBe('29,687')
+    expect(formatAmount(e18('1000000'), 18)).toBe('1,000,000')
+    expect(formatAmount(e18('10.2759'), 18)).toBe('10.27')
+    expect(formatAmount(e18('1.5'), 18)).toBe('1.5')
+    expect(formatAmount(e18('0.064699'), 18)).toBe('0.06469')
+    expect(formatAmount(e18('0.000012345'), 18)).toBe('0.00001234')
+    expect(formatAmount(0n, 18)).toBe('0')
+    expect(formatAmount(1_500_000n, 6)).toBe('1.5')
   })
 })

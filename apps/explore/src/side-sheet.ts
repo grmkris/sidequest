@@ -1,7 +1,8 @@
 /**
- * The SIDE sheet's decisions, kept pure: what its trade section shows, the MON a Fill puts in the buy, and the `?side`
- * link that opens it. The sheet itself is `components/side/SideToken.tsx`.
+ * The SIDE sheet's decisions, kept pure: what its trade card shows, what a two-way trade sends, and the `?side` link that
+ * opens it. The sheet itself is `components/side/SideToken.tsx`, its card `components/side/TradeCard.tsx`.
  */
+import { minOutFor } from '@sidequest/sdk'
 import { formatUnits, parseEther } from 'viem'
 
 /**
@@ -61,4 +62,38 @@ export function withoutSide(search: string): string {
 export function sideShort(needed: bigint | undefined, held: bigint | undefined): bigint | null {
   if (needed === undefined || held === undefined || held >= needed) return null
   return needed - held
+}
+
+/** Which side of the trade card was typed in: what is paid, or what comes back. The other side is the router's quote. */
+export type Edited = 'pay' | 'get'
+
+/**
+ * What a two-way trade sends. Typed on "You pay": that amount goes in, and the quote (getAmountOut) is what comes back.
+ * Typed on "You get": the quote (getAmountIn) goes in, and the typed amount is what comes back. The floor is always 1%
+ * under what comes back. Null until both the amount and its quote are known.
+ */
+export function tradeAmounts(input: {
+  edited: Edited
+  typed: bigint | null
+  quoted: bigint | undefined
+}): { amountIn: bigint; expectedOut: bigint; minOut: bigint } | null {
+  if (input.typed === null || input.quoted === undefined || input.quoted === 0n) return null
+  const amountIn = input.edited === 'pay' ? input.typed : input.quoted
+  const expectedOut = input.edited === 'pay' ? input.quoted : input.typed
+  return { amountIn, expectedOut, minOut: minOutFor(expectedOut) }
+}
+
+const UNIT = 10n ** 18n
+
+/** SIDE to ask for: whole SIDE, rounded up, from one SIDE up, so a fill never falls a fraction short. */
+export function wholeUp(value: bigint): bigint {
+  if (value < UNIT || value % UNIT === 0n) return value
+  return (value / UNIT + 1n) * UNIT
+}
+
+/** An 18-decimal amount as the trade card fills it in: grouped thousands, every decimal kept ("500,000", "0.5"). */
+export function fillText(value: bigint): string {
+  const [whole = '0', frac = ''] = formatUnits(value, 18).split('.')
+  const grouped = BigInt(whole).toLocaleString('en-US')
+  return frac === '' ? grouped : `${grouped}.${frac}`
 }

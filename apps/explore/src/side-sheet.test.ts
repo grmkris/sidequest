@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { fillMon, sideRequest, sideShort, sideTrade, withoutSide } from './side-sheet.ts'
+import { fillMon, fillText, sideRequest, sideShort, sideTrade, tradeAmounts, wholeUp, withoutSide } from './side-sheet.ts'
+
+const side = (n: bigint) => n * 10n ** 18n
 
 describe('the SIDE sheet', () => {
   const open = { writesOpen: true, launcher: true, address: undefined, authenticated: false }
@@ -40,5 +42,29 @@ describe('the SIDE sheet', () => {
     expect(sideShort(10n, 10n)).toBeNull()
     expect(sideShort(undefined, 4n)).toBeNull()
     expect(sideShort(10n, undefined)).toBeNull()
+  })
+
+  it('sends the typed amount in, or the quote in when the amount out was typed, always with a 1% floor', () => {
+    expect(tradeAmounts({ edited: 'pay', typed: 2_000n, quoted: 30_000n })).toEqual({
+      amountIn: 2_000n,
+      expectedOut: 30_000n,
+      minOut: 29_700n,
+    })
+    expect(tradeAmounts({ edited: 'get', typed: 500_000n, quoted: 33_700n })).toEqual({
+      amountIn: 33_700n,
+      expectedOut: 500_000n,
+      minOut: 495_000n,
+    })
+    expect(tradeAmounts({ edited: 'pay', typed: null, quoted: 1n })).toBeNull()
+    expect(tradeAmounts({ edited: 'get', typed: 5n, quoted: undefined })).toBeNull()
+    expect(tradeAmounts({ edited: 'get', typed: 5n, quoted: 0n })).toBeNull()
+  })
+
+  it('asks for whole SIDE, rounded up, and fills amounts in grouped', () => {
+    expect(wholeUp(side(8_963n) + 80_900_000_000_000_000n)).toBe(side(8_964n))
+    expect(wholeUp(side(500_000n))).toBe(side(500_000n))
+    expect(wholeUp(5n * 10n ** 17n)).toBe(5n * 10n ** 17n)
+    expect(fillText(side(500_000n))).toBe('500,000')
+    expect(fillText(5n * 10n ** 17n)).toBe('0.5')
   })
 })

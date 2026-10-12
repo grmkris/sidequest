@@ -81,6 +81,25 @@ export function formatNumber(value: bigint, decimals: number): string {
   return f === '' ? grouped : `${grouped}.${f}`
 }
 
+/**
+ * An amount as people scan a quote or a balance: whole units from 1,000 up, at most two decimals from 1, four significant
+ * digits below 1 ("29,687", "10.27", "0.0646"). Truncated, never rounded up, so a balance or a minimum never reads high.
+ * For money forms; amounts elsewhere stay `formatNumber`.
+ */
+export function formatAmount(value: bigint, decimals: number): string {
+  const [whole = '0', frac = ''] = formatUnits(value, decimals).split('.')
+  const units = BigInt(whole)
+  const grouped = units.toLocaleString('en-US')
+  if (units >= 1000n) return grouped
+  if (units >= 1n) {
+    const f = frac.slice(0, 2).replace(/0+$/, '')
+    return f === '' ? grouped : `${grouped}.${f}`
+  }
+  const zeros = /^0*/.exec(frac)?.[0].length ?? 0
+  const f = frac.slice(0, zeros + 4).replace(/0+$/, '')
+  return f === '' ? '0' : `0.${f}`
+}
+
 /** "7 mUSD". That testnet tokens have no value is said by the TESTNET tag and the wallet, not after every amount. */
 export function amount(value: string | null | undefined, token: string | null | undefined): string {
   if (value === null || value === undefined) return '—'

@@ -5,7 +5,7 @@ import { explorer } from '../wallet.ts'
 import { selectRadio } from './radio.ts'
 import { cn } from '../lib/cn.ts'
 import { Badge } from './ui/badge.tsx'
-import { Button } from './ui/button.tsx'
+import { Button, buttonVariants } from './ui/button.tsx'
 import { Item, ItemGroup, ItemContent } from './ui/item.tsx'
 import { Skeleton } from './ui/skeleton.tsx'
 
@@ -123,6 +123,72 @@ export function CopyButton({
 }
 
 export const shortAddress = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
+
+const STAT_SIZE = {
+  sm: 'truncate font-medium',
+  md: 'text-base leading-tight font-semibold tracking-tight',
+  lg: 'text-lg leading-tight font-semibold tracking-tight',
+} as const
+
+/** A figure in a `<dl>`: its label, its value in tabular numerals, and an optional line under it. */
+export function Stat({
+  label,
+  value,
+  sub,
+  size = 'lg',
+  className,
+}: {
+  label: ReactNode
+  value: ReactNode
+  sub?: ReactNode
+  size?: keyof typeof STAT_SIZE
+  className?: string
+}) {
+  return (
+    <div className={cn('grid min-w-0 content-start gap-0.5', className)}>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className={cn('min-w-0 tabular-nums', STAT_SIZE[size])}>{value}</dd>
+      {sub !== undefined && <dd className="text-xs text-muted-foreground">{sub}</dd>}
+    </div>
+  )
+}
+
+/**
+ * An address in a quiet row, to copy and open on the explorer: in full where someone sends funds to it, `short` where it
+ * only names a contract or a wallet.
+ */
+export function AddressRow({
+  value,
+  kind = 'address',
+  short = false,
+  copyLabel = 'Copy address',
+  className,
+}: {
+  value: string
+  kind?: 'address' | 'token'
+  short?: boolean
+  copyLabel?: string
+  className?: string
+}) {
+  return (
+    <div className={cn('flex min-w-0 items-center gap-0.5 rounded-lg bg-muted/60 py-1 pr-1 pl-3', className)}>
+      <code title={value} className="min-w-0 flex-1 font-mono text-ui [overflow-wrap:anywhere]">
+        {short ? shortAddress(value) : value}
+      </code>
+      <CopyButton value={value} label={copyLabel} />
+      <a
+        href={explorer(kind, value)}
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Open on the explorer"
+        title="Open on the explorer"
+        className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'text-muted-foreground')}
+      >
+        <ExternalLink aria-hidden />
+      </a>
+    </div>
+  )
+}
 
 /** An address: shortened, linked to the explorer, copyable. */
 export function Address({ value, you = false }: { value: string | null | undefined; you?: boolean }) {
