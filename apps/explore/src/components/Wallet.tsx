@@ -31,6 +31,9 @@ function writeOwner(owner: Owner | null) {
   }
 }
 
+/** The board sign-in in flight on this page, if any: concurrent callers share it. */
+let signingIn: Promise<void> | null = null
+
 /**
  * Log in with Privy (email or social; an embedded wallet), then sign in to the board with SIWE (one signature). The
  * session counts only for the address that signed it and until it expires; a different wallet signs in afresh.
@@ -42,7 +45,15 @@ export function useSignedIn() {
   const { signMessageAsync } = useSignMessage()
   const silentSigner = usePrivySilentSigner()
   /** `silent` signs a checked sign-in message without the wallet's screen (the automatic sign-in after a login). */
-  const signIn = async ({ silent = false }: { silent?: boolean } = {}) => {
+  const signIn = ({ silent = false }: { silent?: boolean } = {}) => {
+    // One sign-in at a time for the whole page: a click while the automatic one runs joins it, so no second
+    // challenge, prompt or session is opened.
+    signingIn ??= signInOnce({ silent }).finally(() => {
+      signingIn = null
+    })
+    return signingIn
+  }
+  const signInOnce = async ({ silent }: { silent: boolean }) => {
     if (address === undefined) throw new Error('log in first')
     const { message } = await tool<{ message: string }>('auth_challenge', { address })
     const signature =
