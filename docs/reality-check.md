@@ -1411,6 +1411,10 @@ Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archi
   - Recording it adds the rule "gas token approve to the paymaster" (up to `standingApproval`). The live policy now
     holds 37 rules, 26 of them user-operation rules. Journal hash `b7799828…`, verified 2026-10-12T18:06:23Z.
 
+- **`AgentSweep` is deployed:** `0x328Ab88D957D753e97956f424Bb3DFcFF74C2106`, tx
+  `0x72a2d6b791ec3659066cb85d19ba924697d536e29c1d0a928520dd09f769ed3e`. `identity()` reads back the ERC-8004 registry
+  `0x8004A818BFB912233c491871b3d84c89A494BD9e`. It is recorded as `deployment.agentSweep`. No sweep has run yet.
+
 **Implemented and tested, not yet live:**
 - Hosted agents' Privy `signUserOperation` (`3166ff35`).
 - The paymaster's Worker quote signer.
