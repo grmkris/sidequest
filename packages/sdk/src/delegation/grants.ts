@@ -26,6 +26,7 @@ export type GrantKind =
   | 'agent-approve-once'
   | 'agent-sweep'
   | 'allowance'
+  | 'gas-allowance'
   | 'allowance-once'
   | 'unstake'
   | 'permission'
@@ -57,6 +58,13 @@ export type GrantSpec = GrantBase &
     | { readonly kind: 'unstake'; readonly shares: bigint; readonly operationId: Hex }
     | { readonly kind: 'agent-sweep'; readonly operator: Address }
     | { readonly kind: 'allowance'; readonly agent: Address; readonly token: Address; readonly amount: bigint }
+    | {
+        readonly kind: 'gas-allowance'
+        readonly agent: Address
+        readonly token: Address
+        readonly amount: bigint
+        readonly periodSeconds: number
+      }
     | { readonly kind: 'allowance-once'; readonly agent: Address; readonly token: Address; readonly amount: bigint }
     /** Permissions on demand (ADR-0015): an operator → agent delegation built by buildPermission. */
     | { readonly kind: 'permission'; readonly agent: Address; readonly expiry: number; readonly terms: PermissionTerms }
@@ -70,6 +78,7 @@ export interface GrantTarget {
 
 export const GRANT_CALLS = 100
 export const GRANT_VALIDITY = 86400
+export const GAS_ALLOWANCE_AMOUNT = 5_000_000n
 export const ALLOWANCE_PERIOD = 7 * 86400
 export const ALLOWANCE_VALIDITY = 30 * 86400
 export const ONE_OFF_VALIDITY = 600
@@ -79,6 +88,7 @@ function uint(value: bigint): Hex {
 }
 
 function caveat(enforcer: Address, terms: Hex): Caveat {
+  // SAFETY: lowercasing a hex string preserves its encoding.
   return { enforcer, terms: terms.toLowerCase() as Hex, args: '0x' }
 }
 
@@ -154,11 +164,13 @@ export function grantTargets(ctx: GrantContext, spec: GrantSpec): readonly Grant
           ),
         ),
       ].map((address) => ({
+        // SAFETY: these addresses originate in the parsed deployment and only their case changed.
         address: address as Address,
         abi: erc20Abi,
         methods: [spec.kind === 'agent-approve' ? 'approve' : 'transfer'],
       }))
     case 'allowance':
+    case 'gas-allowance':
     case 'allowance-once':
       return [{ address: spec.token, abi: erc20Abi, methods: ['transfer'] }]
     case 'unstake':
@@ -184,6 +196,7 @@ export function periodTransferTerms(token: Address, amount: bigint, duration: nu
   ) {
     throw new Error('Invalid period transfer terms')
   }
+  // SAFETY: encodePacked returns hex; lowercasing only normalizes its case.
   return encodePacked(
     ['address', 'uint256', 'uint256', 'uint256'],
     [token, amount, BigInt(duration), BigInt(start)],
@@ -193,7 +206,7 @@ export function periodTransferTerms(token: Address, amount: bigint, duration: nu
 export function grantExpiry(spec: GrantSpec): number {
   if (spec.kind === 'permission') return spec.expiry
   const validity =
-    spec.kind === 'allowance'
+    spec.kind === 'allowance' || spec.kind === 'gas-allowance'
       ? ALLOWANCE_VALIDITY
       : spec.kind === 'registration' ||
           spec.kind === 'allowance-once' ||
@@ -217,17 +230,91 @@ export function grantCallLimit(spec: GrantSpec): number {
 
 /** Whether the delegation carries a LimitedCalls caveat (token permissions are bounded by amount, not by calls). */
 export function grantHasCallLimit(spec: GrantSpec): boolean {
-  return spec.kind !== 'allowance' && (spec.kind !== 'permission' || spec.terms.type === 'sidequest:contract-call')
+  return !periodic(spec) && (spec.kind !== 'permission' || spec.terms.type === 'sidequest:contract-call')
+}
+
+function periodic(spec: GrantSpec): boolean {
+  return spec.kind === 'allowance' || spec.kind === 'gas-allowance'
+}
+
+function recipientFor(ctx: GrantContext, spec: GrantSpec): Address | null {
+  switch (spec.kind) {
+    case 'agent-approve':
+    case 'agent-approve-once':
+      return ctx.stack.holding
+    case 'agent-sweep':
+      return spec.operator
+    case 'allowance':
+    case 'gas-allowance':
+    case 'allowance-once':
+      return spec.agent
+    case 'agent-work':
+    case 'operator':
+    case 'permission':
+    case 'registration':
+    case 'unstake':
+      return null
+  }
+}
+
+function amountCaveats(ctx: GrantContext, spec: GrantSpec): Caveat[] {
+  const e = ctx.deployment.delegation.enforcers
+  switch (spec.kind) {
+    case 'agent-approve-once':
+      if (spec.amount <= 0n || !/^0x[0-9a-fA-F]{64}$/.test(spec.operationId))
+        throw new Error('One-off approval requires a positive amount and its exact operation')
+      return [caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [36n, uint(spec.amount)]))]
+    case 'unstake':
+      if (spec.shares <= 0n || !/^0x[0-9a-fA-F]{64}$/.test(spec.operationId))
+        throw new Error('Unstake requires an exact positive approved operation')
+      return [
+        caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [4n, pad(spec.delegator, { size: 32 })])),
+        caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [36n, uint(spec.shares)])),
+      ]
+    case 'allowance':
+    case 'gas-allowance': {
+      const duration = spec.kind === 'gas-allowance' ? spec.periodSeconds : ALLOWANCE_PERIOD
+      return [caveat(e.erc20PeriodTransfer, periodTransferTerms(spec.token, spec.amount, duration, spec.start))]
+    }
+    case 'allowance-once': {
+      if (spec.amount <= 0n) throw new Error('One-off allowance requires a positive amount')
+      const data = encodeFunctionData({ abi: erc20Abi, functionName: 'transfer', args: [spec.agent, spec.amount] })
+      return [
+        caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [0n, data])),
+        caveat(e.erc20TransferAmount, encodePacked(['address', 'uint256'], [spec.token, spec.amount])),
+      ]
+    }
+    case 'agent-approve':
+    case 'agent-sweep':
+    case 'agent-work':
+    case 'operator':
+    case 'permission':
+    case 'registration':
+      return []
+  }
+}
+
+function scopedCaveats(ctx: GrantContext, spec: GrantSpec): Caveat[] {
+  const e = ctx.deployment.delegation.enforcers
+  const result: Caveat[] = []
+  if (grantHasCallLimit(spec)) result.push(caveat(e.limitedCalls, uint(BigInt(grantCallLimit(spec)))))
+  const recipient = recipientFor(ctx, spec)
+  if (recipient !== null) {
+    if (!isAddress(recipient)) throw new Error('Invalid grant recipient')
+    result.push(caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [4n, pad(recipient, { size: 32 })])))
+  }
+  return [...result, ...amountCaveats(ctx, spec)]
 }
 
 export function buildGrant(ctx: GrantContext, spec: GrantSpec): Delegation {
   if (spec.kind === 'permission') return buildPermission(ctx.deployment, spec)
   if (!isAddress(spec.delegator) || !Number.isSafeInteger(spec.start) || spec.start <= 0 || spec.salt < 0n)
     throw new Error('Invalid grant identity')
-  const { deployment: d, stack } = ctx
+  const d = ctx.deployment
+  if (spec.kind === 'gas-allowance' && (d.aa === null || spec.token.toLowerCase() !== d.aa.gasToken.toLowerCase()))
+    throw new Error('Gas allowance requires the configured USDC gas token')
   const e = d.delegation.enforcers
-  const allowance = spec.kind === 'allowance' || spec.kind === 'allowance-once'
-  const delegate = allowance ? spec.agent : d.relay
+  const delegate = 'agent' in spec ? spec.agent : d.relay
   if (!isAddress(delegate)) throw new Error('Invalid grant delegate')
   const targets = grantTargets(ctx, spec)
   // register(string) only; register() would omit the recorded profile URI.
@@ -241,40 +328,8 @@ export function buildGrant(ctx: GrantContext, spec: GrantSpec): Delegation {
     caveat(e.allowedMethods, concat([...new Set(methods)])),
     caveat(e.valueLte, uint(0n)),
     caveat(e.timestamp, encodePacked(['uint128', 'uint128'], [0n, BigInt(grantExpiry(spec))])),
+    ...scopedCaveats(ctx, spec),
   ]
-  if (spec.kind !== 'allowance') caveats.push(caveat(e.limitedCalls, uint(BigInt(grantCallLimit(spec)))))
-  if (spec.kind === 'agent-approve' || spec.kind === 'agent-approve-once' || spec.kind === 'agent-sweep' || allowance) {
-    const recipient =
-      spec.kind === 'agent-approve' || spec.kind === 'agent-approve-once'
-        ? stack.holding
-        : spec.kind === 'agent-sweep'
-          ? spec.operator
-          : spec.agent
-    if (!isAddress(recipient)) throw new Error('Invalid grant recipient')
-    caveats.push(caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [4n, pad(recipient, { size: 32 })])))
-    if (spec.kind === 'agent-approve-once') {
-      if (spec.amount <= 0n) throw new Error('One-off approval requires a positive amount')
-      if (!/^0x[0-9a-fA-F]{64}$/.test(spec.operationId))
-        throw new Error('One-off approval requires its exact operation')
-      caveats.push(caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [36n, uint(spec.amount)])))
-    }
-  }
-  if (spec.kind === 'unstake') {
-    if (spec.shares <= 0n || !/^0x[0-9a-fA-F]{64}$/.test(spec.operationId))
-      throw new Error('Unstake requires an exact positive approved operation')
-    caveats.push(caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [4n, pad(spec.delegator, { size: 32 })])))
-    caveats.push(caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [36n, uint(spec.shares)])))
-  }
-  if (spec.kind === 'allowance')
-    caveats.push(
-      caveat(e.erc20PeriodTransfer, periodTransferTerms(spec.token, spec.amount, ALLOWANCE_PERIOD, spec.start)),
-    )
-  if (spec.kind === 'allowance-once') {
-    if (spec.amount <= 0n) throw new Error('One-off allowance requires a positive amount')
-    const data = encodeFunctionData({ abi: erc20Abi, functionName: 'transfer', args: [spec.agent, spec.amount] })
-    caveats.push(caveat(e.allowedCalldata, encodePacked(['uint256', 'bytes'], [0n, data])))
-    caveats.push(caveat(e.erc20TransferAmount, encodePacked(['address', 'uint256'], [spec.token, spec.amount])))
-  }
   return { delegator: spec.delegator, delegate, authority: ROOT_AUTHORITY, salt: spec.salt, caveats, signature: '0x' }
 }
 
@@ -299,27 +354,20 @@ export function describeGrant(ctx: GrantContext, spec: GrantSpec, grant: Delegat
     targets: grantTargets(ctx, spec).map((target) => ({ address: target.address, methods: target.methods })),
     validAfter: spec.start,
     expiresAt: grantExpiry(spec),
-    calls: spec.kind === 'allowance' ? null : grantCallLimit(spec),
+    calls: periodic(spec) ? null : grantCallLimit(spec),
     nativeValue: '0',
-    recipient:
-      spec.kind === 'agent-approve' || spec.kind === 'agent-approve-once'
-        ? ctx.stack.holding
-        : spec.kind === 'agent-sweep'
-          ? spec.operator
-          : spec.kind === 'allowance' || spec.kind === 'allowance-once'
-            ? spec.agent
-            : null,
-    token:
-      spec.kind === 'allowance' || spec.kind === 'allowance-once' || spec.kind === 'agent-approve-once'
-        ? spec.token
-        : null,
-    amount:
-      spec.kind === 'allowance' || spec.kind === 'allowance-once' || spec.kind === 'agent-approve-once'
-        ? spec.amount.toString()
-        : null,
+    recipient: recipientFor(ctx, spec),
+    token: 'token' in spec ? spec.token : null,
+    amount: 'amount' in spec ? spec.amount.toString() : null,
     shares: spec.kind === 'unstake' ? spec.shares.toString() : null,
-    periodSeconds: spec.kind === 'allowance' ? ALLOWANCE_PERIOD : null,
+    periodSeconds: grantPeriod(spec),
   }
+}
+
+function grantPeriod(spec: GrantSpec): number | null {
+  if (spec.kind === 'gas-allowance') return spec.periodSeconds
+  if (spec.kind === 'allowance') return ALLOWANCE_PERIOD
+  return null
 }
 
 function permissionGrantFields(terms: PermissionTerms) {

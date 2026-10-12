@@ -27,6 +27,7 @@ import type { AgentRouteRequest } from './routes/agents.ts'
 import { ownerAgentSetup } from './agent-setup-owner.ts'
 import { agentAccess } from './agent-access.ts'
 import { agentProfileManagement } from './agent-profile-management.ts'
+import { agentGasAllowance } from './agent-gas-allowance.ts'
 
 function text(body: Record<string, unknown>, key: string): string {
   const value = body[key]
@@ -122,6 +123,7 @@ export async function agentManagement(input: {
       hex(body, 'hash', 64),
       hex(body, 'signature', 130),
     )
+  if (action.startsWith('gas-allowance-')) return agentGasAllowance({ lifecycle, id, operator, action, body })
   if (action === 'stop-access' || action === 'revoke') {
     // Stopping hosted access is authoritative and comes first. Then the agent's event webhooks end: the revocation is
     // recorded where subscribe and delivery check it. Both steps are idempotent, so if the second fails the operator

@@ -36,6 +36,7 @@ import { runSetupTool } from './agent-setup.ts'
 import { BackingRequestInput, chainBackingReads, requestBacking } from './agent-backing-request.ts'
 import { publicOrigin } from './telegram.ts'
 import { objectFor } from './commons/route.ts'
+import { agentGasAllowance } from './agent-gas-allowance.ts'
 
 const key32 = (key: string) => /^0x[0-9a-fA-F]{64}$/.test(key)
 
@@ -159,6 +160,27 @@ export async function runAgent(runtime: {
       ok: true,
       result: { approvals: agents.approvals(agent.operator).filter((row) => row.agent_id === agent.id) },
     })
+  if (
+    ['prepare_gas_allowance', 'edit_gas_allowance', 'confirm_gas_allowance', 'revoke_gas_allowance'].includes(req.tool)
+  ) {
+    const actions: Readonly<Record<string, string>> = {
+      prepare_gas_allowance: 'gas-allowance-prepare',
+      edit_gas_allowance: 'gas-allowance-edit',
+      confirm_gas_allowance: 'gas-allowance-confirm',
+      revoke_gas_allowance: 'gas-allowance-revoke',
+    }
+    const lifecycle = new AgentLifecycle({ sql, context: ctx, now: () => Math.floor(Date.now() / 1000), sponsor })
+    return toJson({
+      ok: true,
+      result: await agentGasAllowance({
+        lifecycle,
+        id: agent.id,
+        operator: agent.operator,
+        action: actions[req.tool]!,
+        body: args,
+      }),
+    })
+  }
   const permissions = new AgentPermissions({ sql, context: ctx, now: () => Math.floor(Date.now() / 1000) })
   if (req.tool === 'get_supported_permissions')
     return toJson({ ok: true, result: sdk.supportedPermissions(ctx.deployment) })

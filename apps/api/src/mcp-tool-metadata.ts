@@ -50,6 +50,14 @@ const PUBLISHER_OUTPUT_SCHEMAS: Readonly<Record<string, Record<string, unknown>>
     }),
   ),
   agent_status: envelope(objectOutput({ state: stringOutput, allowances: listOutput })),
+  prepare_gas_allowance: envelope(
+    objectOutput({ hash: stringOutput, typedData: stringOutput, transactions: listOutput }),
+  ),
+  edit_gas_allowance: envelope(objectOutput({ hash: stringOutput, typedData: stringOutput, transactions: listOutput })),
+  confirm_gas_allowance: envelope(
+    objectOutput({ hash: stringOutput, status: stringOutput, gasAllowances: listOutput }),
+  ),
+  revoke_gas_allowance: envelope(objectOutput({ hash: stringOutput, status: stringOutput, transactions: listOutput })),
   task_index: envelope(listOutput),
   list_tasks: envelope({
     type: 'array',

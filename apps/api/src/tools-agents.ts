@@ -1,7 +1,47 @@
 /** Management tools are executed by the reserved object, never by a tenant board. */
 const object = { type: 'object', properties: {} }
+const gasAllowanceInput = {
+  type: 'object',
+  properties: {
+    key: { type: 'string', pattern: '^[A-Za-z0-9_-]{1,128}$' },
+    amount: { type: 'string', pattern: '^[1-9][0-9]{0,77}$' },
+    periodSeconds: { type: 'integer', minimum: 1, maximum: 2592000 },
+  },
+  required: ['key'],
+  additionalProperties: false,
+}
 
 export const agentTools = {
+  prepare_gas_allowance: {
+    description:
+      'Prepare a separate operator-funded USDC gas budget for this agent (default 5 USDC per week). Return the typed data to the operator to sign. Nothing moves until the operator signs and an agent action redeems it.',
+    inputSchema: gasAllowanceInput,
+  },
+  edit_gas_allowance: {
+    description:
+      'Prepare a replacement USDC gas budget with a new request key. The operator sends returned disable transactions before signing and confirming the new Delegation.',
+    inputSchema: gasAllowanceInput,
+  },
+  confirm_gas_allowance: {
+    description:
+      'Confirm the operator signature for a prepared gas budget. Requires onchain proof that every previous gas allowance was disabled or expired.',
+    inputSchema: {
+      type: 'object',
+      properties: { key: { type: 'string' }, hash: { type: 'string' }, signature: { type: 'string' } },
+      required: ['key', 'hash', 'signature'],
+      additionalProperties: false,
+    },
+  },
+  revoke_gas_allowance: {
+    description:
+      'Stop hosted use of this agent gas budget and return the disable transaction for its operator to send. A repeated call verifies onchain disable proof.',
+    inputSchema: {
+      type: 'object',
+      properties: { hash: { type: 'string' } },
+      required: ['hash'],
+      additionalProperties: false,
+    },
+  },
   create_agent: {
     description:
       'Create an operator-owned agent wallet and profile from a setup connection. Agree the name, purpose and avatar idea with your human first. Give them approveUrl; creation grants no work or hire authority. It answers before the avatar is drawn: profile.image is null until it is (usually under a minute), and the approval page shows it then. Retry identical arguments with the same operationKey.',

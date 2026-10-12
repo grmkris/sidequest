@@ -69,6 +69,28 @@ describe('spec v2 grant templates', () => {
     ).toBe(true)
   })
 
+  it('builds a separate gas allowance only for configured USDC', () => {
+    const spec = {
+      kind: 'gas-allowance' as const,
+      delegator: operator,
+      agent,
+      token: d.aa!.gasToken,
+      amount: 5_000_000n,
+      periodSeconds: 7 * 86400,
+      salt: 9n,
+      start: now,
+    }
+    const grant = buildGrant(ctx, spec)
+    expect(describeGrant(ctx, spec, grant)).toMatchObject({
+      kind: 'gas-allowance',
+      amount: '5000000',
+      periodSeconds: 7 * 86400,
+      calls: null,
+      recipient: agent,
+    })
+    expect(() => buildGrant(ctx, { ...spec, token: d.rewardTokens[0]! })).toThrow('configured USDC')
+  })
+
   it('does not accept a mutated grant', () => {
     const spec = { kind: 'registration' as const, delegator: operator, salt: 2n, start: now }
     const grant = buildGrant(ctx, spec)
