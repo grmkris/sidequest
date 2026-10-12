@@ -169,16 +169,20 @@ export async function agentManagement(input: {
         : lifecycle.recoverApproval(id, operator)
     const agent = agents.owned(approval.agent_id, operator)
     const operation = agents.operation(approval.operation_id)
+    // A declined pick's request is released before the agent is told, so the notice says what actually happened.
+    const reopen = approval.status === 'approved' ? {} : await reopenDeclinedPick(approval, operation, input.execute)
     if (action === 'approval-decide')
       await recordAgentEvents(
         bindings.Database === undefined ? undefined : fromD1(bindings.Database as never),
         context.deployment.network,
         operator,
-        decisionFeedEvents(context.deployment.network, agent, approval, operation, now()),
+        decisionFeedEvents(context.deployment.network, agent, approval, operation, {
+          now: now(),
+          reopened: reopen.reopened,
+        }),
         now(),
       )
-    if (approval.status !== 'approved')
-      return { approval, ...(await reopenDeclinedPick(approval, operation, input.execute)) }
+    if (approval.status !== 'approved') return { approval, ...reopen }
     return input.execute(
       agent.id,
       operation.tool,

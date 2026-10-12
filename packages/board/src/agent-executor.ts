@@ -230,7 +230,13 @@ export class AgentExecutor {
     const next = { tool: 'list_quotes', args: { requestId } } as const
     if (this.agents.step(operation.id, 'reopened') !== undefined) return { next }
     try {
-      await this.deps.prepareTool({ tool: 'release_pick', args: { requestId, taskId }, caller: { address } })
+      const released = await this.deps.prepareTool({
+        tool: 'release_pick',
+        args: { requestId, taskId },
+        caller: { address },
+      })
+      // A pick that published, or whose request moved on, is not reopened: say so by returning nothing.
+      if (!(released instanceof Object && 'released' in released && released.released === true)) return {}
     } catch (error) {
       console.error(
         JSON.stringify({ event: 'pick-reopen-failed', operationId: operation.id, ...errorDiagnostics(error) }),

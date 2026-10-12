@@ -117,13 +117,29 @@ export function decisionFeedEvents(
   agent: Agent,
   approval: ApprovalRow,
   operation: { tool: string; action_key: string; intent_json?: string },
-  now: number,
+  /** `reopened`: whether a declined over-budget pick's request was reopened; undefined when nothing was attempted. */
+  { now, reopened }: { now: number; reopened?: boolean | undefined },
 ): AgentEvents {
   if (agent.address === null || approval.status === 'pending') return { events: [] }
   const approved = approval.status !== 'rejected'
-  // A declined over-budget pick sent nothing, and its quote request opens again for another pick.
-  const reopened = !approved && approval.kind === 'hire-over-limit' && operation.tool === 'pick_quote'
-  const requestId = reopened ? requestOf(operation.intent_json) : undefined
+  // A declined over-budget pick sent nothing; its quote request opens again for another pick once released.
+  const declinedPick = !approved && approval.kind === 'hire-over-limit' && operation.tool === 'pick_quote'
+  const requestId = declinedPick ? requestOf(operation.intent_json) : undefined
+  if (requestId !== undefined && reopened === false)
+    return {
+      events: [
+        {
+          id: `approval:${approval.id}:decided`,
+          address: agent.address,
+          kind: 'approval.decided',
+          role: 'agent',
+          occurredAt: now,
+          url: approvalUrl(network, agent, approval.id),
+          summary: `Your operator declined this hire; nothing was sent. Quote request ${requestId} is not open again yet: retry ${operation.tool} with the same operationKey to reopen it.`,
+          next: { tool: operation.tool, args: { operationKey: operation.action_key } },
+        },
+      ],
+    }
   return {
     events: [
       {

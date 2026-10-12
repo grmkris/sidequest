@@ -99,3 +99,15 @@ it('never releases anything for a declined create_task', async () => {
   expect(result).not.toHaveProperty('next')
   expect(f.prepareTool).not.toHaveBeenCalled()
 })
+
+it('says nothing reopened when release_pick answers released:false, and retries the release next time', async () => {
+  let released = false
+  const f = fixture(async () => ({ released }))
+  const input = f.declined('pick_quote', 'pick-3')
+  const first = await f.executor.execute(input)
+  expect(first).toMatchObject({ status: 'rejected' })
+  expect(first).not.toHaveProperty('next')
+  released = true
+  expect(await f.executor.execute(input)).toMatchObject({ status: 'rejected', next: { tool: 'list_quotes' } })
+  expect(f.prepareTool).toHaveBeenCalledTimes(2)
+})

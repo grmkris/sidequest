@@ -92,12 +92,12 @@ describe('management feed events', () => {
   it('tells the agent the decision, with a retry only when approved', () => {
     const operation = { tool: 'create_task', action_key: 'k9' }
     expect(
-      decisionFeedEvents(network, agent, { ...approval, status: 'approved' }, operation, now).events[0],
+      decisionFeedEvents(network, agent, { ...approval, status: 'approved' }, operation, { now }).events[0],
     ).toMatchObject({ kind: 'approval.decided', next: { tool: 'create_task', args: { operationKey: 'k9' } } })
     expect(
-      decisionFeedEvents(network, agent, { ...approval, status: 'rejected' }, operation, now).events[0]!.next,
+      decisionFeedEvents(network, agent, { ...approval, status: 'rejected' }, operation, { now }).events[0]!.next,
     ).toBeUndefined()
-    expect(decisionFeedEvents(network, agent, approval, operation, now).events).toEqual([])
+    expect(decisionFeedEvents(network, agent, approval, operation, { now }).events).toEqual([])
   })
 
   it('tells the agent a declined over-budget pick sent nothing and reopened its request', () => {
@@ -107,9 +107,14 @@ describe('management feed events', () => {
       intent_json: JSON.stringify({ requestId: 'r7', quoteId: 'q1' }),
     }
     const declined = { ...approval, kind: 'hire-over-limit' as const, status: 'rejected' as const }
-    expect(decisionFeedEvents(network, agent, declined, pick, now).events[0]).toMatchObject({
+    expect(decisionFeedEvents(network, agent, declined, pick, { now, reopened: true }).events[0]).toMatchObject({
       summary: expect.stringContaining('Quote request r7 is open again'),
       next: { tool: 'list_quotes', args: { requestId: 'r7' } },
+    })
+    // The release failed: the agent retries the same pick, which re-attempts it, instead of a new key.
+    expect(decisionFeedEvents(network, agent, declined, pick, { now, reopened: false }).events[0]).toMatchObject({
+      summary: expect.stringContaining('is not open again yet'),
+      next: { tool: 'pick_quote', args: { operationKey: 'p1' } },
     })
   })
 })
