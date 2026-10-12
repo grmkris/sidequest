@@ -9,7 +9,7 @@ import { CreateAgent } from '../components/agent/CreateAgent.tsx'
 import { StartPrompt } from '../components/AgentStartLink.tsx'
 import { BackingManager } from '../components/BackingManager.tsx'
 import { BoardLink } from '../components/BoardLink.tsx'
-import { CopyButton, PageTitle, textLinkClass } from '../components/kit.tsx'
+import { AddressRow, PageTitle, textLinkClass } from '../components/kit.tsx'
 import { NeedsBacking } from '../components/backing/NeedsBacking.tsx'
 import { hires, newestAgent, useOnboardingFacts } from '../components/onboarding/useOnboardingFacts.ts'
 import { PrivyLogin } from '../components/Privy.tsx'
@@ -263,10 +263,7 @@ function Fund({ address }: { address: Address }) {
     )
   return (
     <div className="grid gap-3">
-      <div className="flex min-w-0 items-center gap-2 rounded-xl bg-muted px-3.5 py-3">
-        <code className="min-w-0 flex-1 font-mono text-sm [overflow-wrap:anywhere]">{address}</code>
-        <CopyButton value={address} label="Copy your address" />
-      </div>
+      <AddressRow value={address} copyLabel="Copy your address" />
       <p className="text-xs text-muted-foreground">
         Send USDC on Monad for gas, or use {chain.nativeCurrency.symbol}. Buying SIDE with MON also needs MON for the
         purchase.

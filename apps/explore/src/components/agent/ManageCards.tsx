@@ -23,6 +23,7 @@ import { Countdown, useNow } from '../Time.tsx'
 import { TokenAmount } from '../token/TokenAmount.tsx'
 import { Button } from '../ui/button.tsx'
 import { Meter } from '../ui/meter.tsx'
+import { AmountField } from '../money/AmountField.tsx'
 
 /** A titled card of the Manage tab; `id` lets the Overview's next steps scroll to it. */
 export function ManageCard({
@@ -319,16 +320,16 @@ export function AgentOwnedBacking({
             </p>
           )}
           {position.activeShares > 0n && (
-            <div className="flex flex-wrap gap-2">
-              <input
+            <div className="grid gap-2">
+              <AmountField
+                label="Agent-owned amount to leave"
                 value={unstake}
-                onChange={(event) => setUnstake(event.target.value)}
-                placeholder="SIDE amount"
-                aria-label="Agent-owned amount to leave"
-                inputMode="decimal"
-                className="min-h-8 w-full min-w-0 flex-1 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm pointer-coarse:min-h-11 dark:bg-input/30"
+                onChange={setUnstake}
+                token={deployment.factory}
+                symbol="SIDE"
               />
               <Button
+                className="w-fit"
                 variant="secondary"
                 busy={action.busy}
                 disabled={!requestReady}
