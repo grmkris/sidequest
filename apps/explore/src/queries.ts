@@ -3,7 +3,7 @@ import { queryOptions } from '@tanstack/react-query'
 import { type BoardInfo, boardApi, chainJobs, currentBoardId, data, fetchDirectory, taskIndex } from './api.ts'
 import { chain } from './wallet.ts'
 
-export const queryScope = (boardId = 'public') => ({
+const queryScope = (boardId = 'public') => ({
   origin: boardApi(boardId).baseUrl || globalThis.location?.origin || 'same-origin',
   chainId: chain.id,
   boardId,

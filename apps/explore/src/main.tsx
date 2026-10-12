@@ -32,7 +32,7 @@ import { CommonsPage } from './routes/Commons.tsx'
 import { RoadmapItemPage } from './routes/RoadmapItem.tsx'
 import { GapPage } from './routes/Gap.tsx'
 import './styles.css'
-import { wagmiConfig } from './wallet.ts'
+import { chain, wagmiConfig } from './wallet.ts'
 import { AgentPage } from './routes/Agent.tsx'
 import { WalletPage } from './routes/Wallet.tsx'
 import { ConnectPage } from './routes/Connect.tsx'
@@ -373,6 +373,18 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error
 }
 
 const queryClient = new QueryClient()
+
+// Explicit per-tab opt-in. The recorder is a separate chunk and never sends telemetry.
+try {
+  if (sessionStorage.getItem('sidequest:diagnostics') === '1')
+    void import('./diagnostics.ts')
+      .then(({ installDiagnostics }) => installDiagnostics(queryClient, chain.rpcUrls.default.http))
+      .catch(() => {
+        /* Optional diagnostics must not interrupt the app. */
+      })
+} catch {
+  /* The app also works with browser storage disabled. */
+}
 
 createRoot(document.getElementById('root') as HTMLElement).render(
   <StrictMode>

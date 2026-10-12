@@ -1,7 +1,7 @@
 /** Mutations refresh affected resource families; unrelated directory, profile and inbox reads stay warm. */
 import type { QueryClient, QueryKey } from '@tanstack/react-query'
 
-export const BALANCE_READS = [
+const BALANCE_READS = [
   'balance',
   'readContract',
   'readContracts',
