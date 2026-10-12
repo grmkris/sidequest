@@ -13,6 +13,18 @@ afterEach(() => {
   for (const db of databases.splice(0)) db.close()
 })
 
+it.each([null, '2081'])(
+  'keeps creator %s and creation time on task detail without a second index read',
+  async (agentId) => {
+    const f = fixture()
+    f.sql.run('UPDATE tasks SET creator_agent_id = ? WHERE id = ?', agentId, 'alice-own')
+    const expected = f.board.taskIndex({}).find((task) => task.taskId === 'alice-own')!
+    const detail = await f.board.getTask({}, { taskId: 'alice-own' })
+    expect(detail.createdAt).toBe(expected.createdAt)
+    expect(detail.creatorAgentId).toBe(expected.creatorAgentId)
+  },
+)
+
 function fixture() {
   const base = sdk.context('monad-testnet', 'main', 'http://127.0.0.1:1')
   const read = vi.fn(async ({ functionName }: { functionName: string }): Promise<string | number | boolean> => {

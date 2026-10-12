@@ -59,8 +59,9 @@ import {
   type ForeignOffer,
   type JobOfferFields,
 } from '../job-offer.tsx'
-import { useJobs, usePosterAgents } from './Jobs.tsx'
+import { usePosterAgents } from './Jobs.tsx'
 import { JOBS_LABEL } from '../places.ts'
+import { jobAttribution, jobListingFallback, taskFromDetail, type FrozenTask } from '../job-detail.ts'
 
 export type { JobEvent }
 
@@ -103,17 +104,7 @@ interface Detail {
 }
 
 /** The board's `get_task` answer, as far as this page reads it. */
-interface BoardTask {
-  taskId: string
-  title: string
-  mode: 'hire'
-  stack: string
-  creator: string
-  approver: string
-  deliveryDeadline: number
-  workerBond: string
-  termsHash: string
-  screening: { verdict: string; reasons: string[] }
+interface BoardTask extends FrozenTask {
   chain: {
     status: string
     provider: string | null
@@ -128,11 +119,6 @@ interface BoardTask {
   }
   you: string[] | null
   selection?: ActionJob['selection']
-  terms: {
-    brief?: string
-    acceptanceCriteria?: string[]
-    windows?: { reviewSeconds: number; disputeSeconds: number; arbitrationSeconds: number }
-  }
   deliverables?: Array<{
     repo: string
     branch: string
@@ -188,8 +174,6 @@ export function JobPage({
   const params = useParams({ strict: false }) as { jobId?: string }
   const jobId = given ?? params.jobId ?? ''
   const now = useNow()
-  const { items } = useJobs()
-  const listed = items.find((i) => i.jobId === jobId)?.task
   const chain = useQuery({
     queryKey: publicKey('job', jobId),
     queryFn: () => data<Detail>(`jobs/${jobId}`),
@@ -197,9 +181,14 @@ export function JobPage({
     enabled: /^\d+$/.test(jobId),
   })
   const d = chain.data
+  /**
+   * The indexed job detail includes its board and task attribution. Only missing attribution needs the
+   * board index scan: it keeps newly published/local offers visible while avoiding the full jobs and task-index reads
+   * on the normal detail path. The selected row is immutable offer metadata; chain/detail remains authoritative.
+   */
+  const listingFallback = useQuery(jobListingFallback(currentBoardId(), jobId, chain.isFetched && d?.board == null))
   // The offer lives on the board it was frozen on, which may not be the one this page is on.
-  const boardId = d?.board?.boardId ?? currentBoardId()
-  const taskId = d?.board?.taskId ?? listed?.taskId
+  const { boardId, taskId, local } = jobAttribution(currentBoardId(), d?.board, listingFallback.data)
   const board = useQuery({
     queryKey: boardKey(boardId, 'get_task', boardId, taskId, auth.address?.toLowerCase(), auth.signedIn),
     queryFn: () => boardApi(boardId).tool<BoardTask>('get_task', { taskId }),
@@ -207,6 +196,7 @@ export function JobPage({
     refetchInterval: 15_000,
   })
   const t = board.data
+  const listed = taskFromDetail(t, jobId, local)
   const roles = auth.signedIn ? (t?.you ?? []) : []
 
   let input: LifecycleInput | null = null
@@ -260,7 +250,16 @@ export function JobPage({
   const delivered = d?.job.deliverable != null
   const otherBoard = d?.board != null && d.board.boardId !== currentBoardId() && d.board.boardId !== 'public'
 
-  if (chain.isLoading && listed === undefined) return <JobSkeleton />
+  if (!/^\d+$/.test(jobId)) {
+    return (
+      <>
+        <Back />
+        <h1 className="text-2xl font-semibold">That is not a Job ID</h1>
+        <p>Jobs use a number, like 84.</p>
+      </>
+    )
+  }
+  if ((chain.isLoading || listingFallback.isLoading || board.isLoading) && listed === undefined) return <JobSkeleton />
   if (d !== undefined && d.job.kind !== 'sidequest-v1') {
     return (
       <>
@@ -546,15 +545,22 @@ function JobSkeleton() {
   return (
     <>
       <Back />
-
-      <div className="grid gap-3">
-        <Skeleton className="h-8 w-4/5" />
-        <Skeleton className="h-4 w-2/5" />
+      <output className="sr-only">Loading job details</output>
+      <header className="grid min-w-0 gap-2" aria-hidden>
+        <Skeleton className="h-14 w-4/5 sm:h-8" />
+        <Skeleton className="h-6 w-3/5" />
+        <Skeleton className="h-5 w-2/5" />
+      </header>
+      <div className="grid min-w-0 gap-7 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-x-8" aria-hidden>
+        <div className="grid content-start gap-7">
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-40 rounded-xl" />
+        </div>
+        <div className="grid content-start gap-4">
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-40 rounded-xl" />
+        </div>
       </div>
-
-      <Skeleton className="h-20 w-full rounded-2xl" />
-
-      <Skeleton className="h-40 w-full rounded-xl" />
     </>
   )
 }
@@ -702,7 +708,7 @@ function Dispute({
           : undefined
       }
     >
-      <ItemGroup className="px-4 py-2">
+      <ItemGroup role="presentation" className="px-4 py-2">
         {d.job.violation !== null && <Row label="Rejected as">{VIOLATION[d.job.violation] ?? d.job.violation}</Row>}
         <Row label="Reason">
           {reason ?? <span className="font-mono text-ui">{d.job.rejection_reason_hash?.slice(0, 14) ?? '—'}…</span>}

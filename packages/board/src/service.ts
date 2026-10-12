@@ -3797,6 +3797,8 @@ export class Board {
     const nextAction = this.#openNextAction(task, view, caller, creatorSelection)
     const summary = {
       taskId: task.id,
+      creatorAgentId: task.creator_agent_id ?? null,
+      createdAt: task.created_at,
       title: terms.title,
       mode: terms.mode,
       stack: task.stack,
