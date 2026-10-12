@@ -4,7 +4,7 @@ import { useFeedJobs } from './activity/useActivityFeed.ts'
 import { AgentOrb } from './agent/AgentOrb.tsx'
 import { BoardLink, type LinkTarget } from './BoardLink.tsx'
 import { CardAction, CardLink, useCardFrame } from './CardLink.tsx'
-import { CopyButton, shortAddress } from './kit.tsx'
+import { CopyButton, Stat, shortAddress } from './kit.tsx'
 import { TokenAmount } from './token/TokenAmount.tsx'
 import { Badge } from './ui/badge.tsx'
 import { Skeleton } from './ui/skeleton.tsx'
@@ -14,12 +14,7 @@ import { Monogram, useAuth } from './Wallet.tsx'
 const walletTarget = (address: string): LinkTarget => ({ to: '/wallet/$address', params: { address } })
 
 function Figure({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="grid min-w-0 content-start gap-0.5">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 truncate font-medium tabular-nums">{children}</dd>
-    </div>
-  )
+  return <Stat size="sm" label={label} value={children} />
 }
 
 /** A wallet's card: its mark and address, what it posted, paid out and who it hired, and its page. */

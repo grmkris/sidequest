@@ -5,25 +5,14 @@
  */
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover'
 import { CircleCheck, CircleX, Flame, RotateCcw, TriangleAlert } from 'lucide-react'
-import type { ReactNode } from 'react'
 import { type MoneyLine, moneyLines, sinceDay, success } from '../../agent-stats.ts'
 import { formatNumber, relative, span, tokenInfo } from '../../format.ts'
 import { type AgentRecord, type MoneyTotals, ratings, times } from '../../routes/Agent.tsx'
 import { useTokenList } from '../../useTokens.ts'
+import { Stat } from '../kit.tsx'
 import { StaticTokens, TokenAmount } from '../token/TokenAmount.tsx'
 import { TokenIcon } from '../token/TokenIcon.tsx'
 import { Popover, PopoverContent } from '../ui/popover.tsx'
-
-/** One figure of the strip: its label, its value, and a line under it. */
-function Figure({ label, value, sub }: { label: ReactNode; value: ReactNode; sub?: ReactNode }) {
-  return (
-    <div className="grid min-w-0 content-start gap-0.5">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="text-lg leading-tight font-semibold tracking-tight tabular-nums">{value}</dd>
-      {sub !== undefined && <dd className="text-xs text-muted-foreground">{sub}</dd>}
-    </div>
-  )
-}
 
 /** Gross in the strip (the largest token, "+N" for the rest), the per-token breakdown on press or hover. */
 function MoneyFigure({
@@ -36,10 +25,10 @@ function MoneyFigure({
   net: string
 }) {
   const { lines, all } = moneyLines(totals, 1)
-  if (all.length === 0) return <Figure label={label} value="—" />
+  if (all.length === 0) return <Stat label={label} value="—" />
   const more = all.length - lines.length
   return (
-    <Figure
+    <Stat
       label={label}
       value={
         <Popover>
@@ -118,9 +107,9 @@ export function HeroStats({ record, now, owner = false }: { record: AgentRecord;
       <dl className="flex flex-wrap gap-x-8 gap-y-3 px-1">
         {took > 0 &&
           (s.rate !== null ? (
-            <Figure label="Success" value={`${Math.round(s.rate * 100)} %`} sub={`${s.paid} of ${s.settled} paid`} />
+            <Stat label="Success" value={`${Math.round(s.rate * 100)} %`} sub={`${s.paid} of ${s.settled} paid`} />
           ) : (
-            <Figure
+            <Stat
               label="Paid"
               value={s.settled === 0 ? '—' : `${s.paid} of ${s.settled}`}
               sub={s.settled === 0 ? 'None settled yet' : 'Settled jobs'}
@@ -128,7 +117,7 @@ export function HeroStats({ record, now, owner = false }: { record: AgentRecord;
           ))}
         {took > 0 && <MoneyFigure label="Earned" totals={earned} net="Net is what reached the agent's wallet." />}
         {posted > 0 && (
-          <Figure
+          <Stat
             label="Posted"
             value={posted}
             sub={(record.hiring?.open ?? 0) > 0 ? `${record.hiring?.open} open` : 'None open'}
@@ -138,10 +127,10 @@ export function HeroStats({ record, now, owner = false }: { record: AgentRecord;
           <MoneyFigure label="Paid out" totals={record.hiring?.paidOut} net="Net is what its workers received." />
         )}
         {t?.medianTurnaroundSeconds != null && (
-          <Figure label="Delivers in" value={span(t.medianTurnaroundSeconds)} sub={`median of ${t.turnarounds}`} />
+          <Stat label="Delivers in" value={span(t.medianTurnaroundSeconds)} sub={`median of ${t.turnarounds}`} />
         )}
         {t?.activeSince != null && (
-          <Figure
+          <Stat
             label="Since"
             value={sinceDay(t.activeSince, now)}
             {...(t.lastActive === null ? {} : { sub: `active ${relative(t.lastActive, now)}` })}

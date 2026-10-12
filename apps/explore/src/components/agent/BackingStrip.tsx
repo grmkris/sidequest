@@ -12,22 +12,13 @@ import { sidequest } from '../../sidequest.ts'
 import { percent } from '../../stake.ts'
 import { deployed } from '../../wallet.ts'
 import { DELEGATION_RISK } from '../DelegationPositions.tsx'
-import { Address as AddressText, Section } from '../kit.tsx'
+import { Address as AddressText, Section, Stat } from '../kit.tsx'
 import { Countdown, useNow } from '../Time.tsx'
 import { TokenAmount } from '../token/TokenAmount.tsx'
 import { Disclosure } from '../ui/disclosure.tsx'
 import { Meter } from '../ui/meter.tsx'
 import { Skeleton } from '../ui/skeleton.tsx'
 import { SideChip } from '../side/SideToken.tsx'
-
-function Figure({ value, label }: { value: ReactNode; label: string }) {
-  return (
-    <div className="grid min-w-0 content-start gap-0.5">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="tabular-nums text-base leading-tight font-semibold tracking-tight">{value}</dd>
-    </div>
-  )
-}
 
 function Line({ label, children }: { label: ReactNode; children: ReactNode }) {
   return (
@@ -58,9 +49,17 @@ export function BackingStrip({ wallet, viewer }: { wallet: Address; viewer: Addr
             <p className="text-xs text-muted-foreground">Showing last known backing; the refresh is unavailable.</p>
           )}
           <dl className="flex flex-wrap gap-x-8 gap-y-3">
-            <Figure value={<TokenAmount value={snapshot.backing.assets} token={factory} />} label="Total backing" />
-            <Figure value={snapshot.delegatorCount} label={snapshot.delegatorCount === 1 ? 'Backer' : 'Backers'} />
-            <Figure value={percent(snapshot.backing.tier.feeBps)} label="Worker fee" />
+            <Stat
+              size="md"
+              value={<TokenAmount value={snapshot.backing.assets} token={factory} />}
+              label="Total backing"
+            />
+            <Stat
+              size="md"
+              value={snapshot.delegatorCount}
+              label={snapshot.delegatorCount === 1 ? 'Backer' : 'Backers'}
+            />
+            <Stat size="md" value={percent(snapshot.backing.tier.feeBps)} label="Worker fee" />
           </dl>
           {snapshot.backing.tier.nextThreshold === null ? (
             <p className="text-xs text-muted-foreground">It pays the lowest fee.</p>
