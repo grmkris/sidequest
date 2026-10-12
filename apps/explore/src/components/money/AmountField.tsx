@@ -129,25 +129,3 @@ function Balance({
     </button>
   )
 }
-
-/** A quick-amount chip for `AmountField` (one posting bond, half, all). */
-export function AmountChip({
-  children,
-  onClick,
-  disabled,
-}: {
-  children: ReactNode
-  onClick: () => void
-  disabled?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className="inline-flex min-h-7 items-center rounded-full bg-muted px-2.5 text-xs font-medium text-foreground transition-[background-color,scale] duration-(--dur-fast) active:scale-[0.96] disabled:opacity-50 pointer-coarse:min-h-11 [@media(hover:hover)]:hover:bg-muted/70"
-    >
-      {children}
-    </button>
-  )
-}
