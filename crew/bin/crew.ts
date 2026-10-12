@@ -34,6 +34,7 @@ import { parseEnv } from 'node:util'
 import { stageProfile } from '../../infra/stage.ts'
 import * as hosted from './hosted-mcp.ts'
 import { type ConnectionFiles, type Token, readToken } from './hosted-mcp.ts'
+import { type HeldTask, openHeld } from './crew-wake.ts'
 
 const crewDir = resolve(import.meta.dir, '..')
 const repo = resolve(crewDir, '..')
@@ -481,8 +482,6 @@ const relayMon = (): Promise<number> => hosted.relayMon(crew.board.rpc, crew.boa
 const mcpCall = <T = unknown>(token: string, name: string, args: Record<string, unknown> = {}): Promise<T> =>
   hosted.mcpCall<T>(crew.board.mcp, token, name, args)
 
-const TERMINAL = new Set(['completed', 'cancelled', 'expired', 'closed', 'settled', 'ruled'])
-
 /** When a member last advertised, in ms. Members write ISO 8601 (COMMON.md), but some write Unix seconds or ms. */
 function advertisedAt(state: string): number {
   const stamp = existsSync(join(state, 'advertised')) ? readFileSync(join(state, 'advertised'), 'utf8').trim() : ''
@@ -504,11 +503,8 @@ async function wakeReason(id: string): Promise<string | null> {
   const inboxWake = await inboxReason(id, token, state)
   if (inboxWake !== null) return inboxWake
   // Held work: jobs this member activated and holds on chain (role holder), whose chain status is not final.
-  const held = await mcpCall<Array<{ chain?: { status?: string } }>>(token, 'list_tasks', {
-    role: 'holder',
-    limit: 20,
-  })
-  const open = (Array.isArray(held) ? held : []).filter((t) => !TERMINAL.has(String(t.chain?.status ?? '')))
+  const held = await mcpCall<HeldTask[]>(token, 'list_tasks', { role: 'holder', limit: 20 })
+  const open = openHeld(Array.isArray(held) ? held : [])
   if (open.length > 0) return `${open.length} held task(s)`
   // A deadline passing writes nothing on chain, so no event wakes a creator to close a no-show or an undisputed
   // rejection: look for its own jobs whose window has run out.
