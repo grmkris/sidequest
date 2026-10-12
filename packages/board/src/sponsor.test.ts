@@ -462,6 +462,8 @@ describe('ERC-7710 sponsorship boundaries and recovery', () => {
     await expect(
       f.desk.submit(f.owner.address, f.entries([f.cancel()], f.owner.address), 'below'),
     ).rejects.toMatchObject({ reason: 'floor' })
+    // The floor reads the pending balance, so another send already in flight counts against it.
+    expect(f.client.getBalance).toHaveBeenLastCalledWith(expect.objectContaining({ blockTag: 'pending' }))
     f.setBalance(sponsorRelayFloor(f.ctx.deployment.network) + expected)
     const op = await f.desk.submit(f.owner.address, f.entries([f.cancel()], f.owner.address), 'enough')
     const saved = f.sql.all<{ raw_tx: Hex; reserved_cost: string }>(

@@ -475,8 +475,9 @@ export class SponsorDesk {
         )[0]!.publishes
         if (dailyPublishes + publishes > SPONSOR_LIMITS.operatorPublishes)
           throw this.#refuse('cap', 'the operator daily sponsored publish count is exhausted')
+        // Pending sends this desk made are settled above; the pending balance also counts any other send in flight.
         if (
-          (await ctx.publicClient.getBalance({ address: relay.account.address })) <
+          (await ctx.publicClient.getBalance({ address: relay.account.address, blockTag: 'pending' })) <
           sponsorRelayFloor(ctx.deployment.network) + expected
         )
           throw this.#refuse('floor', 'the sponsorship relay is below its balance floor')
