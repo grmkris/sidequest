@@ -19,3 +19,15 @@ it('reloads once for the Privy wallet-created crash, then shows the error page',
 it('never reloads for any other error', () => {
   expect(recoverOnce(new Error('Failed to fetch'), storage())).toBe(false)
 })
+
+it('recognises the same crash as Firefox and Safari word it', () => {
+  const firefox = new TypeError('can\'t access property "onSuccess", d.createWallet is undefined')
+  expect(recoverOnce(firefox, storage())).toBe(true)
+  const safari = new TypeError('Right side of assignment cannot be destructured')
+  safari.stack = 'createWallet@https://dev.sidequest.exchange/assets/privy.js:1:2'
+  expect(recoverOnce(safari, storage())).toBe(true)
+  // The same Safari wording from anywhere else is not this crash.
+  const other = new TypeError('Right side of assignment cannot be destructured')
+  other.stack = 'render@https://dev.sidequest.exchange/assets/index.js:1:2'
+  expect(recoverOnce(other, storage())).toBe(false)
+})
