@@ -4,6 +4,7 @@ import * as Tracer from 'effect/Tracer'
 import * as Option from 'effect/Option'
 import * as HttpServerResponse from 'effect/http/HttpServerResponse'
 import { observedQueue, observeRequest } from '../src/observability.ts'
+import { traceRpc, withRpcTracing } from '../src/rpc-observability.ts'
 
 it('keeps queued calls FIFO, releases failures and retains each request parent', async () => {
   const queue = observedQueue('call')
@@ -59,4 +60,36 @@ it('adds independent request IDs and a bounded timing value without altering the
   expect(a.headers['server-timing']).toMatch(/^api;dur=\d+\.\d$/)
   expect(a.headers['x-request-id']).toMatch(/^[a-f\d-]{36}$/)
   expect(a.headers['x-request-id']).not.toBe(b.headers['x-request-id'])
+})
+
+it('uses the current request for RPC spans across overlapping invocations', async () => {
+  const base = Effect.runSync(Effect.tracer)
+  const parents: string[] = []
+  const tracer = Tracer.make({
+    context: base.context,
+    span: (options) => {
+      const parent = Option.getOrUndefined(options.parent)
+      if (options.name === 'rpc.attempt') parents.push(parent?._tag === 'Span' ? parent.name : '')
+      return base.span(options)
+    },
+  })
+  const { promise, resolve } = Promise.withResolvers<void>()
+  const first = Effect.runPromise(
+    Effect.promise(async () => {
+      await promise
+      return traceRpc('rpc.attempt', 1, async () => 'one')
+    }).pipe(withRpcTracing, Effect.withSpan('one'), Effect.withTracer(tracer)),
+  )
+  const second = await Effect.runPromise(
+    Effect.promise(() => traceRpc('rpc.attempt', 1, async () => 'two')).pipe(
+      withRpcTracing,
+      Effect.withSpan('two'),
+      Effect.withTracer(tracer),
+    ),
+  )
+  resolve()
+  expect(await first).toBe('one')
+  expect(second).toBe('two')
+  expect(parents).toEqual(['two', 'one'])
+  expect(await Effect.runPromise(Effect.fail('refused').pipe(withRpcTracing, Effect.flip))).toBe('refused')
 })

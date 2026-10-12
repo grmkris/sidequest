@@ -1,3 +1,5 @@
+import { withReadCachePolicy } from './read-cache.ts'
+import { traceRpc } from './rpc-observability.ts'
 import { observeRequest } from './observability.ts'
 import { offerResponse } from './offers.ts'
 import { catalogReply, registryProofReply, serverCardReply, type McpMetadataReply } from './mcp-metadata.ts'
@@ -284,7 +286,10 @@ export default class Api extends Cloudflare.Worker<Api>()(
             : HttpServerResponse.text(reply.body, { status: reply.status, headers: reply.headers })
         }
 
-        const reads = rpcUrl === '' ? undefined : sdk.context(network, 'main', rpcUrl).publicClient
+        const reads =
+          rpcUrl === ''
+            ? undefined
+            : sdk.context(network, 'main', rpcUrl, { batch: true, trace: traceRpc }).publicClient
         const tokenInfo = async (address: Address): Promise<TenantToken> => {
           const cached = tokenCache.get(address.toLowerCase())
           if (cached !== undefined) return cached
@@ -726,7 +731,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
             return yield* Effect.promise(() =>
               stakingDataRoute(
                 sql,
-                rpcUrl === '' ? undefined : sdk.context(network, 'main', rpcUrl),
+                rpcUrl === '' ? undefined : sdk.context(network, 'main', rpcUrl, { batch: true, trace: traceRpc }),
                 dataUrl,
                 now(),
                 cors,
@@ -880,7 +885,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
         }
 
         return HttpServerResponse.text('not found', { status: 404 })
-      }).pipe(observeRequest, Effect.orDie),
+      }).pipe(withReadCachePolicy, observeRequest, Effect.orDie),
     }
   }).pipe(
     Effect.provide(

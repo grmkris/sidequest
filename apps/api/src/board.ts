@@ -1,3 +1,4 @@
+import { traceRpc } from './rpc-observability.ts'
 import { observedQueue } from './observability.ts'
 import {
   ADMISSION_OBJECT_NAME,
@@ -131,7 +132,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
       const contexts: Partial<Record<sdk.StackName, sdk.Ctx>> = {}
       for (const name of ['main'] as const) {
         if (sdk.deployment(env.network).stacks[name] !== undefined)
-          contexts[name] = sdk.context(env.network, name, env.rpcUrl, { batch: true })
+          contexts[name] = sdk.context(env.network, name, env.rpcUrl, { batch: true, trace: traceRpc })
       }
       const board = new BoardService(
         fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write)),
@@ -190,7 +191,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               migrateAgentSchema(sql)
               return hostedCreatorFacts(
                 sql,
-                sdk.context(env.network, 'main', env.rpcUrl),
+                sdk.context(env.network, 'main', env.rpcUrl, { batch: true, trace: traceRpc }),
                 query,
                 Math.floor(Date.now() / 1000),
               )
@@ -525,7 +526,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
           return toJson(
             await hostedCreatorFacts(
               sql,
-              sdk.context(req.env.network, 'main', req.env.rpcUrl),
+              sdk.context(req.env.network, 'main', req.env.rpcUrl, { batch: true, trace: traceRpc }),
               query,
               Math.floor(Date.now() / 1000),
             ),

@@ -1,3 +1,4 @@
+import { withRpcTracing } from './rpc-observability.ts'
 /** Request-local diagnostics. No URLs, arguments, headers or wallet identities enter application spans. */
 import * as Effect from 'effect/Effect'
 import * as HttpServerResponse from 'effect/http/HttpServerResponse'
@@ -8,7 +9,7 @@ export const observeRequest = <E, R>(effect: Effect.Effect<HttpServerResponse.Ht
     const started = performance.now()
     const requestId = crypto.randomUUID()
     yield* Effect.annotateCurrentSpan('request.id', requestId)
-    const response = yield* effect
+    const response = yield* effect.pipe(withRpcTracing)
     yield* Effect.annotateCurrentSpan('http.response.status_code', response.status)
     return response.pipe(
       HttpServerResponse.setHeader('x-request-id', requestId),
@@ -28,7 +29,10 @@ export function observedQueue(name: 'call' | 'management' | 'relay') {
           Effect.promise(() => previous).pipe(
             Effect.withSpan('board.queue.wait', { attributes: { queue: name } }),
             Effect.flatMap(() =>
-              Effect.promise(action).pipe(Effect.withSpan('board.queue.execute', { attributes: { queue: name } })),
+              Effect.promise(action).pipe(
+                withRpcTracing,
+                Effect.withSpan('board.queue.execute', { attributes: { queue: name } }),
+              ),
             ),
           ),
         )

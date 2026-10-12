@@ -1,3 +1,4 @@
+import { traceRpc } from '../rpc-observability.ts'
 import { BoardError, fromDurableObjectSql, type Caller, type DisputeThreadEntry } from '@sidequest/board'
 import { fromD1 } from '@sidequest/indexer'
 import * as sdk from '@sidequest/sdk'
@@ -81,7 +82,7 @@ export function commonsHostFactory(input: { state: CommonsState; bindings: Commo
       transaction(() => migrate(sql, roleConfig.maintainer[0] ?? config.arbitrator, Math.floor(Date.now() / 1000)))
       migrated = true
     }
-    const ctx = sdk.context(env.network, 'main', env.rpcUrl)
+    const ctx = sdk.context(env.network, 'main', env.rpcUrl, { batch: true, trace: traceRpc })
     const d1 = fromD1(bindings.Database)
     const base = Layer.mergeAll(
       sqlLayer(sql, transaction),

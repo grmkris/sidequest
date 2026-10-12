@@ -1,3 +1,4 @@
+import { traceRpc, withRpcTracing } from './rpc-observability.ts'
 import {
   DirectoryError,
   type DirectoryPort,
@@ -96,7 +97,9 @@ export default class DirectoryObject extends Cloudflare.DurableObject<DirectoryO
       const serviceFor = (request: DirectoryCall) => {
         const config = sdk.deployment(request.network)
         const reads =
-          request.rpcUrl === '' ? undefined : sdk.context(request.network, 'main', request.rpcUrl).publicClient
+          request.rpcUrl === ''
+            ? undefined
+            : sdk.context(request.network, 'main', request.rpcUrl, { batch: true, trace: traceRpc }).publicClient
         return new DirectoryService({
           sql: storage,
           chainId: config.chainId,
@@ -183,14 +186,14 @@ export default class DirectoryObject extends Cloudflare.DurableObject<DirectoryO
                 if (service !== undefined && flush) await flushProjection(service)
               }
             }),
-          ),
+          ).pipe(withRpcTracing),
         alarm: () =>
           Effect.promise(() =>
             serialized(async () => {
               const scope = journal.scope()
               if (scope !== null) await flushProjection(serviceFor({ ...scope, rpcUrl: '', action: 'read' }))
             }),
-          ),
+          ).pipe(withRpcTracing),
       }
     })
   }),

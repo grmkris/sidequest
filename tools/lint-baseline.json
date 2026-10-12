@@ -42,7 +42,7 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 54,
     "complexity(complexity)": 3,
     "eslint(max-lines)": 1,
-    "eslint(max-lines-per-function)": 5,
+    "eslint(max-lines-per-function)": 4,
     "eslint(max-params)": 1,
     "typescript(no-base-to-string)": 3
   },
