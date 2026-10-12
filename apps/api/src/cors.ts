@@ -14,7 +14,7 @@ export function corsHeaders(origin: string | undefined, allowed: boolean): Recor
     'access-control-allow-headers': CORS_HEADERS,
     'access-control-allow-methods': CORS_METHODS,
     // A browser client reads the step-up challenge (ADR-0021) from WWW-Authenticate.
-    'access-control-expose-headers': 'mcp-session-id, www-authenticate',
+    'access-control-expose-headers': 'mcp-session-id, www-authenticate, x-request-id, server-timing',
     'access-control-max-age': '600',
     vary: 'origin',
   }

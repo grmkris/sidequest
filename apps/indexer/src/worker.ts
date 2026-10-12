@@ -70,6 +70,9 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
       })
 
     const run = Effect.gen(function* () {
+      const runRequest = Effect.runPromiseWith(yield* Effect.context())
+      const phase = <A>(name: string, action: () => Promise<A>) =>
+        runRequest(Effect.promise(action).pipe(Effect.withSpan(name)))
       const network = (yield* Config.String('NETWORK')) as sdk.Network
       sdk.setRelayOverride((yield* Config.String('RELAY_ADDRESS')) as `0x${string}`)
       configurePublicSite(yield* Config.String('PUBLIC_ORIGIN'), yield* Config.String('TELEGRAM_BOT_USERNAME'))
@@ -88,7 +91,7 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
       }
       const hyper = yield* Config.String('HYPERSYNC_URL')
       return yield* Effect.promise(async () => {
-        await migrate(sql)
+        await phase('indexer.migrate', () => migrate(sql))
         let allowSilence = false
         const indexer = {
           contracts: contractsOf(network),
@@ -100,22 +103,26 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
           offers: { boards: sdk.deployment(network).boards ?? [], origin: publicOrigin() },
         }
         try {
-          const result = await runOnce(sql, indexer)
+          const result = await phase('indexer.ingest', () => runOnce(sql, indexer))
           // Judged against the head this run indexed to. A second head lookup here raced a chain that finalizes
           // several blocks a second, so it almost never passed and the feed and notifications stood still.
           const caughtUp = result.caughtUp
           // The inbox feed (V1.1 WS4) follows finalized transitions whether or not Telegram is configured.
           const fedAt = Math.floor(Date.now() / 1000)
           // 100 events is about 300 D1 statements, so a catch-up run leaves room for the Telegram queue below.
-          await feedFromChain(sql, network, fedAt, { caughtUp, limit: 100 }).catch(reportFeedFailure)
+          await phase('indexer.feed', () => feedFromChain(sql, network, fedAt, { caughtUp, limit: 100 })).catch(
+            reportFeedFailure,
+          )
           if (fedAt % 3600 < 60) await pruneFeed(sql, fedAt).catch(reportFeedFailure)
           // Webhooks send what the feed holds; board and approval events arrive whether or not the chain index is caught up.
-          await deliverWebhooks(sql, network, fedAt).catch(reportWebhookFailure)
+          await phase('indexer.webhooks', () => deliverWebhooks(sql, network, fedAt)).catch(reportWebhookFailure)
           if (telegramToken !== '') {
             const now = Math.floor(Date.now() / 1000)
             const deployment = sdk.deployment(network)
             const client = sdk.context(network, 'main', rpcUrl).publicClient
-            const notifications = await queueTelegramNotifications(sql, network, now, { caughtUp })
+            const notifications = await phase('indexer.notifications', () =>
+              queueTelegramNotifications(sql, network, now, { caughtUp }),
+            )
             allowSilence = !notifications.stale
             // Owner alert when the sponsorship relay nears its floor; never fails the indexing run.
             await watchRelay(sql, {
@@ -129,14 +136,16 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
         } finally {
           // The next minute's run indexes at once instead of being refused while this lease runs out. A failed
           // release only means waiting for expiry, as before.
-          await releaseLease(sql, indexer).catch(() => undefined)
+          await phase('indexer.release-lease', () => releaseLease(sql, indexer)).catch(() => undefined)
           if (telegramToken !== '')
-            await drainTelegramOutbox(
-              sql,
-              telegramTransport(telegramToken),
-              Math.floor(Date.now() / 1000),
-              20,
-              allowSilence,
+            await phase('indexer.deliver-notifications', () =>
+              drainTelegramOutbox(
+                sql,
+                telegramTransport(telegramToken),
+                Math.floor(Date.now() / 1000),
+                20,
+                allowSilence,
+              ),
             )
         }
       })
@@ -144,6 +153,7 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
 
     yield* Cloudflare.Workers.cron('* * * * *', () =>
       run.pipe(
+        Effect.withSpan('indexer.run'),
         Effect.flatMap((r) => record({ ok: true, result: r })),
         Effect.catchCause((c) => record({ ok: false, cause: c }).pipe(Effect.ignore)),
       ),

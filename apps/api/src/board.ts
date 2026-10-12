@@ -1,3 +1,4 @@
+import { observedQueue } from './observability.ts'
 import {
   ADMISSION_OBJECT_NAME,
   SPONSOR_OBJECT_NAME,
@@ -115,12 +116,12 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
     let service: { key: string; board: BoardService } | undefined
     let limits: AdmissionRateLimits | undefined
     // Serialize across awaits and service/config replacement, including callers from different tenants.
-    let callQueue: Promise<unknown> = Promise.resolve()
+    const callQueue = observedQueue('call')
     // Management execution may await a tenant object. Keep that queue separate from relay sends, which can be
     // requested by the tenant while the management object is waiting.
-    let managementQueue: Promise<unknown> = Promise.resolve()
+    const managementQueue = observedQueue('management')
     // Relay sends retain one nonce-serialized queue in the reserved object.
-    let relayQueue: Promise<unknown> = Promise.resolve()
+    const relayQueue = observedQueue('relay')
     // SAFETY: Alchemy provides this object's SQL state and the API Worker's declared binding record.
     const commonsHost = commonsHostFactory({ state, bindings: runtimeEnv as never })
 
@@ -284,70 +285,60 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
       // SAFETY: Alchemy's WorkerEnvironment is the binding record of this Worker.
       ...commonsRpcs({ state, bindings: runtimeEnv as Record<string, unknown>, host: commonsHost }),
       agentExecute: (req: AgentExecuteRequest) =>
-        Effect.promise(() => {
-          const result = managementQueue.then(async () => {
-            try {
-              return await executeAgent(req)
-            } catch (error) {
-              return toJson(agentFailureReply(error, 'Hosted agent execution failed'))
-            } finally {
-              syncListeners()
-            }
-          })
-          managementQueue = result.catch(() => undefined)
-          return result
+        managementQueue(async () => {
+          try {
+            return await executeAgent(req)
+          } catch (error) {
+            return toJson(agentFailureReply(error, 'Hosted agent execution failed'))
+          } finally {
+            syncListeners()
+          }
         }),
       agentManage: (req: AgentManagementRequest) =>
-        Effect.promise(() => {
-          const result = managementQueue.then(async () => {
-            try {
-              const bindings = runtimeEnv as Record<string, unknown>
-              const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
-              if (
-                namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString() ||
-                req.env.network !== bindings.NETWORK
-              )
-                throw new BoardError('forbidden', 'Management identity mismatch')
-              const desk = new SessionDesk({
-                sql: fromD1(bindings.Database as never),
-                now: () => Math.floor(Date.now() / 1000),
-                verify: async () => false,
-              })
-              const session = await desk.resolve({ bearer: req.bearer })
-              if (session === undefined) throw new BoardError('unauthenticated', 'Sign in with your operator wallet')
-              const context = sdk.context(req.env.network, 'main', req.env.rpcUrl)
-              const sql = fromDurableObjectSql(state.storage.sql.raw, (write) =>
-                state.raw.storage.transactionSync(write),
-              )
-              const managementResult = await agentManagement({
-                request: req.request,
-                sql,
-                context,
-                operator: session.address,
-                bindings,
-                rpcUrl: req.env.rpcUrl,
-                relayKey: req.env.relayKey as Hex,
-                now: () => Math.floor(Date.now() / 1000),
-                ...(req.privyToken === undefined ? {} : { privyToken: req.privyToken }),
-                execute: async (agentId, tool, args, key, _approvalId, originalBoard) => {
-                  const reply = JSON.parse(
-                    await executeAgent(
-                      operatorRequest(req, session.address, { agentId, tool, args, key, boardId: originalBoard }),
-                    ),
-                  ) as BoardReply
-                  if (!reply.ok) throw failureFromReply(reply)
-                  return reply.result
-                },
-              })
-              return toJson({ ok: true, result: managementResult })
-            } catch (error) {
-              return toJson(agentFailureReply(error, 'Agent management failed'))
-            } finally {
-              syncListeners()
-            }
-          })
-          managementQueue = result.catch(() => undefined)
-          return result
+        managementQueue(async () => {
+          try {
+            const bindings = runtimeEnv as Record<string, unknown>
+            const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
+            if (
+              namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString() ||
+              req.env.network !== bindings.NETWORK
+            )
+              throw new BoardError('forbidden', 'Management identity mismatch')
+            const desk = new SessionDesk({
+              sql: fromD1(bindings.Database as never),
+              now: () => Math.floor(Date.now() / 1000),
+              verify: async () => false,
+            })
+            const session = await desk.resolve({ bearer: req.bearer })
+            if (session === undefined) throw new BoardError('unauthenticated', 'Sign in with your operator wallet')
+            const context = sdk.context(req.env.network, 'main', req.env.rpcUrl)
+            const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
+            const managementResult = await agentManagement({
+              request: req.request,
+              sql,
+              context,
+              operator: session.address,
+              bindings,
+              rpcUrl: req.env.rpcUrl,
+              relayKey: req.env.relayKey as Hex,
+              now: () => Math.floor(Date.now() / 1000),
+              ...(req.privyToken === undefined ? {} : { privyToken: req.privyToken }),
+              execute: async (agentId, tool, args, key, _approvalId, originalBoard) => {
+                const reply = JSON.parse(
+                  await executeAgent(
+                    operatorRequest(req, session.address, { agentId, tool, args, key, boardId: originalBoard }),
+                  ),
+                ) as BoardReply
+                if (!reply.ok) throw failureFromReply(reply)
+                return reply.result
+              },
+            })
+            return toJson({ ok: true, result: managementResult })
+          } catch (error) {
+            return toJson(agentFailureReply(error, 'Agent management failed'))
+          } finally {
+            syncListeners()
+          }
         }),
       operatorAgent: (req: { agentId: string; bearer?: string }) =>
         Effect.promise(async () => {
@@ -387,43 +378,39 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         origin: string
         bearer?: string
       }) =>
-        Effect.promise(() => {
-          const result = callQueue.then(async () => {
-            const bindings = runtimeEnv as Record<string, unknown>
-            const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
-            if (
-              namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString() ||
-              req.env.network !== bindings.NETWORK
-            )
-              throw new Error('management object identity mismatch')
-            const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
-            migrateAgentSchema(sql)
-            const desk = new SessionDesk({
-              sql: fromD1(bindings.Database as never),
-              now: () => Math.floor(Date.now() / 1000),
-              verify: async () => false,
-            })
-            const session = await desk.resolve({ bearer: req.bearer })
-            const reply = await oauthRoute({
-              sql,
-              method: req.method,
-              path: req.path,
-              query: new URLSearchParams(req.query),
-              body: req.body,
-              origin: req.origin,
-              siteOrigin: req.origin,
-              ...(session === undefined ? {} : { owner: session.address }),
-              now: Math.floor(Date.now() / 1000),
-              revokeSubscriptions: async (principal, grantId, at) => {
-                await terminateGrantSubscriptions(fromD1(bindings.Database as never), principal, grantId, at)
-              },
-            })
-            // Consent may bind a waiting setup connection to its agent; revoking ends a connection.
-            syncListeners()
-            return toJson(reply ?? null)
+        callQueue(async () => {
+          const bindings = runtimeEnv as Record<string, unknown>
+          const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
+          if (
+            namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString() ||
+            req.env.network !== bindings.NETWORK
+          )
+            throw new Error('management object identity mismatch')
+          const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
+          migrateAgentSchema(sql)
+          const desk = new SessionDesk({
+            sql: fromD1(bindings.Database as never),
+            now: () => Math.floor(Date.now() / 1000),
+            verify: async () => false,
           })
-          callQueue = result.catch(() => undefined)
-          return result
+          const session = await desk.resolve({ bearer: req.bearer })
+          const reply = await oauthRoute({
+            sql,
+            method: req.method,
+            path: req.path,
+            query: new URLSearchParams(req.query),
+            body: req.body,
+            origin: req.origin,
+            siteOrigin: req.origin,
+            ...(session === undefined ? {} : { owner: session.address }),
+            now: Math.floor(Date.now() / 1000),
+            revokeSubscriptions: async (principal, grantId, at) => {
+              await terminateGrantSubscriptions(fromD1(bindings.Database as never), principal, grantId, at)
+            },
+          })
+          // Consent may bind a waiting setup connection to its agent; revoking ends a connection.
+          syncListeners()
+          return toJson(reply ?? null)
         }),
       oauthResolve: (req: { resource: string; bearer?: string; activity?: boolean }) =>
         Effect.sync(() => {
@@ -560,59 +547,55 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         }),
       /** Internal relay RPC shares the reserved object's queue and durable nonce ledger with sponsorship. */
       relay: (req: { env: BoardCall['env']; request: RelayRequest }) =>
-        Effect.promise(() => {
-          const result = relayQueue.then(async (): Promise<string> => {
-            try {
-              const bindings = runtimeEnv as Record<string, unknown>
-              const namespace = bindings.Board as { idFromName(name: string): { toString(): string } } | undefined
+        relayQueue(async (): Promise<string> => {
+          try {
+            const bindings = runtimeEnv as Record<string, unknown>
+            const namespace = bindings.Board as { idFromName(name: string): { toString(): string } } | undefined
+            if (
+              namespace?.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString() ||
+              req.env.network !== bindings.NETWORK
+            )
+              throw new BoardError('forbidden', 'relay object identity or network mismatch')
+            const request = req.request,
+              deployment = sdk.deployment(req.env.network)
+            // No public generic relay: the three internal send paths still carry verifiable signed authority.
+            if (request.authorizationList !== undefined) {
               if (
-                namespace?.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString() ||
-                req.env.network !== bindings.NETWORK
+                !isAddress(request.to) ||
+                request.data !== '0x' ||
+                request.authorizationList.length !== 1 ||
+                request.authorizationList[0]!.address.toLowerCase() !== deployment.delegation.delegator.toLowerCase()
               )
-                throw new BoardError('forbidden', 'relay object identity or network mismatch')
-              const request = req.request,
-                deployment = sdk.deployment(req.env.network)
-              // No public generic relay: the three internal send paths still carry verifiable signed authority.
-              if (request.authorizationList !== undefined) {
-                if (
-                  !isAddress(request.to) ||
-                  request.data !== '0x' ||
-                  request.authorizationList.length !== 1 ||
-                  request.authorizationList[0]!.address.toLowerCase() !== deployment.delegation.delegator.toLowerCase()
-                )
-                  throw new BoardError('forbidden', 'invalid account-upgrade relay request')
-              } else if (request.value !== undefined && request.value !== '0') {
-                if (
-                  deployment.network !== 'monad-testnet' ||
-                  !request.key.startsWith('drip:') ||
-                  !isAddress(request.to) ||
-                  request.data !== '0x' ||
-                  request.value !== '50000000000000000'
-                )
-                  throw new BoardError('forbidden', 'invalid testnet MON drip')
-              } else if (
-                deployment.network === 'monad-testnet' &&
-                deployment.testnetFaucet?.toLowerCase() === request.to.toLowerCase()
-              ) {
-                const decoded = decodeFunctionData({ abi: sdk.testnetFaucetAbi, data: request.data })
-                if (!request.key.startsWith('faucet:') || decoded.functionName !== 'drip')
-                  throw new BoardError('forbidden', 'invalid testnet faucet relay request')
-              } else {
-                const pair = Object.values(deployment.stacks).find(
-                  (s) => s?.evaluator.toLowerCase() === request.to.toLowerCase(),
-                )
-                if (pair === undefined) throw new BoardError('forbidden', 'relay target is not a configured evaluator')
-                const decoded = decodeFunctionData({ abi: sdk.sidequestEvaluatorAbi, data: request.data })
-                if (!['attachEvidence', 'ruleWithSignature'].includes(decoded.functionName))
-                  throw new BoardError('forbidden', 'invalid evaluator relay method')
-              }
-              return toJson({ ok: true, result: await boardFor(req.env).relayTransaction(request) })
-            } catch (e) {
-              return toJson(agentFailureReply(e, 'The relay could not send this transaction', undefined, 'chain'))
+                throw new BoardError('forbidden', 'invalid account-upgrade relay request')
+            } else if (request.value !== undefined && request.value !== '0') {
+              if (
+                deployment.network !== 'monad-testnet' ||
+                !request.key.startsWith('drip:') ||
+                !isAddress(request.to) ||
+                request.data !== '0x' ||
+                request.value !== '50000000000000000'
+              )
+                throw new BoardError('forbidden', 'invalid testnet MON drip')
+            } else if (
+              deployment.network === 'monad-testnet' &&
+              deployment.testnetFaucet?.toLowerCase() === request.to.toLowerCase()
+            ) {
+              const decoded = decodeFunctionData({ abi: sdk.testnetFaucetAbi, data: request.data })
+              if (!request.key.startsWith('faucet:') || decoded.functionName !== 'drip')
+                throw new BoardError('forbidden', 'invalid testnet faucet relay request')
+            } else {
+              const pair = Object.values(deployment.stacks).find(
+                (s) => s?.evaluator.toLowerCase() === request.to.toLowerCase(),
+              )
+              if (pair === undefined) throw new BoardError('forbidden', 'relay target is not a configured evaluator')
+              const decoded = decodeFunctionData({ abi: sdk.sidequestEvaluatorAbi, data: request.data })
+              if (!['attachEvidence', 'ruleWithSignature'].includes(decoded.functionName))
+                throw new BoardError('forbidden', 'invalid evaluator relay method')
             }
-          })
-          relayQueue = result.catch(() => undefined)
-          return result
+            return toJson({ ok: true, result: await boardFor(req.env).relayTransaction(request) })
+          } catch (e) {
+            return toJson(agentFailureReply(e, 'The relay could not send this transaction', undefined, 'chain'))
+          }
         }),
       /** Private RPC, reachable only through the existing Board binding's reserved object. */
       admit: (req: AdmissionCall) =>
@@ -640,122 +623,116 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         }),
       /** Runs one tool and returns its JSON reply; tool errors are replies, not failures. */
       call: (req: BoardCall) =>
-        Effect.promise(() => {
-          const result = callQueue.then(async (): Promise<string> => {
-            const tool = tools[req.tool]
-            if (tool === undefined) return toJson({ ok: false, code: 'not-found', message: `no tool ${req.tool}` })
-            // Only the hosted executor reopens a request, for an agent whose operator declined the pick.
-            if (req.tool === 'release_pick' && req.agentAuth === undefined)
-              return toJson({ ok: false, code: 'forbidden', message: 'release_pick is internal' })
-            try {
-              const bindings = runtimeEnv as Record<string, unknown>
-              const network = bindings.NETWORK as sdk.Network
-              const stage = bindings.DEPLOY_STAGE
-              const admission = parseHostedAdmission(
-                typeof bindings.PROD_ADMISSION_DRAIN === 'string' ? bindings.PROD_ADMISSION_DRAIN : '1',
-              )
-              if (req.env.network !== network || (network === 'monad-mainnet' && stage !== 'prod')) {
+        callQueue(async (): Promise<string> => {
+          const tool = tools[req.tool]
+          if (tool === undefined) return toJson({ ok: false, code: 'not-found', message: `no tool ${req.tool}` })
+          // Only the hosted executor reopens a request, for an agent whose operator declined the pick.
+          if (req.tool === 'release_pick' && req.agentAuth === undefined)
+            return toJson({ ok: false, code: 'forbidden', message: 'release_pick is internal' })
+          try {
+            const bindings = runtimeEnv as Record<string, unknown>
+            const network = bindings.NETWORK as sdk.Network
+            const stage = bindings.DEPLOY_STAGE
+            const admission = parseHostedAdmission(
+              typeof bindings.PROD_ADMISSION_DRAIN === 'string' ? bindings.PROD_ADMISSION_DRAIN : '1',
+            )
+            if (req.env.network !== network || (network === 'monad-mainnet' && stage !== 'prod')) {
+              return toJson({
+                ok: false,
+                code: 'forbidden',
+                message: 'Durable Object runtime network/stage mismatch',
+              })
+            }
+            const namespace = bindings.Board as { idFromName: (name: string) => { toString: () => string } } | undefined
+            const objectName = objectFor(req.tool, req.env.boardId)
+            const production = network === 'monad-mainnet' || stage === 'prod'
+            if (
+              (objectName !== req.env.boardId || production) &&
+              (namespace === undefined || namespace.idFromName(objectName).toString() !== state.id.toString())
+            )
+              return toJson({ ok: false, code: 'forbidden', message: 'Durable Object board identity mismatch' })
+            let directCaller = req.caller !== undefined ? { address: getAddress(req.caller) } : undefined
+            if (req.agentAuth !== undefined) {
+              const grant = await authenticatedAgent(req)
+              directCaller = { address: getAddress(grant.address) }
+              const rate = await enforceHostedRate(bindings, {
+                network,
+                tool: req.tool,
+                boardId: req.env.boardId,
+                bearer: req.bearer,
+                caller: req.caller,
+                ip: req.ip,
+                agentAuth: req.agentAuth,
+              })
+              if (!rate.ok) return toJson(rate)
+            } else if (production) {
+              const desk = new SessionDesk({
+                sql: fromD1((runtimeEnv as Record<string, unknown>).Database as never),
+                now: () => Math.floor(Date.now() / 1000),
+                verify: async () => false,
+              })
+              const session = await desk.resolve({ bearer: req.bearer, mcpSession: req.mcpSession })
+              if (req.caller !== undefined && session?.address.toLowerCase() !== req.caller.toLowerCase())
                 return toJson({
                   ok: false,
                   code: 'forbidden',
-                  message: 'Durable Object runtime network/stage mismatch',
+                  message: 'Durable Object caller is not the authenticated session wallet',
                 })
-              }
-              const namespace = bindings.Board as
-                | { idFromName: (name: string) => { toString: () => string } }
-                | undefined
-              const objectName = objectFor(req.tool, req.env.boardId)
-              const production = network === 'monad-mainnet' || stage === 'prod'
-              if (
-                (objectName !== req.env.boardId || production) &&
-                (namespace === undefined || namespace.idFromName(objectName).toString() !== state.id.toString())
-              )
-                return toJson({ ok: false, code: 'forbidden', message: 'Durable Object board identity mismatch' })
-              let directCaller = req.caller !== undefined ? { address: getAddress(req.caller) } : undefined
-              if (req.agentAuth !== undefined) {
-                const grant = await authenticatedAgent(req)
-                directCaller = { address: getAddress(grant.address) }
-                const rate = await enforceHostedRate(bindings, {
-                  network,
-                  tool: req.tool,
-                  boardId: req.env.boardId,
-                  bearer: req.bearer,
-                  caller: req.caller,
-                  ip: req.ip,
-                  agentAuth: req.agentAuth,
-                })
-                if (!rate.ok) return toJson(rate)
-              } else if (production) {
-                const desk = new SessionDesk({
-                  sql: fromD1((runtimeEnv as Record<string, unknown>).Database as never),
-                  now: () => Math.floor(Date.now() / 1000),
-                  verify: async () => false,
-                })
-                const session = await desk.resolve({ bearer: req.bearer, mcpSession: req.mcpSession })
-                if (req.caller !== undefined && session?.address.toLowerCase() !== req.caller.toLowerCase())
-                  return toJson({
-                    ok: false,
-                    code: 'forbidden',
-                    message: 'Durable Object caller is not the authenticated session wallet',
-                  })
-                directCaller = session === undefined ? undefined : { address: session.address }
-                const directDenied = admissionFailure(
-                  admission,
-                  network,
-                  req.env.boardId,
-                  req.tool,
-                  directCaller?.address,
-                  String(stage ?? ''),
-                )
-                if (directDenied !== undefined) return toJson({ ok: false, code: 'forbidden', message: directDenied })
-                const rate = await enforceHostedRate(bindings, {
-                  network,
-                  tool: req.tool,
-                  boardId: req.env.boardId,
-                  bearer: req.bearer,
-                  mcpSession: req.mcpSession,
-                  caller: req.caller,
-                  ip: req.ip,
-                })
-                if (!rate.ok) return toJson(rate)
-              }
-              const board = boardFor(req.env)
-              const caller = directCaller ?? board.resolveCaller({ bearer: req.bearer, mcpSession: req.mcpSession })
-              const denied = admissionFailure(
+              directCaller = session === undefined ? undefined : { address: session.address }
+              const directDenied = admissionFailure(
                 admission,
                 network,
                 req.env.boardId,
                 req.tool,
-                caller?.address,
+                directCaller?.address,
                 String(stage ?? ''),
               )
-              if (denied !== undefined) return toJson({ ok: false, code: 'forbidden', message: denied })
-              const ctx: ToolContext = {
-                network: req.env.network,
-                mcpSession: req.mcpSession,
-                ...(commonsToolNames.has(req.tool) ? { commons: commonsHost(req.env) } : {}),
-              }
-              const toolResult = await tool.run(board, caller, req.args, ctx)
-              // Inbox feed and Telegram notices for website, REST and managed calls alike; never fails the tool.
-              await recordBoardEvent(fromDurableObjectSql(state.storage.sql.raw), fromD1(bindings.Database as never), {
-                tool: req.tool,
-                args: req.args,
-                result: toolResult,
+              if (directDenied !== undefined) return toJson({ ok: false, code: 'forbidden', message: directDenied })
+              const rate = await enforceHostedRate(bindings, {
                 network,
+                tool: req.tool,
                 boardId: req.env.boardId,
-                now: Math.floor(Date.now() / 1000),
+                bearer: req.bearer,
+                mcpSession: req.mcpSession,
+                caller: req.caller,
+                ip: req.ip,
               })
-              return toJson({ ok: true, result: toolResult } satisfies BoardReply)
-            } catch (e) {
-              // The one safe boundary for tenant replies: board refusals keep their code and fields, a decoded revert
-              // keeps its error name, and anything else (RPC or provider text) becomes a logged error id.
-              return toJson(
-                agentFailureReply(e, 'The board could not complete this call', undefined, 'error') satisfies BoardReply,
-              )
+              if (!rate.ok) return toJson(rate)
             }
-          })
-          callQueue = result.catch(() => undefined)
-          return result
+            const board = boardFor(req.env)
+            const caller = directCaller ?? board.resolveCaller({ bearer: req.bearer, mcpSession: req.mcpSession })
+            const denied = admissionFailure(
+              admission,
+              network,
+              req.env.boardId,
+              req.tool,
+              caller?.address,
+              String(stage ?? ''),
+            )
+            if (denied !== undefined) return toJson({ ok: false, code: 'forbidden', message: denied })
+            const ctx: ToolContext = {
+              network: req.env.network,
+              mcpSession: req.mcpSession,
+              ...(commonsToolNames.has(req.tool) ? { commons: commonsHost(req.env) } : {}),
+            }
+            const toolResult = await tool.run(board, caller, req.args, ctx)
+            // Inbox feed and Telegram notices for website, REST and managed calls alike; never fails the tool.
+            await recordBoardEvent(fromDurableObjectSql(state.storage.sql.raw), fromD1(bindings.Database as never), {
+              tool: req.tool,
+              args: req.args,
+              result: toolResult,
+              network,
+              boardId: req.env.boardId,
+              now: Math.floor(Date.now() / 1000),
+            })
+            return toJson({ ok: true, result: toolResult } satisfies BoardReply)
+          } catch (e) {
+            // The one safe boundary for tenant replies: board refusals keep their code and fields, a decoded revert
+            // keeps its error name, and anything else (RPC or provider text) becomes a logged error id.
+            return toJson(
+              agentFailureReply(e, 'The board could not complete this call', undefined, 'error') satisfies BoardReply,
+            )
+          }
         }),
     })
   }),

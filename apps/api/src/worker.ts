@@ -1,3 +1,4 @@
+import { observeRequest } from './observability.ts'
 import { offerResponse } from './offers.ts'
 import { catalogReply, registryProofReply, serverCardReply, type McpMetadataReply } from './mcp-metadata.ts'
 import registryProof from './mcp-registry-proof.json' with { type: 'json' }
@@ -194,6 +195,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
 
     return {
       fetch: Effect.gen(function* () {
+        const runRequest = Effect.runPromiseWith(yield* Effect.context<RuntimeContext>())
         const request = yield* HttpServerRequest.HttpServerRequest
         const url = new URL(request.originalUrl)
         const network = (yield* Config.String('NETWORK')) as sdk.Network
@@ -306,9 +308,15 @@ export default class Api extends Cloudflare.Worker<Api>()(
           await desk.migrate()
           await migrateTelegram(sql)
         })()
-        yield* Effect.promise(() => migrated as Promise<void>)
-        yield* boards.getByName('__sidequest_fleet_v1__').management({ kind: 'retire' })
-        yield* boards.getByName(SPONSOR_OBJECT_NAME).management({ kind: 'migrate' })
+        yield* Effect.promise(() => migrated as Promise<void>).pipe(Effect.withSpan('api.migrations'))
+        yield* boards
+          .getByName('__sidequest_fleet_v1__')
+          .management({ kind: 'retire' })
+          .pipe(Effect.withSpan('api.retire-fleet'))
+        yield* boards
+          .getByName(SPONSOR_OBJECT_NAME)
+          .management({ kind: 'migrate' })
+          .pipe(Effect.withSpan('api.management-migrations'))
 
         const tenant = yield* Effect.promise(async (): Promise<TenantConfig | undefined> => {
           if (boardId === PUBLIC_BOARD_ID)
@@ -318,7 +326,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
           const config = (await getBoard(sql, boardId))?.config
           boardCache.set(boardId, { at: now(), config })
           return config
-        })
+        }).pipe(Effect.withSpan('api.tenant'))
         const origin = request.headers.origin
         const allowed = tenant === undefined ? false : isAllowedOrigin(tenant, origin, url.host)
         const cors = corsHeaders(origin, allowed)
@@ -368,7 +376,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
         }
         const relaySend = async (relayRequest: RelayRequest): Promise<Hex> => {
           const reply = JSON.parse(
-            await Effect.runPromise(boards.getByName(SPONSOR_OBJECT_NAME).relay({ env, request: relayRequest })),
+            await runRequest(boards.getByName(SPONSOR_OBJECT_NAME).relay({ env, request: relayRequest })),
           ) as BoardReply
           if (!reply.ok) throw failureFromReply(reply)
           return reply.result as Hex
@@ -390,17 +398,13 @@ export default class Api extends Cloudflare.Worker<Api>()(
                   }),
                 ),
               activity: async (agentIds) =>
-                JSON.parse(
-                  await Effect.runPromise(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds })),
-                ),
+                JSON.parse(await runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds }))),
             },
             tool,
             args,
           )
         const yieldlessDirectoryCall = async (id: string, req: import('./directory-object.ts').DirectoryCall) =>
-          Effect.runPromise(
-            directory.getByName(directoryObjectName(chainId, deployment.identity, url.origin, id)).call(req),
-          )
+          runRequest(directory.getByName(directoryObjectName(chainId, deployment.identity, url.origin, id)).call(req))
 
         /**
          * Calls one tool: sign-in and registry tools in the Worker, everything else in the board's Durable Object with
@@ -677,7 +681,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
                 )
                   return runMcp(call(tool, args, undefined, grant!.address))
                 const result = JSON.parse(
-                  await Effect.runPromise(
+                  await runRequest(
                     boards.getByName(SPONSOR_OBJECT_NAME).agentExecute({
                       env,
                       tool,
@@ -711,7 +715,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
             profileRoute(path, publicOrigin, {
               // SAFETY: Manifests is this Worker's R2 binding (manifests.ts); its raw form serves the stored bytes.
               bucket: (runtimeEnv as Record<string, unknown>).Manifests as AvatarBucket | undefined,
-              read: (req) => Effect.runPromise(boards.getByName(SPONSOR_OBJECT_NAME).managedProfiles(req)),
+              read: (req) => runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedProfiles(req)),
             }),
           )
         }
@@ -764,9 +768,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
                   network,
                   audience: url.origin,
                   activity: async (agentIds) =>
-                    JSON.parse(
-                      await Effect.runPromise(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds })),
-                    ),
+                    JSON.parse(await runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds }))),
                 },
                 url,
                 now(),
@@ -878,7 +880,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
         }
 
         return HttpServerResponse.text('not found', { status: 404 })
-      }).pipe(Effect.orDie),
+      }).pipe(observeRequest, Effect.orDie),
     }
   }).pipe(
     Effect.provide(
