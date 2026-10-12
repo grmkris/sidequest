@@ -440,10 +440,6 @@
     "complexity(complexity)": 2,
     "eslint(max-lines-per-function)": 1
   },
-  "apps/explore/src/agent-grant.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1,
-    "typescript(no-unnecessary-type-assertion)": 1
-  },
   "apps/explore/src/agent-name.ts": {
     "anti-slop(no-runtime-typeof)": 1
   },
@@ -463,12 +459,6 @@
   },
   "apps/explore/src/components/AgentStake.tsx": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2
-  },
-  "apps/explore/src/components/AllowanceEditor.tsx": {
-    "anti-slop(no-runtime-typeof)": 5,
-    "anti-slop(require-safety-comment-for-type-assertion)": 1,
-    "complexity(complexity)": 1,
-    "eslint(max-lines-per-function)": 1
   },
   "apps/explore/src/components/BackingManager.tsx": {
     "complexity(complexity)": 1,
@@ -525,8 +515,7 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 5,
     "react-hooks(rules-of-hooks)": 3,
     "typescript(no-deprecated)": 2,
-    "typescript(no-unnecessary-type-assertion)": 1,
-    "typescript(unbound-method)": 1
+    "typescript(no-unnecessary-type-assertion)": 1
   },
   "apps/explore/src/components/Sheet.tsx": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
@@ -544,14 +533,12 @@
     "typescript(no-misused-promises)": 1
   },
   "apps/explore/src/components/TestnetFaucet.tsx": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 2,
-    "eslint(max-lines-per-function)": 1,
-    "typescript(no-misused-promises)": 1,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
     "typescript(no-unnecessary-type-assertion)": 1
   },
   "apps/explore/src/components/TxSteps.tsx": {
     "anti-slop(require-safety-comment-for-type-assertion)": 5,
-    "complexity(complexity)": 5,
+    "complexity(complexity)": 4,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "jsx-a11y(prefer-tag-over-role)": 3,
@@ -659,11 +646,6 @@
     "eslint(max-lines-per-function)": 1,
     "jsx-a11y(control-has-associated-label)": 1,
     "typescript(no-unnecessary-type-assertion)": 1
-  },
-  "apps/explore/src/components/txJournal.ts": {
-    "anti-slop(no-runtime-typeof)": 7,
-    "anti-slop(require-safety-comment-for-type-assertion)": 1,
-    "complexity(complexity)": 1
   },
   "apps/explore/src/components/txOperation.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2,
@@ -815,11 +797,6 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 1,
     "typescript(no-unnecessary-type-assertion)": 1
-  },
-  "apps/explore/src/routes/Sponsorship.tsx": {
-    "complexity(complexity)": 1,
-    "eslint(max-lines-per-function)": 1,
-    "jsx-a11y(prefer-tag-over-role)": 1
   },
   "apps/explore/src/routes/Telegram.tsx": {
     "complexity(complexity)": 1,
