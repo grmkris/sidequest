@@ -57,6 +57,8 @@ const ROLES = {
     ARBITER_MODEL_API_KEY: e.CLIPROXY_API_KEY,
     ARBITER_RUNNER: 'sq-arbiter@netcup',
     ARBITER_INTERVAL_SECONDS: '60',
+    // Sends a dispute's cancellation transaction.
+    MONAD_RPC_URL: e.MONAD_RPC_URL || e.MONAD_TESTNET_RPC_URL,
   }),
   moderator: (e: Env) => ({
     NETWORK: 'monad-testnet',
@@ -75,8 +77,6 @@ const ROLES = {
     MAINTAINER_MODEL_BASE_URL: MODEL_BASE_URL,
     MAINTAINER_MODEL_API_KEY: e.CLIPROXY_API_KEY,
     MAINTAINER_STATE_FILE: '/state/maintainer.json',
-    MONAD_RPC_URL: e.MONAD_RPC_URL,
-    ACTIVITY_STATE: '/state',
   }),
 } as const
 type Role = keyof typeof ROLES
