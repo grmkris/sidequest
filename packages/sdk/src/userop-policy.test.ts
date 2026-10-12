@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { canonical } from '../scripts/privy/policy-document.ts'
 import { RULE_NAME_LIMIT, authorityPolicy, config, userOpRules, userOpTargets } from '../scripts/privy/policy.ts'
 
 type Condition = {
@@ -42,5 +43,16 @@ describe('the user-operation signing rules (ADR-0023)', () => {
     const names = userOpRules().map((candidate) => candidate.name)
     const inPolicy = authorityPolicy('admin').rules.filter((candidate) => candidate.method === 'eth_signUserOperation')
     expect(inPolicy.map((candidate) => candidate.name)).toEqual(names)
+  })
+})
+
+describe('comparing policy documents', () => {
+  it('ignores rule order, as Privy returns rules in its own order, and refuses duplicate names', () => {
+    const policy = authorityPolicy('admin')
+    const shuffled = { ...policy, rules: policy.rules.toReversed() }
+    expect(canonical(shuffled)).toBe(canonical(policy))
+    const changed = { ...policy, rules: [{ ...policy.rules[0]!, action: 'DENY' }, ...policy.rules.slice(1)] }
+    expect(canonical(changed)).not.toBe(canonical(policy))
+    expect(() => canonical({ ...policy, rules: [...policy.rules, policy.rules[0]!] })).toThrow('Duplicate rule names')
   })
 })

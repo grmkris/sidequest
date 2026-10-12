@@ -24,6 +24,20 @@ export function writablePolicy(policy: JsonRecord): JsonRecord {
   }
 }
 
+/**
+ * A policy document as one comparable string, its rules sorted by name: Privy returns a policy's rules in an order of
+ * its own, and order never changes what a policy allows (a DENY wins wherever it sits). Names must be unique.
+ */
 export function canonical(policy: JsonRecord): string {
-  return formatPrivyAuthorizationPayload({ method: 'PATCH', url: '', headers: {}, body: policy })
+  const rules = Array.isArray(policy.rules) ? policy.rules.map(record) : undefined
+  const names = rules?.map((rule) => String(rule.name))
+  if (names !== undefined && new Set(names).size !== names.length)
+    throw new PolicyDocumentError('Duplicate rule names; refusing comparison')
+  const sorted = rules?.toSorted((a, b) => (String(a.name) < String(b.name) ? -1 : 1))
+  return formatPrivyAuthorizationPayload({
+    method: 'PATCH',
+    url: '',
+    headers: {},
+    body: sorted === undefined ? policy : { ...policy, rules: sorted },
+  })
 }
