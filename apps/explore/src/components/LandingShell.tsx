@@ -34,8 +34,8 @@ function SideAddress({ address, className }: { address: string; className?: stri
 }
 
 /**
- * The public front door: a translucent bar with the brand, the SIDE contract address, Buy (or "Get SIDE" on its
- * launcher) and "Open app"; the page; and a footer of links (the documentation, the protocol and its risks, the source,
+ * The public front door: a translucent bar with the brand, the SIDE contract address, "Get SIDE" on its launcher's
+ * site (mainnet's nad.fun) or Buy (in the app, through nad.fun's router or our market), and "Open app"; the page; and a footer of links (the documentation, the protocol and its risks, the source,
  * X), SIDE's address again on a phone, and the network switch.
  */
 export function LandingShell({ children }: { children: ReactNode }) {

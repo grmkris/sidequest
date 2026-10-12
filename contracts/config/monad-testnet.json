@@ -131,7 +131,6 @@
     }
   },
   "nadfun": {
-    "app": "https://testnet.nad.fun",
     "router": "0x75588668999cA0557b78046b8a5E86b47b9234ec",
     "curve": "0x27063a38eC0D3281D354090EB92e669Ed1eB956C",
     "tokenImplementation": "0xFD870fEbeeA5C1Cd5b10cd950eFF8f4d63dc81f1",

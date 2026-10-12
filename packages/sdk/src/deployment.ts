@@ -13,6 +13,7 @@ import {
 } from 'viem'
 import testnet from '../../../contracts/config/monad-testnet.json' with { type: 'json' }
 import mainnet from '../../../contracts/config/monad-mainnet.json' with { type: 'json' }
+import type { Launcher } from './launcher.ts'
 
 export type Network = 'monad-testnet' | 'monad-mainnet'
 export type StackName = 'main'
@@ -147,6 +148,11 @@ export interface Deployment {
    * `liquidity`), traded through Uniswap's UniversalRouter and V4Quoter. Null until the config names both.
    */
   readonly market: Market | null
+  /**
+   * SIDE on nad.fun's router (config `nadfun.router` and the deployment's SIDE), which Explore's Buy and Sell use where
+   * there is no market of ours: the same calls on testnet and mainnet. Null until both exist.
+   */
+  readonly launcher: Launcher | null
   /** The block the recipe deployed at: where an indexer starts and a rebuild restarts. */
   readonly deployBlock: bigint
 }
@@ -416,6 +422,8 @@ export function deploymentFromConfig(network: Network, c: DeploymentConfig): Dep
     x402: c.x402 === undefined ? null : { usdc: c.x402.usdc as Address, facilitator: c.x402.facilitator },
     testnetFaucet: d.testnetFaucet === undefined || c.chainId === 143 ? null : (d.testnetFaucet as Address),
     market: marketFromConfig(d.factory as Address, c.liquidity),
+    launcher:
+      validAddress(c.nadfun?.router) && validAddress(d.factory) ? { router: c.nadfun.router, side: d.factory } : null,
     deployBlock: BigInt(d.block ?? 0),
   }
 }

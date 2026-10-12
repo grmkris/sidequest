@@ -309,7 +309,9 @@ cmd_token_send() {
     if curl -sSf "$api/token/$token" >/dev/null 2>&1; then listed=yes && break; fi
     sleep 10
   done
-  if [[ -n "$listed" ]]; then say "Listed on nad.fun: $(nadfun app)/tokens/$token"; else say "Not listed on nad.fun's API after 60 s; check again."; fi
+  if [[ -z "$listed" ]]; then say "Not listed on nad.fun's API after 60 s; check again."
+  elif [[ -n "$(nadfun app)" ]]; then say "Listed on nad.fun: $(nadfun app)/tokens/$token"
+  else say "Listed on nad.fun's API: $api/token/$token (nad.fun has no website for this network)"; fi
 }
 
 # L4: the creator's SIDE (the dev buy) to the Safe.

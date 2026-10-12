@@ -254,7 +254,13 @@ function StepCard({
 }
 
 function Fund({ address }: { address: Address }) {
-  if (testnet) return <TestnetFaucet address={address} />
+  if (testnet)
+    return (
+      <div className="grid gap-3">
+        <TestnetFaucet address={address} />
+        <BuyButtons address={address} />
+      </div>
+    )
   return (
     <div className="grid gap-3">
       <div className="flex min-w-0 items-center gap-2 rounded-xl bg-muted px-3.5 py-3">
