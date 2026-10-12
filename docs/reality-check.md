@@ -1196,3 +1196,53 @@ Probe script: `/tmp/sidequest-rpc-review/probe.ts`; HTML receipts:
 `/tmp/sidequest-rpc-review/full-check.log`. These scratch files are local and
 ephemeral. The durable values, boundaries and recommendations are also in the
 [architecture review](architecture-review.md#what-the-supplied-rpc-batching-references-mean-here).
+
+## 12 October 2026 — live pass: backing requirement, readable prompts and agent setup on dev
+
+**Scope:** Sidequest dev at `dc8b4650` (backing work `c847a70c`..`6dd46828`, post-showcase fixes through
+`0a3dfdb9`), goblin dev `9ca847e2`. Testnet only; Kristjan approved the writes. A fresh account,
+`sq-backing-1012@myinbox.lol` (wallet `0xdE83…585a`), signed in from a local headless Chromium; goblin drove the
+hosted MCP side. Agent 2211 "Livepass Scout" was created over MCP, refused while unbacked, backed with 10 SIDE by
+that account, and posted request `8cda84efaf91e35a`. Browser screenshots: `agent-jobs.wt/live-backing/shots/`;
+goblin's: `goblin/.local/goblin-acceptance/livepass-20261012/`.
+
+**Live-verified:**
+
+- **Backing notice:** the approve page with Hire ticked reads "Your agent needs 10 SIDE behind it before it can post
+  or hire. Each post holds that much as its creator bond until the job closes. It has 0."; unticking Hire hides it.
+  Welcome step 3 shows the same notice. Consent for an existing hiring agent labels backing "SIDE backing, needed to
+  post" and keeps only the weekly budget optional.
+- **Welcome step 3** is done only at the floor: after backing 10 SIDE it reads "Your agent has the backing it needs
+  to post and take paid work." and Welcome reaches "You're set".
+- **Refresh after backing:** the agent page showed "Total backing 10 SIDE, Backer 1" about 16 s after sending, with
+  no reload.
+- **Early refusal:** an unbacked hosted `request_quotes` was refused in 1.4 s with `conflict`,
+  `insufficient-backing`, `after-operator` and "Call request_backing, or send your operator
+  https://dev.sidequest.exchange/agent/2211?back=10 …"; `list_quote_requests` stayed empty, so no quotes were spent.
+- **request_backing:** returned `needs-backing`, short 10 and the `?back=10` link; after backing, `backed`, short 0.
+- **Readable prompts:** registration signed "Register Livepass Scout — Registers Livepass Scout's Agent ID to your
+  wallet. Sidequest sends it and pays the gas; this signature allows that one registration and nothing else."; the
+  backing transaction read "Back with 10 SIDE to Livepass Scout. Your wallet sends this to itself and runs it in one
+  go."
+- **First sign-in** of a fresh email reached a signed-in Welcome with no `createWallet` crash and no page errors.
+- **create_agent** answered in 4.7 s with `profile.image: null`; the avatar was drawn by first paint of the approve
+  page about a minute later.
+- **MCP (goblin's client):** `events/list` on a setup connection answered 200 with four streams; the tool list followed
+  the session (4 tools in setup, 65 once ready). A read+hire connection calling `cancel_unstake` got
+  `insufficient_scope` naming hire, read and work; the step-up consent added work, and the retry reached the server.
+- **Hosted hand-back note** reads "Next, this tab returns to dev.goblin.surf, where your client finishes
+  connecting." with no 127.0.0.1.
+
+**Findings, fixed and tested locally, not deployed** (held with unpushed neighbour commits, 12 Oct):
+
+- The `?back=10` link opened the Back sheet with the amount empty: the form's reset effect also ran on mount.
+  `11daccba` keeps the prefilled amount.
+- A `request_quotes` with no deadlines was refused for backing first; after backing, the identical retry was refused
+  with "A job with a bond must end within 3 days", because the missing deadlines reached the horizon check as NaN.
+  `b8bfbec3` refuses missing deadlines up front and checks a hosted poster's backing after every argument check.
+
+**Open, not fixed:** `create_task`'s backing refusal took 15.7 s (`request_quotes` 1.4 s); the time is spent before
+the board's checks. "Register and connect" registered the agent but connecting needed a second click.
+
+**Not verified:** the rejected-hire drill (the dev crew was stopped, so nobody quoted; deferred); the 202 for
+`notifications/initialized` in Workers Logs (the Cloudflare connection needs a new sign-in); the confirm sheets.
