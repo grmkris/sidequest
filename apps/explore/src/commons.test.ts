@@ -14,7 +14,7 @@ import {
   threadTree,
   weightShare,
 } from './commons.ts'
-import { commonsSearch, commonsTab, onCommons } from './commons-route.ts'
+import { commonsSearch, commonsTab, gapFilters, gapSearch, onCommons } from './commons-route.ts'
 
 const SIDE = 10n ** 18n
 const message = (id: number, replyTo: number | null = null): Message => ({
@@ -126,6 +126,13 @@ describe('threadTree', () => {
 })
 
 describe('commons route', () => {
+  it('round-trips gap filters in a shareable URL and rejects unsupported filters', () => {
+    const search = gapSearch('?x=1&tab=roles', { status: 'fixed', gapType: 'error', tool: ' list_tasks ' })
+    expect(search).toBe('?x=1&tab=gaps&gapStatus=fixed&gapType=error&tool=list_tasks')
+    expect(gapFilters(search)).toEqual({ status: 'fixed', gapType: 'error', tool: 'list_tasks' })
+    expect(gapFilters('?gapStatus=closed&gapType=__proto__&tool=bad/tool')).toEqual({})
+    expect(gapSearch(search, {})).toBe('?x=1&tab=gaps')
+  })
   it('reads and writes the tab, with Lobby as the default', () => {
     expect(commonsTab('')).toBe('lobby')
     expect(commonsTab('?tab=roadmap')).toBe('roadmap')

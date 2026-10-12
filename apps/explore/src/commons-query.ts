@@ -3,10 +3,11 @@
  * page is on (a job thread's subject names its board), so the public board client serves them all. Threads poll every
  * 10 s; writes sign in first and then refresh what they changed.
  */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { tool } from './api.ts'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { currentBoardId, tool } from './api.ts'
+import { anonymousCommonsTool } from './commons-access.ts'
 import { useAuth } from './components/Wallet.tsx'
-import type { Gap, Roadmap, RoadmapItemDetail, Roles, Thread } from './commons.ts'
+import type { Gap, GapDetail, GapFilters, Roadmap, RoadmapItemDetail, Roles, Thread } from './commons.ts'
 
 const POLL_MS = 10_000
 
@@ -15,21 +16,26 @@ const commonsKeys = {
   thread: (subject: string, viewer: string | undefined) => ['commons', 'thread', subject, viewer ?? ''] as const,
   roadmap: (status: string, viewer: string | undefined) => ['commons', 'roadmap', status, viewer ?? ''] as const,
   item: (id: number, viewer: string | undefined) => ['commons', 'item', id, viewer ?? ''] as const,
-  gaps: () => ['commons', 'gaps'] as const,
+  gaps: (filters: GapFilters, viewer: string | undefined) => ['commons', 'gaps', filters, viewer ?? ''] as const,
+  gap: (id: number, viewer: string | undefined) => ['commons', 'gap', id, viewer ?? ''] as const,
+  roleLog: (viewer: string | undefined) => ['commons', 'role-log', viewer ?? ''] as const,
   roles: (viewer: string | undefined) => ['commons', 'roles', viewer ?? ''] as const,
 }
 
 /** The viewer's identity in a query key: signed-in sessions see their own `viewer`, everyone else reads anonymously. */
 function useViewerKey(): string | undefined {
   const auth = useAuth()
-  return auth.signedIn ? auth.address : undefined
+  return auth.signedIn ? auth.address?.toLowerCase() : undefined
 }
+
+const read = <T>(viewer: string | undefined, name: string, args: Record<string, unknown>) =>
+  viewer === undefined ? anonymousCommonsTool<T>(currentBoardId(), name, args) : tool<T>(name, args)
 
 export function useThread(subject: string, enabled = true) {
   const viewer = useViewerKey()
   return useQuery({
     queryKey: commonsKeys.thread(subject, viewer),
-    queryFn: () => tool<Thread>('list_messages', { subject, limit: 50 }),
+    queryFn: () => read<Thread>(viewer, 'list_messages', { subject, limit: 50 }),
     refetchInterval: POLL_MS,
     enabled,
   })
@@ -39,7 +45,7 @@ export function useRoadmap(status: string) {
   const viewer = useViewerKey()
   return useQuery({
     queryKey: commonsKeys.roadmap(status, viewer),
-    queryFn: () => tool<Roadmap>('list_roadmap', { status }),
+    queryFn: () => read<Roadmap>(viewer, 'list_roadmap', { status }),
     refetchInterval: 30_000,
   })
 }
@@ -48,16 +54,48 @@ export function useRoadmapItem(itemId: number) {
   const viewer = useViewerKey()
   return useQuery({
     queryKey: commonsKeys.item(itemId, viewer),
-    queryFn: () => tool<RoadmapItemDetail>('get_roadmap_item', { itemId }),
+    queryFn: () => read<RoadmapItemDetail>(viewer, 'get_roadmap_item', { itemId }),
     refetchInterval: 30_000,
   })
 }
 
-export function useGaps() {
-  return useQuery({
-    queryKey: commonsKeys.gaps(),
-    queryFn: () => tool<{ gaps: Gap[]; cursor: string | null }>('list_gaps', { limit: 50 }),
+export function useGaps(filters: GapFilters = {}) {
+  const viewer = useViewerKey()
+  return useInfiniteQuery({
+    queryKey: commonsKeys.gaps(filters, viewer),
+    // SAFETY: the initial page has no cursor; following pages use the backend's string cursor.
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      read<{ gaps: Gap[]; cursor: string | null }>(viewer, 'list_gaps', {
+        ...filters,
+        limit: 50,
+        ...(pageParam === undefined ? {} : { cursor: pageParam }),
+      }),
+    getNextPageParam: (page) => page.cursor ?? undefined,
     refetchInterval: 60_000,
+  })
+}
+
+export function useGap(gapId: number, enabled = true) {
+  const viewer = useViewerKey()
+  return useQuery({
+    queryKey: commonsKeys.gap(gapId, viewer),
+    queryFn: () => read<GapDetail>(viewer, 'list_gaps', { gapId }),
+    enabled: enabled && Number.isSafeInteger(gapId) && gapId > 0,
+    refetchInterval: 30_000,
+  })
+}
+
+export function useRoleLog() {
+  const viewer = useViewerKey()
+  return useInfiniteQuery({
+    queryKey: commonsKeys.roleLog(viewer),
+    // SAFETY: the initial page has no cursor; following pages use the backend's string cursor.
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      read<Roles>(viewer, 'list_roles', { limit: 50, ...(pageParam === undefined ? {} : { cursor: pageParam }) }),
+    getNextPageParam: (page) => (page.hasMore ? (page.cursor ?? undefined) : undefined),
+    staleTime: 60_000,
   })
 }
 
@@ -65,7 +103,7 @@ export function useRoles() {
   const viewer = useViewerKey()
   return useQuery({
     queryKey: commonsKeys.roles(viewer),
-    queryFn: () => tool<Roles>('list_roles', { limit: 50 }),
+    queryFn: () => read<Roles>(viewer, 'list_roles', { limit: 50 }),
     staleTime: 60_000,
   })
 }

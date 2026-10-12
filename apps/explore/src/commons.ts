@@ -100,6 +100,8 @@ export interface RoleAction {
   readonly action: string
   readonly targetKind: string
   readonly targetId: string
+  readonly subject?: string
+  readonly detail?: Readonly<Record<string, unknown>>
   readonly reason: string
   readonly createdAt: number
 }
@@ -135,6 +137,34 @@ export interface Gap {
   readonly firstAt: number
   readonly lastAt: number
   readonly itemIds: readonly number[]
+  readonly status: GapStatus
+}
+
+export type GapStatus = 'open' | 'fixed' | 'wontfix'
+export const GAP_STATUS_LABEL: Record<GapStatus, string> = { open: 'Open', fixed: 'Fixed', wontfix: "Won't fix" }
+
+export interface GapReport {
+  readonly id: number
+  readonly gapId: number
+  readonly originGapId: number
+  readonly reporter: Address
+  readonly whatINeeded: string | null
+  readonly whatITried: string | null
+  readonly suggestion: string | null
+  readonly userGoal?: string | null
+  readonly hidden: Hidden | null
+  readonly createdAt: number
+}
+
+export interface GapDetail {
+  readonly gap: Gap
+  readonly reports: readonly GapReport[]
+}
+
+export interface GapFilters {
+  readonly status?: GapStatus
+  readonly gapType?: GapType
+  readonly tool?: string
 }
 
 export interface Roles {

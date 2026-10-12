@@ -4,6 +4,8 @@ import { type ReactNode, createContext, useContext, useEffect, useRef, useState 
 import { ChevronUp } from 'lucide-react'
 import type { Address } from 'viem'
 import { useAccount, useDisconnect, useSignMessage } from 'wagmi'
+import { useQueryClient } from '@tanstack/react-query'
+import { forgetCommonsViewer } from '../commons-access.ts'
 import { session, setSession, tool } from '../api.ts'
 import { askedKey, isRefusal, silentSignable } from '../sign-in.ts'
 import { chain } from '../wallet.ts'
@@ -73,7 +75,15 @@ const AuthContext = createContext<ReturnType<typeof useSignedIn> | null>(null)
 
 /** One sign-in state for the whole app (the header and every page see the same session). */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  return <AuthContext value={useSignedIn()}>{children}</AuthContext>
+  const auth = useSignedIn()
+  const client = useQueryClient()
+  const viewer = auth.signedIn ? auth.address?.toLowerCase() : undefined
+  const previous = useRef(viewer)
+  useEffect(() => {
+    if (previous.current !== undefined && previous.current !== viewer) forgetCommonsViewer(client, previous.current)
+    previous.current = viewer
+  }, [client, viewer])
+  return <AuthContext value={auth}>{children}</AuthContext>
 }
 
 export function useAuth() {

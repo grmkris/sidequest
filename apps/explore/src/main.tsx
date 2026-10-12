@@ -30,6 +30,7 @@ import { JobPage } from './routes/Job.tsx'
 import { ActivityPage } from './routes/Activity.tsx'
 import { CommonsPage } from './routes/Commons.tsx'
 import { RoadmapItemPage } from './routes/RoadmapItem.tsx'
+import { GapPage } from './routes/Gap.tsx'
 import './styles.css'
 import { wagmiConfig } from './wallet.ts'
 import { AgentPage } from './routes/Agent.tsx'
@@ -240,6 +241,7 @@ const roadmapItem = createRoute({
   path: '/commons/roadmap/$itemId',
   component: RoadmapItemPage,
 })
+const gap = createRoute({ getParentRoute: () => root, path: '/commons/gaps/$gapId', component: GapPage })
 // Tenant boards (ADR-0008): the same pages under /b/<slug>, plus the boards directory, creation and the widget.
 const boards = createRoute({ getParentRoute: () => root, path: '/boards', component: BoardsPage })
 const boardNew = createRoute({
@@ -326,6 +328,7 @@ const router = createRouter({
     sponsorship,
     commons,
     roadmapItem,
+    gap,
     boards,
     boardNew,
     embed,
