@@ -9,6 +9,7 @@
     "./telegram": "./src/telegram.ts",
     "./telegram-notifications": "./src/telegram-notifications.ts",
     "./relay-watch": "./src/relay-watch.ts",
+    "./gas-watch": "./src/gas-watch.ts",
     "./webhooks": "./src/webhooks.ts",
     "./mcp-events": "./src/mcp-events.ts",
     "./database": "./src/database.ts",
