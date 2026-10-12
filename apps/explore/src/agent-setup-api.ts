@@ -46,7 +46,10 @@ export async function readProposal(agentKey: string): Promise<Proposal | null> {
   return { name: body.name ?? '', description: body.description ?? '', image: body.image ?? null }
 }
 
-/** create_agent answers before the avatar is drawn, so look again every 4 s until it is, for two minutes at most. */
+/**
+ * create_agent answers before the avatar is drawn, so look again every 4 s until it is, for two minutes at most.
+ * `fetches` counts failed reads too, so a string of errors cannot keep it polling past that.
+ */
 export function proposalPoll(proposal: Proposal | null | undefined, fetches: number): number | false {
   return proposal?.image === null && fetches < 30 ? 4_000 : false
 }

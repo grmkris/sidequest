@@ -133,7 +133,8 @@ export function AgentApprovePage() {
     queryKey: managedKey('proposal', auth.address, auth.signedIn, agentKey),
     queryFn: () => readProposal(agentKey),
     enabled: auth.signedIn,
-    refetchInterval: (query) => proposalPoll(query.state.data, query.state.dataUpdateCount),
+    refetchInterval: (query) =>
+      proposalPoll(query.state.data, query.state.dataUpdateCount + query.state.errorUpdateCount),
   })
   const agent = agents.data?.agents.find((row) => row.id === agentKey)
   // The branch is fixed by the first state seen (approveBranch): registering here must not hand off to a second click.
