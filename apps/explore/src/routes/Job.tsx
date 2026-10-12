@@ -479,6 +479,7 @@ export function JobPage({
             !phase.terminal &&
             ['active', 'submitted'].includes(t?.chain.status ?? '') && (
               <TopUp
+                boardId={boardId}
                 jobId={jobId}
                 holding={sidequest.holding}
                 token={token as Account}

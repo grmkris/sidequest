@@ -1,5 +1,4 @@
 import { refreshJob } from '../../query-refresh.ts'
-import { currentBoardId } from '../../api.ts'
 import { cn } from '../../lib/cn.ts'
 import { Button } from '../ui/button.tsx'
 import { Input } from '../ui/input.tsx'
@@ -99,11 +98,14 @@ export function FeeQuote({
 
 /** After activation: anyone adds to the reward. Paid to the agent with it (same fee rate), or refundable. */
 export function TopUp({
+  boardId,
   jobId,
   holding,
   token,
   viewer,
 }: {
+  /** The board that lists the job, so its copies refresh after the top-up. */
+  boardId: string
   jobId: string
   holding: Address
   token: Address
@@ -185,7 +187,7 @@ export function TopUp({
             reportToBoard={false}
             onDone={() => {
               setTxs(null)
-              void refreshJob(qc, { boardId: currentBoardId(), jobId })
+              void refreshJob(qc, { boardId, jobId })
               toast('Added to the reward')
             }}
           />

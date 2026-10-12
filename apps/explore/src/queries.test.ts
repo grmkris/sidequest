@@ -35,3 +35,15 @@ it('refreshes a changed task and affected lists while leaving unrelated detail a
   expect(client.getQueryState(unrelated)?.isInvalidated).toBe(false)
   expect(client.getQueryState(directory)?.isInvalidated).toBe(false)
 })
+
+it("refreshes the job's own board, and every board when the board is unknown", async () => {
+  const client = new QueryClient()
+  const own = boardKey('team', 'task_index', 'team')
+  const other = boardKey('public', 'task_index', 'public')
+  for (const key of [own, other]) client.setQueryData(key, {})
+  await refreshJob(client, { boardId: 'team', jobId: '7' })
+  expect(client.getQueryState(own)?.isInvalidated).toBe(true)
+  expect(client.getQueryState(other)?.isInvalidated).toBe(false)
+  await refreshJob(client, { jobId: '7' })
+  expect(client.getQueryState(other)?.isInvalidated).toBe(true)
+})

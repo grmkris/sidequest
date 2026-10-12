@@ -23,7 +23,8 @@ export async function refreshFamilies(client: QueryClient, families: readonly st
 export const refreshBalances = (client: QueryClient) => refreshFamilies(client, BALANCE_READS)
 
 interface JobChange {
-  boardId: string
+  /** The board the job lives on; omitted when unknown, which refreshes every board's copies. */
+  boardId?: string
   taskId?: string
   jobId?: string
 }
@@ -36,10 +37,12 @@ function affectedJob(key: QueryKey, change: JobChange): boolean {
     )
   )
     return true
-  if (kind === 'task_index' || kind === 'list_quote_requests') return key[1] === change.boardId
+  // No board means a change whose board is unknown (Collect): refresh that family on every board.
+  const onBoard = change.boardId === undefined || key[1] === change.boardId
+  if (kind === 'task_index' || kind === 'list_quote_requests') return onBoard
   if (kind === 'job') return change.jobId === undefined || key[1] === change.jobId
   if (['get_task', 'applications', 'bundle', 'delivery-preview'].includes(String(kind)))
-    return key[1] === change.boardId && (change.taskId === undefined || key[2] === change.taskId)
+    return onBoard && (change.taskId === undefined || key[2] === change.taskId)
   return kind === 'collect_actions'
 }
 

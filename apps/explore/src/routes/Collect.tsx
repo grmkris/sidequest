@@ -1,5 +1,4 @@
 import { refreshJob } from '../query-refresh.ts'
-import { currentBoardId } from '../api.ts'
 import { cn } from '../lib/cn.ts'
 import { Button } from '../components/ui/button.tsx'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '../components/ui/empty.tsx'
@@ -139,10 +138,8 @@ export function CollectSection() {
                       autoStart
                       onDone={() => {
                         setOpen(null)
-                        void refreshJob(qc, {
-                          boardId: currentBoardId(),
-                          ...(a.jobId == null ? {} : { jobId: a.jobId }),
-                        })
+                        // A collect action does not say which board listed its job: refresh them all.
+                        void refreshJob(qc, a.jobId == null ? {} : { jobId: a.jobId })
                         toast(k?.done ?? 'Collected')
                       }}
                     />
