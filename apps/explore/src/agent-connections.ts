@@ -27,6 +27,16 @@ export function useAgentConnections(agentId: string | undefined) {
   })
 }
 
+/** "Claude Code is connected as Quill.": the clients acting as the agent, each named once. */
+export function connectedWords(connections: readonly Pick<AgentConnection, 'client'>[], name: string): string | null {
+  const clients = [...new Set(connections.map((connection) => connection.client))]
+  const last = clients.pop()
+  if (last === undefined) return null
+  return clients.length === 0
+    ? `${last} is connected as ${name}.`
+    : `${clients.join(', ')} and ${last} are connected as ${name}.`
+}
+
 const mayWords = (roles: readonly AgentRole[]) => (roles.length === 0 ? 'read only' : `may ${roles.join(' and ')}`)
 
 /** What a connection may do now, and what its sign-in covers when that is more ("may hire · signed in for work and hire"). */

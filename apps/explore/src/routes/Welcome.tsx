@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import { type ReactNode, useRef } from 'react'
 import { type Address, getAddress } from 'viem'
 import type { ManagedAgent } from '../api.ts'
+import { connectedWords, useAgentConnections } from '../agent-connections.ts'
 import { AgentOrb } from '../components/agent/AgentOrb.tsx'
 import { CreateAgent } from '../components/agent/CreateAgent.tsx'
 import { StartPrompt } from '../components/AgentStartLink.tsx'
@@ -79,6 +80,9 @@ function Welcome({ address }: { address: Address }) {
   const facts = useOnboardingFacts(address)
   const steps = onboardingSteps(facts)
   const agent = newestAgent(useManagedAgents().data?.agents ?? [])
+  // Once a client acts as the agent, the step says so instead of asking for the connect line again.
+  const connections = useAgentConnections(agent?.id).data?.connections ?? []
+  const connected = agent === undefined ? null : connectedWords(connections, agent.name)
   const navigate = useNavigate()
   // The steps done before this visit show done at once; one finished here gets its check drawn.
   const before = useRef<ReadonlySet<OnboardingStep> | null>(null)
@@ -115,10 +119,12 @@ function Welcome({ address }: { address: Address }) {
             n={i + 1}
             state={state}
             title={COPY[step].title}
-            text={state === 'done' ? COPY[step].done : COPY[step].text}
+            text={
+              state !== 'done' ? COPY[step].text : step === 'agent' && connected !== null ? connected : COPY[step].done
+            }
             fresh={state === 'done' && before.current !== null && !before.current.has(step)}
             after={
-              step === 'agent' && state === 'done' && agent !== undefined ? (
+              step === 'agent' && state === 'done' && agent !== undefined && connected === null ? (
                 <StartPrompt agent={{ name: agent.name, agentId: agent.agent_id }} />
               ) : null
             }
