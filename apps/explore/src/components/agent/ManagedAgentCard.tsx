@@ -8,6 +8,7 @@ import { AgentNew } from '../../routes/AgentNew.tsx'
 import { Address, TxLink } from '../kit.tsx'
 import { Badge } from '../ui/badge.tsx'
 import { Button } from '../ui/button.tsx'
+import { ConfirmButton } from '../Sheet.tsx'
 import { useAuth } from '../Wallet.tsx'
 import { useNow } from '../Time.tsx'
 import { AgentStake } from '../AgentStake.tsx'
@@ -153,9 +154,22 @@ export function ManagedAgentCard({ agent, onBack }: { agent: ManagedAgent; onBac
             </p>
           ))}
         </div>
-        <Button variant="destructive" busy={busy} onClick={() => void revoke()} className="justify-self-start">
-          {stopped ? 'Reconcile revocation and signer removal' : 'Stop hosted access and revoke'}
-        </Button>
+        {stopped ? (
+          <Button variant="destructive" busy={busy} onClick={() => void revoke()} className="justify-self-start">
+            Reconcile revocation and signer removal
+          </Button>
+        ) : (
+          <ConfirmButton
+            busy={busy}
+            className="justify-self-start"
+            title={`Stop ${agent.name}?`}
+            description="Its hosted actions end at once, its signer is removed and its on-chain permissions are disabled. Jobs it has open stay on chain. This cannot be undone."
+            confirm="Stop and revoke"
+            onConfirm={() => void revoke()}
+          >
+            Stop hosted access and revoke
+          </ConfirmButton>
+        )}
         {error !== null && <p className="text-ui text-destructive-text [overflow-wrap:anywhere]">{error}</p>}
       </ManageCard>
     </article>
@@ -199,14 +213,16 @@ function PermissionList({
               </p>
             </div>
             {row.status !== 'disabled' && (
-              <Button
-                variant="destructive"
+              <ConfirmButton
                 busy={action.busy && action.pending?.args.permissionId === row.permissionId}
                 disabled={action.busy}
-                onClick={() => void action.execute('revoke_permission', { permissionId: row.permissionId }, refresh)}
+                title="Revoke this permission?"
+                description="Its on-chain authority is disabled. The agent has to ask again to get it back."
+                confirm="Revoke permission"
+                onConfirm={() => void action.execute('revoke_permission', { permissionId: row.permissionId }, refresh)}
               >
                 Revoke
-              </Button>
+              </ConfirmButton>
             )}
           </div>
         ))

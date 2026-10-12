@@ -7,6 +7,7 @@ import { relative } from '../../format.ts'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
 import { ManageCard } from './ManageCards.tsx'
+import { ConfirmButton } from '../Sheet.tsx'
 
 type Role = 'work' | 'hire'
 
@@ -110,15 +111,18 @@ function ConnectionsCard({ agent }: { agent: ManagedAgent }) {
                   {row.lastUsedAt === null ? 'not used yet' : `last used ${relative(row.lastUsedAt)}`}
                 </span>
               </div>
-              <Button
+              <ConfirmButton
                 variant="outline"
                 size="sm"
                 busy={busy === row.id}
                 disabled={busy !== null}
-                onClick={() => void disconnect(row.id)}
+                title={`Disconnect ${row.client}?`}
+                description={`It stops acting as ${agent.name} at once and hears no more events. To use it again, connect it from the client.`}
+                confirm="Disconnect"
+                onConfirm={() => void disconnect(row.id)}
               >
                 Disconnect
-              </Button>
+              </ConfirmButton>
             </li>
           ))}
         </ul>

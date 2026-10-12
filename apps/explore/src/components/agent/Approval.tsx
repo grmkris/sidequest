@@ -12,6 +12,7 @@ import { reviewAgentGrant, type PreparedGrant } from '../../agent-grant.ts'
 import { AgentGrantReview } from '../AgentGrantReview.tsx'
 import { PermissionApproval } from './PermissionApproval.tsx'
 import { RoleApproval } from './RoleApproval.tsx'
+import { ConfirmButton } from '../Sheet.tsx'
 import { TokenAmount } from '../token/TokenAmount.tsx'
 
 import { useTokenList } from '../../useTokens.ts'
@@ -32,6 +33,36 @@ export function Approval(props: Parameters<typeof OperationApproval>[0]) {
       />
     )
   return <OperationApproval {...props} />
+}
+
+/** Rejecting asks first. A rejected hire sends and pays nothing, and a rejected pick reopens its quote request. */
+function RejectButton({
+  kind,
+  name,
+  busy,
+  onReject,
+}: {
+  kind: AgentApproval['kind']
+  name: string
+  busy: boolean
+  onReject: () => void
+}) {
+  const unstake = kind === 'unstake'
+  return (
+    <ConfirmButton
+      disabled={busy}
+      title={unstake ? 'Keep the position?' : 'Reject this hire?'}
+      description={
+        unstake
+          ? `The shares stay where they are, and ${name} is told you said no.`
+          : `Nothing is sent and nothing is paid. If ${name} picked a quote, that quote request opens again so it can pick another.`
+      }
+      confirm={unstake ? 'Reject leaving' : 'Reject hire'}
+      onConfirm={onReject}
+    >
+      Reject
+    </ConfirmButton>
+  )
 }
 
 /**
@@ -157,9 +188,12 @@ function OperationApproval({
                 : 'Sign and approve hire'
               : 'Approve exact shares'}
           </Button>
-          <Button variant="destructive" disabled={busy} onClick={() => void run(() => decide(false))}>
-            Reject
-          </Button>
+          <RejectButton
+            kind={approval.kind}
+            name={agent.name}
+            busy={busy}
+            onReject={() => void run(() => decide(false))}
+          />
         </div>
       )}
       {approval.status === 'approved' && (

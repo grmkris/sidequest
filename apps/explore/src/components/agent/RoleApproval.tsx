@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Badge } from '../ui/badge.tsx'
 import { Button } from '../ui/button.tsx'
 import { Section } from '../kit.tsx'
+import { ConfirmButton } from '../Sheet.tsx'
 
 const Request = Schema.Struct({ role: Schema.Literals(['work', 'hire']), reason: Schema.optionalKey(Schema.String) })
 
@@ -72,9 +73,15 @@ export function RoleApproval({
           <Button busy={busy} onClick={() => void decide(true)}>
             Allow
           </Button>
-          <Button variant="destructive" disabled={busy} onClick={() => void decide(false)}>
+          <ConfirmButton
+            disabled={busy}
+            title={`Decline ${agent.name}'s request?`}
+            description={`${agent.name} keeps the roles it has and is told you said no. It can ask again.`}
+            confirm="Decline"
+            onConfirm={() => void decide(false)}
+          >
             Decline
-          </Button>
+          </ConfirmButton>
         </div>
       )}
       {error !== null && (

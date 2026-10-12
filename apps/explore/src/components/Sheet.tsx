@@ -6,7 +6,17 @@ import { cn } from '../lib/cn.ts'
  * a wider screen. Decisions that move money go through `ConfirmSheet`, which says what will happen before it does.
  */
 import { X } from 'lucide-react'
-import { type ReactNode, createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react'
+import {
+  type ComponentProps,
+  type ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react'
 
 /** Apple's momentum projection: where a flick released at `velocity` px/s comes to rest. */
 const project = (velocity: number, decelerationRate = 0.998) =>
@@ -218,6 +228,63 @@ export function ConfirmSheet({
         </Button>
       </div>
     </Sheet>
+  )
+}
+
+/**
+ * A button for something that cannot be taken back (reject, decline, disconnect, stop): it asks first, in a destructive
+ * `ConfirmSheet` that says what will happen. Confirming closes the sheet and runs `onConfirm`; the button shows it busy.
+ */
+export function ConfirmButton({
+  children,
+  title,
+  description,
+  confirm,
+  onConfirm,
+  busy,
+  disabled,
+  variant = 'destructive',
+  size,
+  className,
+}: {
+  children: ReactNode
+  title: ReactNode
+  description: ReactNode
+  confirm: ReactNode
+  onConfirm: () => void
+  busy?: boolean
+  disabled?: boolean
+  variant?: ComponentProps<typeof Button>['variant']
+  size?: ComponentProps<typeof Button>['size']
+  className?: string
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <Button
+        variant={variant}
+        size={size}
+        busy={busy}
+        disabled={disabled}
+        className={className}
+        aria-haspopup="dialog"
+        onClick={() => setOpen(true)}
+      >
+        {children}
+      </Button>
+      <ConfirmSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        title={title}
+        description={description}
+        confirm={confirm}
+        tone="destructive"
+        onConfirm={() => {
+          setOpen(false)
+          onConfirm()
+        }}
+      />
+    </>
   )
 }
 

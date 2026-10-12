@@ -4,6 +4,7 @@ import { Field, FieldLabel, FieldDescription } from '../ui/field.tsx'
 import { Input } from '../ui/input.tsx'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Section } from '../kit.tsx'
+import { ConfirmButton } from '../Sheet.tsx'
 import { useState } from 'react'
 import { type Address, type Hex, parseUnits } from 'viem'
 import { useSignTypedData } from 'wagmi'
@@ -230,9 +231,15 @@ export function PermissionApproval({
           <Button busy={busy} onClick={() => void run(review === null ? prepare : () => decide(true))}>
             {review === null ? 'Review permission' : 'Sign and grant permission'}
           </Button>
-          <Button variant="destructive" disabled={busy} onClick={() => void run(() => decide(false))}>
+          <ConfirmButton
+            disabled={busy}
+            title="Reject this permission?"
+            description={`Nothing is signed and ${agent.name} gets no new authority. It is told you said no.`}
+            confirm="Reject permission"
+            onConfirm={() => void run(() => decide(false))}
+          >
             Reject
-          </Button>
+          </ConfirmButton>
         </div>
       )}
       {error !== null && (
