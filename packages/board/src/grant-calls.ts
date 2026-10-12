@@ -54,7 +54,7 @@ export function checkGrantCall(ctx: sdk.GrantContext, spec: sdk.GrantSpec, call:
       ? ctx.stack.holding
       : spec.kind === 'agent-sweep'
         ? spec.operator
-        : spec.kind === 'allowance' || spec.kind === 'allowance-once'
+        : spec.kind === 'allowance' || spec.kind === 'gas-allowance' || spec.kind === 'allowance-once'
           ? spec.agent
           : undefined
   if (pin !== undefined && (typeof args[0] !== 'string' || !same(args[0], pin)))

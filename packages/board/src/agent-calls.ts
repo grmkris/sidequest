@@ -41,6 +41,8 @@ function approval(scope: AgentCallScope, call: sdk.Call): string {
   const [spender, amount] = decoded.args
   const encoded = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [spender, amount] })
   if (!same(encoded, call.data)) throw new Error('Noncanonical approval calldata')
+  if (scope.agentSweep !== null && scope.agentSweep !== undefined && same(spender, scope.agentSweep))
+    return 'sweep-approve'
   const { aa } = scope.context.deployment
   if (
     aa?.paymaster !== null &&
@@ -76,7 +78,8 @@ function redemption(scope: AgentCallScope, call: sdk.Call): string {
   const hash = sdk.delegationHash(grant)
   const row = scope.grants.get(hash)
   if (
-    row?.status !== 'live' ||
+    row === undefined ||
+    row.status !== 'live' ||
     row.signature === null ||
     row.expires_at <= scope.now ||
     !same(row.owner, scope.agent.operator)
@@ -85,29 +88,39 @@ function redemption(scope: AgentCallScope, call: sdk.Call): string {
   const spec = scope.grants.spec(hash)
   const signed = scope.grants.signed(hash)
   sdk.assertGrant(scope.context, spec, grant)
-  if (
-    spec.start > scope.now ||
-    !same(grant.delegator, scope.agent.operator) ||
-    !same(grant.delegate, scope.agent.address) ||
-    !same(grant.signature, signed.signature) ||
-    execution.value !== 0n
-  )
-    throw new Error('Redemption requires this operator and agent with zero value')
+  validateRedemptionGrant(scope, grant, signed, spec, execution)
   if (spec.kind === 'permission') {
     sdk.checkPermissionExecution(spec, execution)
     if (spec.terms.type === 'sidequest:contract-call') {
       routine(scope, { to: execution.target, data: execution.callData, value: execution.value })
       return 'permission'
     }
-  } else if (spec.kind !== 'allowance' && spec.kind !== 'allowance-once') {
+  } else if (!['allowance', 'gas-allowance', 'allowance-once'].includes(spec.kind)) {
     throw new Error('Redemption grant kind is outside agent policy')
   }
   const decoded = decodeFunctionData({ abi: erc20Abi, data: execution.callData })
   if (decoded.functionName !== 'transfer' || !same(decoded.args[0], scope.agent.address))
     throw new Error('Redemption must pay this agent')
+  if (!same(encodeFunctionData({ abi: erc20Abi, functionName: 'transfer', args: decoded.args }), execution.callData))
+    throw new Error('Noncanonical transfer calldata')
+  if ('amount' in spec && decoded.args[1] > spec.amount) throw new Error('Redemption exceeds its allowance')
   if (spec.kind !== 'permission')
     checkGrantCall(scope.context, spec, { to: execution.target, data: execution.callData, value: '0' })
+  if (spec.kind === 'gas-allowance') return 'gas-pull'
   return spec.kind === 'permission' ? 'permission' : 'reward-pull'
+}
+
+function validateRedemptionGrant(
+  scope: AgentCallScope,
+  grant: sdk.Delegation,
+  signed: sdk.Delegation,
+  spec: sdk.GrantSpec,
+  execution: sdk.Execution,
+): void {
+  const matches =
+    spec.start <= scope.now && same(grant.delegator, scope.agent.operator) && same(grant.delegate, scope.agent.address)
+  if (!matches || !same(grant.signature, signed.signature) || execution.value !== 0n)
+    throw new Error('Redemption requires this operator and agent with zero value')
 }
 
 /** Every method is bound to the configured contract; direct native value and naked token transfers are refused. */
@@ -192,7 +205,25 @@ export function checkAgentBatch(scope: AgentCallScope, calls: readonly sdk.Call[
     if (method === 'reward-pull' && methods[index + 2] !== 'publish')
       throw new Error('Reward allowance requires a hire')
     if (method === 'publish') checkHire(scope, calls, index)
-    if (method === 'permission' && methods.filter((item) => item !== 'gas-approve').length !== 1)
+    if (method === 'sweep-approve') checkSweepApproval(scope, calls, index)
+    if (method === 'sweep' && methods[index - 1] !== 'sweep-approve')
+      throw new Error('Sweep requires an exact approval')
+    if (method === 'permission' && methods.filter((item) => item !== 'gas-approve' && item !== 'gas-pull').length !== 1)
       throw new Error('Permission redemption must be the only action')
   })
+}
+
+function checkSweepApproval(scope: AgentCallScope, calls: readonly sdk.Call[], index: number): void {
+  const approve = calls[index]!
+  const next = calls[index + 1]
+  if (next === undefined || checkAgentCall(scope, next) !== 'sweep')
+    throw new Error('Sweep approval requires its sweep')
+  const swept = decodeFunctionData({ abi: agentSweepAbi, data: next.data })
+  const approvalCall = decodeFunctionData({ abi: erc20Abi, data: approve.data })
+  if (
+    approvalCall.functionName !== 'approve' ||
+    !same(approve.to, swept.args[0]) ||
+    approvalCall.args[1] !== swept.args[2]
+  )
+    throw new Error('Sweep approval must equal its token and amount')
 }

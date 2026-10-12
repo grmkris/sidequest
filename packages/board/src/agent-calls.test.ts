@@ -64,7 +64,7 @@ function fixture() {
           policyHash: sdk.EMPTY_HASH,
           token: spec.token,
           reward: 100n,
-          creatorBond: 0n,
+          creatorBond: 10n * 10n ** 18n,
           workerBond: 0n,
           deliveryDeadline: now + 3600,
           expiredAt: now + 86400,
@@ -144,6 +144,36 @@ describe('agent user-operation scope', () => {
     ).toThrow('outside')
     expect(checkAgentCall(scope, sweep(7n))).toBe('sweep')
     expect(() => checkAgentCall(scope, sweep(8n))).toThrow('agent ID')
+    const approve = sdk.approveCall(d.factory, d.identity, 1n)
+    expect(() => checkAgentBatch(scope, [approve, sweep(7n)])).not.toThrow()
+    expect(() => checkAgentBatch(scope, [sdk.approveCall(d.factory, d.identity, 2n), sweep(7n)])).toThrow('equal')
+    expect(() => checkAgentBatch(scope, [approve])).toThrow('requires its sweep')
+    expect(() => checkAgentBatch(scope, [sweep(7n)])).toThrow('exact approval')
+  })
+  it('keeps gas pulls separate from reward funding and bounds them by the live period amount', () => {
+    const f = fixture()
+    const spec: sdk.GrantSpec = {
+      kind: 'gas-allowance',
+      delegator: operator,
+      agent,
+      token: context.deployment.aa.gasToken,
+      amount: 5_000_000n,
+      periodSeconds: 604800,
+      start: now,
+      salt: 9n,
+    }
+    const prepared = f.scope.grants.prepare(operator, spec)
+    f.sql.run("UPDATE grants SET status='live',signature='0x1234' WHERE delegation_hash=?", prepared.hash)
+    const pull = (amount: bigint): sdk.Call => ({
+      to: d.delegation.manager,
+      value: 0n,
+      data: sdk.redeemCallsCalldata({ ...prepared.grant, signature: '0x1234' }, [
+        sdk.advanceExecution(spec.token, agent, amount),
+      ]),
+    })
+    expect(checkAgentCall(f.scope, pull(1n))).toBe('gas-pull')
+    expect(() => checkAgentBatch(f.scope, [f.pull(), f.approve, f.publish, pull(1n)])).not.toThrow()
+    expect(() => checkAgentCall(f.scope, pull(5_000_001n))).toThrow('exceeds')
   })
 })
 

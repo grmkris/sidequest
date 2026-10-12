@@ -60,7 +60,7 @@ export async function allowanceAvailable(ctx: sdk.Ctx, grants: GrantStore, row: 
   const spec = grants.spec(row.delegation_hash)
   if (row.status !== 'live' || row.signature === null || (await sdk.isDisabled(ctx, row.delegation_hash))) return 0n
   if (spec.kind === 'allowance-once') return (await sdk.callsMade(ctx, row.delegation_hash)) === 0n ? spec.amount : 0n
-  if (spec.kind !== 'allowance') return 0n
+  if (spec.kind !== 'allowance' && spec.kind !== 'gas-allowance') return 0n
   const caveat = grants
     .signed(row.delegation_hash)
     .caveats.find((item) => same(item.enforcer, ctx.deployment.delegation.enforcers.erc20PeriodTransfer))

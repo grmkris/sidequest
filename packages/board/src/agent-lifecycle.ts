@@ -8,6 +8,7 @@ import { GrantStore, type GrantRow } from './grants.ts'
 import { SponsorDesk } from './sponsor.ts'
 import { allowanceAvailable } from './agent-call-mapper.ts'
 import type { Sql } from './store.ts'
+import { GasAllowances, type GasAllowanceInput } from './gas-allowance.ts'
 
 export interface AgentLifecycleDeps {
   readonly sql: Sql
@@ -73,6 +74,7 @@ export class AgentLifecycle {
       agent,
       permissions: new AgentPermissions(this.deps).list(agent),
       allowances: usage,
+      gasAllowances: await new GasAllowances(this.deps).status(agent),
       grants: this.grants
         .list(agent.address ?? operator)
         .map((row) => ({ hash: row.delegation_hash, kind: row.kind, status: row.status, expiresAt: row.expires_at })),
@@ -92,10 +94,29 @@ export class AgentLifecycle {
     return this.grants.list(agent.operator).filter((row) => {
       const spec = this.grants.spec(row.delegation_hash)
       return (
-        (spec.kind === 'allowance' || spec.kind === 'allowance-once' || spec.kind === 'permission') &&
+        (spec.kind === 'allowance' ||
+          spec.kind === 'gas-allowance' ||
+          spec.kind === 'allowance-once' ||
+          spec.kind === 'permission') &&
         spec.agent.toLowerCase() === agent.address?.toLowerCase()
       )
     })
+  }
+
+  prepareGasAllowance(id: string, operator: Address, input: GasAllowanceInput) {
+    return new GasAllowances(this.deps).prepare(id, operator, input)
+  }
+
+  editGasAllowance(id: string, operator: Address, input: GasAllowanceInput) {
+    return this.prepareGasAllowance(id, operator, input)
+  }
+
+  confirmGasAllowance(id: string, operator: Address, key: string, hash: Hex, signature: Hex) {
+    return new GasAllowances(this.deps).confirm(id, operator, key, hash, signature)
+  }
+
+  revokeGasAllowance(id: string, operator: Address, hash: Hex) {
+    return new GasAllowances(this.deps).revoke(id, operator, hash)
   }
 
   prepareAllowance(id: string, operator: Address, input: { key: string; token: Address; amount: bigint }) {
@@ -208,7 +229,7 @@ export class AgentLifecycle {
             start: this.deps.now(),
             salt: requestKey(agent.id, `approval-${operation.id.slice(2)}-${attempt}`),
           }
-        : this.grants.spec(prior!.hash),
+        : this.grants.spec(prior.hash),
     )
     this.agents.freezeStep(operation.id, `operator-allowance:${attempt}`, { hash: prepared.hash })
     return { approval, ...prepared }
