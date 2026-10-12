@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { ChevronUp, ExternalLink } from 'lucide-react'
-import { Fragment, type ReactNode, type RefObject, useState } from 'react'
+import { Fragment, type ReactNode, type RefObject, useRef, useState } from 'react'
 import { type Address, zeroAddress } from 'viem'
 import { formatNumber } from '../format.ts'
 import { cn } from '../lib/cn.ts'
@@ -8,6 +8,7 @@ import { approxUsd } from '../usd.ts'
 import { type BalanceRow, useWalletBalances } from '../wallet-balances.ts'
 import { deployment, explorer, isMainnet, writesOpen } from '../wallet.ts'
 import { CopyButton, textLinkClass } from './kit.tsx'
+import { useSideSheet } from './side/SideToken.tsx'
 import { TokenIcon } from './token/TokenIcon.tsx'
 import { buttonVariants } from './ui/button.tsx'
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from './ui/popover.tsx'
@@ -15,14 +16,16 @@ import { Monogram } from './Wallet.tsx'
 
 /**
  * A glance at the wallet from the sidebar's account row, which itself still opens Account: every token Explore knows,
- * SIDE staked behind agents, dollar estimates (`usd.ts`), and Buy and Stake beside SIDE. It opens upward from the row
- * and reads nothing until it is opened.
+ * SIDE staked behind agents, dollar estimates (`usd.ts`), and Buy (the SIDE sheet) and Stake beside SIDE. It opens
+ * upward from the row and reads nothing until it is opened.
  */
 export function WalletPeek({ address, anchor }: { address: Address; anchor: RefObject<HTMLElement | null> }) {
   const [open, setOpen] = useState(false)
+  const trigger = useRef<HTMLButtonElement>(null)
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
+        ref={trigger}
         aria-label="Wallet balances"
         title="Wallet balances"
         className={cn(
@@ -37,9 +40,34 @@ export function WalletPeek({ address, anchor }: { address: Address; anchor: RefO
       </PopoverTrigger>
       <PopoverContent anchor={anchor} side="top" align="start" sideOffset={6} className="w-80 gap-0 p-0">
         <PopoverTitle className="sr-only">Wallet balances</PopoverTitle>
-        <Balances address={address} close={() => setOpen(false)} />
+        <Balances address={address} close={() => setOpen(false)} trigger={trigger} />
       </PopoverContent>
     </Popover>
+  )
+}
+
+/** Under SIDE: Buy, which opens the SIDE sheet (returning focus to the peek's button), and Stake on Account. */
+function SideActions({ close, trigger }: { close: () => void; trigger: RefObject<HTMLButtonElement | null> }) {
+  const side = useSideSheet()
+  const action = buttonVariants({ variant: 'outline', size: 'xs' })
+  return (
+    <li className="flex gap-1.5 px-1.5 pt-0.5 pb-2 pl-8">
+      {side !== null && (deployment.launcher !== null || deployment.market !== null) && (
+        <button
+          type="button"
+          className={action}
+          onClick={() => {
+            close()
+            side.open({ returnFocus: trigger.current })
+          }}
+        >
+          Buy
+        </button>
+      )}
+      <Link to="/account" hash="backing" onClick={close} className={action}>
+        Stake
+      </Link>
+    </li>
   )
 }
 
@@ -76,9 +104,17 @@ function Line({
   )
 }
 
-function Balances({ address, close }: { address: Address; close: () => void }) {
+function Balances({
+  address,
+  close,
+  trigger,
+}: {
+  address: Address
+  close: () => void
+  /** The peek's own button: where focus returns once the SIDE sheet opened from here closes. */
+  trigger: RefObject<HTMLButtonElement | null>
+}) {
   const { rows, staked, totalUsd } = useWalletBalances(address)
-  const action = buttonVariants({ variant: 'outline', size: 'xs' })
   return (
     <>
       <div className="flex min-w-0 items-center gap-2 border-b px-3 py-2">
@@ -120,18 +156,7 @@ function Balances({ address, close }: { address: Address; close: () => void }) {
                 nested
               />
             )}
-            {row.role === 'bond' && writesOpen && (
-              <li className="flex gap-1.5 px-1.5 pt-0.5 pb-2 pl-8">
-                {deployment.market !== null && (
-                  <Link to="/account" hash="wallet" onClick={close} className={action}>
-                    Buy
-                  </Link>
-                )}
-                <Link to="/account" hash="backing" onClick={close} className={action}>
-                  Stake
-                </Link>
-              </li>
-            )}
+            {row.role === 'bond' && writesOpen && <SideActions close={close} trigger={trigger} />}
           </Fragment>
         ))}
       </ul>

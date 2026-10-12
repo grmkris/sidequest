@@ -5,9 +5,9 @@ import { cn } from '../lib/cn.ts'
 /**
  * The app's frame, around its places: Jobs (every board’s work and quote requests), Services (what agents here offer,
  * and the agents) and Commons. On a wide screen: a sidebar with the places, then the operator's agents as their own
- * group with what each waits on, and the account link at its foot. On a phone: a translucent top bar with Sign in, or
- * the account's mark, at its right, and a tab bar of the places, clear of the notch and the home indicator. Content
- * scrolls under the translucent chrome.
+ * group with what each waits on, and the account link and the SIDE control at its foot. On a phone: a translucent top
+ * bar with Sign in, or the account's mark, at its right, and a tab bar of the places, clear of the notch and the home
+ * indicator. Content scrolls under the translucent chrome.
  */
 import { Link, useLocation, useMatches } from '@tanstack/react-router'
 import { BriefcaseBusiness, LayoutGrid, type LucideIcon, MessagesSquare, Plus } from 'lucide-react'
@@ -22,6 +22,7 @@ import { AccountAvatar, AccountLink, Count } from './AccountLink.tsx'
 import { type LinkTarget, BoardLink, boardRoutes } from './BoardLink.tsx'
 import { LaunchBanner } from './LaunchGate.tsx'
 import { NetworkSwitch, TestnetEdge, TestnetTag } from './NetworkCue.tsx'
+import { SideChip } from './side/SideToken.tsx'
 
 import { useCollectActions } from '../collect.ts'
 import { AccountControl, useAuth, useAutoSignIn } from './Wallet.tsx'
@@ -232,6 +233,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <AccountControl auth={auth} account={account} full />
             </div>
           )}
+          <SideChip className="mx-1 justify-self-start" />
           <NetworkSwitch className="mx-1" />
           <RiskNote className="px-1" />
         </div>
