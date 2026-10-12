@@ -10,10 +10,16 @@ import {SidequestRecipe} from "../script/SidequestRecipe.sol";
 contract MainnetRunbookTest is Test {
     string internal doc;
     string internal r7;
+    string internal kit;
+
+    /// The runbook's SafeAccept step: the launch kit on Kris's MacBook runs SafeAccept.s.sol from the owner keystore.
+    string internal constant KIT_ACCEPT =
+        "MAINNET_GO=yes NETWORK=monad-mainnet contracts/script/launch-kit.sh accept send";
 
     function setUp() public {
         doc = vm.readFile(string.concat(vm.projectRoot(), "/../docs/mainnet-runbook.md"));
         r7 = vm.readFile(string.concat(vm.projectRoot(), "/script/rehearse-launch.sh"));
+        kit = vm.readFile(string.concat(vm.projectRoot(), "/script/launch-kit.sh"));
     }
 
     /// The forge steps both documents share, in launch order.
@@ -26,8 +32,35 @@ contract MainnetRunbookTest is Test {
     }
 
     function test_runbookAndR7RunTheSameForgeSteps() public view {
-        _inOrder(doc, _sharedSteps(), "runbook");
+        string[] memory runbook = _sharedSteps();
+        runbook[2] = KIT_ACCEPT;
+        _inOrder(doc, runbook, "runbook");
         _inOrder(r7, _sharedSteps(), "rehearse-launch.sh");
+        // The kit's accept is R7's SafeAccept.s.sol, broadcast with MAINNET_GO from the owner keystore.
+        string[] memory accept = new string[](3);
+        accept[0] = "MAINNET_GO=${MAINNET_GO:-} forge script script/SafeAccept.s.sol";
+        accept[1] = "--keystore \"$KEYS/sidequest-owner\" --password-file \"$PWFILE\"";
+        accept[2] = "forge script script/SafeAccept.s.sol --sig 'check()'";
+        _inOrder(kit, accept, "launch-kit.sh");
+    }
+
+    /// 12 Oct: the Safe owner, creator and exit-test keys sign on Kris's MacBook through the kit. Every password read is a
+    /// Keychain prompt (no trusted app), a mainnet send needs MAINNET_GO=yes and refuses agent-made keystores, agents
+    /// cannot run setup, and no raw key is ever passed.
+    function test_launchKitSignsFromPromptedKeystores() public view {
+        string[7] memory needles = [
+            "security add-generic-password -U -a sidequest -s \"sidequest-$1\" -l \"Sidequest $1 keystore\" -T \"\"",
+            "[[ \"${MAINNET_GO:-}\" == yes ]]",
+            "these keystores were made by an agent for a testnet dry run",
+            "setup makes keys: Kris runs it himself in Terminal",
+            "--keystore \"$KEYS/sidequest-$name\" --password-file \"$PWFILE\"",
+            "$(nadfun api)",
+            "version: \"V2\""
+        ];
+        for (uint256 i; i < needles.length; ++i) {
+            assertTrue(vm.contains(kit, needles[i]), string.concat("launch-kit.sh lacks ", needles[i]));
+        }
+        assertFalse(vm.contains(kit, "--private-key"), "launch-kit.sh passes a raw key");
     }
 
     function test_runbookSequenceWithGates() public view {
@@ -41,14 +74,14 @@ contract MainnetRunbookTest is Test {
         s[4] = "forge script script/PromoteSidequest.s.sol";
         s[5] = live;
         s[6] = "production launch gate refused";
-        s[7] = "MAINNET_GO=yes forge script script/SafeAccept.s.sol";
+        s[7] = KIT_ACCEPT;
         s[8] = "forge script script/SafeAccept.s.sol --sig \"check()\"";
         s[9] = live;
         s[10] = "Sidequest v1 production launch gate passed";
         // LAUNCH-AUDIT-003: the gate reads the reviewed Safe back against the artifact's pins.
         s[11] = "the reviewed Safe: storage slot 0 is the canonical SafeL2 singleton";
-        // R4/G1: the Safe goes to 2-of-3 once it owns everything, and the gate's threshold pin follows.
-        s[12] = "`changeThreshold(uint256)` with 2";
+        // R4/G1: the 1-of-1 launch Safe goes to 2-of-3 by 20 Oct, in place, and the gate's pins follow.
+        s[12] = "`addOwnerWithThreshold(address,uint256)`";
         s[13] = "PROD_ADMISSION_DRAIN=1 bun run deploy:prod";
         s[14] = "Post-deploy probes";
         s[15] = "bun scripts/preflight-prod.ts docs/p0-prod-artifact.json --probe https://sidequest.exchange";
@@ -225,7 +258,7 @@ contract MainnetRunbookTest is Test {
             "| arbitrator | `roles.arbitrator` (a fresh R2 key) | 0.11 |", // LAUNCH-AUDIT-007: the cancellation reserve
             "RELAY_FLOOR_MAINNET",
             "| relay |",
-            "| changeThreshold(2) |"
+            unicode"| 2-of-3 by 20 Oct: addOwnerWithThreshold ×2 |"
         ];
         for (uint256 i; i < needles.length; ++i) {
             assertTrue(vm.contains(doc, needles[i]), string.concat("runbook lacks ", needles[i]));
@@ -244,14 +277,15 @@ contract MainnetRunbookTest is Test {
         string[9] memory needles = [
             "cast wallet import sidequest-deployer --interactive",
             "--account sidequest-deployer --password-file ~/.config/sidequest/deployer.password",
-            "--account sidequest-safe-owner",
-            "--password-file ~/.config/sidequest/safe-owner.password",
+            // The Safe owner, creator and exit-test keys: Kris makes them on the Mac, and every signature is his prompt.
+            "NETWORK=monad-mainnet contracts/script/launch-kit.sh setup",
+            KIT_ACCEPT,
             // KEYSTORE-SEC-002: an existing directory or file is tightened, and every signer is checked first.
             "chmod 700 ~/.config/sidequest",
             "rm -f ~/.config/sidequest/deployer.password",
             "chmod 600 ~/.config/sidequest/deployer.password",
             "pwcheck ~/.config/sidequest/deployer.password && \\",
-            "pwcheck ~/.config/sidequest/safe-owner.password && \\"
+            "click **Allow**, never **Always Allow**"
         ];
         for (uint256 i; i < needles.length; ++i) {
             assertTrue(vm.contains(doc, needles[i]), string.concat("runbook lacks ", needles[i]));

@@ -10,12 +10,13 @@ subshell. Every read names its `--rpc-url`, and RPC URLs and API keys are never 
 The **development** stage serves `dev.sidequest.exchange`; prod serves `sidequest.exchange`. Each has its own
 remote state and resources; both use Monad testnet until the mainnet gate described below. See [stages](stages.md).
 
-## Launch decisions (Kris, 11 October)
+## Launch decisions (Kris, 11 and 12 October)
 
 The full record is myplan note 22 (Decisions); the task list is note 23.
 
-- **SIDE.** SIDE launches on the nad.fun launcher, created from Kris's wallet `0xB9970A6371358F6C74DFb15A7cB2653E3AE3E471`
-  with a 5% dev buy (50M SIDE) in the creation transaction. The dev buy moves to the Safe and is disclosed: 50% for
+- **SIDE.** SIDE launches on the nad.fun launcher, created by the `sidequest-creator` keystore on Kris's MacBook
+  through nad.fun's upload and salt API and its V2 router (nad.fun lists only tokens made through its API), with a 5% dev
+  buy (50M SIDE) in the creation transaction. The dev buy moves to the Safe and is disclosed: 50% for
   backing positions the Safe owns, 30% for tasks the Safe funds, 20% in reserve. nad.fun's creator fee goes to the Safe.
   The protocol mints nothing: the deploy points at the existing token.
 - **No mining at launch.** The mining reserve, distributor and team vesting are gone from the contracts (tag
@@ -24,8 +25,11 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
 - **Gate.** Mainnet goes only after Kris's A01–A08 by hand on prod-testnet and R7 passing on the commit that launches.
 - **Stages.** `sidequest.exchange` (prod) runs on testnet until the launch. At launch it flips to 143 through
   `infra/prod.json` and a redeploy; `dev.sidequest.exchange` stays on testnet.
-- **Safe.** Three owners, all Kris's. Threshold 1 while `SafeAccept.s.sol` runs as scripted, then 2 (§3.7).
-- **Keys.** Fresh relay, attester and arbitrator keys for 143 only.
+- **Safe.** One owner, the `sidequest-owner` keystore on Kris's MacBook, and threshold 1 at launch. It becomes 2-of-3
+  by 20 October 2026, in place (§3.7); the docs disclose both.
+- **Keys.** Every mainnet wallet is fresh. The Safe owner, the SIDE creator and the exit-test wallet are Foundry
+  keystores on Kris's MacBook, signed through `contracts/script/launch-kit.sh` (§2). The deployer, relay, attester and
+  arbitrator are fresh keys on this box, for 143 only.
 - **Disclosure.** Explore's footer and sidebar say the contracts are unaudited; the docs state the Safe's powers.
 
 ## 0. What is already proven, without a mainnet transaction
@@ -33,9 +37,13 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
 - **The launch on a fork of 143 (R7).** `RPC=https://rpc.monad.xyz bash contracts/script/rehearse-launch.sh` runs
   §3.1–§3.7 against the live chain's state, with Monad gas pricing and anvil dev keys: SIDE is created through the real
   nad.fun router with the 5% dev buy and the creator fee paid to the Safe, and must have no `burn`. The launch gate
-  refuses while the four handovers are pending, passes after `SafeAccept`, and passes again at threshold 2. Then two
+  refuses while the four handovers are pending and passes after `SafeAccept` with the 1-of-1 pin. Rehearsing the 2-of-3
+  due by 20 Oct, it then refuses the stale pin and passes the new one. Then two
   hires paid in SIDE (one settled, one missed whose worker bond must land in the sink) and a small buy and sell. R7
   must pass again on the launching commit before the go; it prints the exact gas budget (§2).
+- **The launch kit on testnet.** `contracts/script/launch-kit.sh` made a 1-of-1 Safe and a token through nad.fun's
+  testnet API (listed with its links, creator fee to the Safe), moved the dev buy, and bought and sold; its backing batch
+  ran on a fork (`docs/evidence/mainnet/2026-10-12-launch-kit-dry-run.md`).
 - **Fork tests** (`(cd contracts && set -a && . ../.env.local && set +a && forge test --match-path 'test/fork/*')`):
   - `SidequestRehearsal.t.sol`: the recipe step by step on a mainnet fork, with third-party calls between the steps,
     against a launcher-like SIDE (no `burn`); a fresh core whose admin roles move to the Safe; the Safe accepts every
@@ -49,14 +57,16 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
 
 ## 1. Inputs, before anything is sent
 
-1. **The Safe (R2).** A Safe v1.4.1 on 143 with Kris's three owners. The canonical contracts have code there:
+1. **The Safe (R2).** A Safe v1.4.1 on 143 with one owner, the kit's `sidequest-owner`. The canonical contracts have
+   code there (`launchKit.safe` in the config):
    - SafeProxyFactory `0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67`;
    - SafeL2 `0x29fcB43b46531BcA003ddC8FCB67FFE91900C762`;
    - fallback handler `0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99`;
    - MultiSendCallOnly `0x9641d764fc13c8B624c04430C7356C1C7C8102e2`.
 
    After the deploy it owns every v1 contract and holds both core admin roles; the deployer keeps nothing (§3.7
-   enforces this). `SafeAccept.s.sol` needs a **threshold-1** Safe, so create it at threshold 1 and raise it in §3.7.
+   enforces this). `SafeAccept.s.sol` needs a **threshold-1** Safe; it stays 1-of-1 through launch and becomes 2-of-3 by
+   20 Oct (§3.7).
 2. **`contracts/config/monad-mainnet.json`** (the coordinator commits it). The complete `sidequest` object:
    `SidequestRecipe.load` reads every row below, so DeploySidequest refuses if any is missing. Numbers are whole SIDE or
    seconds unless marked as raw token units or basis points. Leave the generated `deployment` fields absent: PromoteSidequest writes them from the receipts.
@@ -91,7 +101,7 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
 4. **Domain.** `prod` serves only `sidequest.exchange`; development serves only `dev.sidequest.exchange`.
    No apex alias or domain handoff is needed. Add `https://sidequest.exchange` to the production Privy app's allowed domains.
 
-## 2. Budget and funding [tx, by Kris from his own wallet]
+## 2. Budget and funding [tx, funded by Kris]
 
 Monad charges the **gas limit**, and checks a sender's balance against limit × max fee. R7 on the launching commit
 prints each step's limit and gasUsed; hold twice its charged total. The earlier launch (which also deployed SIDE,
@@ -99,20 +109,39 @@ vesting and mining) took 26 deploy transactions and 26.3M gas, so the deployer's
 
 | step | sends | paid by |
 | --- | --- | --- |
-| Safe (if created by script) | 1 | deployer |
-| nad.fun creation with the 5% dev buy | 1 | Kris's wallet: about 3,544 MON plus the creation fee (check it live) |
-| dev buy to the Safe | 1 | Kris's wallet |
+| Safe (`launch-kit.sh safe send`) | 1 | the owner keystore (Mac) |
+| nad.fun creation with the 5% dev buy | 1 | the creator keystore (Mac): about 3,544 MON; the deploy fee is 0 today, and the kit re-reads it |
+| dev buy to the Safe | 1 | the creator keystore (Mac) |
 | DeploySidequest, fresh core | R7 | deployer |
 | PromoteSidequest | 0 | — |
-| SafeAccept, 4 × execTransaction | 4 | a Safe owner |
-| changeThreshold(2) | 1 | a Safe owner |
+| SafeAccept, 4 × execTransaction | 4 | the owner keystore (Mac) |
+| backing batch (§3.8) | 1 | the owner keystore (Mac) |
+| exit test, buy and sell (§3.12) | 3 | the exit-test keystore (Mac) |
+| 2-of-3 by 20 Oct: addOwnerWithThreshold ×2 | 2 | the owner keystore (Mac), after launch day |
 
 Keep the role wallets separate; each has its own key.
 
 **Keystores, mandatory on mainnet.** No mainnet key goes on a command line or into `.env.local`; `--private-key` is a
 testnet fallback only. Each key that sends here lives in an encrypted Foundry keystore, unlocked by a password file
-you own with mode 600. Import each one once, on the box that sends: the deployer as `sidequest-deployer`, the Safe owner
-as `sidequest-safe-owner`. Kris's wallet signs the nad.fun creation itself.
+you own with mode 600. Import each one once, on the box that sends: the deployer as `sidequest-deployer` here.
+
+**The keys on Kris's MacBook** (decided 12 Oct, myplan note 22). The Safe owner, the SIDE creator and the exit-test
+wallet sign through `contracts/script/launch-kit.sh` in a clone of this repo on the Mac. Kris creates them himself, in
+Terminal; agents never make them:
+
+```
+NETWORK=monad-mainnet contracts/script/launch-kit.sh setup   # three keystores; passwords go into Keychain unseen
+```
+
+Each password is a login-Keychain item that trusts no application, so every read shows Kris a macOS prompt. He must
+click **Allow**, never **Always Allow**. Back up each password into the Passwords app (`copy-password <name>`) and the
+keystores to an encrypted place (`backup <dir>`). A Claude Code session on the Mac runs every kit step twice:
+- `plan` reads, uploads and simulates, and signs nothing;
+- `send` re-checks, takes one Keychain prompt, sends, and reads the result back.
+
+A mainnet `send` needs `MAINNET_GO=yes`, given only after Kris's go, and refuses keystores an agent made for a testnet
+dry run. The steps and their outputs pass through the myplan launch desk note (L0); Claude on this box checks each one
+on chain.
 
 Everything from here on runs in one interactive **bash** session at the repo root. Start it with `bash`: zsh, this box's
 default shell, reads `read -rsp` differently, and `pwcheck` below is bash. Contract commands run in an explicit
@@ -151,8 +180,10 @@ DeploySidequest refuses either mistake before it sends anything (LAUNCH-AUDIT-FI
 
 | role | address | send | why |
 | :--- | :--- | :--- | :--- |
-| admin (deployer) | `0x675269d710692d4d0d7166da11B76463577aad73` | 6 MON | deploy + Safe, with room for a retry |
-| Safe owner that sends | from the Safe | 0.5 MON | SafeAccept and `changeThreshold` |
+| admin (deployer) | `roles.admin`, the fresh `sidequest-deployer` (never the old `0x6752…ad73`) | 60 MON | deploy (about 2.4 MON at 102 gwei) with room for a retry; the relay, arbiter and crew top-ups go out from it (§3.8) |
+| Safe owner (Mac kit) | `launch-kit.sh addresses` | 2 MON | the Safe, SafeAccept and the backing batch |
+| creator (Mac kit) | `launch-kit.sh addresses` | about 3,600 MON | the 5% dev buy (about 3,544 MON) and gas; the kit's margin is refunded |
+| exit test (Mac kit) | `launch-kit.sh addresses` | about 20 MON | the small buy and sell (§3.12) |
 | relay | `roles.relay` (a fresh R2 key) | 3 MON | must stay **above `RELAY_FLOOR_MAINNET` = 2 MON** (`packages/sdk/src/relay.ts`): the launch gate and each sponsored send check it. 3 MON leaves about 1 MON above the floor, about two sponsored hires (0.4–0.5 MON each, [sponsorship.md](sponsorship.md)); decide the launch funding and the 10 MON daily budget before opening writes |
 | attester | `roles.attester` (a fresh R2 key) | 1 MON | attaches evidence |
 | arbitrator | `roles.arbitrator` (a fresh R2 key) | 0.11 | signs rulings, which the relay sends. It also sends `cancelRuling` itself, to burn a recorded ruling's nonce (arbiter `cancel_ruling`). Bounded reserve: 10 cancellations at 51,848 gas (estimated on a Monad-pricing fork) × 203 gwei = 0.105 MON. Refill when below 0.05; no other use |
@@ -166,12 +197,20 @@ Space out transfers to one wallet (Monad's reserve-balance rule; see `reality-ch
 
 ### 3.1 The Safe [tx]
 
-Create it in Safe{Wallet}, or from the factory as R7 does, with Kris's three owners and threshold 1. Then check it:
+On the Mac, with the kit (canonical factory and SafeL2, a salt nonce fixed per owner and network, so a second send
+cannot make a second Safe; the kit checks the threshold, the module list and the guard slot):
+
+```
+NETWORK=monad-mainnet contracts/script/launch-kit.sh safe plan
+MAINNET_GO=yes NETWORK=monad-mainnet contracts/script/launch-kit.sh safe send
+```
+
+Then check it from this box:
 
 ```
 (set -a && . ./.env.local && set +a && S=<safe> && R="$MONAD_MAINNET_RPC_URL" && \
   cast call --rpc-url "$R" "$S" "VERSION()(string)" && cast call --rpc-url "$R" "$S" "getOwners()(address[])" && \
-  cast call --rpc-url "$R" "$S" "getThreshold()(uint256)")   # "1.4.1", the three owners, 1
+  cast call --rpc-url "$R" "$S" "getThreshold()(uint256)")   # "1.4.1", [the owner], 1
 ```
 
 Before any SIDE reaches it, the Safe must have no module and no guard: a module acts without the owners' signatures
@@ -187,13 +226,23 @@ module or a guard later:
   || echo "STOP: the Safe has a guard")
 ```
 
-### 3.2 SIDE on nad.fun [tx, Kris's wallet]
+### 3.2 SIDE on nad.fun [tx, the creator keystore on the Mac]
 
-Kris creates the token on nad.fun from `0xB9970A6371358F6C74DFb15A7cB2653E3AE3E471`: name Sidequest, ticker SIDE, the
-Sidequest mark, the utility-only description, and the website and X links. In the same creation transaction, buy 5%
-of the supply (50M SIDE; about 3,544 MON at launch). Set the creator-fee vault's recipient to the Safe (R7 checks the
-vault names it with `getCreator(token)`). Check the creation fee on nad.fun first. Then read the token back; every line
-must match:
+nad.fun lists only tokens whose metadata and salt come from its API, and the token's `tokenURI` is permanent. The kit
+uploads the Sidequest mark and `docs/brand/nadfun-token.json` (the utility-only description, the website, X and Telegram
+links) to `api.nad.fun` and reads the stored metadata back. It then asks for a V2 salt, checks the predicted address
+(ending 7777) with `cast create2` and that it has no code, re-reads the deploy fee, and simulates `createWithNative`:
+name Sidequest, ticker SIDE, a 5% dev buy in the same transaction (50M SIDE; about 3,544 MON), and the creator-fee
+vault paying the Safe. The salt stays in the kit's state until the send; never post it.
+
+```
+NETWORK=monad-mainnet SAFE=<safe> contracts/script/launch-kit.sh token plan
+MAINNET_GO=yes NETWORK=monad-mainnet SAFE=<safe> contracts/script/launch-kit.sh token send
+```
+
+After the send the kit checks code, 18 decimals, the 1e9 supply, `getCreator(token)` on the creator-fee vault equal to
+the Safe (as R7 does), and the listing on nad.fun's API. Then read the token back from this box; every line must
+match:
 
 ```
 (set -a && . ./.env.local && set +a && T=<SIDE> && R="$MONAD_MAINNET_RPC_URL" && \
@@ -203,9 +252,17 @@ must match:
 ```
 
 Take the address only from the creation transaction's `Create(token, creator)` log, emitted by the router
-`nadfun.router`, with `creator` equal to Kris's wallet: nad.fun does not enforce unique tickers, and DeploySidequest
-refuses any token that is not a clone of `nadfun.tokenImplementation` on `nadfun.curve`. Send the 50M dev-buy SIDE to the
-Safe [tx], then write `sidequest.token` and add SIDE to `knownTokens` in `config/monad-mainnet.json` (PromoteSidequest
+`nadfun.router`, with `creator` equal to the kit's creator address: nad.fun does not enforce unique tickers, and
+DeploySidequest refuses any token that is not a clone of `nadfun.tokenImplementation` on `nadfun.curve`. Send the
+dev-buy SIDE to the Safe [tx] with `MAINNET_GO=yes NETWORK=monad-mainnet SAFE=<safe> contracts/script/launch-kit.sh move
+send` (after `move plan`) and read the Safe's balance back from this box:
+
+```
+(set -a && . ./.env.local && set +a && T=<SIDE> && S=<safe> && R="$MONAD_MAINNET_RPC_URL" && \
+  cast call --rpc-url "$R" "$T" "balanceOf(address)(uint256)" "$S")   # the whole dev buy, about 50M SIDE
+```
+
+Then write `sidequest.token` and add SIDE to `knownTokens` in `config/monad-mainnet.json` (PromoteSidequest
 refuses a mainnet reward list without USDC and SIDE), and commit. Publish the address only from the site and the
 official accounts.
 
@@ -257,19 +314,23 @@ problem; stop. The one exception is `launch:relay at or below RELAY_FLOOR_MAINNE
 
 ### 3.6 The Safe accepts the four [tx]
 
-The Safe still has no module and no guard (§3.1). Then, with the threshold-1 Safe, sent by one owner, in a `contracts/` subshell:
+The Safe still has no module and no guard (§3.1). Pull the promotion commit on the Mac; the kit refuses unless the
+config's promoted Safe is its own. It runs `SafeAccept.s.sol` (one `execTransaction` per contract, the owner's
+pre-validated signature) from the owner keystore, with `MAINNET_GO`:
 
 ```
-pwcheck ~/.config/sidequest/safe-owner.password && \
-(cd contracts && set -a && . ../.env.local && set +a && \
-  NETWORK=monad-mainnet MAINNET_GO=yes forge script script/SafeAccept.s.sol \
-  --rpc-url "$MONAD_MAINNET_RPC_URL" --account sidequest-safe-owner \
-  --password-file ~/.config/sidequest/safe-owner.password --broadcast --slow)
+NETWORK=monad-mainnet contracts/script/launch-kit.sh accept plan
+MAINNET_GO=yes NETWORK=monad-mainnet contracts/script/launch-kit.sh accept send
+```
+
+Then read the four owners back from this box:
+
+```
 (cd contracts && set -a && . ../.env.local && set +a && \
   NETWORK=monad-mainnet forge script script/SafeAccept.s.sol --sig "check()" --rpc-url "$MONAD_MAINNET_RPC_URL")
 ```
 
-### 3.7 The launch gate passes, then threshold 2 [tx]
+### 3.7 The launch gate passes
 
 ```
 bun scripts/preflight-prod.ts docs/p0-prod-artifact.json --live   # repo root; reads through the artifact's RPC
@@ -286,17 +347,28 @@ the artifact's public RPC (chain 143 only), and refuses on any failed read. It r
 - the attester a verifier on the Evaluator;
 - the relay above `RELAY_FLOOR_MAINNET`.
 
-Then raise the Safe to 2-of-3: a Safe transaction to itself calling `changeThreshold(uint256)` with 2, proposed and
-executed in Safe{Wallet} by one owner (the threshold is still 1). Read `getThreshold()` back, set
-`deployment.sidequest.safeThreshold` to 2 in the artifact, commit, and run the gate again: it must pass. Every opening
-deploy reruns it.
+At launch the artifact pins `safeOwners` to the one owner and `safeThreshold` to 1; nothing changes the threshold on
+launch day. Every opening deploy reruns the gate.
+
+**After launch, by 20 October [tx]:** the Safe becomes 2-of-3 in place, with nothing moved. Two Safe transactions to
+itself, sent by the owner: `addOwnerWithThreshold(address,uint256)` with the second owner and 1, then the third owner
+and 2 (R7 step 5 rehearses this). Read `getOwners()` and `getThreshold()` back, set `safeOwners` and `safeThreshold`
+(2) in the artifact, commit, and run the gate again: it must pass.
 
 ### 3.8 Fund the operation [tx]
 
-Fund the relay, arbiter and crew wallets with MON (§2). From the dev buy's backing half, the Safe backs the official
-account (5M SIDE) and each crew agent (2.5M): one Safe{Wallet} batch through MultiSendCallOnly of `approve(vault, total)`
-on SIDE followed by `delegateFor(account, safe, amount)` for each account, so the Safe keeps each position. The Safe is
-2-of-3 by now, so two owners sign. Record every hash. The creator fee reaches nad.fun's creator-fee vault only when
+Fund the relay, arbiter and crew wallets with MON from the deployer (§2). From the dev buy's backing half, the Safe
+backs the official account (5M SIDE) and each crew agent (2.5M): one Safe transaction through MultiSendCallOnly of
+`approve(vault, total)` on SIDE followed by `delegateFor(account, safe, amount)` for each account, so the Safe keeps each
+position. The 1-of-1 Safe's owner signs it on the Mac; the file is `[{"account": "0x…", "side": "5000000"}, …]` in whole
+SIDE, and the kit reads each `stakeOf` back:
+
+```
+NETWORK=monad-mainnet contracts/script/launch-kit.sh backing plan backing.json
+MAINNET_GO=yes NETWORK=monad-mainnet contracts/script/launch-kit.sh backing send backing.json
+```
+
+Record every hash. The creator fee reaches nad.fun's creator-fee vault only when
 nad.fun's operator collects it (`FeeCollector.collectFee` refuses anyone else), so it is not claimable at once. Once
 the vault holds a claimable balance for SIDE, the Safe calls `claim(SIDE)` on it; record that first claim.
 
@@ -319,7 +391,7 @@ SIDEQUEST_PROD_ARTIFACT=docs/p0-prod-artifact.json PROD_ADMISSION_DRAIN=1 bun ru
 - A missing or empty `PROD_ADMISSION_DRAIN` also drains, and the artifact's mode must match the runtime value.
 - `assertDeployConfig` runs before any resource: structure, provider and Privy mapping, dedicated secret sources,
   the signing keys against the configured relay and attester, and the RPC's chain id. It also checks Explore's pinned
-  `explore.mainnetLive`, which must equal `MAINNET_LIVE` in `apps/explore/src/release.ts` and be false while drained.
+  `explore.mainnetLive`, which must equal `MAINNET_LIVE` in `packages/sdk/src/release.ts` and be false while drained.
 - A drained deploy skips the D16 gate, so an emergency redeploy is never blocked by it.
 - **Blocker:** remote state needs verified, account-scoped **Secrets Store: Edit** permission on the Cloudflare token,
   and must be readable and map the intended resources before evaluation. Do not bootstrap state to make the preflight
@@ -338,7 +410,7 @@ SIDEQUEST_PROD_ARTIFACT=docs/p0-prod-artifact.json PROD_ADMISSION_DRAIN=1 bun ru
 ### 3.11 Explicit opening
 
 1. Review and commit the artifact with `admission.drain: false` and `explore.mainnetLive: true`. In the same commit,
-   set `MAINNET_LIVE = true` in `apps/explore/src/release.ts`; that line is the only source, and the preflight refuses
+   set `MAINNET_LIVE = true` in `packages/sdk/src/release.ts`; that line is the only source, and the preflight refuses
    an open artifact unless the pin and the source are both true. While it is false, Explore on chain 143 is read-only
    by any URL (PROD-GATE-006). Every write page shows "Launching soon", and only read tools reach the board. The build
    writes the value to `/release.json` as `{network, mainnetLive, writesOpen}`. The same commit adds
@@ -355,7 +427,8 @@ The official Sidequest account posts a job paid in SIDE from the Safe-funded tas
 is accepted and settled. Its page shows "founder demo" and "related party". Those labels come from `firstParty` in
 `contracts/config/monad-mainnet.json`. `addresses` (the Safe, the official account, the crew wallets) and `agents` (the
 official account's and the crew's Agent IDs) are committed before the job is posted. Once it is posted, its number goes
-into `demoJobs`, followed by a redeploy. Then Kris's wallet buys and sells a small amount of SIDE on nad.fun to prove the exit path. Record every
+into `demoJobs`, followed by a redeploy. Then the exit-test keystore buys and sells a small amount of SIDE on nad.fun
+to prove the exit path (`launch-kit.sh exit buy send <MON>`, then `exit sell send`, each after its `plan`). Record every
 hash in `docs/reality-check.md` under "v1 mainnet".
 
 ## 4. Mining
