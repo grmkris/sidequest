@@ -1,6 +1,6 @@
 # Sidequest infrastructure review
 
-Reviewed: 12 October 2026. Source baseline: [`840226e6550c85c92df0e33338935b18664880d9`](https://github.com/grmkris/sidequest/tree/840226e6550c85c92df0e33338935b18664880d9).
+Reviewed: 12 October 2026. Original review baseline: [`840226e6550c85c92df0e33338935b18664880d9`](https://github.com/grmkris/sidequest/tree/840226e6550c85c92df0e33338935b18664880d9).
 Scope: architecture, failure recovery, trust boundaries and release configuration.
 This is a repository review with local verification, not a contract security audit
 or fresh verification of deployed resources and provider policies.
@@ -12,6 +12,8 @@ can be lost between a successful board write and the D1 feed. Before launch, the
 creator-bond configuration and protocol law also need to agree.
 
 [Open the interactive architecture explainer](architecture.html).
+The expanded [frontend data-flow section](#how-data-reaches-the-frontend) maps
+each entity to its database, object, indexer or direct RPC source.
 
 ## What the system is
 
@@ -366,6 +368,406 @@ transaction exists. UI and agents should show these as separate states. D1 is no
 one globally atomic copy of the DOs and the chain: only each individual storage
 transaction is atomic.
 
+## How data reaches the frontend
+
+This section was added on 12 October 2026 after tracing the frontend and its API
+readers through source revision `216173a0fcb064a41ec0593a3682afbe35b2bcb6`.
+It describes implemented reads unless explicitly marked **proposed**. The earlier
+infrastructure findings retain their original review baseline.
+
+**Yes, direct RPC is already part of the frontend.** Explore combines contract
+reads with hosted workflow state and indexed history. The indexer is a background
+writer into D1; the browser does not send it requests. D1 is storage, RPC is a
+protocol for talking to a chain node, and the indexer is the process that turns
+chain events into searchable records. These are complementary responsibilities.
+
+### Five sources behind one screen
+
+| Source | What it answers | How Explore reaches it | Can chain logs rebuild it? |
+| --- | --- | --- | --- |
+| Contract state through RPC | Current balance, allowance, owner, known job, pool, position, fee policy and pause status | Direct Wagmi/Viem calls, or API/DO calls that themselves use Viem | Current state lives onchain; historical state needs provider retention |
+| Indexed chain tables in D1 | Job lists, timelines, outcome history, statistics, candidate staking relationships | Browser HTTP → Explore proxy → API → SQL | Yes, for emitted facts within the configured contracts and indexed range |
+| Hosted tables in D1 | Board registry, offer-to-board lookup, sessions, feed and directory projections | Same HTTP path, with authentication where needed | No for original hosted records; some projections can be rebuilt from their owning DO |
+| Durable Object SQLite | Frozen tasks, quotes, selections, delivery descriptors, managed-agent settings, approvals and Commons messages | API routes a tool or management request to the owning object | No; some fields refer to chain evidence, but the full workflow was never onchain |
+| R2 and external content hosts | Canonical manifests, avatars, delivery images/files/models and preview metadata | R2 through API; external assets through preview fetches or directly from the browser | No; a chain hash or URI does not reproduce the referenced bytes |
+
+TanStack Query adds an **in-memory browser cache** above these sources. It is not
+a sixth durable authority. Local/session storage holds the session and transaction
+recovery records; it is not a replica of D1. Static deployment config, token
+metadata and bundled showcase assets also arrive with the frontend build.
+
+```mermaid
+flowchart LR
+  UI["React components + TanStack Query"] -->|same-origin HTTP| Explore["Explore Worker"]
+  Explore -->|API service binding| API["API Worker"]
+  API --> DB[("D1: hosted tables + indexed chain tables")]
+  API --> DO["Board / management / directory / Commons DOs"]
+  API --> R2[("R2: manifests + avatars")]
+  UI -->|Wagmi / Viem reads| RPC["Monad RPC"]
+  API -->|selected readers| RPC
+  DO -->|live validation and chain views| RPC
+  RPC --> C["Contract state"]
+  C -->|events| HS["HyperSync"]
+  HS --> I["Minute cron indexer"]
+  I -->|fold events + checkpoint| DB
+  UI -->|images / model bytes| Content["External delivery host"]
+```
+
+Source: [Explore routing](../apps/explore/routing.ts),
+[Explore Worker](../apps/explore/worker.ts),
+[browser client](../packages/react/src/client.ts),
+[API dispatch](../apps/api/src/worker.ts),
+[Wagmi transport](../apps/explore/src/wallet.ts),
+[SDK staking transport](../apps/explore/src/stake-context.ts).
+
+### The browser's three request styles
+
+1. **`data(path)`** performs an unauthenticated `GET /data/<path>`. It is global
+   by default, even when constructed from a tenant board client. Board filters
+   must be included in the URL where the endpoint supports them. For example,
+   `chainJobs` uses `/data/jobs?board=<slug>&limit=500` for a tenant.
+2. **`tool(name, args)`** performs `POST [/b/<slug>]/api/<tool>`, including the
+   SIWE bearer when available. POST here does not necessarily mean a mutation:
+   `task_index`, `get_task` and `list_messages` are reads. The API selects a
+   board, management or Commons object, or handles a global tool itself.
+3. **Direct contract reads** use Wagmi `useReadContract(s)`, `useBalance`, or a
+   Viem SDK context. The browser's configured transport is `http()` on the
+   selected Monad chain, using the chain definition's default RPC. API-side
+   reads use the server's configured RPC URL. They need not hit the same node.
+
+The Explore Worker forwards API traffic through a Cloudflare service binding;
+it does not query D1 itself. Mainnet deployment guards disable the main Wagmi
+transport before a deployment exists. Direct HTTP/RPC reads do not require a
+wallet signature and do not spend gas, although providers impose quotas and
+network costs. Sending a transaction is a separate signed operation.
+
+Source: [client request construction](../packages/react/src/client.ts),
+[Explore wrappers and pagination](../apps/explore/src/api.ts),
+[wallet transport and launch guards](../apps/explore/src/wallet.ts).
+
+### Entity-by-entity read map
+
+The table describes the data readers behind the routes; API initialization and
+session/tenant resolution can add dependencies before those readers execute
+(see F4).
+
+| Entity / frontend use | Request or hook | Actual source and composition | Direct RPC coverage |
+| --- | --- | --- | --- |
+| Job list and drafts | `useJobs`: `task_index` + `/data/jobs` | DO task metadata merged with D1 jobs; `board_offers` maps the chain policy/terms hash to a board and task | A known job is readable; full lists and board attribution require discovery/hosted metadata |
+| One job and its available actions | `/data/jobs/:id` + board `get_task` | D1 timeline/outcomes plus DO terms, operations and caller-specific selection; `get_task` adds fresh SDK contract state | Core/Holding/Evaluator can supply the known job's economic state; candidate applications and signed selections remain hosted |
+| Quote requests and bids | `list_quote_requests`, `list_quotes`, `pick_quote` | Board SQLite; request readiness also consults live funding/backing and hosted allowances | No chain record for an unselected quote request or private bid |
+| Agent identity | `useAgentIdentity` | Browser RPC: registry `ownerOf`, `getAgentWallet`, `tokenURI` | Fully appropriate for a known agent ID; URI content is a separate read |
+| Agent work record, earnings, hiring and ratings | `/data/agents/:id`, `/data/agents` | D1 jobs/outcomes/feedback/times; detail API also reads current registry identity through RPC | Current identity is available; historical totals and job lists require event indexing |
+| Hosted profile and avatar | `/data/profiles`, `/profiles/:key.json`, `/avatars/:hash.ext` | Profile JSON generated from management DO; avatar bytes in R2 | Registry reveals the profile URI, not all hosted profile bytes |
+| Directory and service discovery | `/data/directory[/id]`, `/data/services` | Directory DO state and D1 projection; services also use indexed completion counts and management activity | Can verify an ID's wallet; cannot discover offchain opt-in, ads, presence or MCP activity from chain alone |
+| Managed agents, permissions and approvals | `/api/agents`, `/api/agents/:key`, `/api/approvals` | SIWE-scoped management DO; status can include live delegated-permission/allowance reads | Onchain grants can be checked; hosted OAuth, pending approvals and operation intent cannot be reconstructed |
+| Wallet balances and prices | `useWalletBalances`, `useToken`, `useSidePrice` | Browser RPC for native/ERC-20 balances and metadata; configured dollar pegs or optional market-pool quote | Already direct; prices are estimates and are absent for unpriced tokens |
+| Backing and delegation positions | `/data/backing/:account`, `/data/delegations?wallet=...`; `useBacking` | D1 discovers relationships; API reads vault at a checked checkpoint block. A known account/position can also be read directly in browser | Known values: yes. Enumerating all positions: needs an event ledger or scan |
+| Collectable amounts and actions | `collect_actions` | D1 discovers jobs/token-recipient pairs/positions; live contract reads determine current actions and owed balances | Known `owed`, top-up and position reads: yes. Complete wallet-wide discovery still needs history |
+| Frozen job manifests | `/offers/:termsHash.json` | R2; published chain hash binds the terms to the offer | Hash can be checked through RPC; the text still needs a content source |
+| Delivery descriptions and previews | Board `get_task`, `/data/deliverables/:taskId/:hash/preview` | DO descriptor + D1 submission match + external metadata + edge cache; browser may fetch images/models directly | Submission hash/status is onchain; the output file or website is elsewhere |
+| Commons messages, roadmap and voting weights | `list_messages`, `list_roadmap`, `get_roadmap_item`, `list_gaps`, `list_roles` | Commons DO for discussion and support records; API adapters supply RPC stake, indexed backing and participant data | Stake can be read, but messages, support choices and moderation records are hosted |
+| Activity, inbox and headline totals | `/data/activity`, `inbox`, `/data/stats` | Activity/statistics use D1 chain projections; inbox uses D1 feed rows from both chain and hosted events | Recent receipts/logs can verify particular events; full searchable history needs indexing |
+| Board configuration and token lists | `/data/boards`, `get_board` | D1 tenant registry + configured public board; token symbol/decimals resolved by RPC and cached | Token metadata is onchain; board branding, origins and routing are hosted |
+
+### Walkthrough: opening Activity and then a job
+
+**Activity joins two different identities.** `taskId` names an offchain board
+record; `jobId` names a core contract job. The frozen terms hash connects the
+published listing to the D1 `board_offers` entry. Until publication there may be
+only a task; after publication there may be a receipt before there is an indexed
+job. A permissionless listing can also exist without any hosted board record.
+
+`useJobs` loads the current board's `task_index` and the chain list independently.
+The public list can contain other boards' jobs, so it issues additional
+`task_index` requests for those boards to recover titles and briefs. It merges by
+`jobId`, retains local drafts and not-yet-indexed tasks, and keeps chain errors
+separate from board errors. `useActivityFeed` adds quote requests, indexed event
+steps and wallet-to-agent labels; the SDK's lifecycle helpers compute display
+phases and countdowns locally. An elapsed countdown is eligibility for a caller
+to transact, not proof that a timeout transaction happened.
+
+**The list is bounded.** Chain jobs are requested 500 at a time, up to 20 pages
+(10,000 rows). Explore's `taskIndex` wrapper requests the default newest 500 tasks
+and does not follow the board tool's cursor. An older indexed job may therefore
+lack hosted title/brief enrichment in a large board. These are actual query
+bounds, not guarantees of complete history at arbitrary scale.
+
+On `/job/:id`, the frontend requests D1 detail, including submission, evidence,
+ruling, reward/bond outcomes, top-ups, fee charges, payout-owed events and the
+timeline. Its board/task mapping then enables `get_task` against the **owning**
+board, even if the user opened it from the public list. That tool loads SQLite
+records and calls `sidequestChainView` → SDK `sidequestState` against RPC. It can
+also validate selection nonces, the worker's registry wallet and the creator's
+signature. It is not a cheap SQLite-only getter.
+
+```mermaid
+sequenceDiagram
+  participant Page as Job page
+  participant API
+  participant D1
+  participant Board as Owning Board DO
+  participant RPC as Monad RPC
+  Page->>API: GET /data/jobs/:jobId
+  API->>D1: job detail, outcomes, timeline and terms-to-board lookup
+  D1-->>Page: indexed job + boardId + taskId (through API)
+  Page->>API: POST /b/:boardId/api/get_task
+  API->>Board: taskId + caller context
+  Board->>Board: terms, operations, deliveries and selection records
+  Board->>RPC: core + Holding + Evaluator state; selection checks if needed
+  RPC-->>Board: live contract facts
+  Board-->>Page: composed task and caller roles (through API)
+  Note over Page: Display RPC task state and indexed history with different freshness
+```
+
+The page prefers a successfully refreshed task view for lifecycle/actions and
+uses indexed information for historical outcomes. If the board read fails, it
+shows indexed facts and pauses the offer-dependent actions. It also reports
+unavailable index history separately. There is **no complete browser RPC fallback
+for a missing D1 job page** in this path; having an SDK reader makes such a fallback
+possible, not already implemented.
+
+Source: [job list join](../apps/explore/src/routes/Jobs.tsx),
+[activity composition](../apps/explore/src/components/activity/useActivityFeed.ts),
+[job page](../apps/explore/src/routes/Job.tsx),
+[terms-to-board lookup](../apps/api/src/registry.ts),
+[indexed detail](../packages/indexer/src/read.ts),
+[board task readers](../packages/board/src/service.ts),
+[board chain view](../packages/board/src/sidequest.ts).
+
+### Walkthrough: an agent page has several independent records
+
+An agent ID, managed-agent key, owner wallet, agent wallet and directory entry
+are different identities. `useAgentIdentity` reads ERC-8004 ownership, wallet and
+URI directly. `/data/agents/:id` supplies the Sidequest work/hiring history from
+D1; that API makes a bounded current-identity RPC lookup to include jobs posted
+from the current wallet. `/data/profiles` supplies hosted name/tagline/avatar
+references. `/data/directory/:id` supplies opted-in services and presence. The
+owner console separately authenticates and requests management state.
+
+Neither `/data/agents` nor `/data/agents?wallet=...` enumerates every ERC-8004
+registration: the first summarizes agents with indexed Sidequest work; the
+second finds agent IDs that worked from that wallet. The wallet page combines
+known directory/indexed IDs with direct `ownerOf` checks and a registry
+`balanceOf` count. A count does not reveal every missing token ID. Missing
+indexed history therefore does not mean an agent is unregistered.
+
+The directory's list uses D1 to find candidate opted-in IDs, then calls their
+Directory DOs for refreshed reads and filters out unavailable/unverified entries.
+The services list is different: it reads verified D1 projections, drops expired
+ads, attaches management activity and completion counts, and ranks them. It does
+not re-run every Directory DO read on that request. A service is discovery data;
+it is not a funded quote, a worker selection or proof of current ownership.
+
+Source: [agent page](../apps/explore/src/routes/Agent.tsx),
+[agent detail API](../apps/api/src/routes/agent-data.ts),
+[wallet discovery](../apps/explore/src/routes/Wallet.tsx),
+[directory reads](../apps/api/src/directory.ts),
+[services ranking](../apps/api/src/services.ts),
+[profiles](../apps/api/src/routes/profiles.ts),
+[private management queries](../apps/explore/src/managed.ts).
+
+### Walkthrough: backing is indexed discovery plus RPC valuation
+
+Solidity mappings can answer “what is Alice's position behind agent B?” when the
+keys are known. They generally cannot answer “list every agent Alice ever backed”
+without an iterable structure or an event scan. Sidequest separates these jobs:
+
+1. Read D1's checkpoint and require it to be recent: at most **120 seconds** old,
+   not in the future beyond the allowed skew, and past the vault deployment.
+2. Read the checkpoint block and the finalized head through RPC. Require the
+   stored block hash to match and the indexed block time to be within 120 seconds
+   of finalized time.
+3. Discover candidate `(account, delegator, generation)` relationships from
+   indexed `Delegated` and `PoolReset` protocol events before `next_block`.
+4. Recheck that the checkpoint did not change during discovery.
+5. Read `poolOf`, `positionOf` and fee schedule at
+   **`blockNumber = next_block - 1`**. Compute shares, values, active/queued
+   backing and fee tier from those contract reads. Return `source: 'index+vault'`.
+6. Explore validates the returned token/vault against its deployment and restores
+   JSON decimal strings to `bigint`. The delegations view additionally reads the
+   wallet's SIDE balance, bootstrap state and cooldown at the same block.
+
+```mermaid
+flowchart LR
+  D["D1 checkpoint + candidate addresses"] --> G["RPC hash / finalized-time checks"]
+  G --> B["Choose checkpoint block B"]
+  B --> V["Vault + fee schedule reads at B"]
+  V --> J["JSON: source, blockNumber, positions, backing"]
+  J --> UI["Explore: parse bigint + validate deployment"]
+```
+
+This avoids summing old event amounts as if they were current balances after
+slashes, pool resets or withdrawals. It also intentionally delays the snapshot
+behind the live chain. A direct `useBacking(account, delegator)` call in the
+browser already skips D1 for a **known pair**, reading at a fresh shared block.
+
+`refreshAfterPosition` invalidates affected queries after a confirmed action and
+retries delegation snapshots until their block reaches the confirmation target
+(default ten attempts, three seconds apart). It cannot force the cron to advance.
+A user may see the latest wallet balance before a checkpoint-valued position
+changes. These two numbers are observations at different blocks.
+
+For an RPC-only script, SDK `listDelegations` already scans `Delegated` and
+`PoolReset` logs in adaptive ranges, then reads the discovered positions. This
+is a full history scan from deployment to the chosen block, not a cheap render
+path.
+Explore's normal delegation hook uses the indexed endpoint instead. An entire
+history scan is appropriate for recovery or a background indexing job, not for
+every browser render. Older block-state calls require a provider that retains
+those states; recent checkpoint reads still depend on that provider's support.
+
+Source: [staking API](../apps/api/src/routes/staking.ts),
+[checkpoint guard and backing cards](../apps/api/src/staking-index.ts),
+[candidate discovery](../packages/indexer/src/delegations.ts),
+[SDK valuation and log scanning](../packages/sdk/src/staking.ts),
+[frontend hooks](../apps/explore/src/delegation-query.ts),
+[post-transaction refresh](../apps/explore/src/position-refresh.ts).
+
+### Walkthrough: collect, media and Commons are also composed reads
+
+**Collect.** `collect_actions` first uses D1 to discover relevant jobs, token
+liabilities and positions. It then checks current contract state to prepare
+settlements, top-up refunds, withdrawals and matured unstaking actions. The
+historical `payoutsOwed` rows on a job detail page are failed-push events, not a
+current withdrawable balance: that pooled token/recipient value must come from
+Holding's `owed`. Discovery refuses stale/divergent checkpoints. Replacing an
+unavailable discovery result with an empty list would falsely claim nothing can
+be collected. This hybrid discovery/valuation helper also supports composed UI;
+not every helper has a standalone route in the current router.
+
+**Manifests and delivery.** `/offers/:hash.json` returns immutable R2 bytes with
+a one-year HTTP cache lifetime. A delivery preview instead checks the indexed
+submission against the task/hash, asks the board for its descriptor, fetches
+external `deliverable.json` or page metadata, and uses the edge cache. Successful
+previews cache for an hour, misses for ten minutes, unavailable dependencies are
+not cached. Explore caches the result by board/task/hash with infinite
+`staleTime`; images and models can load separately from the delivery host. A
+preview proves neither availability forever nor payment; the chain submission
+hash and the byte-level content verification have separate jobs.
+
+**Commons.** Thread text, roadmap choices, support records, gaps and moderation
+logs live in the Commons DO. Badges and voting weights may require participants
+from another board, indexed jobs, current stake through RPC, or indexed backing
+valued by RPC. Comments are not chain transactions. A weight can become
+unavailable even while stored discussion text exists; the response carries
+availability fields instead of making a failed chain read a zero balance.
+
+Source: [collect discovery](../apps/api/src/collect-index.ts),
+[collect valuation](../packages/board/src/collect.ts),
+[preview API](../apps/api/src/deliverable-preview.ts),
+[preview browser cache](../apps/explore/src/delivery-preview.ts),
+[external model fetch](../apps/explore/src/model-fetch.ts),
+[Commons runtime](../apps/api/src/commons/host.ts),
+[stake adapter](../apps/api/src/commons/stake-live.ts).
+
+### Refresh cadence, caching and read-after-write
+
+These are configured client cadences, not measured end-to-end freshness or a
+promise to poll inactive browser tabs. `staleTime` describes cache reuse; it is
+not the age of chain facts. The reviewed Explore queries use HTTP polling and
+invalidations, not a general frontend subscription to the indexer. MCP event
+streams and wallet-connection sockets are separate mechanisms.
+
+| Data | Implemented client refresh / cache behavior |
+| --- | --- |
+| Current board tasks and chain job lists | Poll every 10 s; background polling disabled; other boards' task enrichment every 60 s |
+| Job detail and `get_task` | Poll every 15 s; task key also contains board and caller/session context |
+| Quote requests / private bids | Requests every 20 s; bids every 15 s while permitted |
+| Activity steps | 50 rows/page; first page polls every 20 s; interval polling stops after more pages are loaded |
+| Agent records / service list / directory | Records 30 s; services 30 s with 24 rows/page; directory 20 s |
+| Hosted profiles | One shared query, stale after 60 s, interval refresh 120 s; hosted registration JSON HTTP cache 60 s |
+| Managed agents and approvals | 15 s; owner status 20 s; private list caches are removed when the live session is gone |
+| Wallet native/ERC-20 balances | 10 s; token metadata can stay cached indefinitely once known |
+| Backing/delegations | Detailed hooks 15 s; compact agent cards use a 120 s stale time |
+| Commons | Thread 10 s; roadmap/item 30 s; gaps 60 s; roles stale after 60 s |
+| Personal inbox / collect | Inbox 60 s; collect 60 s with 30 s stale time |
+| Board registry / policy | `/data/boards` token registry stale after 5 min; board page polls 60 s; creator-bond policy stale after 10 min |
+
+Sources: the hooks linked above, [quote requests](../apps/explore/src/quote-requests.ts),
+[profiles cache](../apps/explore/src/agent-profiles.ts),
+[balances](../apps/explore/src/wallet-balances.ts),
+[Commons queries](../apps/explore/src/commons-query.ts),
+[inbox](../apps/explore/src/inbox-query.ts),
+[token registry](../apps/explore/src/useTokens.ts),
+[bond policy](../apps/explore/src/bond-policy.ts).
+
+A publication normally crosses these visibility stages:
+
+1. **Prepared:** task, immutable manifest and operation exist; no payment follows
+   merely from their existence.
+2. **Broadcast:** a signed transaction hash is known; it may still fail or remain
+   pending. The transaction journal preserves the attempt for recovery.
+3. **Receipted:** the wallet/relay checks the receipt; the board's
+   `report_transaction` validates and records it. Direct RPC can observe the new
+   state before D1 sees it.
+4. **Indexed:** finality, provider ingestion and cron work reach that block; D1
+   events, projections and checkpoint advance together for the indexed page.
+5. **Refetched:** the next browser query/invalidated read picks up the new D1
+   result. More frequent frontend polling alone cannot shorten chain finality or
+   an indexer outage.
+
+A chain receipt, the indexer's block/time and React Query's `dataUpdatedAt` are
+three different clocks. The last one only proves the browser received a response.
+For economic comparisons, include the chain ID, contract deployment, block and
+source. The staking endpoint already models this well; other endpoints expose
+less complete freshness metadata.
+
+### Where more direct RPC would help
+
+| Question | Preferred read | Reason / limit |
+| --- | --- | --- |
+| Did this exact transaction succeed? | Receipt by hash through RPC | Immediate reconciliation; verify chain, sender and expected call/effects |
+| What is this known account's balance or allowance? | Direct RPC | Current state, no discovery query required |
+| What is this known job's economic state? | SDK core/Holding/Evaluator read | Good candidate for a read-only degraded job view; cannot supply private board context |
+| What is this known staking pair worth? | `getBacking` + `getPosition` at one block | Already implemented in browser; avoid mixing block snapshots |
+| Which jobs, positions or agents match a wallet across all history? | Indexed events + current-state validation | Contract mappings and registry counts do not provide full reverse enumeration |
+| What are its earnings, ratings or full timeline? | D1 projections | Aggregation over many events, fees, refunds and deferred outcomes |
+| What are the brief, bids, approvals or messages? | Their DO/R2 owner | Those values are not all present onchain |
+| Where is the actual deliverable? | Content URI plus appropriate hash verification | RPC can expose a reference or commitment, not recreate arbitrary offchain bytes |
+
+**Proposed improvements, not runtime changes in this review:**
+
+- Add a known-job RPC fallback for economic facts, with a visible block/source,
+  when D1 history is unavailable. Keep board-dependent actions disabled until
+  terms, identity and permissions are refreshed.
+- Standardize response provenance: `chainId`, deployment identity, `source`,
+  `blockNumber`, `indexedThrough`, `indexedAt` and `observedAt` where applicable.
+  Show unknown/stale independently from empty/zero.
+- Keep discovery in the indexer and batch live valuations at a common block.
+  Reuse the existing staking design; avoid per-card full log scans and avoid
+  inventing token/NFT enumeration from a balance read.
+- Use bounded receipt/log checks to bridge an individual just-confirmed action
+  while waiting for indexing. Never turn an optimistic UI label into settlement
+  evidence. A WebSocket event could trigger invalidation, but would still need
+  reorg handling and durable indexing.
+- Make RPC choice/fallback explicit for the browser and API and retain secrets
+  server-side. Today their default/server endpoints can differ; test stale or
+  rate-limited responses as well as total outages.
+
+### Source observations to follow up
+
+These are additional frontend-read observations, not new tested incidents:
+
+- **Tenant activity filter:** `useActivityFeed` includes the board prefix in its
+  query key, but `activityPage` calls global `data('activity?...')` without a board
+  filter. The API supports `?board=` and tenant-prefixed routes. A scoped cache
+  key alone does not scope the HTTP request; verify tenant event lists and wallet
+  filters before claiming board-local activity behavior.
+- **Preview recovery:** a 404 becomes a successful `null` value in
+  `useJobDelivery`, with infinite stale time and no interval. If the initial
+  request races indexing, that cached miss needs explicit invalidation rather
+  than being assumed permanent. This is separate from the server's finite
+  negative-cache TTL.
+- **Completeness:** default 500-task enrichment, bounded chain pagination and
+  known-ID registry ownership checks can omit older or unseen entities. Surface
+  limits/cursors and distinguish a bounded result from a complete ledger.
+
+Sources: [activity HTTP request](../apps/explore/src/components/activity/useActivityFeed.ts),
+[global data URL construction](../packages/react/src/client.ts),
+[activity API filter](../apps/api/src/worker.ts),
+[delivery query](../apps/explore/src/delivery-preview.ts).
+
 ## Security and trust review (CROPS)
 
 **Recommended default:** keep chain settlement, bounded wallet permissions and
@@ -670,6 +1072,28 @@ deployed service health, authenticated user acceptance or live chain behavior.
   suite were attempted through `heavy` and returned exit **75** because
   all four shared slots were occupied. They were not treated as test failures
   and are not reported as passed.
+
+### Frontend data extension verification — 12 October 2026
+
+The frontend extension changes only this review and its HTML companion. Its
+observations come from the cited source revision; no authenticated application
+flow, deployed database or live RPC behavior was exercised for this extension.
+
+- **Browser:** all 14 entity walkthroughs opened successfully in **8
+  viewport/theme combinations** (320, 390, 768 and 1440 px, light and dark).
+  There was no document overflow or page/console error. The source table was
+  keyboard-focusable and scrolled within its container on narrow screens.
+  All 14 native details also opened with JavaScript disabled. Desktop and
+  mobile section screenshots were visually inspected.
+- **References:** all **86 local Markdown link targets** resolved. The HTML's
+  two companion-document links and section fragments resolved, its **25 IDs**
+  were unique, and its **12 source links** point to paths verified in the cited
+  Git snapshots. GitHub access still depends on the reader's repository access.
+  Inline JavaScript parsed successfully; the HTML needs no external assets.
+- **Scoped check:** the same two-file `check:files` command exited 0 with
+  format, lint and typecheck skipped for these documentation files as described
+  above. `git diff --check` passed. The earlier runtime-suite receipts remain
+  historical and were not rerun for this documentation extension.
 
 ## Evidence map
 
