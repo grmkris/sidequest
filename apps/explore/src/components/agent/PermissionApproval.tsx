@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Section } from '../kit.tsx'
 import { ConfirmButton } from '../Sheet.tsx'
 import { useState } from 'react'
-import { type Address, type Hex, parseUnits } from 'viem'
+import { type Address, type Hex, formatEther, parseUnits } from 'viem'
 import { agentEndpoint, type ManagedAgent } from '../../api.ts'
 import type { AgentApproval } from '../../agent-api.ts'
 import { formatNumber, localTime, relative, tokenMeta } from '../../format.ts'
@@ -22,7 +22,7 @@ import {
 import { prompts, useSignTypedDataWithPrompt } from '../../wallet-prompt.ts'
 import { typedDataArgs } from '../../typed-data.ts'
 import { useTokenList } from '../../useTokens.ts'
-import { deployment } from '../../wallet.ts'
+import { chain, deployment } from '../../wallet.ts'
 
 const TYPE_WORDS: Record<string, string> = {
   'erc20-token-periodic': 'Recurring token payments',
@@ -32,15 +32,26 @@ const TYPE_WORDS: Record<string, string> = {
 
 const short = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`
 
+/** A permission period in the largest whole unit it fills: "30 min", "6 h", "7 days" (never "0 h"). */
+export function periodText(seconds: number): string {
+  if (seconds % 604_800 === 0) return seconds === 604_800 ? 'week' : `${seconds / 604_800} weeks`
+  if (seconds % 86_400 === 0) return seconds === 86_400 ? 'day' : `${seconds / 86_400} days`
+  if (seconds >= 3600 && seconds % 3600 === 0) return `${seconds / 3600} h`
+  return seconds >= 3600 ? `${(seconds / 3600).toFixed(1)} h` : `${Math.max(1, Math.round(seconds / 60))} min`
+}
+
 /** The permission in one line for the wallet's own screen: the limits this card shows. */
 function permissionWords(
   t: ReturnType<typeof permissionRequest>['parsed'],
   shown: ReturnType<typeof reviewPermission>['description'],
   requested: bigint | string | null,
 ): string {
-  if (t.type === 'sidequest:contract-call') return `One exact call to ${short(t.target)}.`
+  if (t.type === 'sidequest:contract-call')
+    return t.value === 0n
+      ? `One exact call to ${short(t.target)}.`
+      : `One exact call to ${short(t.target)}, sending ${formatEther(t.value)} ${chain.nativeCurrency.symbol}.`
   const amount = tokenAmountText('amount' in shown ? shown.amount : (requested ?? 0n), t.token)
-  const period = t.type === 'erc20-token-periodic' ? ` every ${Math.round(t.periodDuration / 3600)} h` : ' in total'
+  const period = t.type === 'erc20-token-periodic' ? ` every ${periodText(t.periodDuration)}` : ' in total'
   return `Up to ${amount}${period} from your wallet, only to ${short(t.recipient)}.`
 }
 
