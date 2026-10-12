@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { decodeExecuteCalldata } from '../batch.ts'
 import type { AccountAbstraction } from '../deployment.ts'
 import { buildUserOp, sendUserOp, userOpReceipt } from './build.ts'
-import { AaError, type JsonRpc } from './rpc.ts'
+import { maxTokenCost } from './fees.ts'
+import { AaError, field, quantity, type JsonRpc } from './rpc.ts'
 import { delegatorTypedData, nonceKey } from './userop.ts'
 
 const key = privateKeyToAccount(`0x${'22'.repeat(32)}`)
@@ -106,6 +107,7 @@ describe('building a user operation', () => {
     // The estimate's placeholder must be a well-formed 65-byte ECDSA signature: OpenZeppelin reverts on any other length.
     expect(size(built.op.signature)).toBe(65)
     expect(built.op.callGasLimit).toBe((0x30d40n * 11n) / 10n)
+    expect(built.op.preVerificationGas).toBe((0x19000n * 110n + 99n) / 100n)
     expect(built.maxCost > 0n && built.maxCost <= aa.maxCostPerOp).toBe(true)
   })
 
@@ -126,6 +128,41 @@ describe('building a user operation', () => {
     const seen: bigint[] = []
     const built = await build(services(), { calls: (maxCost) => (seen.push(maxCost), [work]) })
     expect(seen).toEqual([aa.maxCostPerOp, built.maxCost])
+  })
+
+  it('includes the charged pre-verification margin in paymaster data, the cost bound and the ceiling', async () => {
+    const s = services()
+    const paymaster = s.paymaster
+    let finalGas = 0n
+    s.paymaster = async (method, params) => {
+      if (method === 'pm_getPaymasterData') finalGas = quantity(field(params[0], 'preVerificationGas'), 'gas')
+      return paymaster(method, params)
+    }
+    const built = await build(s)
+    const quote = { paymaster: PAYMASTER, exchangeRate: 27_888n, postOpGas: 0x907en }
+    expect(finalGas).toBe((0x19000n * 11n + 9n) / 10n)
+    expect(built.maxCost).toBe(maxTokenCost(built.op, quote))
+    const beforeMargin = maxTokenCost({ ...built.op, preVerificationGas: 0x19000n }, quote)
+    expect(built.maxCost).toBeGreaterThan(beforeMargin)
+    const capped = services()
+    await expect(build(capped, { aa: { ...aa, maxCostPerOp: beforeMargin } })).rejects.toMatchObject({
+      code: 'ceiling',
+    })
+    expect(capped.log).not.toContain('paymaster:pm_getPaymasterData')
+  })
+
+  it('never pads sponsored pre-verification gas before the final signed paymaster answer', async () => {
+    const s = services()
+    const paymaster = s.paymaster
+    let finalGas = 0n
+    s.paymaster = async (method, params) => {
+      if (method === 'pm_getPaymasterData') finalGas = quantity(field(params[0], 'preVerificationGas'), 'gas')
+      return paymaster(method, params)
+    }
+    const built = await build(s, { sponsor: 'faucet' })
+    expect(finalGas).toBe(0x19000n)
+    expect(built.op.preVerificationGas).toBe(0x19000n)
+    expect(built.maxCost).toBe(0n)
   })
 
   it('refuses a landed lane, another paymaster and a cost above the ceiling', async () => {

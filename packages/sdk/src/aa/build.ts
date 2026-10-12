@@ -181,6 +181,10 @@ function withSponsorGas(op: UserOperation, answer: Json): UserOperation {
   }
 }
 
+function withChargedMargin(op: UserOperation): UserOperation {
+  return { ...op, preVerificationGas: (op.preVerificationGas * 110n + 99n) / 100n }
+}
+
 /** The first draft: the lane's nonce, the bundler's fast price, a dummy signature. */
 async function draft(input: BuildInput, callData: Hex): Promise<UserOperation> {
   const fast = field(await input.bundler('pimlico_getUserOperationGasPrice', []), 'fast')
@@ -244,6 +248,7 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
     await input.bundler('eth_estimateUserOperationGas', [toBundlerJson(op, input.authorization), aa.entryPoint]),
     input.minCallGas ?? 0n,
   )
+  if (!sponsored) op = withChargedMargin(op)
   const maxCost = tokenQuote === null ? 0n : maxTokenCost(op, tokenQuote)
   if (maxCost > aa.maxCostPerOp)
     throw new AaError('ceiling', `the gas could cost up to ${maxCost} base units, above the ${aa.maxCostPerOp} ceiling`)
