@@ -10,30 +10,52 @@ import { type Network, type Stack, type StackName, deployment, stack } from './d
 
 export const chains: Record<Network, Chain> = { 'monad-testnet': monadTestnet, 'monad-mainnet': monad }
 
+/** Optional diagnostics receive only fixed phase names and attempt numbers, never RPC URLs or payloads. */
+export type RpcTrace = <A>(
+  phase: 'rpc.queue' | 'rpc.attempt' | 'rpc.backoff',
+  attempt: number,
+  run: () => Promise<A>,
+) => Promise<A>
+
+type RpcFetch = (input: Parameters<typeof fetch>[0], init?: RequestInit, trace?: RpcTrace) => Promise<Response>
+const rpcPhase = <A>(
+  trace: RpcTrace | undefined,
+  phase: Parameters<RpcTrace>[0],
+  attempt: number,
+  run: () => Promise<A>,
+) => (trace === undefined ? run() : trace(phase, attempt + 1, run))
+
 /**
  * Keeps one process under a public RPC's request limit (Monad testnet's answers `-32011 requests limited to
  * 15/sec`): requests leave at most `perSecond` a second, and a rate-limit answer is retried after a pause.
  */
-export function throttledFetch(perSecond = 8, retries = 6): typeof fetch {
+export function throttledFetch(perSecond = 8, retries = 6): RpcFetch {
   let next = 0
   const gap = 1000 / perSecond
-  return async (input, init) => {
+  return async (input, init, trace) => {
     for (let attempt = 0; ; attempt++) {
       const at = Math.max(Date.now(), next)
       next = at + gap
-      if (at > Date.now()) await new Promise((r) => setTimeout(r, at - Date.now()))
-      const res = await fetch(input, init)
+      if (at > Date.now())
+        await rpcPhase(
+          trace,
+          'rpc.queue',
+          attempt,
+          () => new Promise<void>((r) => setTimeout(r, Math.max(0, at - Date.now()))),
+        )
+      const res = await rpcPhase(trace, 'rpc.attempt', attempt, () => fetch(input, init))
       if (attempt >= retries) return res
       const limited = res.status === 429 || (await res.clone().text()).includes('"code":-32011')
       if (!limited) return res
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)))
+      await rpcPhase(trace, 'rpc.backoff', attempt, () => new Promise<void>((r) => setTimeout(r, 500 * (attempt + 1))))
     }
   }
 }
 
 /** One limiter per process, shared by every client, since the limit is per caller, not per client. */
 const sharedFetch = throttledFetch()
-const transport = (rpcUrl: string) => http(rpcUrl, { fetchFn: sharedFetch })
+const transport = (rpcUrl: string, trace?: RpcTrace) =>
+  http(rpcUrl, { fetchFn: (input, init) => sharedFetch(input, init, trace) })
 
 /**
  * `batch` merges reads issued in the same tick into one multicall3 call. The board turns it on: a task summary is
@@ -43,13 +65,13 @@ export function context(
   network: Network,
   stackName: StackName,
   rpcUrl: string,
-  options: { readonly batch?: boolean } = {},
+  options: { readonly batch?: boolean; readonly trace?: RpcTrace } = {},
 ): Ctx {
   const d = deployment(network)
   return {
     publicClient: createPublicClient({
       chain: chains[network],
-      transport: transport(rpcUrl),
+      transport: transport(rpcUrl, options.trace),
       ...(options.batch === true ? { batch: { multicall: true } } : {}),
     }),
     deployment: d,
