@@ -7,7 +7,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { currentBoardId, tool } from './api.ts'
 import { anonymousCommonsTool } from './commons-access.ts'
 import { useAuth } from './components/Wallet.tsx'
-import type { Gap, GapDetail, GapFilters, Roadmap, RoadmapItemDetail, Roles, Thread } from './commons.ts'
+import type { Gap, GapDetail, GapFilters, GapStatus, Roadmap, RoadmapItemDetail, Roles, Thread } from './commons.ts'
 
 const POLL_MS = 10_000
 
@@ -130,3 +130,17 @@ export const usePropose = () =>
     { title: string; problem: string; proposal: string; gapIds?: number[] },
     { item: { id: number }; threadSubject: string }
   >('propose_item')
+
+export const useGapStatus = () =>
+  useCommonsWrite<{ gapId: number; status: GapStatus; reason: string }, { logSeq: number }>('set_gap_status')
+export const useLinkGaps = () =>
+  useCommonsWrite<{ itemId: number; gapIds: number[]; reason: string }, { logSeq: number }>('link_gaps')
+export const useMergeGaps = () =>
+  useCommonsWrite<
+    { sourceGapId: number; targetGapId: number; reason: string },
+    { gap: Gap; movedReports: number; logSeq: number }
+  >('merge_gaps')
+export const useGapModeration = (hidden: boolean) =>
+  useCommonsWrite<{ kind: 'gap_report'; id: number; reason: string }, { logSeq: number }>(
+    hidden ? 'unhide_content' : 'hide_content',
+  )

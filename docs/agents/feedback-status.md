@@ -36,3 +36,19 @@ Initial audit set (refresh status and reproduce before claiming a resolution):
 | 22 | Generic read failure tells callers to reuse a nonexistent operation key | Fix read retry guidance |
 | 23 | Recent code moves picked notices onto publication confirmation | Audit remaining selection guidance |
 | 24 | Job route accepts numeric IDs only; some event links carry task IDs | Resolve aliases and canonical links |
+
+## 12 October: browsing and role controls
+
+- Browsing committed in `147834b4`: `/commons/gaps/<id>` reads every report body, attempted workaround and suggestion,
+  preserves multiline text and original gap IDs after merges, follows canonical merged IDs, and links roadmap items.
+  Gaps have shareable status/type/tool filters and cursor pagination. Captured public dev gap #6 supplies the renderer
+  contract fixture (three reports; no private goal). Scoped format/lint/typecheck passed; Explore 93 files / 435 passed.
+- Public Commons reads use a separate session-free client whenever the viewer is not signed in. Sign-out or wallet
+  change cancels/removes the previous viewer's Commons cache, including unfinished reads. Regression checks prove no
+  bearer header on anonymous reads and no restoration of privileged text by a late request.
+- Role-control slice: status/link/merge forms for maintainers and hide/restore forms for moderators and maintainers.
+  Controls require the server's matching current viewer, public reasons use 3–500 Unicode code points, merge review
+  names source/target IDs and counts, and all mutations display pending/success/failure. Role log paginates and links
+  gap/roadmap targets. Scoped format/lint/typecheck passed; Explore 94 files / 439 passed.
+- Live acceptance is still pending. These are local UI/domain regression claims, not deployed or authenticated-host
+  proof. Foreign observability, query-key and Board edits were preserved and excluded from staging.

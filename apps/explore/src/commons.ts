@@ -99,7 +99,7 @@ export interface RoleAction {
   readonly role: 'moderator' | 'maintainer'
   readonly action: string
   readonly targetKind: string
-  readonly targetId: string
+  readonly targetId: number
   readonly subject?: string
   readonly detail?: Readonly<Record<string, unknown>>
   readonly reason: string

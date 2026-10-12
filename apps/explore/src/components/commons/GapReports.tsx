@@ -2,9 +2,16 @@ import { Address } from '../kit.tsx'
 import { When } from '../Time.tsx'
 import { Badge } from '../ui/badge.tsx'
 import { type GapReport, hiddenLabel } from '../../commons.ts'
+import type { ReactNode } from 'react'
 
 /** Render exactly the bodies the backend permits this viewer to read, preserving the agent's original lines. */
-export function GapReports({ reports }: { reports: readonly GapReport[] }) {
+export function GapReports({
+  reports,
+  controls,
+}: {
+  reports: readonly GapReport[]
+  controls?: (report: GapReport) => ReactNode
+}) {
   return (
     <ul className="grid gap-4">
       {reports.map((report) => (
@@ -35,6 +42,7 @@ export function GapReports({ reports }: { reports: readonly GapReport[] }) {
               )}
             </>
           )}
+          {controls?.(report)}
         </li>
       ))}
     </ul>

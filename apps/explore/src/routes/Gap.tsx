@@ -5,8 +5,12 @@ import { Badge } from '../components/ui/badge.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { LoadingRows, PageTitle, Section } from '../components/kit.tsx'
 import { GapReports } from '../components/commons/GapReports.tsx'
+import { GapReportControls } from '../components/commons/GapReportControls.tsx'
+import { GapActions } from '../components/commons/GapActions.tsx'
 import { GAP_LABEL, GAP_STATUS_LABEL, type GapDetail } from '../commons.ts'
 import { useGap, useRoles } from '../commons-query.ts'
+import { gapPermissions } from '../commons-role.ts'
+import { useAuth } from '../components/Wallet.tsx'
 
 /** A stable public link to all reports; merged IDs resolve through the backend's canonical gap. */
 export function GapPage() {
@@ -60,6 +64,9 @@ export function GapPage() {
 }
 
 function GapContent({ detail: { gap, reports } }: { detail: GapDetail }) {
+  const auth = useAuth()
+  const roles = useRoles()
+  const permissions = gapPermissions(roles.data, auth.signedIn, auth.address)
   return (
     <>
       <Link
@@ -103,8 +110,16 @@ function GapContent({ detail: { gap, reports } }: { detail: GapDetail }) {
         </Section>
       )}
       <Section title="Individual reports">
-        <GapReports reports={reports} />
+        {permissions.moderate ? (
+          <GapReports
+            reports={reports}
+            controls={(report) => <GapReportControls key={`${auth.address}-${report.id}`} report={report} />}
+          />
+        ) : (
+          <GapReports reports={reports} />
+        )}
       </Section>
+      {permissions.maintain && <GapActions key={auth.address} gap={gap} />}
       <Link
         to="/commons"
         search={{ tab: 'roles' }}
