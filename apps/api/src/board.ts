@@ -262,6 +262,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         bindings: runtimeEnv as Record<string, unknown>,
         sql: fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write)),
         stateId: state.id.toString(),
+        background: (work) => state.raw.waitUntil(work),
       })
 
     // 2026 subscriptions/listen streams live here, where every access change happens (ADR-0021).

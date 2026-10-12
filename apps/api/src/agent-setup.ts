@@ -6,6 +6,7 @@ import {
   RelaySender,
   SponsorDesk,
   BoardError,
+  errorDiagnostics,
   type Sql,
   type AgentRow,
 } from '@sidequest/board'
@@ -20,6 +21,7 @@ import {
   parseProfileInput,
   profileOperationKey,
   type AgentProfileUpdates,
+  type ProfileInput,
 } from './agent-profiles.ts'
 import { profileOrigin, type ProfileSummary } from './profiles.ts'
 import { resourceBoard } from './oauth-validation.ts'
@@ -54,7 +56,12 @@ interface SetupDeps {
   origin: string
   onboard: (input: { id: string; operator: `0x${string}`; userId: string; name: string }) => Promise<AgentRow>
   profiles: AgentProfileUpdates
+  /** Keeps work alive after the answer is sent: the Durable Object's waitUntil in production. */
+  background: (work: Promise<void>) => void
 }
+
+/** Avatars being drawn in this isolate, so a retry while one is drawn never pays for a second. */
+const drawing = new Set<string>()
 
 export class AgentSetup {
   readonly agents: AgentStore
@@ -142,6 +149,34 @@ export class AgentSetup {
       ...profile,
       operationKey: key,
     })
+    this.#associate(family, id)
+    const { avatar, ...fields } = profile
+    const saved = this.agents.step<CreationResult>(operation.id, 'setup-result')
+    // A retry restarts a draw that failed, and shows the avatar once it is drawn.
+    if (saved !== undefined) {
+      this.#drawAvatar(id, avatar)
+      return { ...saved, profile: this.deps.profiles.summary(id) }
+    }
+    try {
+      await this.deps.onboard(creation)
+      const summary = await this.deps.profiles.update(id, 'setup-fields', fields, 'agent')
+      const result = this.agents.freezeStep(operation.id, 'setup-result', {
+        agentKey: id,
+        approveUrl: approveUrl(this.origin, id, family.requested_scopes_json),
+        profile: summary,
+      })
+      this.#drawAvatar(id, avatar)
+      return result
+    } catch (error) {
+      // Store no provider message: it may contain credentials or request bodies.
+      this.agents.freezeStep(operation.id, 'setup-interrupted', {
+        message: 'Agent setup was interrupted. Retry create_agent with the original operationKey and arguments.',
+      })
+      throw error
+    }
+  }
+
+  #associate(family: { id: string; board_id: string; resource: string }, id: string) {
     this.deps.sql.run(
       'INSERT OR IGNORE INTO agent_setup_connections (agent_key,family_id,board_id,resource,created_at) VALUES (?,?,?,?,?)',
       id,
@@ -159,23 +194,22 @@ export class AgentSetup {
         'conflict',
         'This setup connection is already creating another agent; resume its operationKey',
       )
-    const saved = this.agents.step<CreationResult>(operation.id, 'setup-result')
-    if (saved !== undefined) return saved
-    try {
-      await this.deps.onboard(creation)
-      const summary = await this.deps.profiles.update(id, 'setup-profile', profile, 'agent')
-      return this.agents.freezeStep(operation.id, 'setup-result', {
-        agentKey: id,
-        approveUrl: approveUrl(this.origin, id, family.requested_scopes_json),
-        profile: summary,
-      })
-    } catch (error) {
-      // Store no provider message: it may contain credentials or request bodies.
-      this.agents.freezeStep(operation.id, 'setup-interrupted', {
-        message: 'Agent setup was interrupted. Retry create_agent with the original operationKey and arguments.',
-      })
-      throw error
-    }
+  }
+
+  /** The image model takes long enough to time clients out, so create_agent answers first and the avatar follows. */
+  #drawAvatar(id: string, avatar: ProfileInput['avatar']) {
+    if (avatar === undefined || drawing.has(id) || this.deps.profiles.profiles.read(id).avatarKey !== null) return
+    drawing.add(id)
+    this.deps.background(
+      this.deps.profiles
+        .update(id, 'setup-avatar', { avatar }, 'agent')
+        .then(
+          () => undefined,
+          (error: unknown) =>
+            console.error(JSON.stringify({ event: 'avatar-draw-failed', agentKey: id, ...errorDiagnostics(error) })),
+        )
+        .finally(() => drawing.delete(id)),
+    )
   }
 
   /** Any setup connection of the operator may ask: a reconnect must not lose track of the agent it waits for. */
@@ -235,6 +269,7 @@ function managedAgentSetup(input: {
   bindings: Record<string, unknown>
   rpcUrl: string
   relayKey: Hex
+  background: (work: Promise<void>) => void
 }): AgentSetup {
   const { sql, context, now, bindings } = input
   const provider = new sdk.PrivyServer({
@@ -273,6 +308,7 @@ export async function runSetupTool(input: {
   bindings: Record<string, unknown>
   sql: Sql
   grant: OAuthGrant
+  background: (work: Promise<void>) => void
 }) {
   const { req, bindings, sql, grant } = input
   // SAFETY: the relay key comes from the private host request; the factory validates it before creating an account.
@@ -286,6 +322,7 @@ export async function runSetupTool(input: {
     bindings,
     rpcUrl: req.env.rpcUrl,
     relayKey,
+    background: input.background,
   })
   if (req.tool === 'whoami' && grant.setup === true) return setup.whoami(grant)
   if (req.tool === 'create_agent' && grant.setup === true) return setup.create(grant, req.args)

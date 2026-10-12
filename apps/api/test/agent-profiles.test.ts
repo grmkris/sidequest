@@ -50,6 +50,10 @@ it('journals the updated profile and reuses the generated avatar after restart o
     code: 'conflict',
   })
   expect(f.boot().profiles.read('one').updatedBy).toBe('agent')
+  // The summary reads the profile as it is now, so a later rename shows through.
+  expect(f.boot().summary('one')).toEqual(result)
+  await f.boot().update('one', 'profile-2', { name: 'Renamed' }, 'agent')
+  expect(f.boot().summary('one')).toEqual({ ...result, name: 'Renamed' })
 })
 
 it('limits model attempts to ten per UTC day and never regenerates a completed key', async () => {

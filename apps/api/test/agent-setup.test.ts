@@ -13,7 +13,14 @@ import { agentRoute } from '../src/routes/agents.ts'
 import { setupFixture, origin, operator, outsider, resource } from './setup-oauth-fixture.ts'
 
 const fixtures: ReturnType<typeof setupFixture>[] = []
-afterEach(() => {
+/** Avatar draws that outlive create_agent, as waitUntil would keep them. */
+const drawing: Promise<void>[] = []
+const drawn = () => Promise.all(drawing.splice(0))
+const background = (work: Promise<void>) => {
+  drawing.push(work)
+}
+afterEach(async () => {
+  await drawn()
   for (const f of fixtures.splice(0)) f.db.close()
 })
 const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1])
@@ -53,7 +60,7 @@ async function fixture(verified = true) {
     for (const state of ['upgraded', 'grants-live'] as const) f.agents.advance(input.id, state)
     return f.agents.get(input.id)
   })
-  const boot = () => new AgentSetup({ sql: f.sql, context, now: f.now, origin, onboard, profiles })
+  const boot = () => new AgentSetup({ sql: f.sql, context, now: f.now, origin, onboard, profiles, background })
   const registered = (id: string) => {
     f.agents.bindRegistry(id, '41')
     f.agents.advance(id, 'registered')
@@ -80,12 +87,17 @@ it('answers setup whoami, creates its managed wallet/profile/avatar once, and re
   const f = await fixture()
   expect(f.boot().whoami(f.grant)).toEqual({ setup: true, operator: operator.toLowerCase(), agents: [] })
   const first = await f.boot().create(f.grant, args)
+  // The answer comes before the avatar is drawn; a retry while it is drawn starts no second draw.
   expect(first).toMatchObject({
     agentKey: expect.stringMatching(/^setup_/),
     approveUrl: `${origin}/agents/approve/${first.agentKey}?roles=work`,
-    profile: { name: 'Quill', description: 'Careful code reviews', image: expect.stringContaining('/avatars/') },
+    profile: { name: 'Quill', description: 'Careful code reviews', image: null },
   })
   expect(await f.boot().create(f.grant, args)).toEqual(first)
+  await drawn()
+  const replay = await f.boot().create(f.grant, args)
+  expect(replay).toEqual({ ...first, profile: { ...first.profile, image: expect.stringContaining('/avatars/') } })
+  await drawn()
   expect(f.onboard).toHaveBeenCalledTimes(1)
   expect(f.generate).toHaveBeenCalledTimes(1)
   expect(f.boot().status(f.grant, { agentKey: first.agentKey })).toMatchObject({ state: 'awaiting-approval' })
@@ -111,11 +123,32 @@ it('refuses caller-supplied ownership, missing Privy proof, changed operation ar
   expect(f.onboard).toHaveBeenCalledTimes(1)
 })
 
-it('replays the frozen creation result after an owner renames the pending agent', async () => {
+it('a failed avatar draw never fails creation, and a retry of create_agent draws it', async () => {
+  const f = await fixture()
+  const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    f.generate.mockRejectedValueOnce(new Error('model busy'))
+    const created = await f.boot().create(f.grant, args)
+    await drawn()
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('avatar-draw-failed'))
+    expect(f.boot().status(f.grant, { agentKey: created.agentKey })).toMatchObject({ state: 'awaiting-approval' })
+    expect((await f.boot().create(f.grant, args)).profile.image).toBeNull()
+    await drawn()
+    expect((await f.boot().create(f.grant, args)).profile.image).toContain('/avatars/')
+    expect(f.generate).toHaveBeenCalledTimes(2)
+  } finally {
+    spy.mockRestore()
+  }
+})
+
+it('replays the frozen creation after an owner renames the pending agent, showing the name it has now', async () => {
   const f = await fixture(),
     created = await f.boot().create(f.grant, args)
   f.agents.rename(created.agentKey, 'Quill reviewed')
-  expect(await f.boot().create(f.grant, args)).toEqual(created)
+  expect(await f.boot().create(f.grant, args)).toEqual({
+    ...created,
+    profile: { ...created.profile, name: 'Quill reviewed' },
+  })
   expect(f.agents.get(created.agentKey).name).toBe('Quill reviewed')
   expect(f.onboard).toHaveBeenCalledTimes(1)
   expect(f.generate).toHaveBeenCalledTimes(1)

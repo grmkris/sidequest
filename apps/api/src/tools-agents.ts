@@ -4,7 +4,7 @@ const object = { type: 'object', properties: {} }
 export const agentTools = {
   create_agent: {
     description:
-      'Create an operator-owned agent wallet and profile from a setup connection. Agree the name, purpose and avatar idea with your human first. Give them approveUrl; creation grants no work or hire authority. Retry identical arguments with the same operationKey.',
+      'Create an operator-owned agent wallet and profile from a setup connection. Agree the name, purpose and avatar idea with your human first. Give them approveUrl; creation grants no work or hire authority. It answers before the avatar is drawn: profile.image is null until it is (usually under a minute), and the approval page shows it then. Retry identical arguments with the same operationKey.',
     inputSchema: {
       type: 'object',
       properties: {

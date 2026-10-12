@@ -153,6 +153,17 @@ export class AgentProfileUpdates {
     return this.#finish(id, operation.id, { avatarKey: stored.key, avatarPrompt: null }, updatedBy)
   }
 
+  /** The profile as it stands now, for answers that outlive the write that made them. */
+  summary(id: string): ProfileSummary {
+    const agent = this.agents.get(id)
+    return profileSummary(this.origin, {
+      profile: this.profiles.read(id),
+      agentId: agent.agent_id,
+      registry: agent.registry,
+      chainId: agent.chain_id,
+    })
+  }
+
   #bucket(): AvatarBucket {
     if (this.deps.bucket === undefined) throw new BoardError('unavailable', 'Avatar storage is unavailable')
     return this.deps.bucket
@@ -199,13 +210,7 @@ export class AgentProfileUpdates {
         description: saved.profile.description ?? profile.description,
       })
     }
-    const agent = this.agents.get(id)
-    const summary = profileSummary(this.origin, {
-      profile: this.profiles.read(id),
-      agentId: agent.agent_id,
-      registry: agent.registry,
-      chainId: agent.chain_id,
-    })
+    const summary = this.summary(id)
     if (this.deps.sql.atomic === undefined) throw new Error('Profile writes require atomic storage')
     return this.deps.sql.atomic(() => {
       this.agents.saveOperation(operationId, 'sending')

@@ -81,11 +81,15 @@ export interface AgentExecuteRequest {
   operator?: Address
 }
 
+const runsOn = (_work: Promise<void>) => undefined
+
 export async function runAgent(runtime: {
   req: AgentExecuteRequest
   bindings: Record<string, unknown>
   sql: Sql
   stateId: string
+  /** Work that outlives the answer; outside a Durable Object it simply runs on. */
+  background?: (work: Promise<void>) => void
 }): Promise<string> {
   const { req, bindings, sql } = runtime
   const namespace = bindings.Board as {
@@ -116,7 +120,10 @@ export async function runAgent(runtime: {
         'role-required: the operator has not allowed this agent this role; call request_role',
       )
     if (grant.setup === true || req.tool === 'setup_status')
-      return toJson({ ok: true, result: await runSetupTool({ req, bindings, sql, grant }) })
+      return toJson({
+        ok: true,
+        result: await runSetupTool({ req, bindings, sql, grant, background: runtime.background ?? runsOn }),
+      })
   }
   const agents = new AgentStore(sql, () => Math.floor(Date.now() / 1000))
   const agent = req.operator === undefined ? agents.get(req.agentId) : agents.owned(req.agentId, req.operator)
