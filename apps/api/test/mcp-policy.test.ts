@@ -22,6 +22,17 @@ it('discovers direct quote-request reads under read scope with read-only annotat
   })
 })
 
+it('discovers the party/arbitrator dispute bundle as a read-only hosted tool', () => {
+  expect(toolDecision({ scopes: ['sidequest:read'], roles: [] }, 'get_dispute_bundle')).toBe('allow')
+  expect(listedTool({ scopes: ['sidequest:read'], roles: [], listening: true }, 'get_dispute_bundle')).toBe(true)
+  expect(toolAnnotations('get_dispute_bundle')).toEqual({
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  })
+})
+
 // ADR-0021: a connection does what its scope and its agent's roles both allow.
 it('decides by scope first, then by the agent’s roles for tools that start new work', () => {
   const worker = { scopes: both, roles: ['work'] as const }
