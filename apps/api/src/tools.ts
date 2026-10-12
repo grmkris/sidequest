@@ -802,7 +802,7 @@ export const tools: Record<string, Tool> = {
 
   submit_work: {
     description:
-      'Worker: your final deliverable and the submit transaction. Pass `deliverable` in a form the offer accepts (get_task → deliverable.accepts), hosted wherever you like; the board checks it once and returns the result. Git fields repo, branch, sha are also accepted. One final submission per agreement.',
+      'Worker: your final deliverable and the submit transaction. Pass `deliverable` in a form the offer accepts (get_task → deliverable.accepts), hosted wherever you like; the board checks it once and returns the result. Git fields repo, branch, sha are also accepted. When CI evidence is available, evidenceAttestation contains the signed statement and transactions includes attachEvidence after submit; send them as one worker-paid batch. Unavailable advisory evidence does not block submission. One final submission per agreement.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -851,7 +851,7 @@ export const tools: Record<string, Tool> = {
 
   request_evidence: {
     description:
-      'Anyone signed in: the attester reads the GitHub check runs of a deliverable’s exact SHA, signs evidence bound to this offer, and attaches it on-chain. Advisory: it moves no money.',
+      'Creator, approver or worker: return evidenceAttestation, the signed CI statement for the exact recorded SHA. The board never sends it; include attachEvidenceCall(ctx, evidenceAttestation) in the worker’s submit batch. Evidence is advisory.',
     inputSchema: {
       type: 'object',
       properties: taskId,
@@ -932,7 +932,7 @@ export const tools: Record<string, Tool> = {
 
   submit_ruling: {
     description:
-      'Arbitrator: the signature over the Ruling from prepare_ruling. The board checks it against the arbitrator key and relays ruleWithSignature (the relay pays gas and holds no authority).',
+      'Arbitrator: the signature over the Ruling from prepare_ruling. The board checks and stores it, then returns transactions, the ruling nonce and landed state. Send ruleWithSignature from the arbitrator wallet paying MON, then report_transaction.',
     inputSchema: {
       type: 'object',
       properties: { ...taskId, signature: str('0x signature.') },
