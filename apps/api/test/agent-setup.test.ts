@@ -387,3 +387,21 @@ it('routes Privy ownership confirmation and approval through the owner managemen
   })
   expect(agentRoute('GET', '/api/agents/quill/approve', {})).toBeUndefined()
 })
+
+it('setup_status restarts an avatar draw the Durable Object lost', async () => {
+  const f = await fixture()
+  const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    // The first draw is lost (an eviction or a deploy ends work kept past create_agent's answer).
+    f.generate.mockRejectedValueOnce(new Error('evicted'))
+    const created = await f.boot().create(f.grant, args)
+    await drawn()
+    // The agent's polling of setup_status starts it again; no create_agent retry is needed.
+    expect(f.boot().status(f.grant, { agentKey: created.agentKey })).toMatchObject({ state: 'awaiting-approval' })
+    await drawn()
+    expect(f.generate).toHaveBeenCalledTimes(2)
+    expect((await f.boot().create(f.grant, args)).profile.image).toContain('/avatars/')
+  } finally {
+    spy.mockRestore()
+  }
+})

@@ -11,7 +11,7 @@ import {
   type AgentRow,
 } from '@sidequest/board'
 import * as sdk from '@sidequest/sdk'
-import { Schema } from 'effect'
+import { Option, Schema } from 'effect'
 import { getAddress, keccak256, stringToHex, type Hex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { AgentExecuteRequest } from './agent-runtime.ts'
@@ -62,6 +62,8 @@ interface SetupDeps {
 
 /** Avatars being drawn in this isolate, so a retry while one is drawn never pays for a second. */
 const drawing = new Set<string>()
+/** The avatar request create_agent's operation recorded, as setup_status reads it back. */
+const AvatarIntent = Schema.Struct({ avatar: Schema.optionalKey(Schema.Struct({ generate: Schema.String })) })
 
 export class AgentSetup {
   readonly agents: AgentStore
@@ -212,6 +214,23 @@ export class AgentSetup {
     )
   }
 
+  /**
+   * Restarts an avatar draw the Durable Object lost (an eviction or a deploy ends work kept past the answer): the
+   * request stays in create_agent's operation, and setup_status is polled while the agent waits for approval.
+   */
+  #resumeAvatar(agentKey: string) {
+    const row = this.deps.sql.all<{ intent_json: string }>(
+      "SELECT intent_json FROM agent_operations WHERE agent_id=? AND action_key='setup-create' AND tool='create_agent'",
+      agentKey,
+    )[0]
+    const avatar =
+      row === undefined
+        ? undefined
+        : Option.getOrUndefined(Schema.decodeUnknownOption(Schema.fromJsonString(AvatarIntent))(row.intent_json))
+            ?.avatar
+    if (avatar !== undefined) this.#drawAvatar(agentKey, avatar)
+  }
+
   /** Any setup connection of the operator may ask: a reconnect must not lose track of the agent it waits for. */
   status(grant: OAuthGrant, args: Record<string, unknown>) {
     const family = this.#family(grant)
@@ -224,6 +243,7 @@ export class AgentSetup {
     if (owned === undefined) throw new BoardError('forbidden', 'No agent with this key belongs to this operator')
     const agent = this.agents.get(agentKey)
     if (agent.state === 'revoked') return { state: 'failed', message: 'Hosted access to this agent was stopped.' }
+    this.#resumeAvatar(agentKey)
     if (family.agent_id === agentKey && agent.state === 'active')
       return {
         state: 'ready',
