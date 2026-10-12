@@ -165,7 +165,7 @@ it('owned requests include picked and expired history and page identical timesta
   expect(second.requests).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ requestId: 'r001', taskId: 'alice-own', status: 'Picked — hire linked' }),
-      expect.objectContaining({ requestId: 'r000', status: 'Expired — reward not escrowed' }),
+      expect.objectContaining({ requestId: 'r000', status: 'Quotes closed — reward not escrowed' }),
     ]),
   )
   expect([...first.requests, ...second.requests].map((r) => r.requestId)).toHaveLength(52)
@@ -173,6 +173,51 @@ it('owned requests include picked and expired history and page identical timesta
   expect((await board.listQuoteRequests({})).some((r) => r.requestId === 'r001' || r.requestId === 'r000')).toBe(false)
   await expect(board.listQuoteRequests({}, { mine: true })).rejects.toThrow(/Sign in/)
   await expect(board.listQuoteRequests({ address: alice }, { mine: true, cursor: 'bad' })).rejects.toThrow(/cursor/)
+})
+
+it('reads a request outside discovery lists and distinguishes quoting closed from delivery expired', async () => {
+  const { board, sql } = fixture()
+  for (const [id, deliveryDeadline, taskId] of [
+    ['closed-before-delivery', 2000, null],
+    ['expired-delivery', 1000, null],
+    ['picked-history', 500, 'alice-own'],
+  ] as const) {
+    sql.run(
+      'INSERT INTO quote_requests (id,creator,stack,request_json,request_hash,quote_deadline,task_id,created_at) VALUES (?,?,?,?,?,?,?,?)',
+      id,
+      alice,
+      'main',
+      JSON.stringify({
+        title: 'Frozen public request',
+        brief: 'Read me after discovery closes',
+        deliveryDeadline,
+        creator: alice,
+      }),
+      id,
+      999,
+      taskId,
+      100,
+    )
+  }
+  expect(await board.listQuoteRequests({})).toEqual([])
+  const closed = await board.getQuoteRequest({}, { requestId: 'closed-before-delivery' })
+  expect(closed).toMatchObject({
+    requestId: 'closed-before-delivery',
+    title: 'Frozen public request',
+    brief: 'Read me after discovery closes',
+    status: 'Quotes closed — reward not escrowed',
+    quotesCount: 0,
+    taskId: null,
+  })
+  expect(closed).not.toHaveProperty('quotes')
+  expect(await board.getQuoteRequest({}, { requestId: 'expired-delivery' })).toMatchObject({
+    status: 'Expired — reward not escrowed',
+  })
+  expect(await board.getQuoteRequest({}, { requestId: 'picked-history' })).toMatchObject({
+    status: 'Picked — hire linked',
+    taskId: 'alice-own',
+  })
+  await expect(board.getQuoteRequest({}, { requestId: 'missing' })).rejects.toMatchObject({ code: 'not-found' })
 })
 
 it('the public list carries record time and bidder count; recent adds the last week of closed and picked requests', async () => {
@@ -226,7 +271,7 @@ it('the public list carries record time and bidder count; recent adds the last w
   expect(recent.map((r) => [r.requestId, r.status, r.quotesCount])).toEqual([
     ['open', 'Accepting quotes — reward not escrowed', 2],
     ['picked', 'Picked — hire linked', 0],
-    ['closed', 'Expired — reward not escrowed', 0],
+    ['closed', 'Quotes closed — reward not escrowed', 0],
   ])
   expect(recent.find((r) => r.requestId === 'picked')).toMatchObject({ taskId: 'alice-own' })
   await expect(board.listQuoteRequests({ address: alice }, { mine: true, recent: true } as never)).rejects.toThrow(

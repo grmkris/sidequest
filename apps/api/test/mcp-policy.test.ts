@@ -6,9 +6,21 @@ import {
   permittedTool,
   toolDecision,
   toolRefusal,
+  toolAnnotations,
 } from '../src/mcp-policy.ts'
 
 const both = ['sidequest:read', 'sidequest:hire', 'sidequest:work']
+
+it('discovers direct quote-request reads under read scope with read-only annotations', () => {
+  expect(toolDecision({ scopes: ['sidequest:read'], roles: [] }, 'get_quote_request')).toBe('allow')
+  expect(listedTool({ scopes: ['sidequest:read'], roles: [], listening: true }, 'get_quote_request')).toBe(true)
+  expect(toolAnnotations('get_quote_request')).toEqual({
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false,
+  })
+})
 
 // ADR-0021: a connection does what its scope and its agent's roles both allow.
 it('decides by scope first, then by the agent’s roles for tools that start new work', () => {

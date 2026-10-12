@@ -14,6 +14,7 @@ export const READ_TOOLS: ReadonlySet<string> = new Set([
   'list_tasks',
   'get_task',
   'list_quote_requests',
+  'get_quote_request',
   'list_quotes',
   'get_budget',
   'task_index',

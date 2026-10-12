@@ -200,7 +200,7 @@ async function settleWithin<T>(read: Promise<T>, ms: number): Promise<T | undefi
 /** How long a closed or picked quote request stays in the public list's `recent` view. */
 const RECENT_REQUESTS = 7 * 86_400
 
-interface QuoteRequestRead {
+export interface QuoteRequestRead {
   requestId: string
   requestHash: string
   taskId: string | null
@@ -1935,6 +1935,13 @@ export class Board {
     return row
   }
 
+  /** One public request by its durable ID, including requests no longer present in discovery lists. */
+  async getQuoteRequest(_caller: Caller, input: { requestId: string }): Promise<QuoteRequestRead> {
+    const now = this.#now()
+    const rows = this.#requestReads([this.#quoteRequest(input.requestId)], now)
+    return (await this.#withBudgetDisplay(await this.#withPosterFacts(rows, now)))[0]!
+  }
+
   /**
    * Public discovery lists open requests; `recent` adds the ones that closed or were picked within the last week (for
    * Explore's single list). A connected creator may page every request it created, including picked/expired rows.
@@ -2011,23 +2018,29 @@ export class Board {
         counts.set(c.request_id, Number(c.n))
       }
     }
-    return rows.map((r) => ({
-      ...(JSON.parse(r.request_json) as object),
-      requestId: r.id,
-      requestHash: r.request_hash,
-      taskId: r.task_id,
-      status:
-        r.task_id !== null
-          ? 'Picked — hire linked'
-          : now >= r.quote_deadline
-            ? 'Expired — reward not escrowed'
-            : 'Accepting quotes — reward not escrowed',
-      createdAt: r.created_at,
-      // One quote per bidder (UNIQUE request_id, worker), so this counts bidders.
-      quotesCount: counts.get(r.id) ?? 0,
-      ...(r.creator_agent_id == null ? {} : { creatorAgentId: r.creator_agent_id }),
-      invite: this.#requestInvite(r),
-    }))
+    return rows.map((r) => {
+      // SAFETY: request_json contains the frozen public request produced by requestQuotes.
+      const request = JSON.parse(r.request_json) as { deliveryDeadline?: number }
+      return {
+        ...request,
+        requestId: r.id,
+        requestHash: r.request_hash,
+        taskId: r.task_id,
+        status:
+          r.task_id !== null
+            ? 'Picked — hire linked'
+            : now >= r.quote_deadline
+              ? request.deliveryDeadline !== undefined && now >= request.deliveryDeadline
+                ? 'Expired — reward not escrowed'
+                : 'Quotes closed — reward not escrowed'
+              : 'Accepting quotes — reward not escrowed',
+        createdAt: r.created_at,
+        // One quote per bidder (UNIQUE request_id, worker), so this counts bidders.
+        quotesCount: counts.get(r.id) ?? 0,
+        ...(r.creator_agent_id == null ? {} : { creatorAgentId: r.creator_agent_id }),
+        invite: this.#requestInvite(r),
+      }
+    })
   }
 
   /**

@@ -412,6 +412,17 @@ export const tools: Record<string, Tool> = {
     },
   },
 
+  get_quote_request: {
+    description:
+      'Anyone: one public quote request by requestId, including closed, expired and picked requests. Returns the frozen brief, terms, bidder count and linked taskId; quote prices stay private in list_quotes.',
+    inputSchema: {
+      type: 'object',
+      properties: { requestId: str('The durable quote request ID.') },
+      required: ['requestId'],
+    },
+    run: (board, caller, args) => board.getQuoteRequest(caller, { requestId: s(args, 'requestId') }),
+  },
+
   list_quote_requests: {
     description:
       'Anyone: open quote requests (the work, accepted tokens, any public budget, bonds, deadlines), each with createdAt and quotesCount (how many bidders quoted; amounts stay private). recent=true also lists requests closed or picked in the last 7 days. A connected publisher may set mine=true to page its own picked and expired requests, including taskId.',

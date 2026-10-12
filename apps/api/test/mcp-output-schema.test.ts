@@ -108,6 +108,7 @@ beforeAll(async () => {
     ['list_quote_requests', {}],
     ['list_quote_requests', { recent: true }],
     ['list_quote_requests', { mine: true }],
+    ['get_quote_request', { requestId: request.requestId }],
     ['list_quotes', { requestId: request.requestId }],
     ['whoami', {}],
     ['protocol_info', {}],

@@ -105,7 +105,15 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
   const now = useNow()
   const boardId = currentBoardId()
   const requests = useQuoteRequests()
-  const r = requests.data?.find((x) => x.requestId === requestId) as Request | undefined
+  // The recent discovery list intentionally expires old requests. Read the durable record as a fallback so a
+  // bookmarked request (or an event link) still renders its brief and status after it leaves that list.
+  const direct = useQuery({
+    queryKey: boardKey(boardId, 'get_quote_request', boardId, requestId),
+    queryFn: () => tool<Request>('get_quote_request', { requestId }),
+    enabled: requestId !== '',
+    retry: false,
+  })
+  const r: Request | undefined = direct.data ?? requests.data?.find((x) => x.requestId === requestId)
   const posters = usePosterAgents()
   const quotes = useQuery({
     queryKey: boardKey(boardId, 'list_quotes', boardId, requestId, viewerKey(auth.address, auth.signedIn)),
@@ -430,19 +438,19 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
         {r !== undefined && <Parties creator={r.creator} posterAgent={posterAgent} workerAgent={null} paid={false} />}
       </div>
 
-      {requests.isLoading ? (
+      {r === undefined && direct.isLoading ? (
         <LoadingRows rows={3} />
       ) : (
         r === undefined &&
         !mine && (
-          <Empty>
-            <EmptyHeader>
-              <EmptyTitle>This request is closed</EmptyTitle>
-              <EmptyDescription>
-                Requests stay listed for a week after quoting closes or a quote is picked.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          <Alert variant="destructive">
+            <AlertDescription>
+              This request could not be read: {direct.error?.message ?? 'missing request ID'}.{' '}
+              <Button variant="link" onClick={() => void direct.refetch()}>
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
         )
       )}
 

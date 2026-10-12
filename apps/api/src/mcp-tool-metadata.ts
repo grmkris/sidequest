@@ -77,6 +77,9 @@ const PUBLISHER_OUTPUT_SCHEMAS: Readonly<Record<string, Record<string, unknown>>
   list_quote_requests: envelope({
     anyOf: [listOutput, objectOutput({ requests: listOutput, nextCursor: stringOutput })],
   }),
+  get_quote_request: envelope(
+    objectOutput({ requestId: stringOutput, taskId: { type: ['string', 'null'] }, status: stringOutput }),
+  ),
   list_quotes: envelope(
     objectOutput({
       requestId: stringOutput,
