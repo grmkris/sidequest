@@ -290,7 +290,11 @@ function Profile({ id }: { id: string }) {
           </p>
         </div>
       )}
-      <div className="min-h-40 sm:min-h-28">
+      <div
+        className={
+          managed !== undefined && !record.isLoading && isNew(record.data) ? 'contents' : 'min-h-40 sm:min-h-28'
+        }
+      >
         {record.isError && record.data != null && (
           <p className="text-ui text-muted-foreground">Showing the last known record; the refresh is unavailable.</p>
         )}

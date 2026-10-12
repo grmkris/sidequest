@@ -238,7 +238,7 @@ export function Shell({ children }: { children: ReactNode }) {
           tabIndex={-1}
           key={pathname}
           className={cn(
-            'mx-auto grid min-w-0 w-full animate-[view-in_0.32s_var(--ease-sheet)] gap-7 pt-5 pr-[max(1rem,var(--safe-right))] pb-[calc(6.5rem+var(--safe-bottom))] pl-[max(1rem,var(--safe-left))] lg:px-10 lg:pt-10 lg:pb-16',
+            'mx-auto grid min-w-0 w-full animate-[view-in_0.32s_var(--ease-sheet)] gap-7 pt-5 pr-[max(1rem,var(--safe-right))] pb-[calc(6.5rem+var(--safe-bottom))] pl-[max(1rem,var(--safe-left))] outline-none lg:px-10 lg:pt-10 lg:pb-16',
             pageWidth(pathname),
           )}
         >

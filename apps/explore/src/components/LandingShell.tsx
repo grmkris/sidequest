@@ -78,7 +78,7 @@ export function LandingShell({ children }: { children: ReactNode }) {
       <main
         id="main-content"
         tabIndex={-1}
-        className="mx-auto grid max-w-5xl gap-16 pt-12 pr-[max(1.25rem,var(--safe-right))] pb-[max(3rem,var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] sm:pt-24"
+        className="mx-auto grid max-w-5xl gap-16 pt-12 pr-[max(1.25rem,var(--safe-right))] pb-[max(3rem,var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] outline-none sm:pt-24"
       >
         <LaunchBanner />
         {children}

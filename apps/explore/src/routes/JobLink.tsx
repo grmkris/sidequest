@@ -46,7 +46,7 @@ function LegacyTaskLink({ taskId }: { taskId: string }) {
     )
   return (
     <>
-      <PageTitle>{validTaskId ? 'Job link unavailable' : 'That is not a Job ID'}</PageTitle>
+      <PageTitle>{validTaskId ? 'Job link unavailable' : 'That job link is not valid'}</PageTitle>
       <Alert variant="destructive">
         <AlertDescription>
           This job link could not be resolved: {read.error?.message ?? 'invalid task ID'}.{' '}
