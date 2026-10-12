@@ -31,3 +31,10 @@ back, got a V2 salt, and checked the address (ending 7777) with `cast create2` b
 - `accept send` against fresh contracts: R7 rehearses SafeAccept on a mainnet fork.
 - The macOS Keychain path: `setup`, `copy-password` and the approval prompt run only on the Mac. Kris's own run on
   testnet is the check.
+
+## `bond`, added later on 12 Oct
+
+Kris's bond policy (note 22) keeps posting a job at about $10 or less, so the Safe re-sets Holding's minimum creator
+bond by hand until an oracle does it. On a testnet fork, with the G1e Holding's ownership moved to the dry-run Safe,
+`bond send 500` set `minimumCreatorBond` from 10 to 500 testnet SIDE and quoted the nad.fun cost of that amount.
+`bond plan 0` and `bond plan 5000`, which is above the 1,000 cap, were refused before any simulation.

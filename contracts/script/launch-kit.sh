@@ -18,6 +18,7 @@
 #   backing plan|send <file.json>  L10: approve + delegateFor from the Safe in one MultiSendCallOnly batch;
 #                                  the file is [{"account": "0x…", "side": "5000000"}, …] in whole SIDE
 #   exit buy|sell plan|send <amt>  L12b: the exit-test wallet buys with <amt> MON, or sells <amt> SIDE (all by default)
+#   bond plan|send <SIDE>          after launch: the Safe re-sets Holding's minimum creator bond (kept at about $10 or less)
 #
 # Addresses come from contracts/config/<network>.json (`nadfun`, `launchKit`, `sidequest`, `deployment`). Keystores,
 # plans and receipts live in $KIT_HOME (default ~/.sidequest-kit). Runs on macOS bash 3.2 and on Linux; needs cast,
@@ -436,6 +437,38 @@ cmd_exit() {
   say "The exit-test wallet holds $(cast balance --ether --rpc-url "$RPC" "$who") MON and $(cast from-wei "$(side_balance "$token" "$who")") SIDE."
 }
 
+# Bond policy (note 22, 12 Oct): posting a job should cost about $10 or less, so the Safe re-sets Holding's minimum
+# creator bond (above 0, at most the immutable cap) for jobs published afterwards. Announce each change in Commons first.
+cmd_bond() {
+  local mode=${1:-} side=${2:-} owner safe holding wei current cap data sig token cost
+  [[ -n "$side" ]] || die "usage: bond plan|send <whole SIDE>"
+  owner=$(addr owner)
+  safe=$(safe_addr)
+  check_safe "$safe"
+  holding=$(cfg .deployment.main.holding)
+  [[ -n "$holding" ]] || die "no promoted SidequestHolding in the config"
+  wei=$(cast to-wei "$side")
+  current=$(num "$(cast call --rpc-url "$RPC" "$holding" 'minimumCreatorBond()(uint256)')")
+  cap=$(num "$(cast call --rpc-url "$RPC" "$holding" 'MAX_MINIMUM_CREATOR_BOND()(uint256)')")
+  [[ "$wei" != 0 && "$(calc "$wei <= $cap")" == 1 ]] || die "the minimum must be above 0 and at most $(cast from-wei "$cap") SIDE"
+  data=$(cast calldata 'setMinimumCreatorBond(uint256)' "$wei")
+  sig=$(owner_signature "$owner")
+  [[ "$(cast call --rpc-url "$RPC" --from "$owner" "$safe" "$EXEC(bool)" "$holding" 0 "$data" 0 0 0 0 $ZERO $ZERO "$sig")" == true ]] \
+    || die "the simulation failed (does the Safe own Holding?)"
+  say "The Safe sets the minimum creator bond from $(cast from-wei "$current") to $side SIDE (ceiling $(cast from-wei "$cap")), for jobs published after it lands."
+  # What buying that much SIDE costs on nad.fun right now, to check it against the dollar target.
+  token=$(side_token 2>/dev/null) || token=
+  if [[ -n "$token" ]] && cost=$(cast call --rpc-url "$RPC" "$(nadfun router)" 'getAmountIn(address,uint256,bool)(uint256)' "$token" "$wei" true 2>/dev/null); then
+    say "Buying $side SIDE on nad.fun costs about $(cast from-wei "$(num "$cost")") MON now."
+  fi
+  say "Announce the change in Commons before sending."
+  [[ "$mode" == send ]] || return 0
+  go_check
+  unlock owner
+  send_tx owner "$safe" 0 "$EXEC" "$holding" 0 "$data" 0 0 0 0 $ZERO $ZERO "$sig"
+  say "minimumCreatorBond is now $(cast from-wei "$(num "$(cast call --rpc-url "$RPC" "$holding" 'minimumCreatorBond()(uint256)')")") SIDE."
+}
+
 case "${1:-}" in
   setup) cmd_setup ;;
   addresses) cmd_addresses ;;
@@ -454,5 +487,6 @@ case "${1:-}" in
   accept) cmd_accept "${2:-plan}" ;;
   backing) cmd_backing "${2:-}" "${3:-}" ;;
   exit) cmd_exit "${2:-}" "${3:-plan}" "${4:-}" ;;
-  *) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//' && exit 2 ;;
+  bond) cmd_bond "${2:-}" "${3:-}" ;;
+  *) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//' && exit 2 ;;
 esac
