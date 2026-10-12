@@ -74,6 +74,7 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
    | field | type | on chain 143 |
    | --- | --- | --- |
    | `sidequest.safe` | address | the Safe |
+   | `sidequest.slashRecipient` | address | the Safe at launch; receives slashed SIDE; the Safe may change it without a timelock |
    | `sidequest.defaultArbitrator` | address | the fresh v1 arbitrator, = `roles.arbitrator` (enforced); per-offer arbitrators override it |
    | `sidequest.margin` | uint | seconds added to the windows when checking `expiredAt`; the reviewed default is 3600 |
    | `sidequest.minimumCreatorBond` | uint | raw SIDE units: 1000000000000000000000000 (1M SIDE) |

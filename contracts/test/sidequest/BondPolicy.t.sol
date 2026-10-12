@@ -109,7 +109,7 @@ contract BondPolicyTest is BaseV1 {
         assertEq(factory.balanceOf(treasury), taken);
         assertEq(vault.stakeOf(creator), CREATOR_STAKE - taken);
         assertEq(vault.reservedOf(creator), 0);
-        assertEq(circulating(), 1_000_000_000e18);
+        assertEq(sideOutsideSlashRecipient(), 1_000_000_000e18);
         assertFalse(listing(job).creatorBondBurned);
         vm.expectRevert(ISidequestHolding.NothingToSettle.selector);
         holding.settle(job);
@@ -164,7 +164,7 @@ contract BondPolicyTest is BaseV1 {
         fast.minDisputeWindow = 1;
         fast.minArbitrationWindow = 1;
         vm.startPrank(deployer);
-        vault = new StakeVault(factory, fast);
+        vault = new StakeVault(factory, safe, fast);
         holding = new SidequestHolding(
             core, vault, fees, IERC8004Identity(address(identity)), arbitrator, 0, CREATOR_BOND, 100_000e18, 2500, fast
         );
@@ -315,6 +315,6 @@ contract BondPolicyTest is BaseV1 {
         assertEq(factory.balanceOf(treasury), taken);
         assertEq(vault.totalAssets(), CREATOR_STAKE + WORKER_STAKE - taken);
         assertEq(vault.totalReserved(), 0);
-        assertEq(circulating(), 1_000_000_000e18);
+        assertEq(sideOutsideSlashRecipient(), 1_000_000_000e18);
     }
 }

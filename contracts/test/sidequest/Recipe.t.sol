@@ -89,6 +89,7 @@ contract RecipeTest is Test {
         c.identity = IERC8004Identity(address(new MockIdentity()));
         c.reputation = IERC8004Reputation(address(new MockReputation()));
         c.safe = safe;
+        c.slashRecipient = safe;
         c.defaultArbitrator = arbitrator;
         c.margin = 1 days;
         c.thresholds = [uint256(0), 10_000, 100_000, 1_000_000];
@@ -496,7 +497,11 @@ contract RecipeTest is Test {
         vm.writeJson("{}", path, ".deployment");
         vm.writeJson(
             string.concat(
-                '{"maxMinimumCreatorBond":100000000000000000000000,"unfilledForfeitBps":2500,"minimumCreatorBond":10000000000000000000000,"token":"',
+                '{"safe":"',
+                vm.toString(safe),
+                '","slashRecipient":"',
+                vm.toString(safe),
+                '","maxMinimumCreatorBond":100000000000000000000000,"unfilledForfeitBps":2500,"minimumCreatorBond":10000000000000000000000,"token":"',
                 vm.toString(address(side)),
                 '"}'
             ),
@@ -513,7 +518,9 @@ contract RecipeTest is Test {
         SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
         string memory shipped = vm.readFile(string.concat(vm.projectRoot(), "/config/monad-testnet.json"));
         string memory path = _temp("testnet", shipped);
-        string memory real = UnpromotedTestnet.write(vm, path, shipped);
+        UnpromotedTestnet.write(vm, path, shipped);
+        vm.writeJson(string.concat('"', vm.toString(safe), '"'), path, ".sidequest.slashRecipient");
+        string memory real = vm.readFile(path);
         SidequestOutput.write(vm, path, d, safe, 122, 123);
         string memory out = vm.readFile(path);
         vm.removeFile(path);
@@ -527,6 +534,7 @@ contract RecipeTest is Test {
         assertFalse(vm.keyExistsJson(out, ".deployment.sidequest.t0"), "no mining genesis in the record");
         assertEq(vm.parseJsonUint(out, ".deployment.sidequest.block"), 123);
         assertEq(vm.parseJsonAddress(out, ".deployment.sidequest.safe"), safe, "D5");
+        assertEq(vm.parseJsonAddress(out, ".deployment.sidequest.slashRecipient"), safe);
         _assertOutputClocks(out, c.clocks);
         assertEq(vm.parseJsonString(out, ".deployment.main.kind"), "sidequest-v1");
         assertEq(vm.parseJsonAddress(out, ".deployment.main.holding"), address(d.holding));
@@ -597,7 +605,9 @@ contract RecipeTest is Test {
         SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
         string memory shipped = vm.readFile(SidequestRecipe.path(vm, "monad-testnet"));
         string memory path = _temp("clock-mismatch", shipped);
-        string memory fixture = UnpromotedTestnet.write(vm, path, shipped);
+        UnpromotedTestnet.write(vm, path, shipped);
+        vm.writeJson(string.concat('"', vm.toString(safe), '"'), path, ".sidequest.slashRecipient");
+        string memory fixture = vm.readFile(path);
         string[] memory names = vm.parseJsonKeys(fixture, ".sidequest.clocks");
         assertEq(names.length, 7);
         for (uint256 i; i < names.length; ++i) {
@@ -711,7 +721,7 @@ contract RecipeTest is Test {
     function test_load_sidequestInputBlock() public {
         string memory base = vm.readFile(string.concat(vm.projectRoot(), "/config/monad-testnet.json"));
         string memory block_ = string.concat(
-            '{"safe":"0x00000000000000000000000000000000000000a1",',
+            '{"safe":"0x00000000000000000000000000000000000000a1","slashRecipient":"0x00000000000000000000000000000000000000a4",',
             '"defaultArbitrator":"0x00000000000000000000000000000000000000a2","margin":86400,"maxMinimumCreatorBond":100000000000000000000000,"unfilledForfeitBps":2500,"minimumCreatorBond":10000000000000000000000,',
             '"schedule":{"thresholds":[0,10000,100000,1000000],"bps":[3000,1000,300,100],',
             '"treasury":"0x00000000000000000000000000000000000000a1"},',
@@ -729,6 +739,7 @@ contract RecipeTest is Test {
         );
         vm.removeFile(path);
         assertEq(l.safe, address(0xa1));
+        assertEq(l.slashRecipient, address(0xa4));
         assertEq(l.defaultArbitrator, address(0xa2));
         assertEq(l.margin, 86400);
         assertEq(l.thresholds[3], 1_000_000);
@@ -763,6 +774,37 @@ contract RecipeTest is Test {
         assertEq(this.guardExt(testnet, true), 10143);
         vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.WrongChain.selector, 143, 10143));
         this.guardExt(mainnet, true);
+    }
+
+    function test_recipe_refusesZeroSlashRecipient() public {
+        c.slashRecipient = address(0);
+        vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "zero address"));
+        driver.configure(c);
+    }
+
+    function test_output_slashRecipientMismatch_preservesConfig() public {
+        SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
+        string memory path = _mainnetTemp("slash-recipient-mismatch");
+        vm.writeJson(string.concat('"', vm.toString(stranger), '"'), path, ".sidequest.slashRecipient");
+        string memory before = vm.readFile(path);
+        vm.expectRevert(SidequestOutput.SlashRecipientMismatch.selector);
+        this.writeExternal(path, d);
+        assertEq(vm.readFile(path), before);
+        vm.removeFile(path);
+    }
+
+    function test_promotion_changedSlashRecipientRefuses() public {
+        SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
+        string memory path = _mainnetTemp("slash-recipient-promoted");
+        SidequestOutput.write(vm, path, d, safe, 10, 11);
+        vm.writeJson(string.concat('"', vm.toString(stranger), '"'), path, ".deployment.sidequest.slashRecipient");
+        vm.expectRevert(SidequestOutput.AlreadyDeployed.selector);
+        this.isPromotedExternal(vm.readFile(path), d);
+        vm.writeJson(string.concat('"', vm.toString(safe), '"'), path, ".deployment.sidequest.slashRecipient");
+        vm.writeJson(string.concat('"', vm.toString(stranger), '"'), path, ".sidequest.slashRecipient");
+        vm.expectRevert(SidequestOutput.AlreadyDeployed.selector);
+        this.isPromotedExternal(vm.readFile(path), d);
+        vm.removeFile(path);
     }
 
     function writeExternal(string memory path, SidequestRecipe.Deployed memory d) external {
@@ -822,6 +864,10 @@ contract RecipeTest is Test {
         SidequestRecipe.Config memory cc = c;
         cc.defaultArbitrator = stranger;
         _expectNotLive(cc, d, "holding.defaultArbitrator");
+
+        cc = c;
+        cc.slashRecipient = stranger;
+        _expectNotLive(cc, d, "vault.slashRecipient");
 
         // The vault stakes another token than the configured SIDE, or SIDE's supply is not the launch supply.
         cc = c;

@@ -132,7 +132,7 @@ contract MainnetRunbookTest is Test {
     /// holds whatever that record holds: no block before R2, R2's own block after (replaced here).
     function test_documentedSidequestInputLoads() public {
         (string memory json, uint256 rows) = _documentedSidequest("");
-        assertEq(rows, 10, "runbook: the sidequest table lists the 10 fields load reads");
+        assertEq(rows, 11, "runbook: the sidequest table lists the 11 fields load reads");
 
         string memory real = vm.readFile(string.concat(vm.projectRoot(), "/config/monad-mainnet.json"));
         string memory path_ = string.concat(vm.projectRoot(), "/config/.test-schema.json");
@@ -145,7 +145,8 @@ contract MainnetRunbookTest is Test {
             SidequestRecipe.Config memory c = SidequestRecipe.load(vm, ".test-schema");
             assertEq(c.chainId, 143);
             assertEq(c.safe, address(uint160(0xa000 + 1)));
-            assertEq(address(c.token), address(uint160(0xa000 + 10)), "the existing SIDE, the last row");
+            assertEq(c.slashRecipient, address(uint160(0xa000 + 2)));
+            assertEq(address(c.token), address(uint160(0xa000 + 11)), "the existing SIDE, the last row");
         }
         (string memory short,) = _documentedSidequest("margin");
         vm.writeFile(path_, real);

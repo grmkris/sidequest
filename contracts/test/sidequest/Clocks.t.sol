@@ -14,7 +14,7 @@ import {IFeeSchedule} from "../../src/sidequest/interfaces/IFeeSchedule.sol";
 contract ClocksTest is BaseV1 {
     // Exercise each real constructor, not only the shared validation helper.
     function deployOne(uint256 which, SidequestClocks.Config memory c) external returns (address) {
-        if (which == 0) return address(new StakeVault(factory, c));
+        if (which == 0) return address(new StakeVault(factory, address(this), c));
         if (which == 1) return address(new FeeSchedule(defaultSchedule(treasury), c));
         if (which == 2) {
             return address(

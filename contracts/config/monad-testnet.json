@@ -95,6 +95,7 @@
       "proposalGrace": 1800
     },
     "safe": "0x78d5A4DB279C6850a07278A5A8EE76296740E438",
+    "slashRecipient": "0x78d5A4DB279C6850a07278A5A8EE76296740E438",
     "defaultArbitrator": "0x96eE4e1660744A4dE92D9E22476C501063524716",
     "margin": 3600,
     "minimumCreatorBond": 10000000000000000000,

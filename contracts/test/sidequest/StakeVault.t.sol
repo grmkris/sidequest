@@ -6,7 +6,6 @@ import {SidequestClocks} from "../../src/sidequest/SidequestClocks.sol";
 import {Test} from "forge-std/Test.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {LaunchToken} from "../mocks/LaunchToken.sol";
-import {SidequestConstants} from "../../src/sidequest/interfaces/SidequestConstants.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {IStakeVault} from "../../src/sidequest/interfaces/IStakeVault.sol";
 
@@ -25,7 +24,7 @@ abstract contract StakeVaultFixture is Test {
     function setUp() public virtual {
         t0 = vm.getBlockTimestamp();
         token = new LaunchToken(address(this));
-        vault = new StakeVault(token, SidequestClocks.production());
+        vault = new StakeVault(token, safe, SidequestClocks.production());
         vault.bootstrapHolding(holding);
         vault.transferOwnership(safe);
         vm.prank(safe);
@@ -56,6 +55,57 @@ abstract contract StakeVaultFixture is Test {
 }
 
 contract StakeVaultTest is StakeVaultFixture {
+    function test_constructor_refusesZeroSlashRecipient() public {
+        vm.expectRevert(IStakeVault.ZeroAddress.selector);
+        new StakeVault(token, address(0), SidequestClocks.production());
+    }
+
+    function test_setSlashRecipient_ownerOnly() public {
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
+        vault.setSlashRecipient(bob);
+        assertEq(vault.slashRecipient(), safe);
+    }
+
+    function test_setSlashRecipient_refusesZero() public {
+        vm.prank(safe);
+        vm.expectRevert(IStakeVault.ZeroAddress.selector);
+        vault.setSlashRecipient(address(0));
+        assertEq(vault.slashRecipient(), safe);
+    }
+
+    function test_setSlashRecipient_refusesVault() public {
+        vm.prank(safe);
+        vm.expectRevert(IStakeVault.InvalidSlashRecipient.selector);
+        vault.setSlashRecipient(address(vault));
+        assertEq(vault.slashRecipient(), safe);
+    }
+
+    function test_setSlashRecipient_emitsPreviousAndRecipient() public {
+        address recipient = makeAddr("new-treasury");
+        vm.expectEmit(true, true, false, true, address(vault));
+        emit IStakeVault.SlashRecipientSet(safe, recipient);
+        vm.prank(safe);
+        vault.setSlashRecipient(recipient);
+        assertEq(vault.slashRecipient(), recipient);
+    }
+
+    function testFuzz_slashAfterRecipientChange_onlyNewRecipientPaid(uint96 amount) public {
+        uint256 slashed = bound(uint256(amount), 1, 100e18);
+        address recipient = makeAddr("new-treasury");
+        _stake(alice, 100e18);
+        _reserve(holding, alice, 100e18);
+        vm.prank(safe);
+        vault.setSlashRecipient(recipient);
+        vm.prank(holding);
+        assertEq(vault.slash(alice, slashed), slashed);
+        assertEq(token.balanceOf(safe), 0, "old recipient receives nothing");
+        assertEq(token.balanceOf(recipient), slashed);
+        assertEq(vault.totalAssets(), 100e18 - slashed);
+        assertEq(token.totalSupply(), SUPPLY);
+        _assertConserved();
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Staking
     // ---------------------------------------------------------------------------------------------
@@ -282,7 +332,7 @@ contract StakeVaultTest is StakeVaultFixture {
         _assertConserved();
     }
 
-    function test_slash_burnsFromReservedOnly() public {
+    function test_slash_sendsReservedSideToRecipientOnly() public {
         _stake(alice, 100e18);
         _reserve(holding, alice, 60e18);
         uint256 supply = token.totalSupply();
@@ -290,7 +340,7 @@ contract StakeVaultTest is StakeVaultFixture {
         vm.expectEmit(address(vault));
         emit IStakeVault.Slashed(holding, alice, 25e18);
         assertEq(vault.slash(alice, 25e18), 25e18);
-        assertEq(token.balanceOf(SidequestConstants.SLASH_SINK), 25e18, "sent to the sink, out of circulation");
+        assertEq(token.balanceOf(vault.slashRecipient()), 25e18, "sent to the slash recipient");
         assertEq(token.totalSupply(), supply, "SIDE has no burn");
         assertEq(vault.stakeOf(alice), 75e18);
         assertEq(vault.reservedOf(alice), 35e18);
@@ -427,7 +477,7 @@ contract StakeVaultTest is StakeVaultFixture {
     }
 
     function test_bootstrap_stakingClosedUntilBootstrapThenBootstrapWorks() public {
-        StakeVault fresh = new StakeVault(token, SidequestClocks.production());
+        StakeVault fresh = new StakeVault(token, safe, SidequestClocks.production());
         token.approve(address(fresh), type(uint256).max);
         // Nobody can stake 1 wei ahead of the bootstrap to force the 15-day path.
         vm.expectRevert(IStakeVault.NotBootstrapped.selector);
@@ -453,7 +503,7 @@ contract StakeVaultTest is StakeVaultFixture {
     }
 
     function test_bootstrap_acceptedHoldingAlsoOpensStakingAndClosesBootstrap() public {
-        StakeVault fresh = new StakeVault(token, SidequestClocks.production());
+        StakeVault fresh = new StakeVault(token, safe, SidequestClocks.production());
         fresh.proposeHolding(holding);
         vm.warp(t0 + 21 days);
         fresh.acceptHolding();
@@ -490,11 +540,11 @@ contract StakeVaultTest is StakeVaultFixture {
         }
         _assertConserved();
         uint256 amount = bound(uint256(x), 0, reserved + 1);
-        uint256 sunk = token.balanceOf(SidequestConstants.SLASH_SINK);
+        uint256 sunk = token.balanceOf(vault.slashRecipient());
         vm.prank(holding);
         uint256 moved = slashIt ? vault.slash(alice, amount) : vault.release(alice, amount);
         assertEq(moved, amount < reserved ? amount : reserved);
-        assertEq(token.balanceOf(SidequestConstants.SLASH_SINK), sunk + (slashIt ? moved : 0));
+        assertEq(token.balanceOf(vault.slashRecipient()), sunk + (slashIt ? moved : 0));
         assertEq(vault.stakeOf(alice), (staked - unstake) * (staked - (slashIt ? moved : 0)) / staked);
         assertEq(vault.reservedOf(alice), reserved - moved);
         _assertConserved();
@@ -571,7 +621,7 @@ contract StakeVaultTest is StakeVaultFixture {
     }
 
     function test_holding_revokeOfAnAuthorizedHoldingClearsItsProposal() public {
-        StakeVault v = new StakeVault(token, SidequestClocks.production());
+        StakeVault v = new StakeVault(token, safe, SidequestClocks.production());
         v.proposeHolding(holding2);
         // Bootstrap is closed while a proposal is pending.
         vm.expectRevert(IStakeVault.BootstrapClosed.selector);
@@ -586,7 +636,7 @@ contract StakeVaultTest is StakeVaultFixture {
 
     /// @dev ACL-3: a proposal never outlives its proposer.
     function test_holding_handoverDropsTheOldOwnersProposal() public {
-        StakeVault v = new StakeVault(token, SidequestClocks.production());
+        StakeVault v = new StakeVault(token, safe, SidequestClocks.production());
         v.bootstrapHolding(holding);
         v.proposeHolding(holding2);
         v.transferOwnership(safe);

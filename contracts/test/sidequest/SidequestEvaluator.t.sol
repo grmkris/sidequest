@@ -108,13 +108,13 @@ contract SidequestEvaluatorTest is BaseV1 {
     function test_ruleForWorker_badFaithBurnsCreatorBond() public {
         uint256 jobId = disputedJob();
         (, uint256 net) = feeOf(REWARD, WORKER_STAKE);
-        uint256 supply = circulating();
+        uint256 supply = sideOutsideSlashRecipient();
         uint256 before = pay.balanceOf(worker);
         rule(jobId, true, true);
         assertEq(pay.balanceOf(worker) - before, net);
         assertEq(vault.stakeOf(creator), CREATOR_STAKE - CREATOR_BOND);
         assertEq(vault.stakeOf(worker), WORKER_STAKE);
-        assertEq(circulating(), supply - CREATOR_BOND, "burned");
+        assertEq(sideOutsideSlashRecipient(), supply - CREATOR_BOND, "burned");
         assertTrue(evaluator.creatorPenaltyDue(jobId));
         assertFalse(evaluator.workerPenaltyDue(jobId));
         assertTrue(listing(jobId).creatorBondBurned);

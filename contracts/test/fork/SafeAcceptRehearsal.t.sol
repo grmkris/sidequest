@@ -40,6 +40,7 @@ contract SafeAcceptRehearsalForkTest is Test {
         SidequestRecipe.Config memory c = SidequestRecipe.loadBase(vm, "monad-testnet");
         c.clocks = SidequestRecipe.load(vm, "monad-testnet").clocks;
         c.safe = safe;
+        c.slashRecipient = safe;
         c.defaultArbitrator = makeAddr("arbiter");
         c.margin = 1 hours;
         c.thresholds = [uint256(0), 10_000, 100_000, 1_000_000];
