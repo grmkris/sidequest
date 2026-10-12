@@ -43,7 +43,7 @@ export interface SponsorRules {
   targets: Record<string, { name: string; abi: Abi }>
 }
 
-export function sponsorRules(): SponsorRules {
+function sponsorRules(): SponsorRules {
   return sponsorRulesFor(sidequest, deployment)
 }
 
@@ -219,9 +219,6 @@ export function sponsorable(
   )
 }
 
-export const sponsorCalls = (txs: readonly TxRequest[]): SponsorCall[] =>
-  txs.map((t) => ({ to: t.to, data: t.data, value: '0' }))
-
 /**
  * What a failed `sponsor_submit` means for the steps. A refusal with a reason (or a 4xx-style code) is final and
  * nothing was sent: the steps go from the wallet instead, except a simulation failure (they would fail there too) and
@@ -270,16 +267,7 @@ export function sponsorKey(): string {
   return `tx_${Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')}`
 }
 
+/** Cutover keeps permission removal; no browser creates or submits a relay grant. */
 export const sponsorApi = {
-  status: (wallet: string) => tool<SponsorStatus>('sponsor_status', { wallet }),
-  /** `key` is kept with the steps before the request and reused only to retry them. */
-  submit: async (wallet: string, key: string, calls: SponsorCall[]) => {
-    const status = await tool<SponsorStatus>('sponsor_status', { wallet })
-    const entries = status.delegationHash === null ? [] : [{ grant: status.delegationHash, calls }]
-    return tool<SponsorOperation>('sponsor_submit', { wallet, key, entries })
-  },
-  prepare: (wallet: string) => tool<SponsorPrep>('sponsor_prepare', { wallet }),
-  confirm: (wallet: string, signature: string) => tool<SponsorStatus>('sponsor_confirm', { wallet, signature }),
-  /** The board stops using the delegation at once; any transactions are the on-chain `disableDelegation` from the wallet. */
   revoke: (wallet: string) => tool<{ transactions: TxRequest[] }>('sponsor_revoke', { wallet }),
 }

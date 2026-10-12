@@ -11,6 +11,7 @@ it('every wallet prompt names what it allows, briefly, with a short button', () 
     prompts.permission('Quill', 'Up to 5 mUSD in total from your wallet, only to 0x12…34.'),
     prompts.jobBudget('10 mUSD'),
     prompts.sponsorship(),
+    prompts.gasBudget('Quill', '5'),
     prompts.selection('Agent ID 7'),
     prompts.backingPermit('Quill', '1,000'),
   ]
@@ -66,4 +67,11 @@ it('sends the wallet the typed data wagmi would, with the domain type it hashes'
   expect(hashTypedData({ ...sent, message: { ...sent.message, salt: BigInt(sent.message.salt) } })).toBe(
     hashTypedData(args),
   )
+})
+
+it('gas prompts make the payer and separate budget explicit', () => {
+  expect(prompts.registration('Quill').description).toContain('pays gas in USDC, or in MON')
+  expect(prompts.sponsorship().description).not.toMatch(/relay|Sidequest pays/)
+  expect(prompts.gasBudget('Quill', '5').description).toContain('5 USDC a week')
+  expect(prompts.gasBudget('Quill', '5').description).toContain('separate from job rewards')
 })

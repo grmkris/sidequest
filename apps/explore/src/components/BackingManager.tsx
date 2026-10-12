@@ -5,8 +5,8 @@ import { useManagedAgents } from '../managed.ts'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { useEffect, useRef, useState } from 'react'
-import { type Address, encodeFunctionData, erc20Abi, parseSignature } from 'viem'
-import { useBalance } from 'wagmi'
+import { type Address, encodeFunctionData, erc20Abi, parseSignature, zeroAddress } from 'viem'
+import { useBalance, useReadContract } from 'wagmi'
 import { prompts, useSignTypedDataWithPrompt } from '../wallet-prompt.ts'
 import { DelegationForm, exactFactory } from './DelegationForm.tsx'
 import { DELEGATION_RISK, DelegationPositions, factoryValue, walletAgentsKey } from './DelegationPositions.tsx'
@@ -88,6 +88,14 @@ function Stake({
   const queryClient = useQueryClient()
   const reads = useDelegations(contracts, owner)
   const mon = useBalance({ address: owner, chainId: chain.id, query: { refetchInterval: 15_000 } })
+  const gas = useReadContract({
+    address: deployment.aa?.gasToken ?? zeroAddress,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: [owner],
+    chainId: chain.id,
+    query: { enabled: deployment.aa !== null, refetchInterval: 15_000 },
+  })
   const directory = useDirectory()
   const managed = useManagedAgents()
   const [account, setAccount] = useState<Address>(initialAccount ?? owner)
@@ -338,7 +346,7 @@ function Stake({
   // The backing form with its gas warning: inline on an agent's page, in a sheet on Account.
   const formBlock = (
     <>
-      {mode === 'add' && <GasWarning mon={mon.data?.value} />}
+      {mode === 'add' && <GasWarning mon={mon.data?.value} usdc={gas.data} />}
       <DelegationForm
         account={account}
         owner={owner}

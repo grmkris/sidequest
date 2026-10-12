@@ -218,7 +218,12 @@ function LauncherForm(props: {
       <p className="text-sm" aria-live="polite">
         {props.message}
       </p>
-      <GasWarning mon={props.gas} action={props.trade === 'buy' ? 'A buy' : 'A sale'} need={SWAP_GAS} />
+      <GasWarning
+        mon={props.gas}
+        action={props.trade === 'buy' ? 'A buy' : 'A sale'}
+        need={SWAP_GAS}
+        allowUsdc={props.trade !== 'buy'}
+      />
       {props.error !== null && (
         <Alert variant="destructive">
           <AlertDescription>{props.error}</AlertDescription>

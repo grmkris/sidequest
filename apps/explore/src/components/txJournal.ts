@@ -1,4 +1,6 @@
 import type { Hex } from 'viem'
+import { Schema } from 'effect'
+import { decodeAaJournal, type AaJournal } from '../aa-journal.ts'
 import type { SendSnapshot, WalletStep } from './txOperation.ts'
 import { type VaultIntentCheckpoint, browserVaultIntentCheckpoint } from '../vault-lock.ts'
 
@@ -17,7 +19,10 @@ export interface OpRecord {
   reverted?: Hex[]
   /** Successful receipts proven to have no requested effect; keep their hashes while offering a retry. */
   effectFailures?: Array<{ index: number; hash: Hex; error: string }>
+  /** A signed user operation is persisted before the bundler call so a reload keeps its action lane. */
+  aa?: AaJournal | null
 }
+
 export interface JournalStorage {
   getItem(key: string): string | null
   setItem(key: string, value: string): void
@@ -46,6 +51,45 @@ export function txJournalKey(taskId: string, txs: WalletStep[]): string {
 }
 export const JOURNAL_CORRUPT = 'Transaction journal is corrupt. Wallet outcome is unknown; reconcile before continuing.'
 
+const isText = Schema.is(Schema.String)
+const isBoolean = Schema.is(Schema.Boolean)
+
+const invalidEffectFailures = (value: OpRecord): boolean => {
+  const failures = value.effectFailures
+  return (
+    failures !== undefined &&
+    (!Array.isArray(failures) ||
+      !failures.every(
+        (failure) =>
+          failure !== null &&
+          failure instanceof Object &&
+          Number.isSafeInteger(failure.index) &&
+          failure.index >= 0 &&
+          isText(failure.hash) &&
+          /^0x[0-9a-f]{64}$/i.test(failure.hash) &&
+          isText(failure.error),
+      ))
+  )
+}
+
+const invalidJournalRecord = (value: OpRecord): boolean =>
+  !value ||
+  !isBoolean(value.batch) ||
+  !Array.isArray(value.hashes) ||
+  !value.hashes.every((hash) => hash === null || (isText(hash) && /^0x[0-9a-f]{64}$/i.test(hash))) ||
+  !Array.isArray(value.recorded) ||
+  !value.recorded.every((recorded) => recorded === null || isBoolean(recorded)) ||
+  (value.reverted !== undefined &&
+    (!Array.isArray(value.reverted) ||
+      !value.reverted.every((hash) => isText(hash) && /^0x[0-9a-f]{64}$/i.test(hash)))) ||
+  (value.pending !== null &&
+    (!Number.isSafeInteger(value.pending) || value.pending < 0 || value.snapshot == null || value.from == null)) ||
+  (value.snapshot != null && (!Number.isSafeInteger(value.snapshot.nonce) || !/^\d+$/.test(value.snapshot.block))) ||
+  (value.from != null && !/^0x[0-9a-f]{40}$/i.test(value.from)) ||
+  (value.attempts != null &&
+    (!Array.isArray(value.attempts) ||
+      !value.attempts.every((nonce) => nonce === null || (Number.isSafeInteger(nonce) && nonce >= 0))))
+
 export function readTxJournal(storage: JournalStorage, key: string, requireExisting = false): OpRecord | null {
   let raw: string | null
   try {
@@ -62,44 +106,13 @@ export function readTxJournal(storage: JournalStorage, key: string, requireExist
   }
   let value: OpRecord
   try {
+    // SAFETY: readTxJournal immediately validates the parsed legacy record with invalidJournalRecord.
     value = JSON.parse(raw) as OpRecord
   } catch {
     throw new Error(JOURNAL_CORRUPT)
   }
-  if (
-    value?.effectFailures !== undefined &&
-    (!Array.isArray(value.effectFailures) ||
-      !value.effectFailures.every(
-        (failure) =>
-          failure !== null &&
-          typeof failure === 'object' &&
-          Number.isSafeInteger(failure.index) &&
-          failure.index >= 0 &&
-          typeof failure.hash === 'string' &&
-          /^0x[0-9a-f]{64}$/i.test(failure.hash) &&
-          typeof failure.error === 'string',
-      ))
-  )
-    throw new Error(JOURNAL_CORRUPT)
-  if (
-    !value ||
-    typeof value.batch !== 'boolean' ||
-    !Array.isArray(value.hashes) ||
-    !value.hashes.every((hash) => hash === null || (typeof hash === 'string' && /^0x[0-9a-f]{64}$/i.test(hash))) ||
-    !Array.isArray(value.recorded) ||
-    !value.recorded.every((recorded) => recorded === null || typeof recorded === 'boolean') ||
-    (value.reverted !== undefined &&
-      (!Array.isArray(value.reverted) ||
-        !value.reverted.every((hash) => typeof hash === 'string' && /^0x[0-9a-f]{64}$/i.test(hash)))) ||
-    (value.pending !== null &&
-      (!Number.isSafeInteger(value.pending) || value.pending < 0 || value.snapshot == null || value.from == null)) ||
-    (value.snapshot != null && (!Number.isSafeInteger(value.snapshot.nonce) || !/^\d+$/.test(value.snapshot.block))) ||
-    (value.from != null && !/^0x[0-9a-f]{40}$/i.test(value.from)) ||
-    (value.attempts != null &&
-      (!Array.isArray(value.attempts) ||
-        !value.attempts.every((nonce) => nonce === null || (Number.isSafeInteger(nonce) && nonce >= 0))))
-  )
-    throw new Error(JOURNAL_CORRUPT)
+  if (invalidJournalRecord(value) || invalidEffectFailures(value)) throw new Error(JOURNAL_CORRUPT)
+  if (value.aa != null) decodeAaJournal(value.aa)
   return value
 }
 export function writeTxJournal(storage: JournalStorage, key: string, record: OpRecord | null): void {

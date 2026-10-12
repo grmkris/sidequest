@@ -77,7 +77,7 @@ export function stepsPrompt(steps: readonly { description: string }[], toSelf: b
 export const prompts = {
   registration: (agent: string): WalletPrompt => ({
     title: `Register ${agent}`,
-    description: `Registers ${agent}'s Agent ID to your wallet. Sidequest sends it and pays the gas; this signature allows that one registration and nothing else.`,
+    description: `Registers ${agent}'s Agent ID to your wallet. Your wallet sends the registration and pays gas in USDC, or in MON.`,
     buttonText: 'Register',
   }),
   weeklyBudget: (agent: string, amount: string): WalletPrompt => ({
@@ -101,10 +101,14 @@ export const prompts = {
     buttonText: 'Grant budget',
   }),
   sponsorship: (): WalletPrompt => ({
-    title: 'Let Sidequest pay your gas',
-    description:
-      "Sidequest's relay may send your Sidequest transactions and pay their gas, within the limits shown. You can turn it off any time.",
-    buttonText: 'Turn on',
+    title: 'Review gas payment',
+    description: 'Your wallet pays gas in USDC, or in MON. Review the maximum USDC cost before sending.',
+    buttonText: 'Review',
+  }),
+  gasBudget: (agent: string, amount: string): WalletPrompt => ({
+    title: `Set ${agent}'s gas budget`,
+    description: `${agent} may pull up to ${amount} USDC a week from your wallet for gas. It is separate from job rewards, and you can change or revoke it.`,
+    buttonText: 'Set budget',
   }),
   selection: (agent: string): WalletPrompt => ({
     title: `Select ${agent}`,

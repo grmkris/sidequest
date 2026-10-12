@@ -1,4 +1,3 @@
-import { Badge } from '../components/ui/badge.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { Item, ItemGroup, ItemDescription, ItemContent, ItemActions } from '../components/ui/item.tsx'
 import { CopyButton, PageTitle, Section } from '../components/kit.tsx'
@@ -22,7 +21,6 @@ import { TelegramSection } from './Telegram.tsx'
 
 import { Monogram, useAuth, useSignOut } from '../components/Wallet.tsx'
 import { useCollectActions } from '../collect.ts'
-import { useSponsorStatus } from '../sponsor.ts'
 import { isMainnet, otherNetwork, writesOpen } from '../wallet.ts'
 import { useSafeOwner } from './Admin.tsx'
 import { useReplaceSearch } from '../page-search.ts'
@@ -153,19 +151,17 @@ function AccountSettings() {
   const auth = useAuth()
   const signOut = useSignOut(auth)
   const owner = useSafeOwner(auth.address)
-  const sponsor = useSponsorStatus(auth.address, auth.signedIn)
   return (
     <>
       <Section title="Settings">
         <ItemGroup>
           <Item render={<Link to="/sponsorship" />}>
             <ItemContent className="flex-1">
-              Gas sponsorship
+              Gas payments
               <ItemDescription className="block text-xs text-muted-foreground">
-                Sidequest pays the gas for your Sidequest transactions
+                You pay a fraction of a cent in USDC, or use MON
               </ItemDescription>
             </ItemContent>
-            {sponsor.data?.status === 'live' && <Badge variant="success">On</Badge>}
             <ItemActions>
               <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
             </ItemActions>

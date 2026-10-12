@@ -1,9 +1,9 @@
 import { managedKey } from '../../queries.ts'
-import { useSigners } from '@privy-io/react-auth'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { agentEndpoint, type ManagedAgent } from '../../api.ts'
-import { agentAction, type AgentStatus } from '../../agent-api.ts'
+import { type AgentStatus } from '../../agent-api.ts'
+import { isHex } from 'viem'
 import { localTime, relative } from '../../format.ts'
 import { AgentNew } from '../../routes/AgentNew.tsx'
 import { Address, TxLink } from '../kit.tsx'
@@ -14,9 +14,12 @@ import { useAuth } from '../Wallet.tsx'
 import { useNow } from '../Time.tsx'
 import { AgentStake } from '../AgentStake.tsx'
 import { ListingCard } from './ListingCard.tsx'
+import { OperatorDisableSteps } from '../OperatorDisableSteps.tsx'
+import { useOperatorRevocation } from '../useOperatorRevocation.ts'
 import {
   AgentOwnedBacking,
   Connection,
+  GasBudgetCard,
   ManageCard,
   WalletEarnings,
   WeeklyBudget,
@@ -31,7 +34,6 @@ import {
 export function ManagedAgentCard({ agent, onBack }: { agent: ManagedAgent; onBack?: () => void }) {
   const auth = useAuth()
   const queryClient = useQueryClient()
-  const { removeSigners } = useSigners()
   const status = useQuery({
     queryKey: managedKey('managed-agent-status', auth.address, auth.signedIn, agent.id),
     queryFn: () =>
@@ -40,8 +42,6 @@ export function ManagedAgentCard({ agent, onBack }: { agent: ManagedAgent; onBac
     enabled: auth.signedIn,
   })
   const now = useNow()
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [operationKey, setOperationKey] = useState(() => crypto.randomUUID())
   const stopped = agent.state === 'revoked'
   async function refresh() {
@@ -52,34 +52,9 @@ export function ManagedAgentCard({ agent, onBack }: { agent: ManagedAgent; onBac
     setOperationKey(crypto.randomUUID())
     void refresh()
   })
-  async function revoke() {
-    setBusy(true)
-    setError(null)
-    const failures: string[] = []
-    try {
-      await agentAction(agent.id, 'stop-access')
-      await refresh()
-      if (agent.address !== null) {
-        try {
-          await removeSigners({ address: agent.address })
-          await agentAction(agent.id, 'signer-removed')
-        } catch {
-          failures.push('Hosted actions have stopped. Privy signer removal is still unconfirmed; retry removal.')
-        }
-      }
-      try {
-        await agentAction(agent.id, 'revoke')
-      } catch {
-        failures.push('On-chain disablement is incomplete. Reconcile again, or renew operator sponsorship if needed.')
-      }
-      await refresh()
-      setError(failures.length === 0 ? null : failures.join(' '))
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Could not stop access; no revocation is claimed')
-    } finally {
-      setBusy(false)
-    }
-  }
+  const disable = useOperatorRevocation(agent, refresh)
+  const { busy, error } = disable
+  const revoke = () => disable.begin({ kind: 'agent' })
   const revocation = status.data?.revocation
   return (
     <article aria-label={agent.name} className="grid gap-7">
@@ -100,6 +75,7 @@ export function ManagedAgentCard({ agent, onBack }: { agent: ManagedAgent; onBac
       {!stopped && agent.state !== 'active' && <AgentNew initial={agent} />}
       {agent.state === 'active' && (
         <>
+          <GasBudgetCard agent={agent} onChanged={() => void refresh()} />
           <WeeklyBudget agent={agent} status={status} onChanged={() => void refresh()} />
           <WalletEarnings agent={agent} action={action} />
           <AgentOwnedBacking agent={agent} action={action} onBack={onBack} />
@@ -113,13 +89,7 @@ export function ManagedAgentCard({ agent, onBack }: { agent: ManagedAgent; onBac
           )}
         </>
       )}
-      <PermissionList
-        permissions={status.data?.permissions}
-        action={action}
-        refresh={async () => {
-          await status.refetch()
-        }}
-      />
+      <PermissionList permissions={status.data?.permissions} action={disable} agentId={agent.id} />
       <Connection />
       {agent.agent_id !== null && (
         <section id="manage-listing" aria-label="Directory listing" className="scroll-mt-20">
@@ -130,7 +100,7 @@ export function ManagedAgentCard({ agent, onBack }: { agent: ManagedAgent; onBac
       <ManageCard
         title="Access"
         tone="danger"
-        note="Stopping access ends hosted actions at once, removes the Privy signer and disables the agent's on-chain permissions."
+        note="Stop hosted actions first, remove the Privy signer, then send on-chain disables from your operator wallet."
       >
         <div className="grid gap-1 text-sm">
           <p>
@@ -165,13 +135,14 @@ export function ManagedAgentCard({ agent, onBack }: { agent: ManagedAgent; onBac
             busy={busy}
             className="justify-self-start"
             title={`Stop ${agent.name}?`}
-            description="Its hosted actions end at once, its signer is removed and its on-chain permissions are disabled. Jobs it has open stay on chain. This cannot be undone."
+            description="Hosted actions end at once. Signer removal and on-chain disables are separate steps; send the returned disables from your wallet and check their chain state. Open jobs stay on chain."
             confirm="Stop and revoke"
             onConfirm={() => void revoke()}
           >
             Stop hosted access and revoke
           </ConfirmButton>
         )}
+        {disable.intent?.request.kind === 'agent' && <OperatorDisableSteps action={disable} agentId={agent.id} />}
         {error !== null && <p className="text-ui text-destructive-text [overflow-wrap:anywhere]">{error}</p>}
       </ManageCard>
     </article>
@@ -189,11 +160,11 @@ type ManagedPermission = {
 function PermissionList({
   permissions,
   action,
-  refresh,
+  agentId,
 }: {
   permissions: ManagedPermission[] | undefined
-  action: ReturnType<typeof useAgentAction>
-  refresh: () => Promise<void>
+  action: ReturnType<typeof useOperatorRevocation>
+  agentId: string
 }) {
   return (
     <ManageCard
@@ -216,12 +187,15 @@ function PermissionList({
             </div>
             {row.status !== 'disabled' && (
               <ConfirmButton
-                busy={action.busy && action.pending?.args.permissionId === row.permissionId}
-                disabled={action.busy}
+                busy={action.busy}
+                disabled={action.busy || action.intent !== null || !isHex(row.permissionId, { strict: true })}
                 title="Revoke this permission?"
-                description="Its on-chain authority is disabled. The agent has to ask again to get it back."
+                description="Hosted use stops first. Send the on-chain disable from your wallet, then check its chain state."
                 confirm="Revoke permission"
-                onConfirm={() => void action.execute('revoke_permission', { permissionId: row.permissionId }, refresh)}
+                onConfirm={() => {
+                  if (isHex(row.permissionId, { strict: true }))
+                    void action.begin({ kind: 'permission', permissionId: row.permissionId })
+                }}
               >
                 Revoke
               </ConfirmButton>
@@ -229,16 +203,7 @@ function PermissionList({
           </div>
         ))
       )}
-      {action.pending?.tool === 'revoke_permission' && (
-        <Button
-          variant="secondary"
-          busy={action.busy}
-          onClick={() => void action.execute(action.pending!.tool, action.pending!.args, refresh)}
-        >
-          Reconcile permission revocation
-        </Button>
-      )}
-      {action.error !== null && action.pending?.tool === 'revoke_permission' && <p role="alert">{action.error}</p>}
+      {action.intent?.request.kind === 'permission' && <OperatorDisableSteps action={action} agentId={agentId} />}
     </ManageCard>
   )
 }

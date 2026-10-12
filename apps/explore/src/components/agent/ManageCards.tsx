@@ -16,6 +16,7 @@ import { factoryAmount } from '../../stake.ts'
 import { useTokenList } from '../../useTokens.ts'
 import { chain, deployment } from '../../wallet.ts'
 import { StartPrompt } from '../AgentStartLink.tsx'
+import { GasAllowanceEditor } from '../GasAllowanceEditor.tsx'
 import { AllowanceEditor } from '../AllowanceEditor.tsx'
 import { ConnectionCard } from '../ConnectionCard.tsx'
 import { Countdown, useNow } from '../Time.tsx'
@@ -369,5 +370,13 @@ export function Connection() {
         <ConnectionCard />
       </div>
     </section>
+  )
+}
+
+export function GasBudgetCard({ agent, onChanged }: { agent: ManagedAgent; onChanged: () => void }) {
+  return (
+    <ManageCard id="manage-gas-budget" title="Gas budget">
+      <GasAllowanceEditor key={agent.id} agent={agent} onConfirmed={onChanged} />
+    </ManageCard>
   )
 }

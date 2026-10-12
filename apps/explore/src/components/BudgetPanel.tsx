@@ -273,8 +273,8 @@ export function BudgetPanel({
         }}
       >
         <p className="text-sm text-muted-foreground">
-          Expires <When at={eb.expiresAt} />. The first grant from this wallet also enables limited spending
-          permissions, which the board’s relay sends for you.
+          Expires <When at={eb.expiresAt} />. The first grant from this wallet also enables limited spending permissions
+          with your own USDC gas payment. You review its gas limit before signing.
         </p>
       </ConfirmSheet>
       <ConfirmSheet

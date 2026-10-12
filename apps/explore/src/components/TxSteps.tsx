@@ -14,20 +14,11 @@ import { getBlock, getBlockNumber, getTransaction, getTransactionCount, waitForT
 import { type TxRequest, boardApi } from '../api.ts'
 import { batchGasLimit, gasLimit } from '../gas.ts'
 import { sidequest } from '../sidequest.ts'
-import {
-  type SponsorOperation,
-  sponsorApi,
-  sponsorCalls,
-  sponsorKey,
-  sponsorable,
-  submitFailure,
-  useLiveSponsorship,
-} from '../sponsor.ts'
 import { friendlyError } from '../txErrors.ts'
+import { useLiveSponsorship } from '../sponsor.ts'
 import { chain, wagmiConfig, writesOpen } from '../wallet.ts'
 import { LaunchNotice } from './LaunchGate.tsx'
 import { usePrivyBatch } from './Privy.tsx'
-import { useAuth } from './Wallet.tsx'
 import {
   type ChainReads,
   type Reconciled,
@@ -85,7 +76,7 @@ const load = (key: string, required = false) => readTxJournal(localStorage, key,
 const save = (key: string, record: OpRecord | null) => writeTxJournal(localStorage, key, record)
 
 const SPONSORED_LABEL: Partial<Record<Status['at'], string>> = {
-  idle: 'Waiting · Sidequest pays the gas',
+  idle: 'Waiting for the previous transaction',
   signing: 'Sending through Sidequest…',
   sent: 'Sent by Sidequest · waiting for Monad…',
 }
@@ -100,35 +91,10 @@ const LABEL: Record<Status['at'], string> = {
   failed: 'Failed · retry below',
 }
 
-/**
- * The transactions a board tool returned (or the app built, `reportToBoard={false}`), from the wallet to the chain
- * and back to the board. When the signed-in wallet's gas sponsorship covers every step (U7b), Sidequest's relay sends
- * them as one transaction with no wallet prompt, and anything it refuses goes from the wallet with the reason. From
- * the Privy wallet several go out as one transaction (EIP-7702 batch) with one confirmation; otherwise one at a
- * time. Each step shows where it is (confirm in wallet, sent, confirmed, recorded); failures say what happened in
- * plain words; a failed report is retried without sending again; and a reload picks up a sent transaction instead of
- * offering to resend.
- */
-export function TxSteps({
-  taskId,
-  txs,
-  onDone,
-  boardId,
-  owner,
-  canSend = true,
-  onBusyChange,
-  onSafeToRestartChange,
-  reportToBoard = true,
-  autoStart = false,
-  retainRecord = false,
-  allowBatch = true,
-  allowSponsorship = true,
-  sendGuard,
-  requireJournal = false,
-  verifyReceipt = false,
-  receiptGuard,
-  durableJournal = false,
-}: {
+/** Browser actions select USDC user operations or MON transactions, preserving the original action journal. */
+export { BrowserTxSteps as TxSteps } from './BrowserTxSteps.tsx'
+
+export type TxStepsProps = {
   taskId: string
   txs: WalletStep[]
   onDone: (hashes: string[]) => void
@@ -141,7 +107,10 @@ export function TxSteps({
   autoStart?: boolean
   retainRecord?: boolean
   allowBatch?: boolean
+  /** Retained for callers during cutover; browser actions always pay their own gas. */
   allowSponsorship?: boolean
+  sponsor?: 'faucet'
+  requireAtomic?: boolean
   /** Rechecked immediately after chain reads, before any new wallet prompt. */
   sendGuard?: (() => string | null | Promise<string | null>) | undefined
   requireJournal?: boolean
@@ -152,21 +121,39 @@ export function TxSteps({
   receiptGuard?:
     | ((receipt: Pick<TransactionReceipt, 'logs'>, steps: readonly WalletStep[]) => string | null)
     | undefined
-}) {
+}
+
+export function MonTxSteps({
+  taskId,
+  txs,
+  onDone,
+  boardId,
+  owner,
+  canSend = true,
+  onBusyChange,
+  onSafeToRestartChange,
+  reportToBoard = true,
+  autoStart = false,
+  retainRecord = false,
+  allowBatch = true,
+  requireAtomic = false,
+
+  sendGuard,
+  requireJournal = false,
+  verifyReceipt = false,
+  receiptGuard,
+  durableJournal = false,
+}: TxStepsProps) {
   const { chainId, address } = useAccount()
   const currentAccount = useRef({ chainId, address, canSend })
   currentAccount.current = { chainId, address, canSend }
-  const auth = useAuth()
+
   const walletBatch = usePrivyBatch(address)
   const zeroValue = txs.every((tx) => tx.value === '0')
   const boardSteps = txs.map((tx) => ({ ...tx, value: '0' as const }))
   const batch = allowBatch && zeroValue ? walletBatch : null
-  const sponsorship = useLiveSponsorship(
-    address,
-    allowSponsorship && auth.signedIn && auth.address?.toLowerCase() === address?.toLowerCase(),
-  )
-  const canSponsor =
-    allowSponsorship && zeroValue && sponsorship.live !== null && sponsorable(boardSteps, sponsorship.live, chain.id)
+  const canSponsor = false
+  const sponsorship = useLiveSponsorship(address, false)
   const { switchChainAsync } = useSwitchChain()
   const sendTransactionAsync = useSendTransactionWithPrompt()
   const key = txJournalKey(taskId, txs)
@@ -397,98 +384,14 @@ export function TxSteps({
     await report(0, hash, r)
   }
 
-  /** Follows the operation the board answered with to the chain. */
-  const follow = async (op: SponsorOperation, r: OpRecord) => {
-    // Reverted or dropped: nothing happened, and a retry with this key would only answer the same. The steps go to
-    // the wallet with a record that has no key, so a later sponsored attempt is a new operation with a new key.
-    if (op.status === 'reverted') {
-      await toWallet(
-        'Sidequest sent these steps and the transaction reverted, so nothing changed. You can send them from your wallet; you pay the gas.',
-        op.txHash,
-      )
-      return
-    }
-    if (op.status === 'dropped') {
-      await toWallet(
-        'Sidequest’s relay transaction was replaced before it was mined, so nothing happened. You can send these from your wallet; you pay the gas.',
-        op.txHash,
-      )
-      return
-    }
-    const known: OpRecord = {
-      ...r,
-      sponsor: { key: r.sponsor?.key ?? '', operationId: op.operationId },
-      hashes: [op.txHash],
-    }
-    await commit(known)
-    set(0, { at: 'sent', hash: op.txHash })
-    await settleSponsored(op.txHash, known)
-  }
-
-  /**
-   * The relay sends the steps (sponsor_submit). The request is recorded first; a refusal sends them from the wallet
-   * instead (or says why not, for a failing simulation); no answer is reconciled by asking again with the identical
-   * calls, which returns the same operation if the first request reached the relay.
-   */
   const runSponsored = async (saved = record) => {
-    if (!writesOpen) return
-    const at = status[0]?.at
-    if (
-      sending.current ||
-      !canSend ||
-      address === undefined ||
-      (owner !== undefined && owner.toLowerCase() !== address.toLowerCase()) ||
-      at === 'signing' ||
-      at === 'confirmed' ||
-      at === 'recorded'
-    )
-      return
-    sending.current = true
-    set(0, { at: 'signing' })
-    let r = saved
-    // Whether an earlier request for these steps may have reached the relay: then a refusal now proves nothing.
-    let ambiguous = r.sponsor != null
-    if (r.sponsor == null) {
-      r = { ...r, sponsor: { key: sponsorKey(), operationId: null } }
-      await commit(r)
-    }
-    const callerKey = r.sponsor?.key ?? ''
-    for (const wait of [0, ...RECHECK_MS]) {
-      if (wait > 0) {
-        await sleep(wait)
-        set(0, { at: 'uncertain', checking: true, error: SPONSORED.checking })
-      }
-      let op: SponsorOperation
-      try {
-        op = await sponsorApi.submit(address, callerKey, sponsorCalls(boardSteps))
-      } catch (e) {
-        const failure = submitFailure(e)
-        if (failure.kind === 'lost') {
-          ambiguous = true
-          continue
-        }
-        sending.current = false
-        if (ambiguous) {
-          // An earlier request may have been sent (the board looks the key up before refusing, but a gateway in front
-          // of it, such as the hosted rate limit, does not): never send from the wallet on top. Check again later.
-          set(0, { at: 'uncertain', error: SPONSORED.lost })
-          return
-        }
-        const cleared = { ...r, sponsor: null }
-        await commit(cleared)
-        if (failure.kind === 'wallet')
-          await toWallet(
-            `${failure.why[0]?.toUpperCase()}${failure.why.slice(1)}, so these go from your wallet; you pay the gas.`,
-          )
-        else set(0, { at: 'failed', error: failure.message })
-        return
-      }
-      sending.current = false
-      await follow(op, r)
-      return
-    }
-    sending.current = false
-    set(0, { at: 'uncertain', error: SPONSORED.lost })
+    const hash = saved.hashes[0]
+    if (hash != null) await settleSponsored(hash, saved)
+    else
+      set(0, {
+        at: 'uncertain',
+        error: 'A previous transaction has no known hash. Ask support to reconcile it before sending again.',
+      })
   }
   const report = async (i: number, hash: Hex, r: OpRecord) => {
     set(i, { at: 'confirmed', hash })
@@ -609,21 +512,6 @@ export function TxSteps({
     }
   }, [batch !== null])
 
-  // The signed-in wallet's sponsorship is read after the first render: offer the relay as long as nothing has started.
-  useEffect(() => {
-    if (
-      canSponsor &&
-      record.sponsored !== true &&
-      !sponsorOff &&
-      !started &&
-      journalError === null &&
-      !hasSavedJournal()
-    ) {
-      setRecord({ ...record, sponsored: true, batch: false })
-      setStatus([{ at: 'idle' }])
-    }
-  }, [canSponsor])
-
   // After a reload: follow any sent transaction to the end, and settle an uncertain one against the chain, instead of
   // offering to send either again.
   useEffect(() => {
@@ -649,6 +537,9 @@ export function TxSteps({
     if (!writesOpen || journalError !== null) return
     // Another tab may have broadcast while this mounted instance still showed idle.
     const authoritative = (await loadDurable(requireJournal)) ?? record
+    if (authoritative.aa != null) throw new Error('A USDC operation is saved for this action. Reload to reconcile it.')
+    if (requireAtomic && batch === null)
+      throw new Error('This action needs one atomic batch. Add USDC and use your Sidequest wallet.')
     syncRecord(authoritative)
     // A relay retry asks about the same saved operation before following its hash. Its nonce may have been
     // consumed by a replacement, in which case receipt-only polling would never discover the safe fallback.
@@ -684,8 +575,7 @@ export function TxSteps({
     const from = address as Hex
     let snapshot: SendSnapshot
     try {
-      // EIP-7702 authorization consumes an account nonce even when a relay sends it.
-      // Capture the funding attempt only after the upgrade is confirmed.
+      // A MON batch requires an already delegated wallet before capturing the send nonce.
       const reads = chainReads(from)
       snapshot = await guardedSnapshot(reads, sendGuard, authoritative.batch ? batch?.prepare : undefined)
     } catch (e) {
@@ -1007,8 +897,8 @@ export function TxSteps({
               ? 'Try again'
               : record.sponsored === true
                 ? txs.length > 1
-                  ? `Send all ${txs.length} · Sidequest pays the gas`
-                  : 'Send · Sidequest pays the gas'
+                  ? 'Check the previous transaction'
+                  : 'Check the previous transaction'
                 : record.batch
                   ? `Confirm ${txs.length > 1 ? `all ${txs.length} as one transaction` : ''}`.trim()
                   : txs.length > 1

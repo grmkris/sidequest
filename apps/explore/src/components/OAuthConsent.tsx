@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { type Address, getAddress } from 'viem'
 import { agentEndpoint, type ManagedAgent } from '../api.ts'
 import { AgentNew } from '../routes/AgentNew.tsx'
+import { GasAllowanceEditor } from './GasAllowanceEditor.tsx'
 import { AllowanceEditor } from './AllowanceEditor.tsx'
 import { AgentStake } from './AgentStake.tsx'
 
@@ -164,6 +165,9 @@ function BudgetAndBacking({ agent, operator }: { agent: ManagedAgent; operator: 
   const hiring = hires(agent)
   return (
     <>
+      <Section title="Gas budget">
+        <GasAllowanceEditor key={agent.id} agent={agent} onConfirmed={() => undefined} />
+      </Section>
       {hiring ? (
         <>
           <NeedsBacking wallet={agent.address === null ? undefined : getAddress(agent.address)} />

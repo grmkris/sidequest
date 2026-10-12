@@ -2,20 +2,16 @@ import { usePrivy } from '@privy-io/react-auth'
 import { useQueryClient } from '@tanstack/react-query'
 import { Check, Circle } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
-import { type Address, zeroAddress } from 'viem'
-import { prompts, useSignTypedDataWithPrompt } from '../../wallet-prompt.ts'
-import { waitForTransactionReceipt } from 'wagmi/actions'
+import { type Address } from 'viem'
 import { Button } from '../ui/button.tsx'
 import { Input } from '../ui/input.tsx'
 import { Label } from '../ui/label.tsx'
 import { Spinner } from '../ui/spinner.tsx'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { TxSteps } from '../TxSteps.tsx'
-import { useDelegatorUpgrade } from '../Privy.tsx'
 import { AgentOrb } from './AgentOrb.tsx'
 import { agentEndpoint, type ManagedAgent } from '../../api.ts'
-import { agentAction, prepareRegistration } from '../../agent-api.ts'
-import { reviewAgentGrant } from '../../agent-grant.ts'
+import { agentAction } from '../../agent-api.ts'
 import { generateAvatar, saveProfile } from '../../agent-profile-api.ts'
 import {
   registrationBatch,
@@ -23,11 +19,6 @@ import {
   registrationSteps,
   type RegistrationBatch,
 } from '../../agent-registration-api.ts'
-import { typedDataArgs } from '../../typed-data.ts'
-import { chain, deployment, wagmiConfig } from '../../wallet.ts'
-
-/** Whether this network's board relays registrations; without a relay the operator's wallet pays its own gas. */
-const relayed = deployment.relay.toLowerCase() !== zeroAddress
 
 type Stage = 'wallet' | 'profile' | 'identity'
 const STAGES: Stage[] = ['wallet', 'profile', 'identity']
@@ -121,50 +112,17 @@ function useCreation(operator: Address, initial: ManagedAgent | undefined) {
   return { draft, agent, stage, note, error, setError, start, finish }
 }
 
-/**
- * Where the board runs a relay: one signature on a single-use registration grant, and the relay pays and sends, so
- * no MON is needed. A grant needs the upgraded wallet; an upgrade not yet made is relayed first (one more signature).
- */
-function SponsoredRegistration({ agent, operator, onDone, onError }: IdentityProps) {
-  const signTypedData = useSignTypedDataWithPrompt()
-  const upgrade = useDelegatorUpgrade(operator)
-  const started = useRef(false)
-  useEffect(() => {
-    if (started.current) return
-    started.current = true
-    void (async () => {
-      const upgraded = upgrade === null ? null : await upgrade()
-      if (upgraded !== null) await waitForTransactionReceipt(wagmiConfig, { hash: upgraded, chainId: chain.id })
-      const review = reviewAgentGrant(await prepareRegistration(agent.id), {
-        kind: 'registration',
-        delegator: operator,
-      })
-      const signature = await signTypedData(typedDataArgs(review.typedData), prompts.registration(agent.name))
-      const result = await agentAction<ManagedAgent | { status: string }>(agent.id, 'registration-confirm', {
-        hash: review.hash,
-        signature,
-      })
-      if (!('state' in result)) throw new Error(`Registration is ${result.status}; retry to reconcile it`)
-      onDone(result)
-    })().catch(onError)
-  }, [agent.id, operator, onDone, onError, signTypedData, upgrade])
-  return <p className="text-sm text-muted-foreground">Sign once in your wallet; Sidequest pays the gas.</p>
-}
-
-/** Without a relay (a network that sponsors nothing): the upgraded wallet sends both calls as one transaction. */
+/** The operator registers and binds the agent in one self-paid operation, including the first wallet authorization. */
 function SelfPaidRegistration({ agent, operator, onDone, onError }: IdentityProps) {
-  const upgrade = useDelegatorUpgrade(operator)
   const started = useRef(false)
   const [batch, setBatch] = useState<RegistrationBatch | null>(null)
   useEffect(() => {
     if (started.current) return
     started.current = true
     void (async () => {
-      const upgraded = upgrade === null ? null : await upgrade()
-      if (upgraded !== null) await waitForTransactionReceipt(wagmiConfig, { hash: upgraded, chainId: chain.id })
       setBatch(await registrationBatch(agent.id))
     })().catch(onError)
-  }, [agent.id, onError, upgrade])
+  }, [agent.id, onError])
   if (batch === null) return <p className="text-sm text-muted-foreground">Preparing the registration…</p>
   return (
     <TxSteps
@@ -174,6 +132,7 @@ function SelfPaidRegistration({ agent, operator, onDone, onError }: IdentityProp
       reportToBoard={false}
       allowSponsorship={false}
       autoStart
+      requireAtomic
       onDone={(hashes) => {
         const hash = hashes.at(-1)
         if (hash === undefined) return onError(new Error('The registration was not sent'))
@@ -191,7 +150,7 @@ interface IdentityProps {
 }
 
 function IdentityStep(props: IdentityProps) {
-  return relayed ? <SponsoredRegistration {...props} /> : <SelfPaidRegistration {...props} />
+  return <SelfPaidRegistration {...props} />
 }
 
 function ProgressRow({ stage, current, children }: { stage: Stage; current: Stage; children?: ReactNode }) {
