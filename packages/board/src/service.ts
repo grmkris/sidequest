@@ -15,6 +15,7 @@ import { delegationPositions, positionFilters, type DelegationSnapshot, type Pos
 import {
   type Address,
   type Hex,
+  type TransactionReceipt,
   decodeEventLog,
   encodeFunctionData,
   erc20Abi,
@@ -23,6 +24,7 @@ import {
   getAddress,
   isAddress,
   isHex,
+  hashTypedData,
   pad,
   parseUnits,
   zeroAddress,
@@ -131,9 +133,8 @@ export interface BoardConfig {
   /** Used for the one-time submission check of a deliverable (ADR-0006); defaults to the global fetch. */
   readonly fetch?: typeof fetch
   /**
-   * The attester (spec §5): a registered verifier key that signs evidence about GitHub check runs, the relay that
-   * sends `attachEvidence` (it holds no authority: the evaluator checks the attester's signature), and the GitHub
-   * App it reads with. Absent: evidence is unavailable and says so.
+   * The attester (spec §5) signs evidence about GitHub check runs. The worker attaches the signed statement
+   * in its own submit batch; the board never broadcasts it. Absent: evidence is unavailable and says so.
    */
   /** Jev's model endpoint (advisory screening at publish); absent → "unscreened". */
   readonly screening?: ModelEndpoint
@@ -156,10 +157,17 @@ export interface BoardConfig {
   readonly requirePosterAgent?: boolean
   readonly evidence?: {
     readonly attester: import('viem').LocalAccount
-    readonly relay: import('viem').LocalAccount
-    readonly rpcUrl: string
+    /** Legacy construction fields, unused by evidence preparation. */
+    readonly relay?: import('viem').LocalAccount
+    readonly rpcUrl?: string
     readonly github?: GitHubApp
   }
+}
+
+interface SubmissionEvidence {
+  evidenceAttestation: sdk.SignedEvidenceAttestation | null
+  evidenceTransactions: TxRequest[]
+  evidenceUnavailable: string | null
 }
 
 /** An unsigned transaction for the caller's wallet: `cast send <to> <data>`, or `eth_sendTransaction`. */
@@ -1427,6 +1435,7 @@ export class Board {
         }
       }
     }
+    this.#observeEvidence(task, ctx, receipt)
     // A redemption of this task's execution-budget delegation (to the manager, or inside the worker's own batch).
     await this.#budget.observe({ task, terms: parseTerms(task.terms_json), ctx }, receipt)
     return this.getTask(caller, { taskId: input.taskId })
@@ -2748,7 +2757,10 @@ export class Board {
       this.#now(),
     )
     this.#operation(task.id, 'submit', me, { deliverableHash })
+    const evidence = await this.#submissionEvidence(caller, task.id, deliverable, deliverableHash)
     return {
+      evidenceAttestation: evidence.evidenceAttestation,
+      evidenceUnavailable: evidence.evidenceUnavailable,
       deliverableHash,
       deliverable,
       check,
@@ -2763,6 +2775,7 @@ export class Board {
             args: [this.#jobId(task), deliverableHash, '0x'],
           }),
         ),
+        ...evidence.evidenceTransactions,
       ],
     }
   }
@@ -2823,63 +2836,39 @@ export class Board {
   // Evidence (the attester)
   // -----------------------------------------------------------------------------------------------
 
-  /**
-   * The attester reads the GitHub check runs of a hire's recorded deliverable SHA, signs an `EvidenceAttestation` bound to this offer's policy and that deliverable, and the
-   * relay attaches it on-chain. Evidence is advisory: it moves no money and gates nothing.
-   */
-  async requestEvidence(caller: Caller, input: { taskId: string }) {
-    const me = this.#requireCaller(caller)
-    const cfg = this.#config.evidence
+  /** Sign advisory CI evidence for the worker's own batch; this method never broadcasts. */
+  async requestEvidence(caller: Caller, input: { taskId: string; submissionHash?: Hex }) {
+    const me = this.#requireCaller(caller),
+      cfg = this.#config.evidence
     if (cfg === undefined) throw new BoardError('invalid', 'the attester is not configured on this board (unavailable)')
     const task = this.#task(input.taskId)
     await this.#requireUnpaused(task)
-    const terms = parseTerms(task.terms_json)
-    const ctx = this.#taskCtx(task)
-    const target = this.#sql.all<{ repo: string; sha: string; deliverable_hash: string }>(
-      'SELECT repo, sha, deliverable_hash FROM deliverables WHERE task_id = ? ORDER BY created_at DESC LIMIT 1',
+    const terms = parseTerms(task.terms_json),
+      ctx = this.#taskCtx(task)
+    if (this.#roles(terms, await this.#chainView(task), me).length === 0)
+      throw new BoardError('forbidden', 'only the creator, approver, worker asks for evidence')
+    const target = this.#sql.all<{ repo: string; sha: string; deliverable_hash: Hex }>(
+      'SELECT repo, sha, deliverable_hash FROM deliverables WHERE task_id=? AND (? IS NULL OR deliverable_hash=?) ORDER BY created_at DESC LIMIT 1',
       task.id,
+      input.submissionHash ?? null,
+      input.submissionHash ?? null,
     )[0]
     if (target === undefined) throw new BoardError('not-found', 'no deliverable to attest')
-    // The relay pays for each attestation: only the parties may ask for one.
-    if (this.#roles(terms, await this.#chainView(task), me).length === 0) {
-      throw new BoardError('forbidden', 'only the creator, approver, worker asks for evidence')
-    }
-    const [already] = this.#sql.all<{ conclusion: number; tx_hash: string }>(
-      'SELECT conclusion, tx_hash FROM evidence WHERE task_id = ? AND submission_hash = ? AND tested_sha = ? AND created_at > ? ORDER BY created_at DESC LIMIT 1',
-      task.id,
-      target.deliverable_hash,
-      target.sha,
-      this.#now() - 6 * 24 * 3600,
-    )
-    if (already !== undefined)
-      return {
-        conclusion: already.conclusion === sdk.EvidenceConclusion.Success ? 'success' : 'failure',
-        txHash: already.tx_hash,
-        reused: true,
-      }
-    const slug = repoSlug(target.repo)
-    if (slug === undefined) throw new BoardError('invalid', 'only public GitHub repositories are attested')
-    const token = cfg.github === undefined ? undefined : await installationToken(cfg.github, this.#now())
-    const runs = await checkRuns(token, slug, target.sha)
-    const required = terms.evidencePolicy?.checks ?? []
-    const relevant = required.length === 0 ? runs : runs.filter((r) => required.includes(r.name))
-    if (relevant.length === 0)
-      throw new BoardError('conflict', `no ${required.length === 0 ? '' : 'required '}check runs on ${target.sha} yet`)
-    if (relevant.some((r) => r.status !== 'completed'))
-      throw new BoardError('conflict', 'checks are still running; ask again when they finish')
-    const missing = required.filter((name) => !relevant.some((r) => r.name === name))
-    const success = missing.length === 0 && relevant.every((r) => r.conclusion === 'success')
-    const checks = relevant.map((r) => ({ name: r.name, conclusion: r.conclusion, app: r.app, sha: r.head_sha }))
-    const shaWord = `0x${target.sha.padStart(64, '0')}` as Hex
+    const cached = this.#cachedEvidence(task, target, cfg.attester.address)
+    if (cached !== undefined) return cached
+    const facts = await this.#evidenceChecks(terms, target, cfg.github)
+    const shaWord: Hex = `0x${target.sha.padStart(64, '0')}`
+    // SAFETY: task hashes are stored as hex from the SDK's canonical terms hash.
+    const policyHash = task.terms_hash as Hex
     const attestation = {
       jobId: this.#jobId(task),
-      submissionHash: target.deliverable_hash as Hex,
-      policyHash: task.terms_hash as Hex,
+      submissionHash: target.deliverable_hash,
+      policyHash,
       repo: sdk.hashText(target.repo),
       headSha: shaWord,
       testedSha: shaWord,
-      checkRunsHash: sdk.hashText(canonicalJson({ checks, missing })),
-      conclusion: success ? sdk.EvidenceConclusion.Success : sdk.EvidenceConclusion.Failure,
+      checkRunsHash: sdk.hashText(canonicalJson({ checks: facts.checks, missing: facts.missing })),
+      conclusion: facts.success ? sdk.EvidenceConclusion.Success : sdk.EvidenceConclusion.Failure,
       validUntil: BigInt(this.#now() + 7 * 24 * 3600),
     }
     const signature = await cfg.attester.signTypedData({
@@ -2888,34 +2877,161 @@ export class Board {
       primaryType: 'EvidenceAttestation',
       message: attestation,
     })
-    const hash = await this.#sendRelay({
-      key: `evidence:${ctx.stack.evaluator}:${sdk.hashText(canonicalJson(attestation))}:${signature}`,
-      to: ctx.stack.evaluator,
-      data: encodeFunctionData({
-        abi: sidequest.evaluatorAbi(ctx),
-        functionName: 'attachEvidence',
-        args: [attestation.jobId, attestation, cfg.attester.address, signature],
-      }),
-    })
-    const receipt = await ctx.publicClient.waitForTransactionReceipt({ hash })
+    const evidenceAttestation: sdk.SignedEvidenceAttestation = {
+      attestation: {
+        ...attestation,
+        jobId: attestation.jobId.toString(),
+        validUntil: attestation.validUntil.toString(),
+      },
+      verifier: cfg.attester.address,
+      signature,
+    }
     this.#sql.run(
-      'INSERT INTO evidence (id, task_id, submission_hash, verifier, conclusion, tested_sha, checks_json, tx_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO evidence (id,task_id,submission_hash,verifier,conclusion,tested_sha,checks_json,tx_hash,created_at) VALUES (?,?,?,?,?,?,?,?,?)',
       randomId(8),
       task.id,
       target.deliverable_hash,
       cfg.attester.address,
       attestation.conclusion,
       target.sha,
-      JSON.stringify({ checks, missing }),
-      receipt.transactionHash,
+      JSON.stringify({ checks: facts.checks, missing: facts.missing, evidenceAttestation }),
+      '',
       this.#now(),
     )
     return {
-      conclusion: success ? 'success' : 'failure',
-      checks,
+      conclusion: facts.success ? 'success' : 'failure',
+      checks: facts.checks,
+      missing: facts.missing,
+      evidenceAttestation,
+      txHash: null,
+      reused: false,
+    }
+  }
+
+  #cachedEvidence(task: TaskRow, target: { deliverable_hash: Hex; sha: string }, verifier: Address) {
+    const saved = this.#sql.all<{ conclusion: number; checks_json: string; tx_hash: string }>(
+      'SELECT conclusion,checks_json,tx_hash FROM evidence WHERE task_id=? AND submission_hash=? AND tested_sha=? AND lower(verifier)=lower(?) AND created_at>? ORDER BY created_at DESC LIMIT 1',
+      task.id,
+      target.deliverable_hash,
+      target.sha,
+      verifier,
+      this.#now() - 6 * 24 * 3600,
+    )[0]
+    if (saved === undefined) return undefined
+    // SAFETY: this envelope is written by requestEvidence; legacy rows without a signed statement are refreshed.
+    const parsed = JSON.parse(saved.checks_json) as {
+      checks: Array<{ name: string; conclusion: string | null; app: string | null; sha: string }>
+      missing: string[]
+      evidenceAttestation?: sdk.SignedEvidenceAttestation
+    }
+    if (parsed.evidenceAttestation === undefined) return undefined
+    return {
+      conclusion: saved.conclusion === sdk.EvidenceConclusion.Success ? 'success' : 'failure',
+      checks: parsed.checks,
+      missing: parsed.missing,
+      evidenceAttestation: parsed.evidenceAttestation,
+      txHash: saved.tx_hash || null,
+      reused: true,
+    }
+  }
+
+  async #evidenceChecks(terms: OfferTerms, target: { repo: string; sha: string }, github?: GitHubApp) {
+    const slug = repoSlug(target.repo)
+    if (slug === undefined) throw new BoardError('invalid', 'only public GitHub repositories are attested')
+    const token = github === undefined ? undefined : await installationToken(github, this.#now())
+    const runs = await checkRuns(token, slug, target.sha),
+      required = terms.evidencePolicy?.checks ?? []
+    const relevant = required.length === 0 ? runs : runs.filter((run) => required.includes(run.name))
+    if (relevant.length === 0) throw new BoardError('conflict', `no required check runs on ${target.sha} yet`)
+    if (relevant.some((run) => run.status !== 'completed'))
+      throw new BoardError('conflict', 'checks are still running; ask again when they finish')
+    const missing = required.filter((name) => !relevant.some((run) => run.name === name))
+    const success = missing.length === 0 && relevant.every((run) => run.conclusion === 'success')
+    return {
+      success,
       missing,
-      txHash: receipt.transactionHash,
-      evidence: this.#evidence(task),
+      checks: relevant.map((run) => ({ name: run.name, conclusion: run.conclusion, app: run.app, sha: run.head_sha })),
+    }
+  }
+
+  /** Advisory evidence failures leave the worker free to submit; a prepared signature is attached atomically. */
+  async #submissionEvidence(
+    caller: Caller,
+    taskId: string,
+    deliverable: Deliverable,
+    submissionHash: Hex,
+  ): Promise<SubmissionEvidence> {
+    if (deliverable.kind !== 'git' || this.#config.evidence === undefined)
+      return { evidenceAttestation: null, evidenceTransactions: [], evidenceUnavailable: null }
+    try {
+      const result = await this.requestEvidence(caller, { taskId, submissionHash })
+      const call = sdk.attachEvidenceCall(this.#taskCtx(this.#task(taskId)), result.evidenceAttestation)
+      return {
+        evidenceAttestation: result.evidenceAttestation,
+        evidenceTransactions: [
+          {
+            description: 'Attach the signed CI evidence',
+            chainId: this.#taskCtx(this.#task(taskId)).deployment.chainId,
+            to: call.to,
+            data: call.data,
+            value: '0',
+          },
+        ],
+        evidenceUnavailable: null,
+      }
+    } catch (error) {
+      return {
+        evidenceAttestation: null,
+        evidenceTransactions: [],
+        evidenceUnavailable:
+          error instanceof BoardError ? error.message : 'CI evidence is unavailable; the submission may proceed',
+      }
+    }
+  }
+
+  /** Only the evaluator's exact signed digest turns a preparation into an attached-evidence receipt. */
+  #observeEvidence(task: TaskRow, ctx: sdk.Ctx, receipt: TransactionReceipt): void {
+    if (receipt.status !== 'success') return
+    for (const log of receipt.logs) {
+      if (!eq(log.address, ctx.stack.evaluator)) continue
+      try {
+        const event = decodeEventLog({ abi: sdk.sidequestEvaluatorAbi, data: log.data, topics: log.topics })
+        if (event.eventName !== 'EvidenceAttached' || task.job_id === null || event.args.jobId !== BigInt(task.job_id))
+          continue
+        this.#recordEvidenceEvent(task, ctx, receipt.transactionHash, event.args)
+      } catch {
+        /* A different or malformed evaluator event does not confirm evidence. */
+      }
+    }
+  }
+
+  #recordEvidenceEvent(
+    task: TaskRow,
+    ctx: sdk.Ctx,
+    hash: Hex,
+    event: { verifier: Address; submissionHash: Hex; digest: Hex },
+  ): void {
+    for (const row of this.#sql.all<{ id: string; checks_json: string }>(
+      'SELECT id,checks_json FROM evidence WHERE task_id=? AND lower(verifier)=lower(?) AND submission_hash=?',
+      task.id,
+      event.verifier,
+      event.submissionHash,
+    )) {
+      // SAFETY: requestEvidence writes this envelope; old rows without it are retained unchanged.
+      const stored = JSON.parse(row.checks_json) as { evidenceAttestation?: sdk.SignedEvidenceAttestation }
+      if (stored.evidenceAttestation === undefined) continue
+      const signed = stored.evidenceAttestation
+      const digest = hashTypedData({
+        domain: sdk.evaluatorDomain(ctx.deployment.chainId, ctx.stack.evaluator),
+        types: sdk.evidenceTypes,
+        primaryType: 'EvidenceAttestation',
+        message: {
+          ...signed.attestation,
+          jobId: BigInt(signed.attestation.jobId),
+          validUntil: BigInt(signed.attestation.validUntil),
+        },
+      })
+      if (eq(digest, event.digest)) this.#sql.run('UPDATE evidence SET tx_hash=? WHERE id=?', hash, row.id)
     }
   }
 
