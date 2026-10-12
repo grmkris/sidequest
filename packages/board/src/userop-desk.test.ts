@@ -131,3 +131,63 @@ it('marks bundler refusals retryable, and does not turn service read failures in
   expect(f.state.sends).toBe(1)
   expect(await f.desk.operation('missing')).toBeUndefined()
 })
+
+it('finds a spent-lane event with a 100-block-limit node and ignores the old deploy-block journal', async () => {
+  const f = fixture()
+  await f.desk.submit(f.input)
+  f.state.sequence = 1n
+  f.sql.run('UPDATE userop_operations SET from_block=? WHERE id=?', '1', f.input.id)
+  const eventAbi = parseAbi([
+    'event UserOperationEvent(bytes32 indexed userOpHash,address indexed sender,address indexed paymaster,uint256 nonce,bool success,uint256 actualGasCost,uint256 actualGasUsed)',
+  ])
+  const event = {
+    address: f.context.deployment.aa!.entryPoint,
+    transactionHash: txHash,
+    topics: encodeEventTopics({
+      abi: eventAbi,
+      eventName: 'UserOperationEvent',
+      args: { userOpHash: f.state.hash, sender: f.account.address, paymaster: f.context.deployment.aa!.paymaster! },
+    }),
+    data: encodeAbiParameters(
+      [{ type: 'uint256' }, { type: 'bool' }, { type: 'uint256' }, { type: 'uint256' }],
+      [sdk.laneNonce(sdk.nonceKey(f.input.id)), true, 77n, 1n],
+    ),
+  }
+  const ranges: Array<[bigint, bigint]> = []
+  const node: sdk.JsonRpc = async (method, params) => {
+    if (method === 'eth_blockNumber') return '0x2710'
+    if (method !== 'eth_getLogs') return f.desk.deps.rpc.node(method, params)
+    const from = sdk.quantity(sdk.field(params[0], 'fromBlock'), 'from block')
+    const to = sdk.quantity(sdk.field(params[0], 'toBlock'), 'to block')
+    ranges.push([from, to])
+    if (to - from > 100n) throw new sdk.AaError('refused', 'eth_getLogs is limited to a 100 range')
+    return from <= 9_999n && to >= 9_999n ? [event] : []
+  }
+  const desk = new UserOpDesk({ ...f.desk.deps, rpc: { ...f.desk.deps.rpc, node } })
+  expect(await desk.operation(f.input.id)).toMatchObject({ status: 'confirmed', txHash, actualGasCost: '77' })
+  expect(ranges[0]![0]).toBe(5_000n)
+  expect(ranges).toHaveLength(50)
+  expect(ranges.every(([from, to]) => to - from <= 100n)).toBe(true)
+  expect(f.state.estimates).toBe(1)
+  expect(f.state.sends).toBe(1)
+})
+
+it('keeps spent proof after a quiet log read and never rebuilds on a later zero nonce read', async () => {
+  const f = fixture()
+  await f.desk.submit(f.input)
+  f.state.sequence = 1n
+  const node: sdk.JsonRpc = async (method, params) => {
+    if (method === 'eth_getLogs') throw new sdk.AaError('unavailable', 'quiet logs')
+    return f.desk.deps.rpc.node(method, params)
+  }
+  const desk = new UserOpDesk({ ...f.desk.deps, rpc: { ...f.desk.deps.rpc, node } })
+  await expect(desk.operation(f.input.id)).rejects.toMatchObject({ reason: 'aa-unavailable' })
+  expect(f.store.require(f.input.id).status).toBe('spent')
+  f.state.sequence = 0n
+  f.clock.now += 500
+  await expect(desk.submit(f.input)).rejects.toMatchObject({ reason: 'aa-unavailable' })
+  expect(f.store.require(f.input.id).status).toBe('spent')
+  expect(f.state.estimates).toBe(1)
+  expect(f.state.signs).toBe(1)
+  expect(f.state.sends).toBe(1)
+})
