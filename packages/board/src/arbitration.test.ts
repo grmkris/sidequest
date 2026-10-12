@@ -92,7 +92,7 @@ const bundle = (violation: 'None' | 'Quality' | 'Falsified' = 'Quality'): Disput
 const reason = 'The check "test" passed on the on-chain deliverable, so the criteria are met.'
 
 describe('ruling rules', () => {
-  it('refuses to burn the worker bond on a rejection that named no violation', () => {
+  it('refuses to slash the worker bond on a rejection that named no violation', () => {
     expect(rulingRefusal('None', false, true)).toBeDefined()
     expect(rulingRefusal('None', true, true)).toBeUndefined()
     expect(rulingRefusal('Quality', false, true)).toBeUndefined()

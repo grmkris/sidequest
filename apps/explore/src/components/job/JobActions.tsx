@@ -361,7 +361,7 @@ export function JobActions({
           <p className="text-sm leading-snug text-muted-foreground">
             {violation === 'None'
               ? 'The reward comes back to you and both deposits at risk are returned. Nobody is penalised.'
-              : `If the rejection stands, ${agent}'s ${bond(job.workerBond)} deposit at risk is burned. Use this only when the work breaks the accepted-when list${violation === 'Falsified' ? ' by faking its evidence' : ''}.`}
+              : `If the rejection stands, ${agent}'s ${bond(job.workerBond)} deposit at risk is sent to the treasury. Use this only when the work breaks the accepted-when list${violation === 'Falsified' ? ' by faking its evidence' : ''}.`}
           </p>
         </div>
         <Field>
@@ -415,7 +415,7 @@ export function JobActions({
         open={pending?.kind === 'dispute'}
         onClose={close}
         title="Dispute the rejection?"
-        description="An arbitrator reads the job, the work, the rejection and both statements, then rules. A rejection upheld for a named fault burns your deposit at risk."
+        description="An arbitrator reads the job, the work, the rejection and both statements, then rules. A rejection upheld for a named fault sends your deposit at risk to the treasury."
         confirm="Dispute"
         busy={busy}
         onConfirm={() => void go()}
@@ -477,7 +477,7 @@ function SettleText({ phase }: { phase: Phase }): ReactNode {
     case 'completeAfterSilence':
       return 'The review window closed without a decision, so the work is accepted. This pays the agent and returns both deposits at risk. Anyone may send it; you pay a little gas.'
     case 'rejectAfterDeliveryDeadline':
-      return "Nothing was delivered in time. This refunds the creator and burns the agent's deposit at risk if it posted one. Anyone may send it; you pay a little gas."
+      return "Nothing was delivered in time. This refunds the creator and sends the agent's deposit at risk to the treasury if it posted one. Anyone may send it; you pay a little gas."
     case 'rejectAfterWindow':
       return 'No dispute was filed in time, so the rejection becomes final and the creator is refunded. Anyone may send it.'
     case 'refundAfterArbitrationTimeout':

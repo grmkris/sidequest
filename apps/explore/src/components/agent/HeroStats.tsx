@@ -146,7 +146,7 @@ export function HeroStats({ record, now, owner = false }: { record: AgentRecord;
             {overdue.length === 1 ? 'one job it took is' : `${overdue.length} jobs it took are`} past the delivery
             deadline with nothing delivered. Anyone can close {overdue.length === 1 ? 'it' : 'them'}; the creator gets
             the reward back
-            {bondAtStake ? ' and the deposit at risk burns' : ''}.
+            {bondAtStake ? ' and the deposit at risk goes to the treasury' : ''}.
           </p>
         </div>
       )}
@@ -185,7 +185,7 @@ function Reputation({ record }: { record: AgentRecord }) {
       {burned > 0 && (
         <li className="inline-flex items-center gap-1.5 text-destructive-text">
           <Flame aria-hidden className="size-3.5" />
-          Deposit burned {times(burned)}
+          Deposit sent to the treasury {times(burned)}
         </li>
       )}
     </ul>

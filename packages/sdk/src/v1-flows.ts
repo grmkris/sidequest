@@ -293,7 +293,7 @@ export async function runV1CoreFlow(d: V1FlowDeps, flow: V1CoreFlow, scope = flo
         sdk.V1_GAS.claimTopUpRefund,
       )
     const after = await sdk.getV1Listing(ctx, jobId)
-    // Use the original bond event's block time: resuming after expiry does not undo a timely burn.
+    // Use the original bond event's block time: resuming after expiry does not undo a timely slash.
     const terminal = ['accept', 'rule', 'silence', 'final-rejection', 'missed', 'timeout', 'cancel', 'settle'].flatMap(
       (label) => {
         const receipt = receipts.get(label)
@@ -315,8 +315,8 @@ export async function runV1CoreFlow(d: V1FlowDeps, flow: V1CoreFlow, scope = flo
     check('settlement outcome', after.outcome, paid ? 1 : 2)
     check('creator bond settled', after.creatorBondSettled, true)
     if (flow !== 'cancel') check('worker bond settled', after.workerBondSettled, true)
-    check('creator bond burn flag', after.creatorBondBurned, slashCreator)
-    check('worker bond burn flag', after.workerBondBurned, slashWorker)
+    check('creator bond slash flag', after.creatorBondBurned, slashCreator)
+    check('worker bond slash flag', after.workerBondBurned, slashWorker)
     const bonusFee = (after.bonus * BigInt(after.feeBps) + 9999n) / 10000n
     const workerCredit = paid ? net + after.bonus - bonusFee : 0n
     // Reconcile the original terminal receipts on every resume. Saved wallet-wide baselines from older journals
