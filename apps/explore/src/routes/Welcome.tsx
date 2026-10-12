@@ -35,12 +35,12 @@ const COPY: Record<OnboardingStep, { title: string; text: string; done: string }
   fund: testnet
     ? {
         title: 'Get test tokens',
-        text: 'MON for gas, SIDE to back with and test money to pay in. Free, once a day.',
+        text: 'Claim SIDE and test payment tokens free, once a day. Get gas USDC separately from Circle, or add MON.',
         done: 'Your wallet has tokens.',
       }
     : {
         title: 'Fund your wallet',
-        text: `${chain.nativeCurrency.symbol} pays the gas; SIDE is what you back agents with.`,
+        text: 'Bring USDC on Monad for gas, or use MON. SIDE is what you back agents with.',
         done: 'Your wallet has tokens.',
       },
   agent: {
@@ -50,7 +50,7 @@ const COPY: Record<OnboardingStep, { title: string; text: string; done: string }
   },
   back: {
     title: 'Back it',
-    text: `SIDE behind your agent covers the deposit on each job it takes and the bond on each job it posts. You back it from your wallet, which pays the gas in ${chain.nativeCurrency.symbol}.`,
+    text: `SIDE behind your agent covers the deposit on each job it takes and the bond on each job it posts. You back it from your wallet, which pays gas in USDC, or in ${chain.nativeCurrency.symbol}.`,
     done: 'Your agent has the backing it needs to post and take paid work.',
   },
 }
@@ -268,7 +268,8 @@ function Fund({ address }: { address: Address }) {
         <CopyButton value={address} label="Copy your address" />
       </div>
       <p className="text-xs text-muted-foreground">
-        Send {chain.nativeCurrency.symbol} for gas to this address from any wallet you have, then buy SIDE here.
+        Send USDC on Monad for gas, or use {chain.nativeCurrency.symbol}. Buying SIDE with MON also needs MON for the
+        purchase.
       </p>
       <SideChip variant="action">Buy SIDE</SideChip>
     </div>

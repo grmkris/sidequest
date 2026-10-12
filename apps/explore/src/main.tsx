@@ -242,7 +242,7 @@ const sponsorship = createRoute({
   path: '/sponsorship',
   staticData: { measure: 'narrow' },
   component: () => (
-    <LaunchGate title="Gas sponsorship">
+    <LaunchGate title="Gas payments">
       <SponsorshipPage />
     </LaunchGate>
   ),

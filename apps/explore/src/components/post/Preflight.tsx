@@ -11,7 +11,7 @@ import { stakeContext } from '../../stake-context.ts'
 import { formatNumber, tokenInfo } from '../../format.ts'
 import { sidequest } from '../../sidequest.ts'
 import { useToken } from '../../useTokens.ts'
-import { chain, isMainnet } from '../../wallet.ts'
+import { chain, deployment, isMainnet } from '../../wallet.ts'
 
 import { SideChip } from '../side/SideToken.tsx'
 import { TokenAmount } from '../token/TokenAmount.tsx'
@@ -20,7 +20,7 @@ import { Mark } from '../controls.tsx'
 type Hex = `0x${string}`
 
 /**
- * "Ready to publish", read live from the wallet: MON for gas, the reward (a hire escrows it at publish), and the
+ * "Ready to publish", read live from the wallet: USDC or MON for gas, the reward (a hire escrows it at publish), and the
  * creator bond, a reservation of stake: the check is the stake still free in the vault, with the way to stake more.
  * A quote request locks nothing yet, so its bond is what picking a quote will need. Advisory: a shortfall is shown,
  * not enforced, since the transaction says the same if it happens.
@@ -43,6 +43,14 @@ export function Preflight({
   const who = address ?? zeroAddress
   const q = { refetchInterval: 15_000 }
   const mon = useBalance({ address: who, chainId: chain.id, query: { ...q, enabled: on } })
+  const usdc = useReadContract({
+    address: deployment.aa?.gasToken ?? zeroAddress,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: [who],
+    chainId: chain.id,
+    query: { ...q, enabled: on && deployment.aa !== null },
+  })
   const free = useReadContract({
     address: sidequest.vault,
     abi: sdk.stakeVaultAbi,
@@ -98,7 +106,7 @@ export function Preflight({
 
   const note = isMainnet
     ? 'Read live from your wallet. Posting holds SIDE staked behind you as the creator bond, released when the job closes.'
-    : 'Read live from your wallet. Testnet MON comes from faucet.monad.xyz; SIDE, mUSD and mEUR from Get test tokens on your Account page.'
+    : 'Read live from your wallet. Testnet USDC comes from faucet.circle.com (Monad Testnet); MON from faucet.monad.xyz; SIDE and payment tokens from Get test tokens on Account.'
   if (!on) {
     return (
       <Section
@@ -129,22 +137,7 @@ export function Preflight({
   return (
     <Section title="Ready to publish" note={note}>
       <ItemGroup>
-        <Item className="before:left-14">
-          <ItemMedia>
-            <Mark tone={monValue === undefined ? 'wait' : monValue > 0n ? 'ok' : 'warn'} />
-          </ItemMedia>
-          <ItemContent className="min-w-0 flex-1">
-            <span className="block">Gas</span>
-            {monValue === 0n && (
-              <span className="block text-ui text-warning-text">
-                Add {chain.nativeCurrency.symbol} to pay for the transactions.
-              </span>
-            )}
-          </ItemContent>
-          <ItemContent className="tabular-nums text-muted-foreground">
-            {monValue === undefined ? '…' : `${formatNumber(monValue, 18)} ${chain.nativeCurrency.symbol}`}
-          </ItemContent>
-        </Item>
+        <GasRow mon={monValue} usdc={usdc.data} />
         {token !== undefined && reward !== undefined && (
           <Item className="before:left-14">
             <ItemMedia>
@@ -270,6 +263,30 @@ function StakeRow({
       <ItemActions className="tabular-nums flex-col items-end text-right text-muted-foreground">
         {free === undefined ? '…' : `${formatNumber(free, 18)} free`}
       </ItemActions>
+    </Item>
+  )
+}
+
+function GasRow({ mon, usdc }: { mon: bigint | undefined; usdc: bigint | undefined }) {
+  const aa = deployment.aa
+  const readyUsdc = aa !== null && aa.paymaster !== null && usdc !== undefined && usdc >= aa.maxCostPerOp
+  const readyMon = mon !== undefined && mon > 0n
+  const tone = readyUsdc || readyMon ? 'ok' : mon === undefined || usdc === undefined ? 'wait' : 'warn'
+  return (
+    <Item className="before:left-14">
+      <ItemMedia>
+        <Mark tone={tone} />
+      </ItemMedia>
+      <ItemContent className="min-w-0 flex-1">
+        <span className="block">Gas · USDC, or MON</span>
+        {!readyUsdc && mon === 0n && usdc !== undefined && (
+          <span className="block text-ui text-warning-text">Add USDC or MON to send this action.</span>
+        )}
+      </ItemContent>
+      <ItemContent className="tabular-nums text-muted-foreground">
+        {usdc === undefined ? '…' : `${formatNumber(usdc, 6)} USDC`} ·{' '}
+        {mon === undefined ? '…' : `${formatNumber(mon, 18)} MON`}
+      </ItemContent>
     </Item>
   )
 }
