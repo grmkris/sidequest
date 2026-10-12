@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 import { serverCard, catalogReply } from '../../apps/api/src/mcp-metadata.ts'
+// By path: scripts/ is not a workspace package, so the bare '@sidequest/sdk' specifier does not resolve here.
+import { MAINNET_LIVE } from '../../packages/sdk/src/release.ts'
 
 type Stage = 'dev' | 'prod'
 interface StageFile {
@@ -22,6 +24,14 @@ const readStage = (stage: Stage): StageFile => {
     throw new Error(`invalid infra/${stage}.json`)
   return file as StageFile
 }
+
+/** What `/release.json` must say, derived as the build derives it (`releaseInfo` in apps/explore/vite.config.ts):
+ *  writes open on testnet, and on mainnet only once `MAINNET_LIVE` is true, so a drained mainnet deploy smokes green. */
+export const expectedRelease = (network: string, live: boolean = MAINNET_LIVE) => ({
+  network,
+  mainnetLive: live,
+  writesOpen: network !== 'monad-mainnet' || live,
+})
 
 const body = async (response: Response): Promise<Record<string, unknown>> => {
   try {
@@ -159,8 +169,8 @@ export const smoke = async (
   const release = await get('/release.json')
   if (release.status !== 200) throw new Error(`release HTTP ${release.status}`)
   const releaseBody = await body(release)
-  if (releaseBody.network !== infra.network || releaseBody.writesOpen !== true)
-    throw new Error('release network or writesOpen mismatch')
+  for (const [key, value] of Object.entries(expectedRelease(infra.network)))
+    if (releaseBody[key] !== value) throw new Error(`release ${key} mismatch`)
 
   const protectedResource = await get('/.well-known/oauth-protected-resource')
   const protectedBody = await body(protectedResource)

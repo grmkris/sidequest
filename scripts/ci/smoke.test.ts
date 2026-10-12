@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { smoke } from './smoke.ts'
+import { expectedRelease, smoke } from './smoke.ts'
 import {
   catalogReply,
   serverCardReply,
@@ -77,7 +77,7 @@ const transport = (
     }
     const documents: Record<string, object> = {
       '/health': { ok: true, runtime: 'Cloudflare-Workers', network: 'monad-testnet', board: 'public' },
-      '/release.json': { network: 'monad-testnet', writesOpen: true },
+      '/release.json': { network: 'monad-testnet', mainnetLive: false, writesOpen: true },
       '/.well-known/oauth-protected-resource': { resource: `${origin}/mcp`, authorization_servers: [origin] },
       '/.well-known/oauth-authorization-server': { issuer: origin },
       '/data/jobs': { ok: true, index: { next_block: 1, updated_at: NOW / 1000 - 60 }, jobs: [] },
@@ -106,7 +106,7 @@ test('smoke rejects cards replaced by HTML, invalid catalog and missing public p
 test('smoke refuses an unexpected runtime, closed writes, foreign issuer or missing bearer challenge', async () => {
   for (const [path, override] of [
     ['/health', { ok: true, runtime: 'local', network: 'monad-testnet', board: 'public' }],
-    ['/release.json', { network: 'monad-testnet', writesOpen: false }],
+    ['/release.json', { network: 'monad-testnet', mainnetLive: false, writesOpen: false }],
     ['/.well-known/oauth-authorization-server', { issuer: 'https://foreign.example' }],
     [
       '/.well-known/oauth-protected-resource',
@@ -115,6 +115,16 @@ test('smoke refuses an unexpected runtime, closed writes, foreign issuer or miss
   ] as const)
     await expect(smoke('dev', transport(path, override).fetcher, () => NOW)).rejects.toThrow('mismatch')
   await expect(smoke('dev', transport('/mcp').fetcher, () => NOW)).rejects.toThrow('challenge mismatch')
+})
+
+test('a drained mainnet build serves closed writes, and smoke expects exactly what the pin says', () => {
+  expect(expectedRelease('monad-mainnet', false)).toEqual({
+    network: 'monad-mainnet',
+    mainnetLive: false,
+    writesOpen: false,
+  })
+  expect(expectedRelease('monad-mainnet', true)).toMatchObject({ mainnetLive: true, writesOpen: true })
+  expect(expectedRelease('monad-testnet', false)).toMatchObject({ writesOpen: true })
 })
 
 const failure = (run: Promise<void>): Promise<string> =>
