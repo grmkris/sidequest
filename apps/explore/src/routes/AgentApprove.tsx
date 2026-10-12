@@ -22,6 +22,7 @@ import {
   type Role,
 } from '../agent-setup-api.ts'
 import { useManagedAgents } from '../managed.ts'
+import { approveBranch } from '../approve-branch.ts'
 
 /** What the coding agent proposed: its avatar (same origin only), name and description. */
 function ProposalCard({ agentKey, proposal }: { agentKey: string; proposal: Proposal }) {
@@ -135,6 +136,9 @@ export function AgentApprovePage() {
     refetchInterval: (query) => proposalPoll(query.state.data, query.state.dataUpdateCount),
   })
   const agent = agents.data?.agents.find((row) => row.id === agentKey)
+  // The branch is fixed by the first state seen (approveBranch): registering here must not hand off to a second click.
+  const [firstState, setFirstState] = useState<string | null>(null)
+  if (agent !== undefined && firstState === null) setFirstState(agent.state)
   const { roles, ticks } = useRoles(agent?.address == null ? undefined : getAddress(agent.address))
   const title = (
     <PageTitle sub="Your coding agent proposed it; approving registers it to you.">Approve your agent</PageTitle>
@@ -169,7 +173,7 @@ export function AgentApprovePage() {
           <ProposalCard agentKey={agentKey} proposal={proposal.data} />
         )}
         <Section title={`What may ${agent.name} do?`}>{ticks}</Section>
-        {agent.state === 'active' ? (
+        {approveBranch(firstState, agent.state) === 'connect' ? (
           <ConnectAgent agent={agent} roles={roles} auto={false} />
         ) : (
           <CreateAgent
