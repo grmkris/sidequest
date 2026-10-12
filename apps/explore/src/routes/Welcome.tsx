@@ -1,6 +1,6 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Check } from 'lucide-react'
-import { type ReactNode, useRef } from 'react'
+import { type ReactNode, useRef, useState } from 'react'
 import { type Address, getAddress } from 'viem'
 import type { ManagedAgent } from '../api.ts'
 import { connectedWords, useAgentConnections } from '../agent-connections.ts'
@@ -15,7 +15,7 @@ import { NeedsBacking } from '../components/backing/NeedsBacking.tsx'
 import { hires, newestAgent, useOnboardingFacts } from '../components/onboarding/useOnboardingFacts.ts'
 import { PrivyLogin } from '../components/Privy.tsx'
 import { TestnetFaucet } from '../components/TestnetFaucet.tsx'
-import { buttonVariants } from '../components/ui/button.tsx'
+import { Button, buttonVariants } from '../components/ui/button.tsx'
 import { useAuth } from '../components/Wallet.tsx'
 import { cn } from '../lib/cn.ts'
 import { agentHome, managedLiveness, useManagedAgents } from '../managed.ts'
@@ -26,6 +26,7 @@ import {
   onboardingDone,
   onboardingSteps,
 } from '../onboarding.ts'
+import { friendlyError } from '../txErrors.ts'
 import { chain, deployment, isMainnet } from '../wallet.ts'
 
 const testnet = !isMainnet && deployment.testnetFaucet !== null
@@ -66,14 +67,50 @@ export function WelcomePage() {
       <>
         <PageTitle>Set up Sidequest</PageTitle>
         <section className="grid gap-3 rounded-xl bg-card p-5 ring-1 ring-foreground/10">
-          <p className="text-sm text-muted-foreground">Sign in first: Sidequest makes you a wallet from your email.</p>
-          <div>
-            <PrivyLogin />
-          </div>
+          {auth.address === undefined ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Sign in first: Sidequest makes you a wallet from your email.
+              </p>
+              <div>
+                <PrivyLogin />
+              </div>
+            </>
+          ) : (
+            <BoardSignIn signIn={auth.signIn} />
+          )}
         </section>
       </>
     )
   return <Welcome address={auth.address} />
+}
+
+/** A wallet that is logged in but not signed in to the board (it declined, or the session lapsed) signs in here too. */
+function BoardSignIn({ signIn }: { signIn: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  async function run() {
+    setBusy(true)
+    setError(null)
+    try {
+      await signIn()
+    } catch (failure) {
+      setError(friendlyError(failure))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <>
+      <p className="text-sm text-muted-foreground">
+        Sign in to finish setting up: one signature in your wallet, free and with no gas.
+      </p>
+      <Button busy={busy} className="justify-self-start" onClick={() => void run()}>
+        Sign in
+      </Button>
+      {error !== null && <p className="text-xs text-destructive-text">{error}</p>}
+    </>
+  )
 }
 
 function Welcome({ address }: { address: Address }) {

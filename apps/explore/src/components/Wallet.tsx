@@ -158,17 +158,17 @@ export function AccountControl({
 }) {
   const signOut = useSignOut(auth)
   if (auth.address === undefined) return <PrivyLogin />
-  const signIn = (
-    <Button busy={account.busy} size="sm" className="shrink-0" onClick={() => void account.signIn()}>
-      Sign in
-    </Button>
+  const error = account.error !== null && (
+    <span className="basis-full text-xs text-destructive-text">{account.error}</span>
   )
-  const menu = <AccountMenu address={auth.address} signOut={signOut} full={full} />
+  // The sidebar is too narrow for the address beside the button, so Sign in sits above the account row there.
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
-      {full ? menu : signIn}
-      {full ? signIn : menu}
-      {account.error !== null && <span className="basis-full text-xs text-destructive-text">{account.error}</span>}
+    <div className={cn('min-w-0', full ? 'grid gap-1' : 'flex flex-wrap items-center gap-2')}>
+      <Button busy={account.busy} size="sm" className="shrink-0" onClick={() => void account.signIn()}>
+        Sign in
+      </Button>
+      <AccountMenu address={auth.address} signOut={signOut} full={full} />
+      {error}
     </div>
   )
 }
