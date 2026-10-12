@@ -266,7 +266,7 @@ cmd_token_plan() {
     '{name: $name, symbol: $symbol, metadataUri: $muri, imageUri: $image, salt: $salt, predicted: $predicted,
       buy: $buy, margin: $margin, safe: $safe, creator: $creator}' | save token-plan.json
   token_simulate
-  say "Plan saved ($STATE/token-plan.json). The salt is private until \`token send\`: never post it or the address."
+  say "Plan saved ($STATE/token-plan.json). The salt stays in this file until \`token send\`: never post it anywhere."
 }
 # Builds the createWithNative params from the plan with a fresh fee and deadline, and simulates them. Sets PARAMS, VALUE.
 token_simulate() {
