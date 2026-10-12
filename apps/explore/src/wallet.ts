@@ -112,6 +112,7 @@ function undeployed(): V1Deployment {
     market: null,
     launcher: null,
     aa: null,
+    agentSweep: null,
     deployBlock: 0n,
   }
 }
