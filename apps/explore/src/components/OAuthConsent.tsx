@@ -13,6 +13,7 @@ import { AgentStake } from './AgentStake.tsx'
 
 import { useAuth } from './Wallet.tsx'
 import { NeedsBacking } from './backing/NeedsBacking.tsx'
+import { hires } from './onboarding/useOnboardingFacts.ts'
 import { OAuthClient, type OAuthClientIdentity } from './OAuthClient.tsx'
 import { HandBackNote, SetupConnect } from './SetupConnect.tsx'
 import { clientRedirect } from '../agent-setup-api.ts'
@@ -160,7 +161,7 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
  * post, so that is said first and its backing is not called optional; the weekly budget always is.
  */
 function BudgetAndBacking({ agent, operator }: { agent: ManagedAgent; operator: Address }) {
-  const hiring = (agent.roles ?? []).includes('hire')
+  const hiring = hires(agent)
   return (
     <>
       {hiring ? (
