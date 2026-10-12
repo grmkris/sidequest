@@ -1436,3 +1436,13 @@ Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archi
 - Hosted agents' Privy `signUserOperation` (`3166ff35`).
 - The paymaster's Worker quote signer.
 - No user operation has been charged in USDC yet.
+
+## 12 October 2026 — B3: the SIDE sheet as a trade desk, and shared money forms, on dev
+
+**Live-verified on dev** (`249199ee`; [CI 38308944934](https://github.com/grmkris/sidequest/actions/runs/38308944934): `verify` and `deploy-dev` passed, prod skipped). Before the push, a full `bun run check` passed in a clean worktree at that commit. Headless Chromium checked `https://dev.sidequest.exchange`:
+- **Signed out, 390 and 1280 px.**
+  - `/jobs?side=500000` opens the sheet pre-filled: You get "500,000" SIDE, You pay "33.69" MON (router `getAmountIn`), and "At least 495,000 SIDE". The button reads "Sign in to buy".
+  - Privy's login opens above the sheet: the sheet turns non-modal and the email field is topmost. Closing Privy restores the modal sheet.
+- **With a read-only injected wallet.** The "1 bond" chip fills You get 10 SIDE, the pay side quotes 0.0006736 MON, and the button reads "Buy 10 SIDE". The agent page's backing sheet is titled "Back Livepass Scout".
+
+**Not verified:** a signed buy or sell sent through Privy from the new card, which needs a real login. Also not verified: the USDC-gas path for a sale.
