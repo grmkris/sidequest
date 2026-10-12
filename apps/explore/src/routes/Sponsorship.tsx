@@ -6,7 +6,7 @@ import { Details, Address, LoadingRows, PageTitle, Section } from '../components
 import { useQueryClient } from '@tanstack/react-query'
 import { Fuel } from 'lucide-react'
 import { useState } from 'react'
-import { useSignTypedData } from 'wagmi'
+import { prompts, useSignTypedDataWithPrompt } from '../wallet-prompt.ts'
 import { waitForTransactionReceipt } from 'wagmi/actions'
 import type { TxRequest } from '../api.ts'
 import { useDelegatorUpgrade } from '../components/Privy.tsx'
@@ -64,7 +64,7 @@ function Sponsorship({ wallet, rules }: { wallet: string; rules: SponsorRules })
   const toast = useToast()
   const status = useSponsorStatus(wallet, true)
   const upgrade = useDelegatorUpgrade(wallet)
-  const { signTypedDataAsync } = useSignTypedData()
+  const signTypedDataAsync = useSignTypedDataWithPrompt()
   const [prep, setPrep] = useState<{ prep: SponsorPrep; policy: SponsorPolicy } | null>(null)
   const [busy, setBusy] = useState<'prepare' | 'sign' | 'revoke' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -100,7 +100,7 @@ function Sponsorship({ wallet, rules }: { wallet: string; rules: SponsorRules })
         const hash = await upgrade()
         if (hash !== null) await waitForTransactionReceipt(wagmiConfig, { hash, chainId: chain.id })
       }
-      const signature = await signTypedDataAsync(typedDataArgs(p.sign.typedData))
+      const signature = await signTypedDataAsync(typedDataArgs(p.sign.typedData), prompts.sponsorship())
       await sponsorApi.confirm(wallet, signature)
       setPrep(null)
       await refresh()

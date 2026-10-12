@@ -4,14 +4,14 @@ import { Alert, AlertDescription } from './ui/alert.tsx'
 import { Select } from './kit.tsx'
 import { useState } from 'react'
 import { type Address, parseUnits, isAddress } from 'viem'
-import { useSignTypedData } from 'wagmi'
+import { prompts, useSignTypedDataWithPrompt } from '../wallet-prompt.ts'
 import type { ManagedAgent } from '../api.ts'
 import { agentAction } from '../agent-api.ts'
 import { reviewAgentGrant, type PreparedGrant } from '../agent-grant.ts'
 import { typedDataArgs } from '../typed-data.ts'
 import { deployment, explorer } from '../wallet.ts'
 import { useToken } from '../useTokens.ts'
-import { rewardTokenList } from '../format.ts'
+import { rewardTokenList, tokenMeta } from '../format.ts'
 import { AgentGrantReview } from './AgentGrantReview.tsx'
 import { useAuth } from './Wallet.tsx'
 
@@ -26,7 +26,7 @@ export function AllowanceEditor({ agent, onConfirmed }: { agent: ManagedAgent; o
   const [review, setReview] = useState<ReturnType<typeof reviewAgentGrant> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const { signTypedDataAsync } = useSignTypedData()
+  const signTypedDataAsync = useSignTypedDataWithPrompt()
   async function run(action: () => Promise<void>) {
     setBusy(true)
     setError(null)
@@ -67,7 +67,10 @@ export function AllowanceEditor({ agent, onConfirmed }: { agent: ManagedAgent; o
   }
   async function confirm() {
     if (review === null) return
-    const signature = await signTypedDataAsync(typedDataArgs(review.typedData))
+    const signature = await signTypedDataAsync(
+      typedDataArgs(review.typedData),
+      prompts.weeklyBudget(agent.name, `${amount} ${tokenMeta(token)?.symbol ?? 'tokens'}`),
+    )
     await agentAction(agent.id, 'allowance-confirm', { key, hash: review.hash, signature })
     setReview(null)
     setKey(crypto.randomUUID())

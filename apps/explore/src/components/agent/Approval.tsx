@@ -5,7 +5,6 @@ import { Details, Section } from '../kit.tsx'
 import * as sdk from '@sidequest/sdk'
 import { useState } from 'react'
 import { type Address, decodeFunctionData } from 'viem'
-import { useSignTypedData } from 'wagmi'
 import { agentEndpoint, type ManagedAgent } from '../../api.ts'
 import type { AgentApproval } from '../../agent-api.ts'
 import { reviewAgentGrant, type PreparedGrant } from '../../agent-grant.ts'
@@ -18,6 +17,8 @@ import { TokenAmount } from '../token/TokenAmount.tsx'
 import { useTokenList } from '../../useTokens.ts'
 import { typedDataArgs } from '../../typed-data.ts'
 import { deployment } from '../../wallet.ts'
+import { prompts, useSignTypedDataWithPrompt } from '../../wallet-prompt.ts'
+import { tokenAmountText } from '../../permission-review.ts'
 
 /** One decision a managed agent waits on; a requested permission and a requested role have their own cards. */
 export function Approval(props: Parameters<typeof OperationApproval>[0]) {
@@ -88,7 +89,7 @@ function OperationApproval({
     call?: { to: string; data: `0x${string}` }
   }
   useTokenList(request.token === undefined ? [] : [request.token])
-  const { signTypedDataAsync } = useSignTypedData()
+  const signTypedDataAsync = useSignTypedDataWithPrompt()
   const [review, setReview] = useState<ReturnType<typeof reviewAgentGrant> | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -138,7 +139,10 @@ function OperationApproval({
     let signature: string | undefined
     if (approved && approval.kind === 'hire-over-limit') {
       if (review === null) throw new Error('Review the exact one-off budget first')
-      signature = await signTypedDataAsync(typedDataArgs(review.typedData))
+      signature = await signTypedDataAsync(
+        typedDataArgs(review.typedData),
+        prompts.hire(agent.name, tokenAmountText(request.amount, request.token!)),
+      )
     }
     await agentEndpoint(`/api/approvals/${approval.id}/decide`, 'POST', {
       approved,

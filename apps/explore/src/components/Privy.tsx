@@ -1,7 +1,14 @@
 import { Button } from './ui/button.tsx'
 import * as sdk from '@sidequest/sdk'
-import { PrivyProvider, usePrivy, useSign7702Authorization, useSignMessage, useWallets } from '@privy-io/react-auth'
-import { type ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react'
+import {
+  PrivyProvider,
+  usePrivy,
+  useSign7702Authorization,
+  useSignMessage,
+  useSignTypedData as usePrivySignTypedData,
+  useWallets,
+} from '@privy-io/react-auth'
+import { type ReactNode, createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { type EIP1193Provider, type Hex, createPublicClient, http, isHex, toHex } from 'viem'
 import { useConnect } from 'wagmi'
 import { type TxRequest, tool } from '../api.ts'
@@ -52,11 +59,30 @@ export function usePrivySilentSigner(): SilentSigner | null {
   return useContext(SilentSignerContext)
 }
 
+/** What Privy's screen says for one signature: what it does, in the person's words, and the button that gives it. */
+export interface WalletPrompt {
+  title: string
+  description: string
+  buttonText: string
+}
+
+/**
+ * Signs serialized EIP-712 typed data (viem's `serializeTypedData`, what wagmi sends a wallet) with the login wallet,
+ * on Privy's screen with `prompt` in place of a bare "Sign". Null without Privy or before login.
+ */
+export type PromptSigner = (typedData: string, prompt: WalletPrompt) => Promise<Hex>
+const PromptSignerContext = createContext<PromptSigner | null>(null)
+
+export function usePrivyPromptSigner(): PromptSigner | null {
+  return useContext(PromptSignerContext)
+}
+
 /** Connect the login wallet only. No agent address can be selected through wagmi. */
 function OperatorBridge({ children }: { children: ReactNode }) {
   const { authenticated, user } = usePrivy()
   const { wallets } = useWallets()
   const { signMessage } = useSignMessage()
+  const { signTypedData } = usePrivySignTypedData()
   const { connectors, connectAsync } = useConnect()
   const connected = useRef<string | undefined>(undefined)
   const pending = useRef(false)
@@ -105,10 +131,23 @@ function OperatorBridge({ children }: { children: ReactNode }) {
     if (!isHex(signature)) throw new Error('The wallet returned no signature.')
     return signature
   }
+  const signWithPrompt = useCallback<PromptSigner>(
+    async (typedData, prompt) => {
+      if (address === undefined) throw new Error('Sign in before signing.')
+      // SAFETY: the caller serialized it with viem's serializeTypedData, which validated it as EIP-712 typed data.
+      const input = JSON.parse(typedData) as Parameters<typeof signTypedData>[0]
+      const { signature } = await signTypedData(input, { address, uiOptions: prompt })
+      if (!isHex(signature)) throw new Error('The wallet returned no signature.')
+      return signature
+    },
+    [address, signTypedData],
+  )
   return (
     <SilentSignerContext value={signSilently}>
-      {error !== null && <p role="alert">{error}</p>}
-      {children}
+      <PromptSignerContext value={authenticated && address !== undefined ? signWithPrompt : null}>
+        {error !== null && <p role="alert">{error}</p>}
+        {children}
+      </PromptSignerContext>
     </SilentSignerContext>
   )
 }

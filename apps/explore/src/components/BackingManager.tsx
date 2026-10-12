@@ -5,7 +5,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useEffect, useState } from 'react'
 import { type Address, encodeFunctionData, erc20Abi, parseSignature } from 'viem'
-import { useBalance, useSignTypedData } from 'wagmi'
+import { useBalance } from 'wagmi'
+import { prompts, useSignTypedDataWithPrompt } from '../wallet-prompt.ts'
 import { type ManagedAgent, agentEndpoint } from '../api.ts'
 import { DelegationForm, exactFactory } from './DelegationForm.tsx'
 import { DELEGATION_RISK, DelegationPositions, factoryValue, walletAgentsKey } from './DelegationPositions.tsx'
@@ -142,7 +143,7 @@ function Stake({
   useEffect(() => {
     if (sheet === 'pick' && hasNextPage && !isFetchingNextPage) void fetchNextPage()
   }, [sheet, hasNextPage, isFetchingNextPage, fetchNextPage])
-  const { signTypedDataAsync } = useSignTypedData()
+  const signTypedDataAsync = useSignTypedDataWithPrompt()
   useEffect(() => {
     setError(null)
     setText('')
@@ -287,7 +288,7 @@ function Stake({
         const permit = await sdk.delegatePermit(ctx, owner, amount, BigInt(Math.floor(Date.now() / 1000) + 3600))
         await withVaultPermitPreparation(
           key,
-          () => signTypedDataAsync(permit),
+          () => signTypedDataAsync(permit, prompts.backingPermit(nameOf(account), exactFactory(amount))),
           async (signature) => {
             const { r, s, v, yParity } = parseSignature(signature)
             await savePrepared(

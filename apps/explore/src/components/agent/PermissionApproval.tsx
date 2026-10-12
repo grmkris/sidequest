@@ -7,7 +7,6 @@ import { Section } from '../kit.tsx'
 import { ConfirmButton } from '../Sheet.tsx'
 import { useState } from 'react'
 import { type Address, type Hex, parseUnits } from 'viem'
-import { useSignTypedData } from 'wagmi'
 import { agentEndpoint, type ManagedAgent } from '../../api.ts'
 import type { AgentApproval } from '../../agent-api.ts'
 import { formatNumber, localTime, relative, tokenMeta } from '../../format.ts'
@@ -20,6 +19,7 @@ import {
   tokenAmountText,
   type PreparedPermission,
 } from '../../permission-review.ts'
+import { prompts, useSignTypedDataWithPrompt } from '../../wallet-prompt.ts'
 import { typedDataArgs } from '../../typed-data.ts'
 import { useTokenList } from '../../useTokens.ts'
 import { deployment } from '../../wallet.ts'
@@ -28,6 +28,20 @@ const TYPE_WORDS: Record<string, string> = {
   'erc20-token-periodic': 'Recurring token payments',
   'erc20-token-allowance': 'One token spending limit',
   'sidequest:contract-call': 'One exact contract call',
+}
+
+const short = (address: string) => `${address.slice(0, 6)}…${address.slice(-4)}`
+
+/** The permission in one line for the wallet's own screen: the limits this card shows. */
+function permissionWords(
+  t: ReturnType<typeof permissionRequest>['parsed'],
+  shown: ReturnType<typeof reviewPermission>['description'],
+  requested: bigint | string | null,
+): string {
+  if (t.type === 'sidequest:contract-call') return `One exact call to ${short(t.target)}.`
+  const amount = tokenAmountText('amount' in shown ? shown.amount : (requested ?? 0n), t.token)
+  const period = t.type === 'erc20-token-periodic' ? ` every ${Math.round(t.periodDuration / 3600)} h` : ' in total'
+  return `Up to ${amount}${period} from your wallet, only to ${short(t.recipient)}.`
 }
 
 /** The one exact call, in full: decoded arguments when the method is known, and always the raw call data (VV2-022). */
@@ -81,7 +95,7 @@ export function PermissionApproval({
   const token = t.type === 'sidequest:contract-call' ? null : t.token
   const meta = token === null ? undefined : tokenMeta(token)
   useTokenList(token === null ? [] : [token])
-  const { signTypedDataAsync } = useSignTypedData()
+  const signTypedDataAsync = useSignTypedDataWithPrompt()
   const [limit, setLimit] = useState('')
   const [days, setDays] = useState('')
   const [standing, setStanding] = useState(request.standing)
@@ -149,7 +163,10 @@ export function PermissionApproval({
         setReview(null)
         throw stale
       }
-      const signature = await signTypedDataAsync(typedDataArgs(review.typedData))
+      const signature = await signTypedDataAsync(
+        typedDataArgs(review.typedData),
+        prompts.permission(agent.name, permissionWords(t, review.description, requested)),
+      )
       body = { approved, signature, hash: review.hash, standing }
     }
     await agentEndpoint(`/api/approvals/${approval.id}/decide`, 'POST', body)

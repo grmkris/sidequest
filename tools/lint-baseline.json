@@ -469,14 +469,12 @@
     "anti-slop(no-runtime-typeof)": 5,
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
     "complexity(complexity)": 1,
-    "eslint(max-lines-per-function)": 1,
-    "typescript(no-deprecated)": 1
+    "eslint(max-lines-per-function)": 1
   },
   "apps/explore/src/components/BackingManager.tsx": {
     "complexity(complexity)": 1,
     "eslint(max-lines-per-function)": 3,
     "jsx-a11y(prefer-tag-over-role)": 1,
-    "typescript(no-deprecated)": 1,
     "typescript(no-unnecessary-boolean-literal-compare)": 1
   },
   "apps/explore/src/components/BoardLink.tsx": {
@@ -486,8 +484,7 @@
     "anti-slop-effect(prefer-effect-match)": 2,
     "complexity(complexity)": 1,
     "eslint(max-lines-per-function)": 1,
-    "react-hooks(rules-of-hooks)": 1,
-    "typescript(no-deprecated)": 1
+    "react-hooks(rules-of-hooks)": 1
   },
   "apps/explore/src/components/Buy.tsx": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
@@ -586,8 +583,7 @@
   "apps/explore/src/components/agent/Approval.tsx": {
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 2,
-    "eslint(max-lines-per-function)": 1,
-    "typescript(no-deprecated)": 1
+    "eslint(max-lines-per-function)": 1
   },
   "apps/explore/src/components/agent/BackingStrip.tsx": {
     "complexity(complexity)": 1,
@@ -622,8 +618,7 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
     "anti-slop-effect(prefer-effect-match)": 2,
     "complexity(complexity)": 1,
-    "eslint(max-lines-per-function)": 1,
-    "typescript(no-deprecated)": 1
+    "eslint(max-lines-per-function)": 1
   },
   "apps/explore/src/components/agent/ProfileHeader.tsx": {
     "jsx-a11y(click-events-have-key-events)": 1,
@@ -642,7 +637,7 @@
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "jsx-a11y(prefer-tag-over-role)": 3,
-    "typescript(no-deprecated)": 3,
+    "typescript(no-deprecated)": 2,
     "typescript(switch-exhaustiveness-check)": 1
   },
   "apps/explore/src/components/job/Timeline.tsx": {
@@ -834,8 +829,7 @@
   "apps/explore/src/routes/Sponsorship.tsx": {
     "complexity(complexity)": 1,
     "eslint(max-lines-per-function)": 1,
-    "jsx-a11y(prefer-tag-over-role)": 1,
-    "typescript(no-deprecated)": 1
+    "jsx-a11y(prefer-tag-over-role)": 1
   },
   "apps/explore/src/routes/Telegram.tsx": {
     "complexity(complexity)": 1,

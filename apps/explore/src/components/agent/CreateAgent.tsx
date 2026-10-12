@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Check, Circle } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { type Address, zeroAddress } from 'viem'
-import { useSignTypedData } from 'wagmi'
+import { prompts, useSignTypedDataWithPrompt } from '../../wallet-prompt.ts'
 import { waitForTransactionReceipt } from 'wagmi/actions'
 import { Button } from '../ui/button.tsx'
 import { Input } from '../ui/input.tsx'
@@ -126,7 +126,7 @@ function useCreation(operator: Address, initial: ManagedAgent | undefined) {
  * no MON is needed. A grant needs the upgraded wallet; an upgrade not yet made is relayed first (one more signature).
  */
 function SponsoredRegistration({ agent, operator, onDone, onError }: IdentityProps) {
-  const { mutateAsync: signTypedData } = useSignTypedData()
+  const signTypedData = useSignTypedDataWithPrompt()
   const upgrade = useDelegatorUpgrade(operator)
   const started = useRef(false)
   useEffect(() => {
@@ -139,7 +139,7 @@ function SponsoredRegistration({ agent, operator, onDone, onError }: IdentityPro
         kind: 'registration',
         delegator: operator,
       })
-      const signature = await signTypedData(typedDataArgs(review.typedData))
+      const signature = await signTypedData(typedDataArgs(review.typedData), prompts.registration(agent.name))
       const result = await agentAction<ManagedAgent | { status: string }>(agent.id, 'registration-confirm', {
         hash: review.hash,
         signature,

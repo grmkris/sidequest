@@ -6,7 +6,8 @@ import { Address, Section, TxLink } from './kit.tsx'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { formatEther, parseEther } from 'viem'
-import { useBalance, useSignTypedData } from 'wagmi'
+import { useBalance } from 'wagmi'
+import { prompts, useSignTypedDataWithPrompt } from '../wallet-prompt.ts'
 import { waitForTransactionReceipt } from 'wagmi/actions'
 import { type Budget, type TaskIndexEntry, type TxRequest, tool } from '../api.ts'
 import { budgetCap } from '../format.ts'
@@ -52,7 +53,7 @@ export function BudgetPanel({
   const party = roles.length > 0
   const eb = task.executionBudget
   const upgrade = useDelegatorUpgrade(address)
-  const { signTypedDataAsync } = useSignTypedData()
+  const signTypedDataAsync = useSignTypedDataWithPrompt()
   const budget = useQuery({
     queryKey: ['get_budget', task.taskId, address],
     queryFn: () => tool<Budget>('get_budget', { taskId: task.taskId }),
@@ -101,7 +102,7 @@ export function BudgetPanel({
       const hash = await upgrade()
       if (hash !== null) await waitForTransactionReceipt(wagmiConfig, { hash, chainId: chain.id })
     }
-    const signature = await signTypedDataAsync(typedDataArgs(prep.sign.typedData))
+    const signature = await signTypedDataAsync(typedDataArgs(prep.sign.typedData), prompts.jobBudget(budgetCap(eb)))
     await tool('budget_grant_confirm', { taskId: task.taskId, signature })
   })
 

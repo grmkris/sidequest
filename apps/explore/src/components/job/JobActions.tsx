@@ -15,7 +15,8 @@ import { Section, Segmented } from '../kit.tsx'
 import type { JobAction, Phase } from '@sidequest/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { type ReactNode, useState } from 'react'
-import { useAccount, useSignTypedData } from 'wagmi'
+import { useAccount } from 'wagmi'
+import { prompts, useSignTypedDataWithPrompt } from '../../wallet-prompt.ts'
 import { type TxRequest, boardApi } from '../../api.ts'
 import { amount, bond, span } from '../../format.ts'
 import { percent } from '../../stake.ts'
@@ -117,7 +118,7 @@ export function JobActions({
   const qc = useQueryClient()
   const toast = useToast()
   const api = boardApi(job.boardId)
-  const { signTypedDataAsync } = useSignTypedData()
+  const signTypedDataAsync = useSignTypedDataWithPrompt()
   const { address } = useAccount()
   const [pending, setPending] = useState<Pending | null>(null)
   const [txs, setTxs] = useState<{ list: TxRequest[]; kind: string; owner: string } | null>(null)
@@ -165,12 +166,16 @@ export function JobActions({
     setError(null)
     try {
       if (pending.kind === 'select') {
+        const chosen = pending
         setPending(null)
         const sel = await api.tool<{ nonce: string; sign: { typedData: string } }>('select_worker', {
           taskId: job.taskId,
           applicationId: pending.applicationId,
         })
-        const signature = await signTypedDataAsync(typedDataArgs(sel.sign.typedData))
+        const signature = await signTypedDataAsync(
+          typedDataArgs(sel.sign.typedData),
+          prompts.selection(`Agent ID ${chosen.agentId}`),
+        )
         await api.tool('submit_selection', { taskId: job.taskId, nonce: sel.nonce, signature })
         const refreshed = await api.tool<{ selection?: ActionJob['selection'] }>('get_task', { taskId: job.taskId })
         qc.setQueriesData<{ selection?: ActionJob['selection'] }>(
