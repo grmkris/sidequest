@@ -10,6 +10,7 @@ import { SponsorDesk } from './sponsor.ts'
 import type { Sql } from './store.ts'
 import { BoardError } from './board-error.ts'
 import { AgentRegistration } from './agent-registration.ts'
+import type { UserOpSubmitter } from './userop-desk.ts'
 export { AgentRegistration } from './agent-registration.ts'
 
 export interface AgentWalletCreator {
@@ -27,7 +28,8 @@ export interface AgentOnboardingDeps {
   readonly context: sdk.Ctx
   readonly now: () => number
   readonly signing: AgentSigning
-  readonly relay: RelaySender
+  readonly relay?: RelaySender
+  readonly submitter?: UserOpSubmitter
   readonly sponsor: SponsorDesk
   readonly signerId: string
   readonly policyId: string
@@ -105,42 +107,14 @@ export class AgentOnboarding {
   }
 
   async resume(id: string): Promise<AgentRow> {
-    const { context: ctx, relay, signing } = this.deps
+    const { context: ctx, signing } = this.deps
     let agent = this.agents.get(id)
     if (agent.state === 'revoked' || agent.address === null || agent.privy_wallet_id === null)
       throw new Error('Agent is unavailable for onboarding')
     const operation = this.agents.begin(id, 'onboarding', 'public', 'agent_onboarding', {})
-    if (agent.state === 'created') {
-      const prior = this.agents.step<SignedAuthorization<number>>(operation.id, 'authorization')
-      if (
-        prior !== undefined ||
-        (await sdk.delegationOf(ctx.publicClient, agent.address))?.toLowerCase() !==
-          ctx.deployment.delegation.delegator.toLowerCase()
-      ) {
-        let nonce = this.agents.step<number>(operation.id, 'upgrade-nonce')
-        if (nonce === undefined)
-          nonce = this.agents.freezeStep(
-            operation.id,
-            'upgrade-nonce',
-            await ctx.publicClient.getTransactionCount({ address: agent.address, blockTag: 'pending' }),
-          )
-        const authorization =
-          prior ?? this.agents.freezeStep(operation.id, 'authorization', await signing.signUpgrade(id, nonce))
-        const receipt = await relay.submit({
-          key: `agent-upgrade-${id}`,
-          to: agent.address,
-          data: '0x',
-          authorizationList: [authorization],
-        })
-        this.agents.freezeStep(operation.id, 'upgrade-receipt', receipt.transactionHash)
-      }
-      if (
-        (await sdk.delegationOf(ctx.publicClient, agent.address))?.toLowerCase() !==
-        ctx.deployment.delegation.delegator.toLowerCase()
-      )
-        throw new Error('Agent upgrade is not confirmed')
-      agent = this.agents.advance(id, 'upgraded')
-    }
+    if (this.deps.submitter !== undefined && (agent.state === 'created' || agent.state === 'upgraded'))
+      return this.agents.advance(id, 'grants-live')
+    if (agent.state === 'created') agent = await this.#upgrade(id, agent.address, operation.id)
     if (agent.state === 'upgraded') {
       await ensureAgentGrants(ctx, this.agents, this.grants, signing, id, operation.id, this.deps.now())
       agent = this.agents.advance(id, 'grants-live')
@@ -148,7 +122,52 @@ export class AgentOnboarding {
     return agent
   }
 
+  async #upgrade(id: string, address: Address, operationId: Hex): Promise<AgentRow> {
+    const { context: ctx, signing } = this.deps
+    const operation = { id: operationId }
+    const prior = this.agents.step<SignedAuthorization>(operation.id, 'authorization')
+    if (
+      prior !== undefined ||
+      (await sdk.delegationOf(ctx.publicClient, address))?.toLowerCase() !==
+        ctx.deployment.delegation.delegator.toLowerCase()
+    ) {
+      let nonce = this.agents.step<number>(operation.id, 'upgrade-nonce')
+      if (nonce === undefined)
+        nonce = this.agents.freezeStep(
+          operation.id,
+          'upgrade-nonce',
+          await ctx.publicClient.getTransactionCount({ address: address, blockTag: 'pending' }),
+        )
+      const authorization =
+        prior ?? this.agents.freezeStep(operation.id, 'authorization', await signing.signUpgrade(id, nonce))
+      const receipt = await this.#relay().submit({
+        key: `agent-upgrade-${id}`,
+        to: address,
+        data: '0x',
+        authorizationList: [authorization],
+      })
+      this.agents.freezeStep(operation.id, 'upgrade-receipt', receipt.transactionHash)
+    }
+    if (
+      (await sdk.delegationOf(ctx.publicClient, address))?.toLowerCase() !==
+      ctx.deployment.delegation.delegator.toLowerCase()
+    )
+      throw new Error('Agent upgrade is not confirmed')
+    return this.agents.advance(id, 'upgraded')
+  }
+
+  #relay(): RelaySender {
+    if (this.deps.relay === undefined) throw new BoardError('unavailable', 'The hosted-agent relay is unavailable')
+    return this.deps.relay
+  }
+
+  #requireOperatorRegistration(): void {
+    if (this.deps.submitter !== undefined)
+      throw new BoardError('conflict', 'Use registration-batch and registration-record for operator-paid registration')
+  }
+
   async prepareRegistration(id: string, operator: Address) {
+    this.#requireOperatorRegistration()
     let agent = this.agents.owned(id, operator)
     if (agent.state !== 'grants-live' && agent.state !== 'registered')
       throw new Error('Prepare the agent upgrade and gas grants first')
@@ -218,6 +237,7 @@ export class AgentOnboarding {
     hash: Hex,
     signature: Hex,
   ): Promise<AgentRow | { status: string; txHash: Hex }> {
+    this.#requireOperatorRegistration()
     let agent = this.agents.owned(id, operator)
     if (agent.state === 'active') return this.verify(id)
     if (await this.#finishBinding(id)) return this.agents.get(id)

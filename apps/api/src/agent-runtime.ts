@@ -36,6 +36,7 @@ import { runSetupTool } from './agent-setup.ts'
 import { BackingRequestInput, chainBackingReads, requestBacking } from './agent-backing-request.ts'
 import { publicOrigin } from './telegram.ts'
 import { objectFor } from './commons/route.ts'
+import { hostedUserOpDesk } from './agent-userop.ts'
 import { agentGasAllowance } from './agent-gas-allowance.ts'
 
 const key32 = (key: string) => /^0x[0-9a-fA-F]{64}$/.test(key)
@@ -147,13 +148,30 @@ export async function runAgent(runtime: {
       : {}),
     fail: (code, message) => new BoardError(code, message),
   })
+  const signerKey = typeof bindings.PRIVY_SIGNER_KEY === 'string' ? bindings.PRIVY_SIGNER_KEY : ''
+  const appSecret = typeof bindings.PRIVY_APP_SECRET === 'string' ? bindings.PRIVY_APP_SECRET : ''
+  const provider = new sdk.PrivyServer({
+    appId: String(bindings.PRIVY_APP_ID ?? ''),
+    appSecret,
+    sign: async (payload) => {
+      if (signerKey === '' || signerKey === 'unset')
+        throw new BoardError('unavailable', 'Hosted agent signing is unavailable')
+      return (await sdk.p256AuthorizationSigner(signerKey))(payload)
+    },
+  })
+  const signing = new AgentSigning(sql, ctx, provider, () => Math.floor(Date.now() / 1000))
+  const submitter = hostedUserOpDesk({ bindings, sql, context: ctx, signing, now: () => Math.floor(Date.now() / 1000) })
+  const lifecycle = new AgentLifecycle({
+    sql,
+    context: ctx,
+    now: () => Math.floor(Date.now() / 1000),
+    sponsor,
+    ...(submitter === undefined ? {} : { hostedSend: 'userop' }),
+  })
   if (req.tool === 'agent_status')
     return toJson({
       ok: true,
-      result: await new AgentLifecycle({ sql, context: ctx, now: () => Math.floor(Date.now() / 1000), sponsor }).status(
-        agent.id,
-        agent.operator,
-      ),
+      result: await lifecycle.status(agent.id, agent.operator),
     })
   if (req.tool === 'list_approvals')
     return toJson({
@@ -169,7 +187,6 @@ export async function runAgent(runtime: {
       confirm_gas_allowance: 'gas-allowance-confirm',
       revoke_gas_allowance: 'gas-allowance-revoke',
     }
-    const lifecycle = new AgentLifecycle({ sql, context: ctx, now: () => Math.floor(Date.now() / 1000), sponsor })
     return toJson({
       ok: true,
       result: await agentGasAllowance({
@@ -190,20 +207,18 @@ export async function runAgent(runtime: {
     const result =
       req.operator === undefined
         ? permissions.stop(agent, permissionId)
-        : await new AgentLifecycle({
-            sql,
-            context: ctx,
-            now: () => Math.floor(Date.now() / 1000),
-            sponsor,
-          }).disablePermission(agent.id, req.operator, permissionId)
-    return toJson({ ok: true, result: req.operator === undefined ? result : { status: 'confirmed', result } })
+        : await lifecycle.disablePermission(agent.id, req.operator, permissionId)
+    return toJson({
+      ok: true,
+      result: req.operator === undefined || submitter !== undefined ? result : { status: 'confirmed', result },
+    })
   }
   if (req.tool === 'check_operation') {
     const operation = agents.operation(String(args.operationId ?? ''))
     if (operation.agent_id !== agent.id) throw new BoardError('forbidden', 'Operation belongs to another agent')
     const result =
       operation.sponsor_operation_id === null
-        ? operation
+        ? ((await submitter?.operation(operation.id)) ?? operation)
         : await sponsor.operation(agent.address!, operation.sponsor_operation_id)
     return toJson({ ok: true, result })
   }
@@ -246,18 +261,6 @@ export async function runAgent(runtime: {
       }),
     })
   if (requiredToolScope(req.tool) === 'sidequest:read') return tenant.call(prepare(req.tool, args))
-  const signerKey = typeof bindings.PRIVY_SIGNER_KEY === 'string' ? bindings.PRIVY_SIGNER_KEY : ''
-  const appSecret = typeof bindings.PRIVY_APP_SECRET === 'string' ? bindings.PRIVY_APP_SECRET : ''
-  const provider = new sdk.PrivyServer({
-    appId: String(bindings.PRIVY_APP_ID ?? ''),
-    appSecret,
-    sign: async (payload) => {
-      if (signerKey === '' || signerKey === 'unset')
-        throw new BoardError('unavailable', 'Hosted agent signing is unavailable')
-      return (await sdk.p256AuthorizationSigner(signerKey))(payload)
-    },
-  })
-  const signing = new AgentSigning(sql, ctx, provider, () => Math.floor(Date.now() / 1000))
   if (req.tool === 'advertise_service' || req.tool === 'withdraw_service') {
     if (agent.agent_id === null) throw new BoardError('conflict', 'Register this agent before listing it')
     const audience = directoryAudience(new URL(req.resource).origin)
@@ -289,6 +292,7 @@ export async function runAgent(runtime: {
     context: ctx,
     signing,
     sponsor,
+    ...(submitter === undefined ? {} : { submitter }),
     verifyAction: (action) =>
       publishAgentOffer({
         sql: fromD1(bindings.Database as never),

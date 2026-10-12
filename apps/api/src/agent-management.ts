@@ -27,6 +27,7 @@ import type { AgentRouteRequest } from './routes/agents.ts'
 import { ownerAgentSetup } from './agent-setup-owner.ts'
 import { agentAccess } from './agent-access.ts'
 import { agentProfileManagement } from './agent-profile-management.ts'
+import { hostedUserOpDesk } from './agent-userop.ts'
 import { agentGasAllowance } from './agent-gas-allowance.ts'
 
 function text(body: Record<string, unknown>, key: string): string {
@@ -83,7 +84,13 @@ export async function agentManagement(input: {
       : {}),
     fail: (code, message) => new BoardError(code, message),
   })
-  const lifecycle = new AgentLifecycle({ sql, context, now, sponsor })
+  const lifecycle = new AgentLifecycle({
+    sql,
+    context,
+    now,
+    sponsor,
+    ...(bindings.HOSTED_SEND === 'userop' ? { hostedSend: 'userop' } : {}),
+  })
   if (action === 'list') return { agents: agents.list(operator).map((row) => ({ ...row, roles: agentRoles(row) })) }
   if (action === 'approvals') return { approvals: agents.approvals(operator) }
   if (action === 'status') return lifecycle.status(id, operator)
@@ -97,7 +104,10 @@ export async function agentManagement(input: {
           const spec = grants.spec(row.delegation_hash)
           return (
             row.delegator.toLowerCase() === agent.address?.toLowerCase() ||
-            ((spec.kind === 'allowance' || spec.kind === 'allowance-once' || spec.kind === 'permission') &&
+            ((spec.kind === 'allowance' ||
+              spec.kind === 'gas-allowance' ||
+              spec.kind === 'allowance-once' ||
+              spec.kind === 'permission') &&
               spec.agent.toLowerCase() === agent.address?.toLowerCase())
           )
         })
@@ -245,17 +255,23 @@ export async function agentManagement(input: {
     )
     return lifecycle.status(id, operator)
   }
-  if (!/^0x[0-9a-fA-F]{64}$/.test(input.relayKey)) throw new BoardError('unavailable', 'The relay is unavailable')
+  const signing = new AgentSigning(sql, context, provider, now)
+  const submitter = hostedUserOpDesk({ bindings, sql, context, signing, now })
+  if (submitter === undefined && !/^0x[0-9a-fA-F]{64}$/.test(input.relayKey))
+    throw new BoardError('unavailable', 'The relay is unavailable')
   const onboarding = new AgentOnboarding({
     sql,
     context,
     now,
     publicOrigin: Schema.decodeUnknownSync(Schema.String)(bindings.PUBLIC_ORIGIN ?? ''),
     sponsor,
-    signing: new AgentSigning(sql, context, provider, now),
+    signing,
+    ...(submitter === undefined ? {} : { submitter }),
     signerId: String(bindings.PRIVY_SIGNER_ID ?? ''),
     policyId: String(bindings.PRIVY_POLICY_ID ?? ''),
-    relay: new RelaySender(sql, context, privateKeyToAccount(input.relayKey), input.rpcUrl, now),
+    ...(submitter === undefined
+      ? { relay: new RelaySender(sql, context, privateKeyToAccount(input.relayKey), input.rpcUrl, now) }
+      : {}),
   })
   if (action === 'create') {
     if (input.privyToken === undefined) throw new BoardError('unauthenticated', 'A current Privy session is required')

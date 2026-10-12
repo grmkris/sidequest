@@ -262,11 +262,13 @@ export class AgentSigning {
 
   async signUpgrade(id: string, nonce: number): Promise<SignedAuthorization<number>> {
     const agent = this.#agent(id)
-    if (agent.state !== 'created') throw new Error('Only a new agent can be upgraded')
+    if (agent.state !== 'created' && (await sdk.delegationOf(this.context.publicClient, agent.address)) !== null)
+      throw new Error('Only an undelegated agent can be upgraded')
     if (!Number.isSafeInteger(nonce) || nonce < 0) throw new Error('Invalid upgrade nonce')
     const contract = this.context.deployment.delegation.delegator
     const chainId = this.context.deployment.chainId
-    const row = this.#request(id, 'upgrade', { method: 'eth_sign7702Authorization', contract, chainId, nonce })
+    const purpose = agent.state === 'created' ? 'upgrade' : `upgrade:${nonce}`
+    const row = this.#request(id, purpose, { method: 'eth_sign7702Authorization', contract, chainId, nonce })
     if (row.result_json !== null) return JSON.parse(row.result_json) as SignedAuthorization<number>
     const current = await this.context.publicClient.getTransactionCount({ address: agent.address, blockTag: 'pending' })
     if (current !== nonce) throw new Error('Upgrade nonce differs from the agent account')

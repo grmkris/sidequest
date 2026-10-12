@@ -9,6 +9,7 @@ export type UserOpStatus =
   | 'signed'
   | 'pending'
   | 'uncertain'
+  | 'spent'
   | 'dropped'
   | 'confirmed'
   | 'reverted'
@@ -64,7 +65,7 @@ interface FrozenBuild {
   userOpHash: Hex
 }
 
-export function freezeUserOp(built: sdk.BuiltUserOp): string {
+function freezeUserOp(built: sdk.BuiltUserOp): string {
   return JSON.stringify({ ...built, op: sdk.toBundlerJson(built.op), maxCost: built.maxCost.toString() })
 }
 
@@ -170,15 +171,23 @@ export class UserOpStore {
       const built = thawUserOp(row.built_json)
       const signed = { ...built, op: { ...built.op, signature } }
       const attempt = (latest?.attempt ?? 0) + 1
-      this.sql.run(
-        'INSERT INTO userop_attempts VALUES (?,?,?,?,?,NULL,?)',
-        id,
-        attempt,
-        freezeUserOp(signed),
-        signature,
-        built.userOpHash,
-        'signed',
-      )
+      if (latest?.userop_hash === built.userOpHash) {
+        if (latest.signature !== signature) throw new Error('Signature for the same user operation cannot change')
+        this.sql.run(
+          "UPDATE userop_attempts SET outcome='signed',sent_at=NULL WHERE operation_id=? AND attempt=?",
+          id,
+          latest.attempt,
+        )
+      } else
+        this.sql.run(
+          'INSERT INTO userop_attempts VALUES (?,?,?,?,?,NULL,?)',
+          id,
+          attempt,
+          freezeUserOp(signed),
+          signature,
+          built.userOpHash,
+          'signed',
+        )
       this.sql.run(
         "UPDATE userop_operations SET status='signed',built_json=?,userop_hash=?,updated_at=? WHERE id=?",
         freezeUserOp(signed),
@@ -198,7 +207,7 @@ export class UserOpStore {
     return this.#atomic(() => {
       const latest = this.attempts(id).at(-1)
       if (latest === undefined) throw new Error('No signed user operation attempt')
-      if (['confirmed', 'reverted', 'failed'].includes(this.require(id).status))
+      if (['confirmed', 'reverted', 'failed', 'spent'].includes(this.require(id).status))
         throw new Error('User operation is terminal')
       this.sql.run(
         'UPDATE userop_attempts SET outcome=?,sent_at=COALESCE(sent_at,?) WHERE operation_id=? AND attempt=?',
@@ -210,6 +219,21 @@ export class UserOpStore {
       this.sql.run('UPDATE userop_operations SET status=?,updated_at=? WHERE id=?', status, this.now(), id)
       return this.require(id)
     })
+  }
+
+  waiting(id: string): UserOpRow {
+    const row = this.require(id)
+    if (row.status === 'confirmed' || row.status === 'reverted' || row.status === 'spent') return row
+    this.sql.run("UPDATE userop_operations SET status='pending',updated_at=? WHERE id=?", this.now(), id)
+    return this.require(id)
+  }
+
+  /** A spent lane remains spent across provider drift and restarts, until its receipt/event is found. */
+  spent(id: string): UserOpRow {
+    const row = this.require(id)
+    if (row.status === 'confirmed' || row.status === 'reverted') return row
+    this.sql.run("UPDATE userop_operations SET status='spent',updated_at=? WHERE id=?", this.now(), id)
+    return this.require(id)
   }
 
   finish(id: string, hash: Hex, receipt: sdk.UserOpReceipt): UserOpRow {

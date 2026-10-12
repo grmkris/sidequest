@@ -1415,6 +1415,23 @@ Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archi
   `0x72a2d6b791ec3659066cb85d19ba924697d536e29c1d0a928520dd09f769ed3e`. `identity()` reads back the ERC-8004 registry
   `0x8004A818BFB912233c491871b3d84c89A494BD9e`. It is recorded as `deployment.agentSweep`. No sweep has run yet.
 
+- **The routine policy now also allows AgentSweep.** It permits `AgentSweep.sweep` and an approval to AgentSweep alone.
+  It holds 39 rules. Journal hash `a82bb3b3…`, verified 2026-10-12T18:50:21Z.
+- **Rulings no longer go through the relay on dev.** Dev `21712378` (CI 38293159138 passed `deploy-dev`) has
+  `submit_ruling` prepare the transaction. The `sq-arbiter` container was re-pinned to `21712378`. It now sends rulings
+  from the arbitrator `0x96eE…4716`, paying MON, through a journal on the persistent `/state` volume. It still accepts
+  the prod board's relayed answer until prod is promoted. No ruling has been sent this way yet.
+
+- **The first user operation through dev's `/aa/rpc` (dev `75b3e8ad`, CI 38294786626).**
+  - The proxy answers `eth_chainId` `0x279f` and Pimlico's EntryPoint list through the Worker's key, and refuses
+    `eth_sendRawTransaction` as off its allowlist.
+  - `aa-dev-probe.ts` ran with a fresh key holding 0 MON, `0x733A1b16c886557e6F98fa3d3945a568b2f90e85`. It claimed from
+    the faucet in one user op that also upgraded it to the DeleGator.
+  - Pimlico sponsored the op through the proxy's faucet route (paymaster `0x7777…834C`).
+  - userOp `0xd049abde47011e85bcd998c5f824d84651ebb5207a5dc8b73e6ab864ff4be1ad`, tx
+    `0x481b09e02bfb8a5ba479901c7448549ba529515b6a4470a3dfe8faa1583258a1`: success, 200 SIDE received, code
+    `0xef0100…63c0c19a…`.
+
 **Implemented and tested, not yet live:**
 - Hosted agents' Privy `signUserOperation` (`3166ff35`).
 - The paymaster's Worker quote signer.

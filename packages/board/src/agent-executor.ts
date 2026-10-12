@@ -13,10 +13,13 @@ import { AgentLifecycle } from './agent-lifecycle.ts'
 import { AgentFailure, agentFailureReply, errorDiagnostics } from './agent-failure.ts'
 import { AgentX402 } from './agent-x402.ts'
 import { x402Deployment } from './x402.ts'
+import { AgentUserOps } from './agent-userops.ts'
+import type { UserOpSubmitter, UserOpResult } from './userop-desk.ts'
 
 export interface AgentPreparedCall {
   readonly transactions?: readonly sdk.TxRequest[]
   readonly sign?: { readonly typedData: string; readonly description?: string }
+  readonly evidenceAttestation?: sdk.SignedEvidenceAttestation | null
   readonly [key: string]: unknown
 }
 
@@ -36,6 +39,8 @@ export interface AgentExecutorDeps {
   /** Hosted storage must be verified even when the action was frozen before a restart. */
   readonly verifyAction?: (action: AgentPreparedCall) => Promise<void>
   readonly verifyToolSigning: (request: AgentToolRequest & { typedData: string }) => Promise<string>
+  /** Present only when HOSTED_SEND=userop; relay remains the default until cutover. */
+  readonly submitter?: UserOpSubmitter
 }
 
 export interface AgentExecuteInput {
@@ -55,7 +60,11 @@ export type AgentExecuteResult =
       readonly next?: { readonly tool: 'list_quotes'; readonly args: { readonly requestId: string } }
     }
   | { readonly status: 'approval'; readonly operationId: Hex; readonly approval: ApprovalRow }
-  | { readonly status: 'pending' | 'reverted' | 'dropped'; readonly operationId: Hex; readonly result: SponsorResult }
+  | {
+      readonly status: 'pending' | 'reverted' | 'dropped'
+      readonly operationId: Hex
+      readonly result: SponsorResult | UserOpResult
+    }
 
 function publicOutput(output: AgentPreparedCall): Record<string, unknown> {
   const { sign: _sign, transactions: _transactions, next: _next, ...result } = output
@@ -71,11 +80,20 @@ function jsonOutput(output: AgentPreparedCall): AgentPreparedCall {
 export class AgentExecutor {
   readonly agents: AgentStore
   readonly grants: GrantStore
+  readonly userops: AgentUserOps
   #queue: Promise<unknown> = Promise.resolve()
 
   constructor(readonly deps: AgentExecutorDeps) {
     this.agents = new AgentStore(deps.sql, deps.now)
     this.grants = new GrantStore(deps.sql, deps.context)
+    this.userops = new AgentUserOps({
+      agents: this.agents,
+      grants: this.grants,
+      context: deps.context,
+      now: deps.now,
+      ...(deps.submitter === undefined ? {} : { submitter: deps.submitter }),
+      finish: (operation, address, sent) => this.#finish(operation, address, sent),
+    })
   }
 
   execute(input: AgentExecuteInput): Promise<AgentExecuteResult> {
@@ -84,14 +102,20 @@ export class AgentExecutor {
     return result
   }
 
-  async #finish(operation: AgentOperationRow, address: Address, sent: SponsorResult): Promise<AgentExecuteResult> {
+  async #finish(
+    operation: AgentOperationRow,
+    address: Address,
+    sent: SponsorResult | UserOpResult,
+  ): Promise<AgentExecuteResult> {
     if (sent.status === 'pending') return { status: 'pending', operationId: operation.id, result: sent }
     if (sent.status !== 'confirmed') {
       this.agents.saveOperation(operation.id, 'failed', { result: sent })
       return { status: sent.status, operationId: operation.id, result: sent }
     }
     const action = this.agents.step<AgentPreparedCall>(operation.id, 'action')!
-    const result = { ...publicOutput(action), sponsorship: sent }
+    if (sent.txHash === null) throw new Error('Confirmed operation has no bundle transaction')
+    const receipt = 'userOpHash' in sent ? { userOperation: sent } : { sponsorship: sent }
+    const result = { ...publicOutput(action), ...receipt }
     const reported = this.agents.step(operation.id, 'reported')
     if (reported === undefined) {
       if (typeof action.taskId === 'string' || typeof JSON.parse(operation.intent_json).taskId === 'string') {
@@ -205,7 +229,8 @@ export class AgentExecutor {
       spec = this.agents.freezeStep(operation.id, step, grantSpecJson(template))
     }
     const prepared = this.grants.prepare(agent.operator, parseGrantSpec(spec))
-    await this.grants.confirm(prepared.hash, await this.deps.signing.signGrant(agent.id, prepared.hash))
+    if (this.agents.step(operation.id, 'send-mode') !== 'userop')
+      await this.grants.confirm(prepared.hash, await this.deps.signing.signGrant(agent.id, prepared.hash))
     return approval.kind === 'unstake'
       ? { unstakeHash: prepared.hash }
       : { approvalHash: prepared.hash, allowanceHash: decision.allowanceHash }
@@ -397,10 +422,17 @@ export class AgentExecutor {
       this.agents.saveOperation(operation.id, 'confirmed', { result })
       return { status: 'confirmed', operationId: operation.id, result }
     }
+    const mode =
+      this.agents.step<'relay' | 'userop'>(operation.id, 'send-mode') ??
+      this.agents.freezeStep(operation.id, 'send-mode', this.deps.submitter === undefined ? 'relay' : 'userop')
+    if (mode === 'userop') {
+      const resumed = await this.userops.resume(operation, agent.address)
+      if (resumed !== undefined) return resumed
+    }
     if (operation.stage === 'sending') {
       const action = this.agents.step<AgentPreparedCall>(operation.id, 'action')
       if (action === undefined || (action.transactions?.length ?? 0) !== 0)
-        throw new Error('Sending operation is missing its relay link')
+        throw new Error('Sending operation is missing its send journal')
       const result = publicOutput(action)
       this.agents.saveOperation(operation.id, 'confirmed', { result })
       return { status: 'confirmed', operationId: operation.id, result }
@@ -420,7 +452,7 @@ export class AgentExecutor {
         return { status: 'rejected', operationId: operation.id, result: approval, ...reopened }
       }
     }
-    await this.deps.sponsor.ready()
+    if (mode === 'relay') await this.deps.sponsor.ready()
     const action = await this.#action(input, operation, agent.address)
     if (input.tool === 'request_permissions') return this.#permission(operation.id, agent, action)
     await this.deps.verifyAction?.(action)
@@ -451,6 +483,7 @@ export class AgentExecutor {
     const entriesStep = approved.allowanceHash === undefined ? 'entries' : `entries:${approved.allowanceHash}`
     // No sponsor link means there are no signed relay bytes. Recheck gas authority on every such retry;
     // the economic calls stay frozen, while old mappings remain available for audit.
+    if (mode === 'userop') return this.userops.send(operation, agent.address, transactions, approved)
     await ensureAgentGrants(
       this.deps.context,
       this.agents,
