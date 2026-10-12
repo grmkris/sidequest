@@ -161,6 +161,35 @@ const deps = (board: BoardLike, proposal: unknown) => ({
 const reason = 'The "test" check passed on the on-chain deliverable; the rejection names no defect.'
 
 describe('arbitrateOnce', () => {
+  it('takes the hash from a board that still relays rulings itself, sending nothing', async () => {
+    const f = fakeBoard()
+    const relayingBoard: BoardLike = {
+      ...f.board,
+      call: async (tool, args) =>
+        // SAFETY: the fake board answers submit_ruling in the pre-ADR-0023 relayed shape.
+        tool === 'submit_ruling' ? ({ relayed: true, txHash: '0xrelayed' } as never) : f.board.call(tool, args),
+    }
+    const sendRuling = vi.fn(async () => ({ txHash: '0xtx' as const }))
+    const result = await arbitrateOnce({
+      ...deps(relayingBoard, {}),
+      propose: async () => ({ forWorker: true, slashLoser: false, reason }),
+      sendRuling,
+    })
+    expect(result.outcomes[0]).toMatchObject({ result: 'ruled', txHash: '0xrelayed' })
+    expect(sendRuling).not.toHaveBeenCalled()
+  })
+
+  it('sends the ruling with the evaluator gas floor, not an estimate', async () => {
+    const f = fakeBoard()
+    const sendRuling = vi.fn(async (_send: { transaction: { gas?: string } }) => ({ txHash: '0xtx' as const }))
+    await arbitrateOnce({
+      ...deps(f.board, {}),
+      propose: async () => ({ forWorker: true, slashLoser: false, reason }),
+      sendRuling,
+    })
+    expect(sendRuling.mock.calls[0]?.[0].transaction.gas).toBe(sdk.V1_GAS.evaluator.toString())
+  })
+
   it('passes public thread context through, defaulting to an empty thread', async () => {
     const thread: DisputeThread = [
       { id: 1, author: account.address, roles: ['worker'], text: 'Context', hidden: false, replyTo: null, at: NOW },

@@ -3,7 +3,7 @@
 `@sidequest/arbiter` owns the arbiter and the Commons moderator and maintainer and runs as the `daemon` runtime class declared in [tools/graph.ts](../../tools/graph.ts).
 
 - **Check**: `bun run check:files apps/arbiter`; `bun run --cwd apps/arbiter typecheck`; `bun run --cwd apps/arbiter test`.
-- **Test floor**: 8 files / 52 passed — recorded from `bun --no-env-file run --cwd apps/arbiter test` on 12 October 2026 (funded ruling sends). Unit tests use fakes and temporary homes; do not set an RPC variable or run the keygen CLI for this suite. The board suite floor after the thread change is 431 passed / 52 skipped across 54 files; its instruction file belongs to the coordinator.
+- **Test floor**: 8 files / 54 passed — recorded from `bun --no-env-file run --cwd apps/arbiter test` on 12 October 2026 (funded ruling sends, the ruling gas floor and an older relaying board). Unit tests use fakes and temporary homes; do not set an RPC variable or run the keygen CLI for this suite. The board suite floor after the thread change is 431 passed / 52 skipped across 54 files; its instruction file belongs to the coordinator.
 - **Contract**: Proposal, deterministic signing and journaled MON-funded sends for named v1 arbitrators.
 - **Landmines**: A model proposes only; validate offer, cutoff, nonce and named arbitrator before signing; only send a locally rebuilt ruleWithSignature for the validated decision; the arbitrator key pays MON.
 - **Read**: [protocol](../../docs/protocol.md), [ADR-0011](../../docs/adr/0011-sidequest-v1.md).

@@ -222,10 +222,13 @@ async function submitAndSendRuling(
     landed: boolean
     nonce: string
     transactions: sdk.TxRequest[]
+    relayed?: boolean
   }>('submit_ruling', {
     taskId: taskId,
     signature,
   })
+  // A board from before ADR-0023 (prod until it is promoted) relays the ruling itself and answers with its hash.
+  if (submitted.relayed === true) return { txHash: submitted.txHash ?? null }
   const transaction: sdk.TxRequest = {
     description: 'Send the signed ruling',
     chainId,
@@ -251,7 +254,12 @@ async function submitAndSendRuling(
   if (!submitted.landed && deps.sendRuling === undefined) throw new Error('ruling needs the funded arbitrator wallet')
   const sent = submitted.landed
     ? { txHash: submitted.txHash }
-    : await deps.sendRuling!({ taskId: taskId, nonce: submitted.nonce, transaction: { ...transaction, value: '0' } })
+    : await deps.sendRuling!({
+        taskId: taskId,
+        nonce: submitted.nonce,
+        // The evaluator pushes payouts and reverts with TransferGasTooLow below its reserve, which an estimate misses.
+        transaction: { ...transaction, value: '0', gas: sdk.V1_GAS.evaluator.toString() },
+      })
   if (sent.txHash !== null) await deps.board.call('report_transaction', { taskId: taskId, txHash: sent.txHash })
 
   return sent
