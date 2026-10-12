@@ -970,8 +970,7 @@
   },
   "packages/board/src/agent-lifecycle.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 11,
-    "complexity(complexity)": 1,
-    "typescript(no-unnecessary-type-assertion)": 1
+    "complexity(complexity)": 1
   },
   "packages/board/src/agent-onboarding.fork.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 5
@@ -1558,10 +1557,6 @@
   "packages/sdk/src/delegation/delegation.test.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 8
-  },
-  "packages/sdk/src/delegation/grants.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 3,
-    "complexity(complexity)": 2
   },
   "packages/sdk/src/delegation/index.ts": {
     "anti-slop(no-runtime-typeof)": 1,
