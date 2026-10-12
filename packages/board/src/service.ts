@@ -237,6 +237,19 @@ export interface Caller {
 const SESSION_SECONDS = 24 * 3600
 const NONCE_SECONDS = 10 * 60
 
+/**
+ * Deadlines arrive as unix seconds once the tool layer has resolved a duration or date. A missing one would reach the
+ * horizon check as NaN and come back as an unrelated refusal ("must end within the unstake period"), so say so first.
+ */
+function requireDeadlines(deadlines: Readonly<Record<string, number | undefined>>): void {
+  const missing = Object.keys(deadlines).filter((field) => !Number.isFinite(deadlines[field]))
+  if (missing.length > 0)
+    throw new BoardError(
+      'invalid',
+      `${missing.join(' and ')} ${missing.length === 1 ? 'is' : 'are'} required: unix seconds, a duration from now ("3d") or an ISO date with a zone`,
+    )
+}
+
 function randomId(bytes = 16): string {
   return [...crypto.getRandomValues(new Uint8Array(bytes))].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
@@ -973,6 +986,7 @@ export class Board {
       if (task.job_id === null) await sidequest.requireOfferHorizon(this.#taskCtx(task), parseTerms(task.terms_json))
       return saved
     }
+    requireDeadlines({ deliveryDeadline: input.deliveryDeadline })
     const tags = input.tags === undefined ? [] : normalizeTags(input.tags)
     const stack = input.stack ?? 'main'
     const ctx = this.#ctx(stack)
@@ -994,7 +1008,6 @@ export class Board {
     const creatorBond = input.creatorBond ?? formatUnits(bondPolicy.minimumCreatorBond, 18)
     const workerBond = input.workerBond ?? '0'
     await sidequest.requireCreatorBond(ctx, parseUnits(creatorBond, 18))
-    await this.#requireHostedBacking(ctx, creator, poster, parseUnits(creatorBond, 18))
     const token = await this.#resolveToken(ctx, input.token)
     const decimals = await ctx.publicClient.readContract({ address: token, abi: erc20Abi, functionName: 'decimals' })
     const [windows, arbitrator, block] = await Promise.all([
@@ -1071,6 +1084,8 @@ export class Board {
         )
       invited = { worker, agentId }
     }
+    // Last, once the arguments are known good: a short hosted poster asks its operator, then retries the same call.
+    await this.#requireHostedBacking(ctx, creator, poster, parseUnits(creatorBond, 18))
     const symbol = await ctx.publicClient.readContract({ address: token, abi: erc20Abi, functionName: 'symbol' })
     // "mEUR"/"mUSD" read as millions to a model; say what the unit is.
     const unit =
@@ -1740,6 +1755,7 @@ export class Board {
     const creator = this.#requireCaller(caller)
     const saved = this.#idempotent<QuotePreparation>(creator, 'request_quotes', input.idempotencyKey)
     if (saved !== undefined) return this.#withRequestDeadlines(saved)
+    requireDeadlines({ deliveryDeadline: input.deliveryDeadline, quoteDeadline: input.quoteDeadline })
     const tags = input.tags === undefined ? [] : normalizeTags(input.tags)
     const stack = input.stack ?? 'main'
     const ctx = this.#ctx(stack)
@@ -1749,7 +1765,6 @@ export class Board {
     const creatorBond = input.creatorBond ?? formatUnits(bondPolicy.minimumCreatorBond, 18)
     const workerBond = input.workerBond ?? '0'
     await sidequest.requireCreatorBond(ctx, parseUnits(creatorBond, 18))
-    await this.#requireHostedBacking(ctx, creator, poster, parseUnits(creatorBond, 18))
     const budget = input.budget === undefined ? undefined : await this.#requestBudget(ctx, input.budget)
     if (budget !== undefined && input.tokens.length > 0) {
       const named = await Promise.all(input.tokens.map((t) => this.#resolveToken(ctx, t)))
@@ -1837,6 +1852,8 @@ export class Board {
         )
       invited = { worker, agentId }
     }
+    // Last, once the arguments are known good: a short hosted poster asks its operator, then retries the same call.
+    await this.#requireHostedBacking(ctx, creator, poster, parseUnits(creatorBond, 18))
     const requestJson = canonicalJson(request)
     const requestHash = sdk.hashText(requestJson)
     const id = randomId(8)

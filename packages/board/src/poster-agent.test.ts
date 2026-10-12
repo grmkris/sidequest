@@ -164,3 +164,44 @@ it('leaves a wallet that is not a hosted agent to stake in its own publish batch
   await f.request(selfRun, { agentId: '2081' })
   expect(Object.keys(await f.agents())).toHaveLength(2)
 })
+
+it('names a missing deadline before anything else, so an unbacked agent is not sent to its operator first', async () => {
+  const f = fixture({ require: true, available: 0n })
+  const token = sdk.context('monad-testnet', 'main', 'http://127.0.0.1:1').deployment.rewardTokens[0]!
+  // The wire's `required` is not enforced, so an omitted deadline reaches the board as no number at all.
+  const omitted = Number.NaN
+  const noDeadline = await f.board
+    .requestQuotes(
+      { address: hosted },
+      {
+        title: 'T',
+        brief: 'B',
+        acceptanceCriteria: ['ok'],
+        tokens: [token],
+        quoteDeadline: omitted,
+        deliveryDeadline: omitted,
+      },
+    )
+    .catch((error: unknown) => error)
+  expect(noDeadline).toMatchObject({
+    code: 'invalid',
+    message: expect.stringMatching(/^deliveryDeadline and quoteDeadline are required/),
+  })
+  // A bad argument is refused as such; backing is checked last, once the call would otherwise succeed.
+  const late = await f.request(hosted, {}).catch((error: unknown) => error)
+  expect(late).toMatchObject({ reason: 'insufficient-backing' })
+  const pastQuote = await f.board
+    .requestQuotes(
+      { address: hosted },
+      {
+        title: 'T',
+        brief: 'B',
+        acceptanceCriteria: ['ok'],
+        tokens: [token],
+        quoteDeadline: 500,
+        deliveryDeadline: 200_000,
+      },
+    )
+    .catch((error: unknown) => error)
+  expect(pastQuote).toMatchObject({ code: 'invalid', message: expect.stringContaining('quote deadline') })
+})
