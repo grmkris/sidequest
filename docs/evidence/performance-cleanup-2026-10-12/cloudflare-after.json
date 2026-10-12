@@ -1,0 +1,96 @@
+{
+  "stage": "dev",
+  "sha": "2b62722f02e3fd6d267ae12136ad10c6364252be",
+  "workers": [
+    {
+      "name": "sidequest-api-dev",
+      "success": true,
+      "latestDeployment": {
+        "id": "3f5f151d-6488-45b9-9a6c-a8d272260a79",
+        "created_on": "2026-10-12T13:58:13.510014Z",
+        "versions": [
+          {
+            "version_id": "221358c5-1ec2-4c55-a4ff-289d6d794858",
+            "percentage": 100
+          }
+        ]
+      },
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "redact_query_string": false,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": true
+        },
+        "traces": {
+          "enabled": true,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      }
+    },
+    {
+      "name": "sidequest-indexer-dev",
+      "success": true,
+      "latestDeployment": {
+        "id": "cf411225-95f3-4d9b-92fa-04b37b57211b",
+        "created_on": "2026-10-12T13:43:42.568858Z",
+        "versions": [
+          {
+            "version_id": "cb125880-d068-426f-8c9f-695481bb102b",
+            "percentage": 100
+          }
+        ]
+      },
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "redact_query_string": false,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": true
+        },
+        "traces": {
+          "enabled": true,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      }
+    },
+    {
+      "name": "sidequest-explore-dev",
+      "success": true,
+      "latestDeployment": {
+        "id": "35b529ea-80c5-4df5-9123-b6fc4017ffa3",
+        "created_on": "2026-10-12T13:58:34.121649Z",
+        "versions": [
+          {
+            "version_id": "b94b3713-6353-475e-87d1-6f9705fca56a",
+            "percentage": 100
+          }
+        ]
+      },
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "redact_query_string": false,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": true
+        },
+        "traces": {
+          "enabled": true,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      }
+    }
+  ]
+}

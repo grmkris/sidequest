@@ -15,7 +15,8 @@ Cloudflare edge caches, API caches, RPC caches, server load and chain state are 
 Conditions are Chromium, anonymous, 390 × 844, reduced motion, no CPU or network throttle. Critical-data readiness
 requires successful route-specific reads, no pending app/RPC reads, a visible heading, no visible skeleton or error
 state, and 500 ms of quiet. Observation lasts at least five seconds and is capped at twenty seconds. Incomplete loads
-have a null readiness time and must be reported separately, never silently dropped. Paint/LCP is a separate metric.
+must be reported separately, never silently dropped. Normalize null readiness or readiness at/above twenty seconds
+as incomplete: a browser evaluation can finish after the loop deadline. Preserve raw values. Paint/LCP is a separate metric.
 CLS is the largest layout-shift session window (one-second gaps, five-second maximum).
 
 Keep the raw JSON, browser version, date, sample counts, supplied deployed SHA and successful CI URL together.

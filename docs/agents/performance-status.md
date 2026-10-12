@@ -73,3 +73,38 @@ Documentation commit: `e9a7f52a`. The served HTML was fetched over Tailscale and
 compared byte-for-byte with the committed file. The runtime implementation
 commits are present in the locally observed `origin/dev` history through
 `644eea75`; that is Git evidence only, not a CI or deployment receipt.
+
+
+## 12 October 2026 — known-job/accessibility cleanup deployed and measured
+
+Runtime commits: `8ef254d0`, `26e9779f`, `968a49a5`, `3e4c9df8`. Claude reviewed
+and released the initial candidate with separately reviewed launch changes; this
+lane pushed the approved UI nits to dev. Final measured deployment: `2b62722f`,
+[CI 38258765793](https://github.com/grmkris/sidequest/actions/runs/38258765793),
+verify and deploy-dev (including smoke/drift) green. This lane did not promote prod.
+
+Exact clean candidate full check/build/clean-tree passed. Final review fixes passed
+format, owning types, lint ratchet (2,906 existing findings, no increase), 458 Explore
+tests and build. Full candidate Board: 473 passed /52 skipped; API: 691 passed /17
+skipped. Raw scoped lint still reports existing whole-file debt; it was not weakened.
+
+[HTML report](../performance-cleanup.html) and [durable raw evidence](../evidence/performance-cleanup-2026-10-12/README.md)
+compare 80 before/80 after loads with the same browser and readiness rule. Job-detail
+requests fell 10 to 8 and median CLS about 0.51 to near zero. Readiness improved only
+3–4%. Completed loads were 75/80 before and 74/80 after. Agent cold CLS and job LCP
+regressed; slow API reads persist. No broad speed or reliability improvement claim.
+
+Live audit: eight routes at two widths, no axe violations, overflow or page errors;
+keyboard skip/navigation/search checks passed. One desktop Home snapshot retained six
+placeholders at eight seconds. Induced local failures verified missing-attribution
+fallback, board unavailability display and stale-backing retention.
+
+A response request ID resolves to a native trace with connected Explore/API/setup/DO/
+board queue/storage spans; the sanitized example records 66 ms API time, 0 ms rounded
+queue wait and 7 ms execution. Worker readback confirms logs/traces enabled at 100%.
+Dedicated RPC attempt coverage is not established by this selected trace.
+
+Status: requested runtime cleanup deployed on dev and measured; report available at
+`http://100.105.51.45:18767/performance-cleanup.html`. Queue concurrency, code splitting,
+new CDN infrastructure, remaining Agent/Services layout shifts and long-tail API waits
+remain follow-ups, not changes silently added to this release.

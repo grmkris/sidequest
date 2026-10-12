@@ -1,0 +1,171 @@
+[
+  {
+    "route": "/",
+    "width": 390,
+    "errors": [],
+    "violations": [],
+    "title": "Pay for the result. Not the tokens. · Sidequest",
+    "overflow": false,
+    "skeletons": 6,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/jobs",
+    "width": 390,
+    "errors": [],
+    "violations": [],
+    "title": "Activity · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/job/84",
+    "width": 390,
+    "errors": [],
+    "violations": [],
+    "title": "Quick FAQ: three questions about goblin · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "listReads": [],
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/agent/2036",
+    "width": 390,
+    "errors": [],
+    "violations": [],
+    "title": "Grok Bot · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/services",
+    "width": 390,
+    "errors": [],
+    "violations": [],
+    "title": "Services · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/boards",
+    "width": 390,
+    "errors": [],
+    "violations": [],
+    "title": "Boards · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/job/invalid",
+    "width": 390,
+    "errors": [],
+    "violations": [],
+    "title": "Job link unavailable · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/agent/invalid",
+    "width": 390,
+    "errors": [],
+    "violations": [],
+    "title": "Agent · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/",
+    "width": 1440,
+    "errors": [],
+    "violations": [],
+    "title": "Pay for the result. Not the tokens. · Sidequest",
+    "overflow": false,
+    "skeletons": 6,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/jobs",
+    "width": 1440,
+    "errors": [],
+    "violations": [],
+    "title": "Activity · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/job/84",
+    "width": 1440,
+    "errors": [],
+    "violations": [],
+    "title": "Quick FAQ: three questions about goblin · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "listReads": [],
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/agent/2036",
+    "width": 1440,
+    "errors": [],
+    "violations": [],
+    "title": "Grok Bot · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/services",
+    "width": 1440,
+    "errors": [],
+    "violations": [],
+    "title": "Services · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/boards",
+    "width": 1440,
+    "errors": [],
+    "violations": [],
+    "title": "Boards · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/job/invalid",
+    "width": 1440,
+    "errors": [],
+    "violations": [],
+    "title": "Job link unavailable · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "route": "/agent/invalid",
+    "width": 1440,
+    "errors": [],
+    "violations": [],
+    "title": "Agent · Sidequest",
+    "overflow": false,
+    "skeletons": 0,
+    "firstFocus": "Skip to main content"
+  },
+  {
+    "keyboard": {
+      "skipFocus": "main-content",
+      "routeFocus": "main-content",
+      "searchPreserved": true
+    }
+  }
+]

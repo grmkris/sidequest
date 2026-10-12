@@ -1,0 +1,26 @@
+{
+  "kind": "local candidate with induced read failures, no backend writes",
+  "rows": [
+    {
+      "scenario": "keyboard skip and malformed legacy link",
+      "pass": true
+    },
+    {
+      "scenario": "simulated missing index attribution uses board fallback",
+      "pass": true,
+      "reads": [
+        "/api/task_index"
+      ]
+    },
+    {
+      "scenario": "simulated board unavailable retains indexed job display",
+      "pass": true,
+      "title": "Job #84 · Sidequest"
+    },
+    {
+      "scenario": "simulated backing refresh failure retains cached backing",
+      "pass": true,
+      "failedReads": 1
+    }
+  ]
+}

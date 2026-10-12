@@ -1,0 +1,391 @@
+{
+  "sha": "2b62722f02e3fd6d267ae12136ad10c6364252be",
+  "request": {
+    "requestId": "e934ff5c-1430-4d6a-af79-6b1b8ef97bd7",
+    "serverTiming": "api;dur=66.0, cfExtPri",
+    "start": "2026-10-12T14:00:58.608Z",
+    "samples": 69
+  },
+  "traceId": "e83aeb6c33b6f4fecb893f3df09c35c8",
+  "success": true,
+  "status": 200,
+  "count": 52,
+  "spans": [
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "419d0b082c2610b9",
+      "parentSpanId": "0ec511e5851cb206",
+      "startTime": 1791814101471,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "186fe0691b0c7bff",
+      "parentSpanId": "0ec511e5851cb206",
+      "startTime": 1791814101471,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "607193ce350496b6",
+      "parentSpanId": "0ec511e5851cb206",
+      "startTime": 1791814101471,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "2fc050f6745d3ca9",
+      "parentSpanId": "0ec511e5851cb206",
+      "startTime": 1791814101471,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "5ed44d1bdcf7a338",
+      "parentSpanId": "0ec511e5851cb206",
+      "startTime": 1791814101471,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "6f3159f66e29e2b9",
+      "parentSpanId": "0ec511e5851cb206",
+      "startTime": 1791814101471,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "57afb8298c9ac790",
+      "parentSpanId": "0ec511e5851cb206",
+      "startTime": 1791814101471,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "1032537e09ea65c5",
+      "parentSpanId": "0ec511e5851cb206",
+      "startTime": 1791814101471,
+      "durationMS": 0
+    },
+    {
+      "name": "fetch",
+      "service": "sidequest-api-dev",
+      "spanId": "84e2df8a8d8439ef",
+      "parentSpanId": "0ec511e5851cb206",
+      "startTime": 1791814101464,
+      "durationMS": 7
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "ebabd13914906415",
+      "parentSpanId": "0ec511e5851cb206",
+      "startTime": 1791814101463,
+      "durationMS": 0
+    },
+    {
+      "name": "board.queue.execute",
+      "service": "sidequest-api-dev",
+      "spanId": "0ec511e5851cb206",
+      "parentSpanId": "11b3e0fc3063ccf4",
+      "startTime": 1791814101463,
+      "durationMS": 7
+    },
+    {
+      "name": "board.queue.wait",
+      "service": "sidequest-api-dev",
+      "spanId": "3be98e2483d3d760",
+      "parentSpanId": "11b3e0fc3063ccf4",
+      "startTime": 1791814101463,
+      "durationMS": 0
+    },
+    {
+      "name": "jsRpcCall",
+      "service": "sidequest-api-dev",
+      "spanId": "11b3e0fc3063ccf4",
+      "parentSpanId": "ebb6403937814e80",
+      "startTime": 1791814101463,
+      "durationMS": 7
+    },
+    {
+      "name": "jsrpc",
+      "service": "sidequest-api-dev",
+      "spanId": "ebb6403937814e80",
+      "parentSpanId": "94ea88149410cd57",
+      "startTime": 1791814101463,
+      "durationMS": 9
+    },
+    {
+      "name": "jsRpcCall",
+      "service": "sidequest-api-dev",
+      "spanId": "94ea88149410cd57",
+      "parentSpanId": "90c0f1e068e09b8d",
+      "startTime": 1791814101451,
+      "durationMS": 33
+    },
+    {
+      "name": "jsRpcSession",
+      "service": "sidequest-api-dev",
+      "spanId": "90c0f1e068e09b8d",
+      "parentSpanId": "3724a4f72b444003",
+      "startTime": 1791814101451,
+      "durationMS": 33
+    },
+    {
+      "name": "durable_object_subrequest",
+      "service": "sidequest-api-dev",
+      "spanId": "3724a4f72b444003",
+      "parentSpanId": "65f20e613f6f1e8f",
+      "startTime": 1791814101451,
+      "durationMS": 33
+    },
+    {
+      "name": "api.tenant",
+      "service": "sidequest-api-dev",
+      "spanId": "52c43352c2eb907c",
+      "parentSpanId": "65f20e613f6f1e8f",
+      "startTime": 1791814101451,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "d3668986ef3123e4",
+      "parentSpanId": "10a5336c165472d5",
+      "startTime": 1791814101442,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "097acc5b3bca5440",
+      "parentSpanId": "10a5336c165472d5",
+      "startTime": 1791814101442,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "0e6c71ac44886dfc",
+      "parentSpanId": "10a5336c165472d5",
+      "startTime": 1791814101442,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "96a27a73458608a4",
+      "parentSpanId": "10a5336c165472d5",
+      "startTime": 1791814101442,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "00463e849123f47b",
+      "parentSpanId": "10a5336c165472d5",
+      "startTime": 1791814101442,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "ff1e9a3f5f9d4a9f",
+      "parentSpanId": "10a5336c165472d5",
+      "startTime": 1791814101442,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "905bd1efe41bd410",
+      "parentSpanId": "10a5336c165472d5",
+      "startTime": 1791814101442,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "9d3c038c6f6d241e",
+      "parentSpanId": "10a5336c165472d5",
+      "startTime": 1791814101442,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "e36794ddcd0a6938",
+      "parentSpanId": "10a5336c165472d5",
+      "startTime": 1791814101442,
+      "durationMS": 0
+    },
+    {
+      "name": "jsRpcCall",
+      "service": "sidequest-api-dev",
+      "spanId": "10a5336c165472d5",
+      "parentSpanId": "8e562ac08522682f",
+      "startTime": 1791814101442,
+      "durationMS": 0
+    },
+    {
+      "name": "jsrpc",
+      "service": "sidequest-api-dev",
+      "spanId": "8e562ac08522682f",
+      "parentSpanId": "f1438c7e2f016a68",
+      "startTime": 1791814101442,
+      "durationMS": 1
+    },
+    {
+      "name": "jsRpcCall",
+      "service": "sidequest-api-dev",
+      "spanId": "f1438c7e2f016a68",
+      "parentSpanId": "e1bf14ad3be7c28c",
+      "startTime": 1791814101428,
+      "durationMS": 22
+    },
+    {
+      "name": "jsRpcSession",
+      "service": "sidequest-api-dev",
+      "spanId": "e1bf14ad3be7c28c",
+      "parentSpanId": "9905a4152db701fd",
+      "startTime": 1791814101428,
+      "durationMS": 22
+    },
+    {
+      "name": "durable_object_subrequest",
+      "service": "sidequest-api-dev",
+      "spanId": "9905a4152db701fd",
+      "parentSpanId": "96af6836b3073e86",
+      "startTime": 1791814101428,
+      "durationMS": 56
+    },
+    {
+      "name": "api.management-migrations",
+      "service": "sidequest-api-dev",
+      "spanId": "96af6836b3073e86",
+      "parentSpanId": "65f20e613f6f1e8f",
+      "startTime": 1791814101428,
+      "durationMS": 23
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "49f5a56e75790366",
+      "parentSpanId": "f6048911653232e5",
+      "startTime": 1791814101423,
+      "durationMS": 0
+    },
+    {
+      "name": "durable_object_storage_exec",
+      "service": "sidequest-api-dev",
+      "spanId": "0c86d38be3ded4be",
+      "parentSpanId": "f6048911653232e5",
+      "startTime": 1791814101423,
+      "durationMS": 0
+    },
+    {
+      "name": "jsRpcCall",
+      "service": "sidequest-api-dev",
+      "spanId": "f6048911653232e5",
+      "parentSpanId": "448709cb19d953dc",
+      "startTime": 1791814101423,
+      "durationMS": 0
+    },
+    {
+      "name": "jsrpc",
+      "service": "sidequest-api-dev",
+      "spanId": "448709cb19d953dc",
+      "parentSpanId": "a2371590e8954df1",
+      "startTime": 1791814101423,
+      "durationMS": 2
+    },
+    {
+      "name": "jsRpcCall",
+      "service": "sidequest-api-dev",
+      "spanId": "a2371590e8954df1",
+      "parentSpanId": "cf58d43356059a7d",
+      "startTime": 1791814101419,
+      "durationMS": 8
+    },
+    {
+      "name": "jsRpcSession",
+      "service": "sidequest-api-dev",
+      "spanId": "cf58d43356059a7d",
+      "parentSpanId": "aaff20edf1d2d408",
+      "startTime": 1791814101419,
+      "durationMS": 8
+    },
+    {
+      "name": "durable_object_subrequest",
+      "service": "sidequest-api-dev",
+      "spanId": "aaff20edf1d2d408",
+      "parentSpanId": "6675ac79d268ff00",
+      "startTime": 1791814101419,
+      "durationMS": 31
+    },
+    {
+      "name": "api.retire-fleet",
+      "service": "sidequest-api-dev",
+      "spanId": "6675ac79d268ff00",
+      "parentSpanId": "65f20e613f6f1e8f",
+      "startTime": 1791814101419,
+      "durationMS": 8
+    },
+    {
+      "name": "api.migrations",
+      "service": "sidequest-api-dev",
+      "spanId": "391a481f1339df04",
+      "parentSpanId": "65f20e613f6f1e8f",
+      "startTime": 1791814101419,
+      "durationMS": 0
+    },
+    {
+      "name": "api.request",
+      "service": "sidequest-api-dev",
+      "spanId": "65f20e613f6f1e8f",
+      "parentSpanId": "27c3c7ca5b0e40b4",
+      "startTime": 1791814101419,
+      "durationMS": 65
+    },
+    {
+      "name": "http.server POST",
+      "service": "sidequest-api-dev",
+      "spanId": "27c3c7ca5b0e40b4",
+      "parentSpanId": "53bcdc1223b912e0",
+      "startTime": 1791814101419,
+      "durationMS": 65
+    },
+    {
+      "name": "fetch",
+      "service": "sidequest-explore-dev",
+      "spanId": "ffb1b965e74c7895",
+      "parentSpanId": "873819d724875eb1",
+      "startTime": 1791814101419,
+      "durationMS": 65
+    },
+    {
+      "name": "POST",
+      "service": "sidequest-api-dev",
+      "spanId": "53bcdc1223b912e0",
+      "parentSpanId": "ffb1b965e74c7895",
+      "startTime": 1791814101419,
+      "durationMS": 66
+    },
+    {
+      "name": "POST",
+      "service": "sidequest-explore-dev",
+      "spanId": "873819d724875eb1",
+      "startTime": 1791814101419,
+      "durationMS": 66
+    }
+  ],
+  "errors": []
+}

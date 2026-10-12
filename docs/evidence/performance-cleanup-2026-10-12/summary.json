@@ -1,0 +1,590 @@
+{
+  "before": {
+    "schema": "sidequest.browser-performance.v2",
+    "startedAt": "2026-10-12T13:05:28.321Z",
+    "origin": "https://dev.sidequest.exchange",
+    "sha": "13fb56580ba390620ed7e532c3022b7fd10a6d3a",
+    "ci": "https://github.com/grmkris/sidequest/actions/runs/38251508452",
+    "browser": "153.0.8010.12",
+    "samples": 10,
+    "conditions": {
+      "viewport": "390x844",
+      "reducedMotion": true,
+      "cpuThrottle": null,
+      "networkThrottle": null,
+      "anonymous": true,
+      "timeoutMs": 20000,
+      "readiness": "Required successful route reads, no pending app/RPC reads, visible h1, no visible skeleton/error, 500ms quiet. Minimum 5s observation; 20s cap.",
+      "warm": "Same-context reload; resource cache reused, React Query memory recreated. No edge/RPC cache reset."
+    },
+    "finishedAt": "2026-10-12T13:14:17.700Z",
+    "groups": [
+      {
+        "route": "/jobs",
+        "kind": "cold",
+        "n": 10,
+        "completed": 9,
+        "readyMs": {
+          "median": 4331.0561790000065,
+          "p75": 4975.899299999997
+        },
+        "cappedReadyMs": {
+          "median": 4571.973500499997,
+          "p75": 7454.147866000014
+        },
+        "lcp": {
+          "median": 4064.0,
+          "p75": 5164
+        },
+        "cls": {
+          "median": 0.06521918639374447,
+          "p75": 0.09961657335054072
+        },
+        "reads": {
+          "median": 16.0,
+          "p75": 16
+        },
+        "scriptTransferBytes": {
+          "median": 1349623.0,
+          "p75": 1349858
+        },
+        "listReads": 21,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 0
+      },
+      {
+        "route": "/jobs",
+        "kind": "warm",
+        "n": 10,
+        "completed": 9,
+        "readyMs": {
+          "median": 3230.1936560000013,
+          "p75": 3537.3469550000154
+        },
+        "cappedReadyMs": {
+          "median": 3294.5726155000075,
+          "p75": 3885.116664999994
+        },
+        "lcp": {
+          "median": 3302.0,
+          "p75": 3588
+        },
+        "cls": {
+          "median": 0.03533818830148003,
+          "p75": 0.042529252414698855
+        },
+        "reads": {
+          "median": 15.0,
+          "p75": 15
+        },
+        "scriptTransferBytes": {
+          "median": 15900.0,
+          "p75": 15900
+        },
+        "listReads": 22,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 1
+      },
+      {
+        "route": "/job/84",
+        "kind": "cold",
+        "n": 10,
+        "completed": 8,
+        "readyMs": {
+          "median": 2412.48881650003,
+          "p75": 2750.631546999997
+        },
+        "cappedReadyMs": {
+          "median": 2593.521284500006,
+          "p75": 9803.074851000012
+        },
+        "lcp": {
+          "median": 1158.0,
+          "p75": 1240
+        },
+        "cls": {
+          "median": 0.5065068823398812,
+          "p75": 0.554631032886598
+        },
+        "reads": {
+          "median": 10.0,
+          "p75": 10
+        },
+        "scriptTransferBytes": {
+          "median": 1349648.0,
+          "p75": 1349852
+        },
+        "listReads": 22,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 3
+      },
+      {
+        "route": "/job/84",
+        "kind": "warm",
+        "n": 10,
+        "completed": 10,
+        "readyMs": {
+          "median": 2055.1066555000143,
+          "p75": 2799.508372999997
+        },
+        "cappedReadyMs": {
+          "median": 2055.1066555000143,
+          "p75": 2799.508372999997
+        },
+        "lcp": {
+          "median": 860.0,
+          "p75": 940
+        },
+        "cls": {
+          "median": 0.5304519637475531,
+          "p75": 0.5545873858630672
+        },
+        "reads": {
+          "median": 10.0,
+          "p75": 10
+        },
+        "scriptTransferBytes": {
+          "median": 15900.0,
+          "p75": 15900
+        },
+        "listReads": 20,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 0
+      },
+      {
+        "route": "/agent/2036",
+        "kind": "cold",
+        "n": 10,
+        "completed": 9,
+        "readyMs": {
+          "median": 3134.5762969999923,
+          "p75": 5463.411536
+        },
+        "cappedReadyMs": {
+          "median": 3318.241087999995,
+          "p75": 8247.408552999987
+        },
+        "lcp": {
+          "median": 1156.0,
+          "p75": 1252
+        },
+        "cls": {
+          "median": 0.46207837956151776,
+          "p75": 0.6308564496752901
+        },
+        "reads": {
+          "median": 12.0,
+          "p75": 12
+        },
+        "scriptTransferBytes": {
+          "median": 1349579.5,
+          "p75": 1350086
+        },
+        "listReads": 21,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 0
+      },
+      {
+        "route": "/agent/2036",
+        "kind": "warm",
+        "n": 10,
+        "completed": 10,
+        "readyMs": {
+          "median": 3591.7450259999896,
+          "p75": 5321.511325999978
+        },
+        "cappedReadyMs": {
+          "median": 3591.7450259999896,
+          "p75": 5321.511325999978
+        },
+        "lcp": {
+          "median": 828.0,
+          "p75": 992
+        },
+        "cls": {
+          "median": 0.3931179912792523,
+          "p75": 0.47441357262116
+        },
+        "reads": {
+          "median": 12.0,
+          "p75": 12
+        },
+        "scriptTransferBytes": {
+          "median": 15900.0,
+          "p75": 15900
+        },
+        "listReads": 21,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 0
+      },
+      {
+        "route": "/services",
+        "kind": "cold",
+        "n": 10,
+        "completed": 10,
+        "readyMs": {
+          "median": 2601.0538925000074,
+          "p75": 3027.9173319999827
+        },
+        "cappedReadyMs": {
+          "median": 2601.0538925000074,
+          "p75": 3027.9173319999827
+        },
+        "lcp": {
+          "median": 878.0,
+          "p75": 980
+        },
+        "cls": {
+          "median": 0.4375942085940861,
+          "p75": 0.4375942085940861
+        },
+        "reads": {
+          "median": 6.0,
+          "p75": 6
+        },
+        "scriptTransferBytes": {
+          "median": 1349537.5,
+          "p75": 1350174
+        },
+        "listReads": 0,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 0
+      },
+      {
+        "route": "/services",
+        "kind": "warm",
+        "n": 10,
+        "completed": 10,
+        "readyMs": {
+          "median": 2071.752835499996,
+          "p75": 2336.443307999987
+        },
+        "cappedReadyMs": {
+          "median": 2071.752835499996,
+          "p75": 2336.443307999987
+        },
+        "lcp": {
+          "median": 522.0,
+          "p75": 596
+        },
+        "cls": {
+          "median": 0.43747721472839957,
+          "p75": 0.43747721472839957
+        },
+        "reads": {
+          "median": 6.0,
+          "p75": 6
+        },
+        "scriptTransferBytes": {
+          "median": 15900.0,
+          "p75": 15900
+        },
+        "listReads": 0,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 0
+      }
+    ]
+  },
+  "after": {
+    "schema": "sidequest.browser-performance.v2",
+    "startedAt": "2026-10-12T14:00:58.608Z",
+    "origin": "https://dev.sidequest.exchange",
+    "sha": "2b62722f02e3fd6d267ae12136ad10c6364252be",
+    "ci": "https://github.com/grmkris/sidequest/actions/runs/38258765793",
+    "browser": "153.0.8010.12",
+    "samples": 10,
+    "conditions": {
+      "viewport": "390x844",
+      "reducedMotion": true,
+      "cpuThrottle": null,
+      "networkThrottle": null,
+      "anonymous": true,
+      "timeoutMs": 20000,
+      "readiness": "Required successful route reads, no pending app/RPC reads, visible h1, no visible skeleton/error, 500ms quiet. Minimum 5s observation; 20s cap.",
+      "warm": "Same-context reload; resource cache reused, React Query memory recreated. No edge/RPC cache reset."
+    },
+    "finishedAt": "2026-10-12T14:09:42.887Z",
+    "groups": [
+      {
+        "route": "/jobs",
+        "kind": "cold",
+        "n": 10,
+        "completed": 9,
+        "readyMs": {
+          "median": 3634.516433,
+          "p75": 5236.273001000052
+        },
+        "cappedReadyMs": {
+          "median": 3758.714537500005,
+          "p75": 5294.498837000021
+        },
+        "lcp": {
+          "median": 3448.0,
+          "p75": 3836
+        },
+        "cls": {
+          "median": 0.05908790563407776,
+          "p75": 0.10452148169219624
+        },
+        "reads": {
+          "median": 15.5,
+          "p75": 16
+        },
+        "scriptTransferBytes": {
+          "median": 1350920.5,
+          "p75": 1351551
+        },
+        "listReads": 20,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 2
+      },
+      {
+        "route": "/jobs",
+        "kind": "warm",
+        "n": 10,
+        "completed": 9,
+        "readyMs": {
+          "median": 2713.794203999976,
+          "p75": 2961.9776509999647
+        },
+        "cappedReadyMs": {
+          "median": 2773.205139999988,
+          "p75": 3076.0763910000096
+        },
+        "lcp": {
+          "median": 2848.0,
+          "p75": 2988
+        },
+        "cls": {
+          "median": 0.04763465607324317,
+          "p75": 0.09961657335054072
+        },
+        "reads": {
+          "median": 15.0,
+          "p75": 16
+        },
+        "scriptTransferBytes": {
+          "median": 15900.0,
+          "p75": 15900
+        },
+        "listReads": 22,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 1
+      },
+      {
+        "route": "/job/84",
+        "kind": "cold",
+        "n": 10,
+        "completed": 9,
+        "readyMs": {
+          "median": 2320.198707000003,
+          "p75": 2453.8939850000315
+        },
+        "cappedReadyMs": {
+          "median": 2329.396874000002,
+          "p75": 4387.652176000003
+        },
+        "lcp": {
+          "median": 1500.0,
+          "p75": 1668
+        },
+        "cls": {
+          "median": 0.00011699386568654722,
+          "p75": 0.00011699386568654722
+        },
+        "reads": {
+          "median": 8.0,
+          "p75": 8
+        },
+        "scriptTransferBytes": {
+          "median": 1351306.5,
+          "p75": 1351786
+        },
+        "listReads": 0,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 1
+      },
+      {
+        "route": "/job/84",
+        "kind": "warm",
+        "n": 10,
+        "completed": 10,
+        "readyMs": {
+          "median": 1990.5317210000358,
+          "p75": 2368.918328999993
+        },
+        "cappedReadyMs": {
+          "median": 1990.5317210000358,
+          "p75": 2368.918328999993
+        },
+        "lcp": {
+          "median": 1082.0,
+          "p75": 1236
+        },
+        "cls": {
+          "median": 3.667342107786645e-05,
+          "p75": 7.33468421557329e-05
+        },
+        "reads": {
+          "median": 8.0,
+          "p75": 8
+        },
+        "scriptTransferBytes": {
+          "median": 15900.0,
+          "p75": 15900
+        },
+        "listReads": 0,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 0
+      },
+      {
+        "route": "/agent/2036",
+        "kind": "cold",
+        "n": 10,
+        "completed": 8,
+        "readyMs": {
+          "median": 2635.9177965000054,
+          "p75": 2659.9613979999995
+        },
+        "cappedReadyMs": {
+          "median": 2656.743270500003,
+          "p75": 4511.574414999981
+        },
+        "lcp": {
+          "median": 954.0,
+          "p75": 968
+        },
+        "cls": {
+          "median": 0.5608681759011449,
+          "p75": 0.6652617922419498
+        },
+        "reads": {
+          "median": 12.0,
+          "p75": 12
+        },
+        "scriptTransferBytes": {
+          "median": 1351275.5,
+          "p75": 1351489
+        },
+        "listReads": 23,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 5
+      },
+      {
+        "route": "/agent/2036",
+        "kind": "warm",
+        "n": 10,
+        "completed": 9,
+        "readyMs": {
+          "median": 2615.8014949999633,
+          "p75": 2692.2696729999734
+        },
+        "cappedReadyMs": {
+          "median": 2628.5913914999765,
+          "p75": 2882.2037230000133
+        },
+        "lcp": {
+          "median": 718.0,
+          "p75": 768
+        },
+        "cls": {
+          "median": 0.2900945600919963,
+          "p75": 0.427240202549186
+        },
+        "reads": {
+          "median": 12.0,
+          "p75": 12
+        },
+        "scriptTransferBytes": {
+          "median": 15900.0,
+          "p75": 15900
+        },
+        "listReads": 22,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 1
+      },
+      {
+        "route": "/services",
+        "kind": "cold",
+        "n": 10,
+        "completed": 10,
+        "readyMs": {
+          "median": 1883.037128499971,
+          "p75": 1965.2852229999844
+        },
+        "cappedReadyMs": {
+          "median": 1883.037128499971,
+          "p75": 1965.2852229999844
+        },
+        "lcp": {
+          "median": 674.0,
+          "p75": 760
+        },
+        "cls": {
+          "median": 0.44115063279612643,
+          "p75": 0.4447070569981668
+        },
+        "reads": {
+          "median": 6.0,
+          "p75": 6
+        },
+        "scriptTransferBytes": {
+          "median": 1351179.0,
+          "p75": 1351406
+        },
+        "listReads": 0,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 0
+      },
+      {
+        "route": "/services",
+        "kind": "warm",
+        "n": 10,
+        "completed": 10,
+        "readyMs": {
+          "median": 1771.3877740000025,
+          "p75": 1848.8506630000193
+        },
+        "cappedReadyMs": {
+          "median": 1771.3877740000025,
+          "p75": 1848.8506630000193
+        },
+        "lcp": {
+          "median": 430.0,
+          "p75": 480
+        },
+        "cls": {
+          "median": 0.43747721472839957,
+          "p75": 0.43747721472839957
+        },
+        "reads": {
+          "median": 6.0,
+          "p75": 6
+        },
+        "scriptTransferBytes": {
+          "median": 15900.0,
+          "p75": 15900
+        },
+        "listReads": 0,
+        "pageErrors": 0,
+        "httpErrors": 0,
+        "pending": 0
+      }
+    ]
+  }
+}

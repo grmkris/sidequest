@@ -20,9 +20,55 @@ the later tracing, cache and diagnostics changes. Its implementation status
 supersedes the corresponding recommendations in the original audit; the earlier
 browser/RPC measurements remain historical samples.
 
+## Known-job loading and route accessibility follow-up
+
+The dev cleanup commits `8ef254d0`, `26e9779f`, `968a49a5` and `3e4c9df8`
+add repeatable measurements, simplify known-job loading and improve navigation.
+The [comparison report](performance-cleanup.html) records the verified deployments,
+raw samples, median/p75 results and incomplete loads. Its baseline already includes
+the earlier tracing, query-scoping and Multicall work; it cannot establish their earlier speed impact.
+
+```mermaid
+flowchart LR
+  Page[Known job page] --> Index[GET /data/jobs/:id]
+  Index --> Attribution[boardId and taskId]
+  Attribution --> Detail[Owning board get_task]
+  Detail --> Display[Frozen terms and current chain-derived state]
+  Index -->|Attribution absent after fetch| Fallback[Current board task_index]
+  Fallback --> Detail
+```
+
+`JobPage` no longer mounts the all-jobs discovery hook. A normal attributed job
+reads its indexed detail, then one owning-board task. `get_task` now includes
+`creatorAgentId` and `createdAt`, so the UI can construct its existing display model
+without fetching every offer. Indexed attribution wins over stale cached local
+metadata, including when the index points at another board. The fallback still
+polls the current board every ten seconds while attribution is absent. This is
+not a general RPC-only fallback: without both index and board, availability remains limited.
+
+Both shells provide a skip link and a focusable main landmark. Route headings
+supply browser titles; pathname navigation moves focus while initial loads,
+search updates, polling, visible modal dialogs and hash targets do not trigger
+that focus action. Delivered items have native list semantics. Invalid legacy
+job links have a heading. Loading layouts reserve space for actual panels;
+already loaded agent records/backing survive a refresh failure with a notice.
+
+The clean candidate passed the complete repository check and build. The final
+review fixes passed the owning types, lint ratchet, 458 Explore tests and build.
+The local browser audit covered eight routes at 390 and 1440 pixels; focused
+induced failures checked missing attribution, unavailable board detail and stale
+backing retention. These checks do not establish wallet-flow or full WCAG acceptance.
+
+Sources: [job detail](../apps/explore/src/routes/Job.tsx),
+[attribution and metadata](../apps/explore/src/job-detail.ts),
+[board response](../packages/board/src/service.ts),
+[route accessibility](../apps/explore/src/components/RouteAccessibility.tsx),
+[measurement method](performance-measurements.md).
+
 ## Implemented performance cleanup
 
-Implemented locally on 12 October 2026. Native telemetry is configured at **100%
+Initial implementation record, before the later dev deployment and measurements
+linked above. Native telemetry is configured at **100%
 initial sampling for dev and prod**, as approved. This is configuration and local
 test evidence; no production rollout, trace readback or new latency benchmark
 was performed by this cleanup lane.
@@ -91,7 +137,7 @@ Sources: [request/queue timing](../apps/api/src/observability.ts),
 | Shared discovery | Reuse `boardsQuery`, `directoryFirstQuery`, `chainJobsQuery` and `taskIndexQuery` | A first directory page and infinite pages keep different keys and shapes |
 | Cache identity | Origin, chain and board scope; wallet and signed-in state on private reads | Credentials never enter keys; headless React additionally tracks session revision |
 | After a mutation | Refresh affected resource families and the known job/task | Balance refresh still refreshes Wagmi read families broadly; unrelated directories/profiles stay warm |
-| Delivery preview races | Missing delivery or URL metadata stale after 30 s; foreground polling stops after six data/error updates; one retry per fetch | Successful browser previews stale after 5 min; server MISS TTL is 30 s, cache version is v2; no background polling |
+| Delivery preview races | Missing delivery or URL metadata stale after 30 s; foreground polling stops after six data/error updates; one retry per fetch | Successful browser previews stale after 5 min; missing-delivery TTL is 30 s and missing-site-metadata TTL is 300 s; no background polling |
 | API contract reads | Opt read-only Worker, Board, Directory and Commons contexts into same-tick Viem Multicall3 | SDK default and wallet writes unchanged; caller-sensitive/money-operation contexts were not broadly opted in |
 | Provider pressure | Preserve the shared eight-starts/second limiter and current retries, measure its wait/backoff | Per isolate/process, not a global provider quota; no new provider or JSON-RPC array batching |
 
@@ -110,8 +156,9 @@ Sources: [query definitions](../apps/explore/src/queries.ts),
 
 The API now applies one explicit response policy. Only anonymous successful
 GET/HEAD discovery replies receive the following budgets, including their
-tenant-prefixed equivalents. `max-age`, `s-maxage` and the
-`stale-while-revalidate` window each use the listed number of seconds.
+tenant-prefixed equivalents. Browsers receive `max-age=0`, so a post-mutation
+refetch reaches the network. `s-maxage` gives a shared cache the listed budget;
+there is no `stale-while-revalidate` window in this policy.
 
 | Public route | Freshness budget |
 | --- | ---: |
@@ -127,7 +174,8 @@ live economic snapshots receive `no-store`. `Vary` includes origin and all four
 credential headers. Existing public avatar, offer, profile, preview and metadata
 policies are preserved for successful anonymous responses, including conditional
 metadata `304`s. The existing preview cache can still retain a negative result
-for 30 s internally; the global policy marks an outgoing `404` as `no-store`.
+for a missing delivery for 30 s internally; missing site metadata is cached for
+300 s to bound external fetches. The global policy marks an outgoing `404` as `no-store`.
 
 **No new CDN/cache-all rule or Workers Cache API layer was installed.** Explore
 assets and existing content caches keep their established paths. These headers

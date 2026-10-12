@@ -1,0 +1,96 @@
+{
+  "stage": "dev",
+  "sha": "13fb56580ba390620ed7e532c3022b7fd10a6d3a",
+  "workers": [
+    {
+      "name": "sidequest-api-dev",
+      "success": true,
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "redact_query_string": false,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": true
+        },
+        "traces": {
+          "enabled": true,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      },
+      "latestDeployment": {
+        "id": "e92154a5-7cbc-4041-999f-2ce3c5c4b3fe",
+        "created_on": "2026-10-12T12:09:13.619883Z",
+        "versions": [
+          {
+            "version_id": "98954a01-a9ca-4383-8fc2-d84b02dac85f",
+            "percentage": 100
+          }
+        ]
+      }
+    },
+    {
+      "name": "sidequest-indexer-dev",
+      "success": true,
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "redact_query_string": false,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": true
+        },
+        "traces": {
+          "enabled": true,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      },
+      "latestDeployment": {
+        "id": "346f8918-e5bf-413d-bafe-c1550bc62dac",
+        "created_on": "2026-10-12T12:09:13.781646Z",
+        "versions": [
+          {
+            "version_id": "2952053d-2bce-4c88-a4d1-ae0ffee9687e",
+            "percentage": 100
+          }
+        ]
+      }
+    },
+    {
+      "name": "sidequest-explore-dev",
+      "success": true,
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "redact_query_string": false,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": true
+        },
+        "traces": {
+          "enabled": true,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      },
+      "latestDeployment": {
+        "id": "700ac3d0-6891-4b27-9a3c-61d19b402def",
+        "created_on": "2026-10-12T12:34:47.313767Z",
+        "versions": [
+          {
+            "version_id": "a2763265-d9e6-427d-9d7a-2fcee8eb4990",
+            "percentage": 100
+          }
+        ]
+      }
+    }
+  ]
+}

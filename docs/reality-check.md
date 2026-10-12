@@ -1337,3 +1337,28 @@ browser wallet `0xdE83…585a`, screenshots `agent-jobs.wt/live-backing/shots/40
 **Open:** a hosted `create_task` backing refusal still waits on the sponsor's pending-send check before the board's
 own checks (15.7 s on 12 Oct). Reordering it would let a prepared action freeze on stale chain state, so it waits for
 a reviewed change.
+
+
+## 12 October 2026 — dev performance and accessibility measurement
+
+**Live-verified on dev:** runtime cleanup through `3e4c9df8`, measured after the
+docs-only successor `2b62722f` deployed via
+[CI 38258765793](https://github.com/grmkris/sidequest/actions/runs/38258765793).
+Verify, deploy-dev, smoke and drift passed. [Report and raw receipts](evidence/performance-cleanup-2026-10-12/README.md).
+
+- Same-browser 80-load comparison against `13fb5658`: job-detail app/RPC request
+  median 10 → 8; full-list reads 42 → 0 across its twenty loads; separate polling
+  observation also had no full-list reads. Job CLS median ~0.51 → near zero.
+- Job readiness improved only 3–4%; job LCP increased. Overall completion within
+  twenty seconds was 75/80 → 74/80; Agent cold CLS worsened and Services CLS remained
+  high. Faster medians elsewhere do not establish a causal release benefit.
+- Eight live routes at two widths had zero axe violations, overflow and page errors.
+  Skip/pathname/search keyboard checks passed. Home still had six placeholders after
+  eight seconds in one desktop sample. No full accessibility conformance claim.
+- A browser request ID matched a connected native Explore/API/board queue/storage
+  trace. Readback confirmed logs and traces at sampling 1. The recorded example does
+  not prove dedicated RPC attempt span coverage or platform metadata redaction.
+
+**Boundary:** anonymous dev lab evidence, not wallet/authenticated/transaction,
+production or field Core Web Vitals acceptance. The interrupted after run during a
+concurrent rollout was excluded; raw before and stable after samples are preserved.

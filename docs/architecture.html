@@ -331,7 +331,14 @@
 
   <section class="section" aria-labelledby="cleanup-title">
     <div class="section-head"><div><h2 id="cleanup-title">What the cleanup implements</h2></div><p>12 October 2026: trace the waits, reuse the right data, batch compatible reads, and give public responses bounded freshness.</p></div>
-    <p class="provenance"><strong>Implemented and locally tested.</strong> These changes are in source, with unit and local Worker binding checks. Live Cloudflare trace export, CDN hits and page-speed gains still need measurement after a dev release. The older audit samples below are a separate baseline.</p>
+    <p class="provenance"><strong>Implemented, deployed to dev, and measured.</strong> The linked follow-up report records the current deployment, before/after browser samples and one connected Cloudflare trace. Broad trace coverage and CDN hits remain separate questions. The older audit samples below are historical.</p>
+
+    <details data-performance="detail-follow-up" open><summary>Known-job loading and route accessibility: the dev follow-up</summary><div class="entity-body">
+      <p>The known-job page now follows <strong>indexed job detail → board/task attribution → owning-board get_task</strong>. It avoids the full job list and board task indexes on the normal path. The board task index remains a fallback when indexed attribution is absent.</p>
+      <p>Task detail includes the frozen creator agent and creation time. Indexed attribution wins over a stale local offer. This removes discovery reads without changing action authorization, queue concurrency or the contract.</p>
+      <p>Both shells now have a skip link. Route navigation manages focus and document titles, delivered items use native lists, invalid links have headings, and loading placeholders resemble the panels they replace. Agent records and backing stay visible with a notice when a refresh fails.</p>
+      <p><a href="performance-cleanup.html"><strong>Open the before/after measurement report</strong></a> for exact deployed SHAs, cold/warm samples, completion counts and the remaining limitations. The baseline already contains tracing and Multicall; this comparison measures the later loading/accessibility follow-up.</p>
+    </div></details>
 
     <h3 class="data-subheading">Follow the time, from the page to the provider</h3>
     <div class="step-grid">
@@ -354,7 +361,7 @@
         <li><strong>Define one query per response shape.</strong> Boards and token readers share <code>boardsQuery</code>. Directory first-page and infinite queries retain separate keys.</li>
         <li><strong>Key by scope.</strong> Include origin, chain and board; private queries also include wallet and signed-in state. Headless React tracks session revision without exposing tokens.</li>
         <li><strong>Invalidate what changed.</strong> Refresh affected job/task and resource families after a mutation. Keep unrelated directories and profiles warm. Balance refresh still covers Wagmi read families broadly.</li>
-        <li><strong>Recover missing previews.</strong> A miss is temporary. Use 30-second freshness and bounded foreground retries; a complete browser preview has five-minute freshness.</li>
+        <li><strong>Recover missing previews.</strong> A miss is temporary. Use 30-second browser freshness and bounded foreground retries; a complete preview has five-minute freshness. The server retains missing site metadata for 300 seconds to bound external fetches.</li>
         <li><strong>Batch compatible reads.</strong> Read-only API, Board, Directory and Commons contexts opt into same-tick Viem Multicall3. Keep block-pinned valuation and fresh action checks. Wallet writes and SDK defaults retain their prior behavior.</li>
       </ol>
       <p>The shared limiter still spaces request starts by 125 ms per process/isolate. The new spans let us see its actual delay. Multicall3 reduces compatible calls; it cannot remove sequential API dependencies or accelerate indexing.</p>
@@ -363,7 +370,7 @@
     <h3 class="data-subheading">Public caching, without a new CDN layer</h3>
     <div class="read-table" tabindex="0" role="region" aria-label="Public response cache budgets">
       <table><thead><tr><th scope="col">Anonymous public list</th><th scope="col">Freshness</th><th scope="col">Policy</th></tr></thead><tbody>
-        <tr><td>Boards and profiles</td><td>60 seconds</td><td>Same browser/shared-cache lifetime and stale-while-revalidate window</td></tr>
+        <tr><td>Boards and profiles</td><td>60 seconds</td><td>Browser max-age=0; shared-cache s-maxage=60; no stale-while-revalidate</td></tr>
         <tr><td>Stats, agents, services, directory</td><td>30 seconds</td><td>List routes only; known job/agent detail stays uncached by this policy</td></tr>
         <tr><td>Activity</td><td>15 seconds</td><td>Wallet-filtered results bypass this policy</td></tr>
         <tr><td>Jobs</td><td>10 seconds</td><td>Discovery can lag a receipt; actions still need fresh checks</td></tr>
@@ -382,7 +389,7 @@
       <p>Query duration includes retries and waiting. Resource <code>apiMs</code> comes from Server-Timing when the browser exposes it. Cross-origin restrictions can hide timing detail. Queries already running before the recorder loads are omitted; resource labels describe the page at observation time. Use the Network panel's request ID for a particular API trace.</p>
     </div></details>
 
-    <p class="source">Local checks: API 681 passed / 17 skipped; Explore 444 passed; SDK 317 passed / 33 skipped; React 8 passed; indexer Worker 9 passed. Owning typechecks passed. No new live, browser or mainnet acceptance claim. Pagination, snapshot redesign, bootstrap restructuring, detail-read simplification and provider selection remain separate follow-ups. <a href="architecture-review.md#implemented-performance-cleanup">Detailed implementation, source links and evidence limits</a>.</p>
+    <p class="source">Initial local-check snapshot: API 681 passed / 17 skipped; Explore 444 passed; SDK 317 passed / 33 skipped; React 8 passed; indexer Worker 9 passed. Owning typechecks passed. The later dev/browser measurements are linked above; no mainnet acceptance claim. Pagination, snapshot redesign, bootstrap restructuring and provider selection remain separate follow-ups. <a href="architecture-review.md#implemented-performance-cleanup">Detailed implementation, source links and evidence limits</a>.</p>
   </section>
 
   <section class="section" aria-labelledby="speed-title">
