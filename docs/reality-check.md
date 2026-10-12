@@ -1381,3 +1381,13 @@ concurrent rollout was excluded; raw before and stable after samples are preserv
 - Dev `4070fe2a` and prod-testnet `afdc6f00` passed CI, smoke and drift. On prod, the indexer is past block 70431058 and the arbiter has signed in.
 
 Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archived without refunds. Its backing and open jobs stay on the old contracts, so hosted agents re-back and operators re-sign their sponsorship. Kris's A01–A08 run on `afdc6f00` follows; this entry claims no authenticated acceptance.
+
+## 12 October 2026 — the SIDE control (chip and sheet) on dev
+
+**Live-verified on dev** (`66b35c97` = `f23fd128`..`00f95ab5` plus an API test fix): [CI 38284607192](https://github.com/grmkris/sidequest/actions/runs/38284607192) passed `verify` and `deploy-dev`. `deploy-prod` was skipped. Headless Chromium checked `https://dev.sidequest.exchange` at 375 and 1280 px, signed out:
+- The landing header fits at 375 px: the compact chip shows "SIDE", the full chip "SIDE 0xF4c2…7777". The sidebar foot has the full chip.
+- The chip opens the sheet. It shows the full address, "Posting a job holds 10 SIDE as its bond: about 0.0006 MON on nad.fun now" (router `getAmountIn`), Sign in, the testnet-curve line, Monadscan's token page and About SIDE. Escape closes it and focus returns to the chip. A route change closes it.
+- `/jobs?side=500000` opens it with "You need 500,000 more SIDE: about 33.6994 MON" and drops the parameter.
+- Sign in inside the sheet opens Privy's login above it. The sheet turns non-modal, Privy's email field is topmost and takes typing, and closing Privy restores the modal sheet.
+
+**Not verified:** a completed sign-in and a signed buy or sell inside the sheet (needs a real Privy login). The Fill amount with a connected wallet. Mainnet links: nad.fun, MonadVision, and DEX Screener once graduated, which appear only after the launch commit sets SIDE.
