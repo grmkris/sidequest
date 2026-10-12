@@ -1246,3 +1246,44 @@ the board's checks. "Register and connect" registered the agent but connecting n
 
 **Not verified:** the rejected-hire drill (the dev crew was stopped, so nobody quoted; deferred); the 202 for
 `notifications/initialized` in Workers Logs (the Cloudflare connection needs a new sign-in); the confirm sheets.
+
+## 12 October 2026 — Commons feedback contents and durable links on dev
+
+**Accepted dev SHA:** `7d3529d7a71db802d8f38b6539c862805fff7dec`. The isolated committed candidate passed
+`heavy bun --no-env-file run check` and `heavy bun --no-env-file run build`; the shared checkout's later live edits
+were excluded. [CI run 38241771092](https://github.com/grmkris/sidequest/actions/runs/38241771092) passed verify,
+guarded deploy-dev, smoke-dev and drift-dev. Production was skipped. The local docs/Explore Worker smoke passed
+159 HTTP checks and 29 parsed HTML responses.
+
+**Live-verified at 11:26 UTC:** anonymous Chromium 153 at `https://dev.sidequest.exchange`:
+
+- Gap #6 rendered all three reports (#6, #7 and #10). Each report's needed capability, attempted workaround and
+  suggestion matched its public API response at 1440 px/light and 390 px/dark. Neither the API nor the page exposed
+  private goals; document width matched the viewport at both sizes. Screenshots:
+  [desktop](evidence/commons-feedback/2026-10-12-gap6-desktop.png) and
+  [mobile](evidence/commons-feedback/2026-10-12-gap6-mobile.png).
+- The Commons gap list opened `/commons/gaps/6`; merged `/commons/gaps/7` redirected to #6 with the original report
+  IDs retained. The browser recorded no page errors during the checks.
+- Legacy `/job/8a2a23cb9d94877d` redirected to published `/job/84`. Unpublished task `e6617ea2ad65a28a` redirected to
+  `/account?resume=e6617ea2ad65a28a&board=public`.
+- The historical request reported in gap #14, `9a385036a9983b98`, was directly readable with `get_quote_request`
+  and rendered through its old `/quotes/<id>` URL at `/request/<id>`. Its current state is `Picked — hire linked`,
+  linked to task `1cf78500b997ade3`; this proves durable picked history, not the earlier closed/unpicked state.
+- `task_index {compact:true, limit:2}` returned two lightweight rows without brief or acceptance-criteria fields.
+  The public MCP card returned 200 with identity `exchange.sidequest/sidequest`, version `2.0.0` and the dev resource.
+  Public MCP Markdown documented `get_quote_request`, `get_dispute_bundle` and compact reads. Anonymous `tools/list`
+  correctly returned 401.
+
+**Local floors at the accepted SHA:** API 78 files passed / 2 skipped, 687 tests passed / 17 skipped; Explore
+97 files / 447 tests passed; Board 50 files passed / 8 skipped, 470 tests passed / 52 skipped; Docs 8 files /
+58 tests passed. The full typecheck completed 11 tasks; the lint ratchet passed with 2,906 existing findings and
+no increase. Skips are not live/fork acceptance.
+
+**Not live-verified:** authenticated MCP tool discovery or dispute-bundle access, maintainer/moderator mutations,
+private-goal visibility and role-cache changes with an authorized session, tenant legacy-link navigation, and a
+closed/unpicked request. These retain local regression coverage. No authorized role session was available; no new
+credentials or role keys were created. Gap 15 (hosted MCP faucet) and gap 16 (generic Git-host verification) remain
+deferred with their limitations documented. No economic transaction was submitted.
+
+Sanitized readback: [2026-10-12-dev.json](evidence/commons-feedback/2026-10-12-dev.json).
+Implementation/audit outcomes: [feedback status](agents/feedback-status.md).

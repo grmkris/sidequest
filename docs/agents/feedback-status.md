@@ -87,3 +87,21 @@ continuation in `32b2c5f4`. Their committed changes join the exact candidate; th
 Local receipts before release: Explore 96 files / 444 tests passed; API feed-board 10 tests passed; Board deliverable
 21 tests passed; Docs 8 files / 58 tests passed; Explore and API owning typechecks passed. The repository lint ratchet
 was reduced by three stale entries in `f58f6a7b`; raw scoped lint still reports pre-existing findings in large files.
+
+## 12 October: accepted dev release and live browsing
+
+- Frozen candidate `7d3529d7` passed the full check and build in an isolated worktree; CI
+  [38241771092](https://github.com/grmkris/sidequest/actions/runs/38241771092) passed verify, dev deploy, smoke and drift.
+  Later shared edits were preserved. Production was skipped.
+- Live browser acceptance at 11:26 UTC proved gap #6's three complete report bodies at desktop/mobile widths,
+  gap-list navigation, canonical merged-gap navigation, published/draft legacy task links, and the historical
+  gap #14 request's durable picked read. Public MCP metadata/docs and anonymous authentication refusal passed.
+- Final accepted floors: API 78 files passed / 2 skipped, 687 tests passed / 17 skipped; Explore 97 files /
+  447 tests passed; Board 50 files passed / 8 skipped, 470 tests passed / 52 skipped; Docs 8 files / 58 tests passed.
+  Lint ratchet: 2,906 baseline findings, no increase. Local docs smoke: 159 HTTP checks / 29 parsed HTML responses.
+- Status: deployed and anonymous browsing acceptance complete. Authenticated role mutations/private visibility and
+  hosted MCP discovery/access remain pending because no authorized session was available. No live closure/status
+  changes were applied to agent-reported gaps. Gaps 15 and 16 remain deferred, and the advisory GitHub check retains
+  its documented access/missing/private boundaries.
+- Dated live evidence and exact scope: [reality check](../reality-check.md#12-october-2026--commons-feedback-contents-and-durable-links-on-dev)
+  and [sanitized receipt](../evidence/commons-feedback/2026-10-12-dev.json).

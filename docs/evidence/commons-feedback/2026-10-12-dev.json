@@ -1,0 +1,169 @@
+{
+  "checkedAt": "2026-10-12T11:26:20.081Z",
+  "origin": "https://dev.sidequest.exchange",
+  "results": [
+    {
+      "name": "gap-detail",
+      "width": 1440,
+      "theme": "light",
+      "reportIds": [
+        6,
+        7,
+        10
+      ],
+      "sizes": {
+        "viewport": 1440,
+        "document": 1440
+      },
+      "privateGoals": false,
+      "comparedFields": [
+        "whatINeeded",
+        "whatITried",
+        "suggestion"
+      ]
+    },
+    {
+      "name": "gap-detail",
+      "width": 390,
+      "theme": "dark",
+      "reportIds": [
+        6,
+        7,
+        10
+      ],
+      "sizes": {
+        "viewport": 390,
+        "document": 390
+      },
+      "privateGoals": false,
+      "comparedFields": [
+        "whatINeeded",
+        "whatITried",
+        "suggestion"
+      ]
+    },
+    {
+      "name": "gap-list-navigation",
+      "path": "/commons/gaps/6"
+    },
+    {
+      "name": "merged-gap-navigation",
+      "from": 7,
+      "to": 6
+    },
+    {
+      "name": "published-task-link",
+      "taskId": "8a2a23cb9d94877d",
+      "jobId": "84",
+      "path": "/job/84"
+    },
+    {
+      "name": "draft-task-link",
+      "taskId": "e6617ea2ad65a28a",
+      "resume": "e6617ea2ad65a28a",
+      "board": "public"
+    },
+    {
+      "name": "quote-request-read",
+      "requestId": "8cda84efaf91e35a",
+      "resultKeys": [
+        "acceptanceCriteria",
+        "approver",
+        "arbitrator",
+        "brief",
+        "budget",
+        "chainId",
+        "creator",
+        "creatorBond",
+        "deliveryDeadline",
+        "quoteDeadline",
+        "requiredChecks",
+        "salt",
+        "stack",
+        "title",
+        "tokens",
+        "v",
+        "windows",
+        "workerBond",
+        "requestId",
+        "requestHash",
+        "taskId",
+        "status",
+        "createdAt",
+        "quotesCount",
+        "creatorAgentId",
+        "invite",
+        "budgetCovered",
+        "budgetDisplay"
+      ],
+      "path": "/request/8cda84efaf91e35a"
+    },
+    {
+      "name": "historical-request-read",
+      "requestId": "9a385036a9983b98",
+      "taskId": "1cf78500b997ade3",
+      "status": "Picked — hire linked",
+      "path": "/request/9a385036a9983b98"
+    },
+    {
+      "name": "compact-task-index",
+      "rows": 2,
+      "keys": [
+        "taskId",
+        "jobId",
+        "stack",
+        "kind",
+        "title",
+        "mode",
+        "tags",
+        "token",
+        "reward",
+        "deliveryDeadline",
+        "quoted",
+        "createdAt"
+      ]
+    },
+    {
+      "name": "mcp-public-card",
+      "status": 200,
+      "version": "2.0.0",
+      "endpoint": "https://dev.sidequest.exchange/mcp",
+      "serverName": "exchange.sidequest/sidequest"
+    },
+    {
+      "name": "mcp-anonymous-refusal",
+      "status": 401,
+      "authenticatedToolDiscovery": "not verified"
+    },
+    {
+      "name": "mcp-public-documentation",
+      "status": 200,
+      "tools": [
+        "get_quote_request",
+        "get_dispute_bundle"
+      ],
+      "compact": true
+    }
+  ],
+  "pageErrors": [],
+  "deployedSha": "7d3529d7a71db802d8f38b6539c862805fff7dec",
+  "browser": {
+    "version": "153.0.8010.12",
+    "authenticated": false
+  },
+  "ci": {
+    "runId": 38241771092,
+    "url": "https://github.com/grmkris/sidequest/actions/runs/38241771092",
+    "verify": "success",
+    "deployDev": "success",
+    "smokeDev": "success",
+    "driftDev": "success"
+  },
+  "boundaries": {
+    "roleMutations": "not verified: no authorized role session available",
+    "authenticatedMcpDiscovery": "not verified",
+    "tenantLegacyLinks": "unit regression only",
+    "closedUnpickedRequest": "local regression only; historical live request is picked",
+    "economicTransactions": "none"
+  }
+}
