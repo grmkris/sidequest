@@ -37,6 +37,9 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
     main: import.meta.url,
     ...(stageProfile() ? { name: stageProfile()!.resources.Indexer } : {}),
     compatibility: { date: '2026-09-01', flags: ['nodejs_compat'] },
+    // Cloudflare.Telemetry enables the trace channel in the Layer below, including
+    // cron and D1 spans. This Alchemy release exposes the supported metadata fields.
+    observability: { enabled: true },
     dev: { port: 8789 },
     env: {
       NETWORK: stageProfile()?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet',
@@ -163,5 +166,13 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
         return HttpServerResponse.jsonUnsafe({ ok: true, ...rows })
       }),
     }
-  }).pipe(Effect.provide(Layer.mergeAll(Cloudflare.Workers.CronEventSourceLive, Cloudflare.D1.QueryDatabaseBinding))),
+  }).pipe(
+    Effect.provide(
+      Layer.mergeAll(
+        Cloudflare.Workers.CronEventSourceLive,
+        Cloudflare.D1.QueryDatabaseBinding,
+        Cloudflare.Telemetry({ headSamplingRate: 1, persist: true }),
+      ),
+    ),
+  ),
 ) {}

@@ -65,6 +65,10 @@ export default Alchemy.Stack(
         ],
       },
       ...(profile ? { domain: { name: new URL(profile.origin).hostname } } : {}),
+      observability: {
+        enabled: true,
+        traces: { enabled: true, headSamplingRate: 1, persist: true },
+      },
       env: { API: api },
       assets: {
         notFoundHandling: 'single-page-application',

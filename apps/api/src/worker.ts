@@ -140,6 +140,10 @@ export default class Api extends Cloudflare.Worker<Api>()(
     main: import.meta.url,
     ...(stageProfile() ? { name: stageProfile()!.resources.Api } : {}),
     compatibility: { date: '2026-09-01', flags: ['nodejs_compat'] },
+    // Logs already run at the platform default. Cloudflare.Telemetry enables the
+    // trace channel below; this Alchemy release exposes only the supported logs/
+    // traces metadata fields here.
+    observability: { enabled: true },
     dev: { port: 8788 },
     // Values come from the deploying shell (.env.local); secrets are bound as secret_text, never plain text.
     env: {
@@ -883,6 +887,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
         Cloudflare.D1.QueryDatabaseBinding,
         Cloudflare.Workers.AIBinding,
         Cloudflare.Images.ImagesBinding,
+        Cloudflare.Telemetry({ headSamplingRate: 1, persist: true }),
       ),
     ),
   ),
