@@ -1,22 +1,14 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { agentEndpoint, type ManagedAgent } from '../../api.ts'
 import { agentAction } from '../../agent-api.ts'
+import { connectionWords, useAgentConnections } from '../../agent-connections.ts'
 import { relative } from '../../format.ts'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
 import { ManageCard } from './ManageCards.tsx'
 
 type Role = 'work' | 'hire'
-
-interface Connection {
-  id: string
-  client: string
-  resource: string
-  scopes: string[]
-  createdAt: number
-  lastUsedAt: number | null
-}
 
 const errorText = (failure: unknown, fallback: string) => (failure instanceof Error ? failure.message : fallback)
 
@@ -39,7 +31,11 @@ function RolesCard({ agent }: { agent: ManagedAgent }) {
     setError(null)
     try {
       await agentAction(agent.id, 'roles', { roles: (['work', 'hire'] as const).filter((role) => ticked[role]) })
-      await queries.invalidateQueries({ queryKey: ['managed-agents'] })
+      // Each connection's access follows the roles at once.
+      await Promise.all([
+        queries.invalidateQueries({ queryKey: ['managed-agents'] }),
+        queries.invalidateQueries({ queryKey: ['agent-connections', agent.id] }),
+      ])
     } catch (failure) {
       setError(errorText(failure, 'The roles could not be saved'))
     } finally {
@@ -79,22 +75,9 @@ function RolesCard({ agent }: { agent: ManagedAgent }) {
   )
 }
 
-/** Which roles a connection's client asked for: the most it can do, whatever the agent's roles allow. */
-function scopeWords(scopes: readonly string[]): string {
-  const words = [
-    ...(scopes.includes('sidequest:work') ? ['work'] : []),
-    ...(scopes.includes('sidequest:hire') ? ['hire'] : []),
-  ]
-  return words.length === 0 ? 'read only' : `may ${words.join(' and ')}`
-}
-
 /** Every client connected as this agent, with one Disconnect each; disconnecting ends its access and its events. */
 function ConnectionsCard({ agent }: { agent: ManagedAgent }) {
-  const connections = useQuery({
-    queryKey: ['agent-connections', agent.id],
-    queryFn: () => agentEndpoint<{ connections: Connection[] }>(`/api/agents/${agent.id}/connections`),
-    refetchInterval: 30_000,
-  })
+  const connections = useAgentConnections(agent.id)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   async function disconnect(id: string) {
@@ -123,7 +106,7 @@ function ConnectionsCard({ agent }: { agent: ManagedAgent }) {
               <div className="grid min-w-0 gap-0.5 text-sm">
                 <span className="font-medium [overflow-wrap:anywhere]">{row.client}</span>
                 <span className="text-muted-foreground">
-                  {scopeWords(row.scopes)} · since {relative(row.createdAt)} ·{' '}
+                  {connectionWords(row)} · since {relative(row.createdAt)} ·{' '}
                   {row.lastUsedAt === null ? 'not used yet' : `last used ${relative(row.lastUsedAt)}`}
                 </span>
               </div>
