@@ -1391,3 +1391,25 @@ Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archi
 - Sign in inside the sheet opens Privy's login above it. The sheet turns non-modal, Privy's email field is topmost and takes typing, and closing Privy restores the modal sheet.
 
 **Not verified:** a completed sign-in and a signed buy or sell inside the sheet (needs a real Privy login). The Fill amount with a connected wallet. Mainnet links: nad.fun, MonadVision, and DEX Screener once graduated, which appear only after the launch commit sets SIDE.
+
+## 12 October 2026 — ERC-4337 groundwork for gas in USDC (ADR-0023, in progress)
+
+**Live-verified on Monad testnet (10143):**
+- **Pimlico's bundler takes our DeleGator user operations.** That includes one carrying a 7702 authorization.
+  - Probe: `packages/sdk/scripts/live/aa-probe.ts`.
+  - Example: userOp `0xceec3be9…3600` in tx `0x77676b17…db4a`, sponsored for free by Pimlico on testnet.
+  - Our userOpHash equals the bundler's.
+- **The Privy routine policy `ocog6r948i9p93x6ucd4f3db` carries the user-operation rules.** It has 36 rules, 25 of them
+  `eth_signUserOperation`. Journal hash `a5508693…`, verified 2026-10-12T17:41:19Z.
+- **`SidequestTestnetPaymaster` is deployed:** `0x998Df34AA25Ab2C4d907B783C5D9a76DD62a38C9`, deploy tx
+  `0xbee40de3cddf619f5488c42d654dd06285f178acd8e3fd0eca2b0d2b0c97d1bf`.
+  - Its state reads back as intended: signer `0x554c8bde009449A6D3d550a506078df782d4fB89`, token Circle testnet USDC
+    `0x534b…43A3`, EntryPoint v0.7, owner and treasury the admin `0xe5B7…9A71`, rate 28000, postOpGas 125000.
+  - EntryPoint deposit 1 MON (tx `0x8c177c16b663c0f64b65ab02818973b9d7b06a046e31fbcb3dd441343e327323`). Stake 1 MON
+    with an 86400 s unstake delay (tx `0xc9721d7a7b85abe195ce4cde11da2fc229a4212b4aa0068aa88ac0f0f12821a3`).
+  - It is recorded as `accountAbstraction.paymaster` in `contracts/config/monad-testnet.json`.
+
+**Implemented and tested, not yet live:**
+- Hosted agents' Privy `signUserOperation` (`3166ff35`).
+- The paymaster's Worker quote signer.
+- No user operation has been charged in USDC yet.
