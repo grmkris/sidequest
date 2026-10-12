@@ -1,13 +1,13 @@
 import { Alert, AlertDescription } from './ui/alert.tsx'
 import { LoadingRows } from './kit.tsx'
 import * as sdk from '@sidequest/sdk'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useManagedAgents } from '../managed.ts'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { useEffect, useRef, useState } from 'react'
 import { type Address, encodeFunctionData, erc20Abi, parseSignature } from 'viem'
 import { useBalance } from 'wagmi'
 import { prompts, useSignTypedDataWithPrompt } from '../wallet-prompt.ts'
-import { type ManagedAgent, agentEndpoint } from '../api.ts'
 import { DelegationForm, exactFactory } from './DelegationForm.tsx'
 import { DELEGATION_RISK, DelegationPositions, factoryValue, walletAgentsKey } from './DelegationPositions.tsx'
 import { HoldingControls } from './HoldingControls.tsx'
@@ -89,11 +89,7 @@ function Stake({
   const reads = useDelegations(contracts, owner)
   const mon = useBalance({ address: owner, chainId: chain.id, query: { refetchInterval: 15_000 } })
   const directory = useDirectory()
-  const managed = useQuery({
-    queryKey: ['managed-agents', owner.toLowerCase()],
-    queryFn: () => agentEndpoint<{ agents: ManagedAgent[] }>('/api/agents'),
-    refetchInterval: 30_000,
-  })
+  const managed = useManagedAgents()
   const [account, setAccount] = useState<Address>(initialAccount ?? owner)
   const selected = useIndexedBacking(account, owner)
   const [mode, setMode] = useState<'add' | 'leave'>('add')

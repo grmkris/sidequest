@@ -1,3 +1,4 @@
+import { publicKey } from '../../queries.ts'
 import NumberFlow from '@number-flow/react'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
@@ -57,7 +58,7 @@ function Figure({ label, children, title }: { label: string; children: React.Rea
  */
 export function LiveNumbers() {
   const stats = useQuery({
-    queryKey: ['landing-numbers'],
+    queryKey: publicKey('landing-numbers'),
     queryFn: () => data<BoardStats>('stats'),
     refetchInterval: 30_000,
   })

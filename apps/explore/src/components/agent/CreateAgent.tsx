@@ -78,7 +78,7 @@ function useCreation(operator: Address, initial: ManagedAgent | undefined) {
   const [stage, setStage] = useState<Stage | 'done' | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const refresh = () => void queries.invalidateQueries({ queryKey: ['managed-agents', operator] })
+  const refresh = () => void queries.invalidateQueries({ queryKey: ['managed-agents', operator.toLowerCase()] })
   async function wallet(name: string): Promise<ManagedAgent> {
     draft.save(name)
     const token = await getAccessToken()

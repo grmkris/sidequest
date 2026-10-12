@@ -1,3 +1,4 @@
+import { refreshBalances } from '../query-refresh.ts'
 import { useQueryClient } from '@tanstack/react-query'
 import * as sdk from '@sidequest/sdk'
 import { useState } from 'react'
@@ -46,7 +47,7 @@ export function TestnetFaucet({ address }: { address: `0x${string}` }) {
   const waiting = next !== undefined && next > 0n
   const done = () => {
     setSteps(null)
-    void qc.invalidateQueries()
+    void refreshBalances(qc)
   }
   const claim = async () => {
     setBusy(true)

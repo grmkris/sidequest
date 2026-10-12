@@ -1,7 +1,8 @@
+import { publicKey } from '../../queries.ts'
 import { type InfiniteData, useInfiniteQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { type FeedEvent, type FeedJob, feedEvents, feedJobs } from '../../activity-feed.ts'
-import { boardPrefix, data } from '../../api.ts'
+import { data } from '../../api.ts'
 import type { ActivityStep } from '../../live-activity.ts'
 import { useQuoteRequests } from '../../quote-requests.ts'
 import { useJobs, usePosterAgents } from '../../routes/Jobs.tsx'
@@ -26,8 +27,8 @@ const activityPage = (cursor: string | undefined, wallet: string | undefined) =>
  * once someone has loaded more, the list holds still until they reload.
  */
 function useSteps(wallet: string | undefined) {
-  return useInfiniteQuery<ActivityPage, Error, InfiniteData<ActivityPage>, readonly string[], string | undefined>({
-    queryKey: ['activity-feed', boardPrefix(), ...(wallet === undefined ? [] : [wallet.toLowerCase()])],
+  return useInfiniteQuery<ActivityPage, Error, InfiniteData<ActivityPage>, readonly unknown[], string | undefined>({
+    queryKey: publicKey('activity-feed', 'infinite', wallet?.toLowerCase()),
     initialPageParam: undefined,
     queryFn: ({ pageParam }) => activityPage(pageParam, wallet),
     getNextPageParam: (page) => page.nextCursor ?? undefined,

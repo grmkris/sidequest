@@ -1,3 +1,4 @@
+import { publicKey } from '../../queries.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { agentAction } from '../../agent-api.ts'
@@ -22,7 +23,7 @@ export function ListingCard({ agent }: { agent: ManagedAgent }) {
   const qc = useQueryClient()
   const [confirming, setConfirming] = useState(false)
   const listing = useQuery({
-    queryKey: ['directory-listing', agentId],
+    queryKey: publicKey('directory-listing', agentId),
     queryFn: () => directoryListing(agentId!),
     enabled: agentId !== null,
     refetchInterval: 30_000,
@@ -45,9 +46,11 @@ export function ListingCard({ agent }: { agent: ManagedAgent }) {
     },
     onSettled: () => {
       setConfirming(false)
-      void qc.invalidateQueries({ queryKey: ['directory-listing', agentId] })
-      void qc.invalidateQueries({ queryKey: ['directory-agent', agentId] })
-      void qc.invalidateQueries({ queryKey: ['directory'] })
+      void qc.invalidateQueries({ queryKey: publicKey('directory-listing', agentId) })
+      void qc.invalidateQueries({ queryKey: publicKey('directory-agent', agentId) })
+      void qc.invalidateQueries({ queryKey: publicKey('directory-first') })
+      void qc.invalidateQueries({ queryKey: publicKey('data-directory') })
+      void qc.invalidateQueries({ queryKey: ['data-services'] })
     },
   })
   if (agentId === null) return null

@@ -1,3 +1,5 @@
+import { refreshJob } from '../../query-refresh.ts'
+import { currentBoardId } from '../../api.ts'
 import { cn } from '../../lib/cn.ts'
 import { Button } from '../ui/button.tsx'
 import { Input } from '../ui/input.tsx'
@@ -183,7 +185,7 @@ export function TopUp({
             reportToBoard={false}
             onDone={() => {
               setTxs(null)
-              void qc.invalidateQueries()
+              void refreshJob(qc, { boardId: currentBoardId(), jobId })
               toast('Added to the reward')
             }}
           />

@@ -1,3 +1,4 @@
+import { publicKey } from './queries.ts'
 import * as sdk from '@sidequest/sdk'
 import { useQuery } from '@tanstack/react-query'
 import { formatUnits } from 'viem'
@@ -19,7 +20,7 @@ export const isUsdPegged = (token: string) => PEGGED.has(token.toLowerCase())
 export function useSidePrice(): number | undefined {
   const m = deployment.market
   const price = useQuery({
-    queryKey: ['market-price', m?.poolId],
+    queryKey: publicKey('market-price', m?.poolId),
     queryFn: () => sdk.sidePrice(stakeContext(), m!, tokenInfo(m!.quote).decimals),
     enabled: deployed && m !== null && isUsdPegged(m.quote),
     refetchInterval: 30_000,

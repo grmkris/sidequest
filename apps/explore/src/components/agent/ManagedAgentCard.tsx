@@ -1,3 +1,4 @@
+import { managedKey } from '../../queries.ts'
 import { useSigners } from '@privy-io/react-auth'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
@@ -32,10 +33,11 @@ export function ManagedAgentCard({ agent, onBack }: { agent: ManagedAgent; onBac
   const queryClient = useQueryClient()
   const { removeSigners } = useSigners()
   const status = useQuery({
-    queryKey: ['managed-agent-status', agent.id, auth.address],
+    queryKey: managedKey('managed-agent-status', auth.address, auth.signedIn, agent.id),
     queryFn: () =>
       agentEndpoint<AgentStatus & { permissions: ManagedPermission[] }>(`/api/agents/${encodeURIComponent(agent.id)}`),
     refetchInterval: 20000,
+    enabled: auth.signedIn,
   })
   const now = useNow()
   const [busy, setBusy] = useState(false)

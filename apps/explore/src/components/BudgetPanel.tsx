@@ -1,3 +1,5 @@
+import { boardKey, viewerKey } from '../queries.ts'
+import { currentBoardId } from '../api.ts'
 import { Badge } from './ui/badge.tsx'
 import { Button } from './ui/button.tsx'
 import { Item, ItemGroup, ItemContent, ItemActions } from './ui/item.tsx'
@@ -55,7 +57,7 @@ export function BudgetPanel({
   const upgrade = useDelegatorUpgrade(address)
   const signTypedDataAsync = useSignTypedDataWithPrompt()
   const budget = useQuery({
-    queryKey: ['get_budget', task.taskId, address],
+    queryKey: boardKey(currentBoardId(), 'get_budget', task.taskId, viewerKey(address, signedIn)),
     queryFn: () => tool<Budget>('get_budget', { taskId: task.taskId }),
     enabled: signedIn && party,
     refetchInterval: 10_000,

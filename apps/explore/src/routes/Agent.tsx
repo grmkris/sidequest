@@ -1,3 +1,4 @@
+import { publicKey } from '../queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link, useParams } from '@tanstack/react-router'
@@ -197,7 +198,7 @@ async function fetchAgentRecord(id: string): Promise<AgentRecord | null> {
 
 const useAgentRecord = (id: string | null, refetchInterval = 30_000) =>
   useQuery({
-    queryKey: ['data-agent', id],
+    queryKey: publicKey('data-agent', id),
     queryFn: () => fetchAgentRecord(id as string),
     enabled: id !== null,
     refetchInterval,
@@ -257,7 +258,7 @@ function Profile({ id }: { id: string }) {
   const identity = useAgentIdentity(id)
   const record = useAgentRecord(id)
   const directory = useQuery({
-    queryKey: ['directory-agent', id],
+    queryKey: publicKey('directory-agent', id),
     queryFn: () => fetchDirectoryAgent(id),
     refetchInterval: 20_000,
   })

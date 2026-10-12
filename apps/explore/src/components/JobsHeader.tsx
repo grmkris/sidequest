@@ -1,15 +1,14 @@
+import { boardsQuery } from '../queries.ts'
 import { Button } from './ui/button.tsx'
 import { useQuery } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
-import { type BoardInfo, data } from '../api.ts'
 import { boardRoutes } from './BoardLink.tsx'
 import { PostJobSheet } from './PostJobSheet.tsx'
 import { JOBS_LABEL } from '../places.ts'
 
 /** Every hosted board (ADR-0008), shared with the Boards page. */
-const useBoards = () =>
-  useQuery({ queryKey: ['boards'], queryFn: () => data<{ boards: BoardInfo[] }>('boards'), refetchInterval: 60_000 })
+const useBoards = () => useQuery({ ...boardsQuery(), refetchInterval: 60_000 })
 
 /**
  * The page's title (Activity, or Jobs in the embed's list), its board, and one way in: Post a job, a sheet with the

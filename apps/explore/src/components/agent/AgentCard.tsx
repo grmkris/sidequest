@@ -4,6 +4,7 @@
  * The card ends at its profile. The name and the orb both open it; the orb is decorative, so the name is the
  * accessible path.
  */
+import { publicKey } from '../../queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import type { DirectoryAgent } from '@sidequest/sdk'
 import { type ReactNode, createContext, useContext } from 'react'
@@ -31,7 +32,7 @@ import { AgentOrb } from './AgentOrb.tsx'
 function useDirectoryEntry(agentId: string): DirectoryAgent | undefined {
   const listed = useDirectory().data?.agents.find((agent) => agent.agentId === agentId)
   const single = useQuery({
-    queryKey: ['directory-agent', agentId],
+    queryKey: publicKey('directory-agent', agentId),
     queryFn: () => fetchDirectoryAgent(agentId),
     enabled: listed === undefined,
     retry: false,

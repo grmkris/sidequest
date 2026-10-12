@@ -1,4 +1,5 @@
 /** SDK-backed reads: every position and its backing are valued at the same block. */
+import { publicKey } from './queries.ts'
 import * as sdk from '@sidequest/sdk'
 import { useQuery } from '@tanstack/react-query'
 import type { Address } from 'viem'
@@ -107,7 +108,7 @@ async function readDelegations(contracts: SidequestContracts, delegator: Address
 
 export function useIndexedBacking(account: Address, wallet?: Address) {
   return useQuery({
-    queryKey: ['indexed-backing', sidequest.vault, account.toLowerCase(), wallet?.toLowerCase()],
+    queryKey: publicKey('indexed-backing', sidequest.vault, account.toLowerCase(), wallet?.toLowerCase()),
     enabled: deployed,
     queryFn: async () => {
       const snapshot = await data<
@@ -140,7 +141,7 @@ export function useIndexedBacking(account: Address, wallet?: Address) {
 
 export function useDelegations(contracts: SidequestContracts, delegator: Address, enabled = true) {
   return useQuery({
-    queryKey: ['delegations', contracts.vault, delegator.toLowerCase()],
+    queryKey: publicKey('delegations', contracts.vault, delegator.toLowerCase()),
     queryFn: () => readDelegations(contracts, delegator),
     enabled,
     refetchInterval: 15_000,
@@ -150,7 +151,7 @@ export function useDelegations(contracts: SidequestContracts, delegator: Address
 
 export function useBacking(account: Address | undefined, delegator?: Address) {
   return useQuery({
-    queryKey: ['backing', sidequest.vault, account?.toLowerCase(), delegator?.toLowerCase()],
+    queryKey: publicKey('backing', sidequest.vault, account?.toLowerCase(), delegator?.toLowerCase()),
     enabled: deployed && account !== undefined,
     queryFn: async () => {
       if (account === undefined) throw new Error('Choose a backing wallet')

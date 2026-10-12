@@ -1,3 +1,4 @@
+import { refreshFamilies } from '../query-refresh.ts'
 import { Badge } from '../components/ui/badge.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { Input } from '../components/ui/input.tsx'
@@ -323,7 +324,7 @@ function Admin({ c, safe, me }: { c: SidequestContracts; safe: Address; me: Addr
               onDone={() => {
                 const title = op.title
                 setOp(null)
-                void qc.invalidateQueries()
+                void refreshFamilies(qc, ['readContract', 'readContracts', 'bond-policy', 'bond-horizon'])
                 toast(`${title}: done`)
               }}
             />

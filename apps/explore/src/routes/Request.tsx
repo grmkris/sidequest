@@ -1,3 +1,4 @@
+import { boardKey, viewerKey } from '../queries.ts'
 import { Badge } from '../components/ui/badge.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { Input } from '../components/ui/input.tsx'
@@ -107,7 +108,7 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
   const r = requests.data?.find((x) => x.requestId === requestId) as Request | undefined
   const posters = usePosterAgents()
   const quotes = useQuery({
-    queryKey: ['list_quotes', boardId, requestId, auth.signedIn],
+    queryKey: boardKey(boardId, 'list_quotes', boardId, requestId, viewerKey(auth.address, auth.signedIn)),
     queryFn: () => tool<{ creator: string; picked: string | null; quotes: Quote[] }>('list_quotes', { requestId }),
     enabled: auth.signedIn,
     refetchInterval: 15_000,
@@ -147,7 +148,7 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
       : undefined
   const pendingTask = picked?.taskId ?? quotes.data?.picked ?? r?.taskId ?? null
   const pickedTask = useQuery({
-    queryKey: ['quote-picked-task', boardId, pendingTask],
+    queryKey: boardKey(boardId, 'quote-picked-task', boardId, pendingTask, viewerKey(auth.address, auth.signedIn)),
     queryFn: () => tool<{ jobId: string | null }>('get_task', { taskId: pendingTask }),
     enabled: pendingTask !== null,
     refetchInterval: 15_000,

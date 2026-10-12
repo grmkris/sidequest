@@ -3,15 +3,16 @@
  * backing behind the posting agent (10 SIDE on testnet, 10,000 on mainnet), read from the deployed Holding, never
  * written down here.
  */
+import { publicKey } from './queries.ts'
 import * as sdk from '@sidequest/sdk'
 import { useQuery } from '@tanstack/react-query'
 import { stakeContext } from './stake-context.ts'
 import { deployed, deployment } from './wallet.ts'
 
-/** The deployed bond policy; it changes only with a redeploy, so it is read rarely. */
+/** Advisory display policy; governance can change it. Transaction preparation rechecks the live policy. */
 export function useBondPolicy() {
   return useQuery({
-    queryKey: ['bond-policy', deployment.stacks.main.holding],
+    queryKey: publicKey('bond-policy', deployment.stacks.main.holding),
     queryFn: () => sdk.readBondPolicy(stakeContext()),
     enabled: deployed,
     staleTime: 10 * 60_000,

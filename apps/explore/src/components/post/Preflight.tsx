@@ -1,3 +1,4 @@
+import { publicKey } from '../../queries.ts'
 import { cn } from '../../lib/cn.ts'
 import { Item, ItemGroup, ItemMedia, ItemContent, ItemActions } from '../ui/item.tsx'
 import { Section, textLinkClass } from '../kit.tsx'
@@ -58,7 +59,13 @@ export function Preflight({
     query: { ...q, enabled: on && token !== undefined && token !== '' },
   })
   const funding = useQuery({
-    queryKey: ['posting-preflight', who, token, reward?.toString(), bond?.toString()],
+    queryKey: publicKey(
+      'posting-preflight',
+      who.toLowerCase(),
+      token?.toLowerCase(),
+      reward?.toString(),
+      bond?.toString(),
+    ),
     enabled: on,
     refetchInterval: 15_000,
     retry: false,

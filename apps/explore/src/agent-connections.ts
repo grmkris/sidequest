@@ -1,5 +1,7 @@
 /** The clients connected as one of the operator's agents, and how each one's access reads (ADR-0021). */
+import { managedKey } from './queries.ts'
 import { useQuery } from '@tanstack/react-query'
+import { useAuth } from './components/Wallet.tsx'
 import { agentEndpoint } from './api.ts'
 
 type AgentRole = 'work' | 'hire'
@@ -19,10 +21,11 @@ export interface AgentConnection {
 const ROLES = ['work', 'hire'] as const
 
 export function useAgentConnections(agentId: string | undefined) {
+  const auth = useAuth()
   return useQuery({
-    queryKey: ['agent-connections', agentId],
+    queryKey: managedKey('agent-connections', auth.address, auth.signedIn, agentId),
     queryFn: () => agentEndpoint<{ connections: AgentConnection[] }>(`/api/agents/${agentId}/connections`),
-    enabled: agentId !== undefined,
+    enabled: auth.signedIn && agentId !== undefined,
     refetchInterval: 30_000,
   })
 }

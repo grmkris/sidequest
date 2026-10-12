@@ -1,3 +1,4 @@
+import { boardKey, viewerKey, publicKey } from '../queries.ts'
 import { Badge } from '../components/ui/badge.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { Skeleton } from '../components/ui/skeleton.tsx'
@@ -190,7 +191,7 @@ export function JobPage({
   const { items } = useJobs()
   const listed = items.find((i) => i.jobId === jobId)?.task
   const chain = useQuery({
-    queryKey: ['job', jobId],
+    queryKey: publicKey('job', jobId),
     queryFn: () => data<Detail>(`jobs/${jobId}`),
     refetchInterval: 15_000,
     enabled: /^\d+$/.test(jobId),
@@ -200,7 +201,7 @@ export function JobPage({
   const boardId = d?.board?.boardId ?? currentBoardId()
   const taskId = d?.board?.taskId ?? listed?.taskId
   const board = useQuery({
-    queryKey: ['get_task', boardId, taskId, auth.address, auth.signedIn],
+    queryKey: boardKey(boardId, 'get_task', boardId, taskId, auth.address?.toLowerCase(), auth.signedIn),
     queryFn: () => boardApi(boardId).tool<BoardTask>('get_task', { taskId }),
     enabled: taskId !== undefined,
     refetchInterval: 15_000,
@@ -445,7 +446,7 @@ export function JobPage({
           {taskId !== undefined && <Thread boardId={boardId} taskId={taskId} jobId={jobId} />}
 
           {d !== undefined && (d.job.violation !== null || d.ruling !== null) && (
-            <Dispute d={d} boardId={boardId} taskId={taskId} signedIn={auth.signedIn} isParty={roles.length > 0} />
+            <Dispute d={d} boardId={boardId} taskId={taskId} auth={auth} isParty={roles.length > 0} />
           )}
 
           {writesOpen &&
@@ -504,6 +505,7 @@ export function JobPage({
       {writesOpen && phase !== null && t !== undefined && taskId !== undefined && (
         <JobActions
           job={{
+            jobId,
             taskId,
             boardId,
             reward,
@@ -671,22 +673,22 @@ function Dispute({
   d,
   boardId,
   taskId,
-  signedIn,
+  auth,
   isParty,
 }: {
   d: Detail
   boardId: string
   taskId: string | undefined
-  signedIn: boolean
+  auth: Auth
   isParty: boolean
 }) {
   const bundle = useQuery({
-    queryKey: ['bundle', boardId, taskId],
+    queryKey: boardKey(boardId, 'bundle', boardId, taskId, viewerKey(auth.address, auth.signedIn)),
     queryFn: () =>
       boardApi(boardId).tool<{
         bundle: { rejection: { reasonText: string | null }; statements: Array<{ role: string; text: string }> }
       }>('get_dispute_bundle', { taskId }),
-    enabled: signedIn && isParty && taskId !== undefined && d.job.violation !== null,
+    enabled: auth.signedIn && isParty && taskId !== undefined && d.job.violation !== null,
     retry: false,
   })
   const reason = bundle.data?.bundle.rejection.reasonText

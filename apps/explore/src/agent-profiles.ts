@@ -1,4 +1,5 @@
 /** Agents' public profiles (`/data/profiles`): name, description, tagline and a same-origin avatar. */
+import { publicKey } from './queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { data } from './api.ts'
 
@@ -14,7 +15,7 @@ interface AgentProfile {
 /** Every profile in one cached read: avatars appear wherever agents do, so each orb must not fetch its own. */
 const useAgentProfiles = () =>
   useQuery({
-    queryKey: ['data-profiles'],
+    queryKey: publicKey('data-profiles'),
     queryFn: () => data<{ profiles: AgentProfile[] }>('profiles'),
     staleTime: 60_000,
     refetchInterval: 120_000,

@@ -3,11 +3,12 @@
  * what, the job's track, a small picture of the work, a card on press), read for the agent's wallet across every board.
  * A job of its record the feed cannot place (an older wallet's, say) follows as a plain row linking the job.
  */
+import { taskIndexQuery, boardsQuery } from '../../queries.ts'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { agentEvents, offFeedJobs } from '../../agent-stats.ts'
-import { type BoardInfo, type ChainJob, type TaskIndexEntry, data, taskIndex } from '../../api.ts'
+import type { ChainJob, TaskIndexEntry } from '../../api.ts'
 import type { AgentRecord, RecordJob } from '../../routes/Agent.tsx'
 import { EventRow } from '../activity/EventRow.tsx'
 import { RowList } from '../activity/StretchedRow.tsx'
@@ -27,14 +28,12 @@ const FIRST = 10
 /** Every board's task index for the jobs shown, for titles; and the boards' names. */
 function useTitles(jobs: readonly ChainJob[]) {
   const boards = useQuery({
-    queryKey: ['data-boards'],
-    queryFn: () => data<{ boards: BoardInfo[] }>('boards'),
-    staleTime: 300_000,
+    ...boardsQuery(),
     enabled: jobs.length > 0,
   })
   const ids = useMemo(() => [...new Set(jobs.map((j) => j.board_id ?? 'public'))], [jobs])
   const indexes = useQueries({
-    queries: ids.map((b) => ({ queryKey: ['task_index', b], queryFn: () => taskIndex(b), staleTime: 60_000 })),
+    queries: ids.map((b) => ({ ...taskIndexQuery(b), staleTime: 60_000 })),
   })
   const tasks = new Map<string, TaskIndexEntry>()
   for (const q of indexes) for (const t of q.data ?? []) if (t.jobId !== null) tasks.set(t.jobId, t)

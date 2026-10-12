@@ -1,3 +1,5 @@
+import { boardKey, viewerKey } from './queries.ts'
+import { currentBoardId } from './api.ts'
 import * as sdk from '@sidequest/sdk'
 import { useQuery } from '@tanstack/react-query'
 import { type Abi, type Address, type Hex, getAddress, hexToBigInt, isHex, size, slice, toFunctionSelector } from 'viem'
@@ -161,7 +163,7 @@ export function useLiveSponsorship(
 
 export function useSponsorStatus(wallet: string | undefined, signedIn: boolean) {
   return useQuery({
-    queryKey: ['sponsor_status', wallet?.toLowerCase()],
+    queryKey: boardKey(currentBoardId(), 'sponsor_status', viewerKey(wallet, signedIn)),
     queryFn: () => tool<SponsorStatus>('sponsor_status', { wallet }),
     enabled: wallet !== undefined && signedIn,
     staleTime: 30_000,

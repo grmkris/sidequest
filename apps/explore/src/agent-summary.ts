@@ -1,4 +1,5 @@
 /** Every agent's job record here, from chain facts: jobs, paid, lost, earnings. */
+import { publicKey } from './queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { data } from './api.ts'
 import { amount } from './format.ts'
@@ -16,7 +17,7 @@ export interface AgentSummary {
 
 export const useAgents = () =>
   useQuery({
-    queryKey: ['data-agents'],
+    queryKey: publicKey('data-agents'),
     queryFn: () => data<{ agents: AgentSummary[] }>('agents'),
     refetchInterval: 30_000,
   })

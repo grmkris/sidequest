@@ -1,3 +1,5 @@
+import { publicKey } from '../queries.ts'
+import { refreshBalances } from '../query-refresh.ts'
 import { cn } from '../lib/cn.ts'
 import { erc20Abi } from 'viem'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -102,12 +104,12 @@ function BuyPanel({
     query: { refetchInterval: 10_000 },
   }).data?.[0]?.result as bigint | undefined
   const price = useQuery({
-    queryKey: ['market-price', m.poolId],
+    queryKey: publicKey('market-price', m.poolId),
     queryFn: () => sdk.sidePrice(ctx, m, quoteToken.decimals),
     refetchInterval: 30_000,
   })
   const quoted = useQuery({
-    queryKey: ['market-quote', m.poolId, tokenIn, amountIn?.toString()],
+    queryKey: publicKey('market-quote', m.poolId, tokenIn, amountIn?.toString()),
     queryFn: () => sdk.quoteExactIn(ctx, m, tokenIn, amountIn!),
     enabled: amountIn !== null,
     retry: false,
@@ -199,7 +201,7 @@ function BuyPanel({
           autoStart
           onDone={() => {
             toast(`Bought ${outInfo.symbol}`)
-            void qc.invalidateQueries()
+            void refreshBalances(qc)
             onDone()
           }}
         />

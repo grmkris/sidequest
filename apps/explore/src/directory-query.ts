@@ -1,9 +1,10 @@
+import { publicKey } from './queries.ts'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { fetchDirectory } from './api.ts'
 
 export function useDirectory() {
   const query = useInfiniteQuery({
-    queryKey: ['data-directory'],
+    queryKey: publicKey('data-directory'),
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) => fetchDirectory(pageParam),
     getNextPageParam: (page) => page.nextCursor ?? undefined,

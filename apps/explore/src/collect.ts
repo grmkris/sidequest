@@ -1,3 +1,5 @@
+import { boardKey, viewerKey } from './queries.ts'
+import { currentBoardId } from './api.ts'
 /**
  * What a wallet can close or claim (U3), from the board's `collect_actions(wallet)` (B4): settlements, top-up refunds,
  * payments held as `owed`, core refunds and unstaked SIDE, each with the transactions that collect it. Read here
@@ -22,7 +24,7 @@ export interface CollectAction {
 
 export function useCollectActions(wallet: string | undefined, signedIn: boolean) {
   return useQuery({
-    queryKey: ['collect_actions', wallet?.toLowerCase()],
+    queryKey: boardKey(currentBoardId(), 'collect_actions', viewerKey(wallet, signedIn)),
     queryFn: () => tool<CollectAction[]>('collect_actions', { wallet }),
     enabled: wallet !== undefined && signedIn,
     refetchInterval: 60_000,

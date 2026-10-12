@@ -1,9 +1,10 @@
+import { chainJobsQuery } from '../../queries.ts'
 import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { AgentOrb } from '../agent/AgentOrb.tsx'
 import { TokenAmount } from '../token/TokenAmount.tsx'
-import { chainJobs, currentBoardId } from '../../api.ts'
+import { currentBoardId } from '../../api.ts'
 import { stage } from '../../wallet.ts'
 import { type ShowcaseItem, showcaseJob } from './showcase-data.ts'
 import { ICON_PACK, showcaseShot } from './showcase-images.ts'
@@ -70,8 +71,7 @@ function AgentLink({
 function usePaid(jobId: string | undefined) {
   const boardId = currentBoardId()
   return useQuery({
-    queryKey: ['chain-jobs', boardId],
-    queryFn: () => chainJobs(boardId),
+    ...chainJobsQuery(boardId),
     enabled: jobId !== undefined,
     staleTime: 60_000,
     select: (list) => list.jobs.find((job) => job.job_id === jobId),

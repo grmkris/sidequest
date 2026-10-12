@@ -793,7 +793,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
             const prefix = routed === null ? '' : `/b/${boardId}`
             return yield* Effect.promise(() =>
               previewRoute(
-                { ...target, key: `${url.origin}${prefix}${path}?v=1`, cors },
+                { ...target, key: `${url.origin}${prefix}${path}?v=2`, cors },
                 {
                   submitted: (taskId, hash) =>
                     submittedDeliverable(sql, deployment, { boardId: tenant.id, taskId, hash }),

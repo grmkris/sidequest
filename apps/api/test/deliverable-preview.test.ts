@@ -293,14 +293,14 @@ describe('previewRoute', () => {
     // A copy stored before the route kept its lifetime gets the short one.
     cache.stored(request.key)?.headers.delete('x-sidequest-max-age')
     const legacy = await answer(deps({ cache }))
-    expect(legacy.res.headers.get('cache-control')).toBe('public, max-age=600')
+    expect(legacy.res.headers.get('cache-control')).toBe('public, max-age=30')
   })
 
   it('is not found for a hash the chain never recorded, without asking the board', async () => {
     const d = deps({ submitted: async () => false })
     const { res, body } = await answer(d)
     expect(res.status).toBe(404)
-    expect(res.headers.get('cache-control')).toBe('public, max-age=600')
+    expect(res.headers.get('cache-control')).toBe('public, max-age=30')
     expect(body).toMatchObject({ ok: false, code: 'not-found' })
     expect(d.calls).toEqual([])
   })
@@ -349,7 +349,7 @@ describe('previewRoute', () => {
     const { res, body } = await answer(deps({ fetch: throwing }))
     expect(res.status).toBe(200)
     expect(body).toMatchObject({ preview: NO_PREVIEW })
-    expect(res.headers.get('cache-control')).toBe('public, max-age=600')
+    expect(res.headers.get('cache-control')).toBe('public, max-age=30')
   })
 })
 

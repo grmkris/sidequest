@@ -1,10 +1,11 @@
+import { boardQueryRoot, boardViewer } from './query.ts'
 /**
  * Headless hooks over one board: read (board, tasks, a task, applications) and act (sign in, publish a hire, select a
  * worker, approve or reject). Every action returns what the board returned plus the hashes sent; the host renders
  * whatever it likes.
  */
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import type { Hex } from 'viem'
 import { signTypedDataWith } from './client.ts'
 import { useSidequest } from './provider.tsx'
@@ -19,12 +20,16 @@ import type {
   TxRequest,
 } from './types.ts'
 
-const KEY = 'sidequest'
+function useReadIdentity() {
+  const { api, chain, address } = useSidequest()
+  const revision = useSyncExternalStore(api.subscribeSession, api.sessionRevision, api.sessionRevision)
+  return { api, root: boardQueryRoot(api, chain.id), viewer: boardViewer(address, revision) }
+}
 
 export function useBoard() {
-  const { api } = useSidequest()
+  const { api, root } = useReadIdentity()
   return useQuery({
-    queryKey: [KEY, api.boardId, 'board'],
+    queryKey: [...root, 'board'],
     queryFn: async () => (await api.tool<{ board: BoardInfo }>('get_board')).board,
     staleTime: 60_000,
   })
@@ -56,14 +61,14 @@ export interface TaskListItem {
 
 /** The board's tasks: the board's records merged with the indexed chain facts (drafts and not-yet-indexed jobs included). */
 export function useTasks(refetchInterval = 20_000) {
-  const { api } = useSidequest()
+  const { api, root } = useReadIdentity()
   const tasks = useQuery({
-    queryKey: [KEY, api.boardId, 'task_index'],
+    queryKey: [...root, 'task_index'],
     queryFn: () => api.tool<TaskIndexEntry[]>('task_index'),
     refetchInterval,
   })
   const chain = useQuery({
-    queryKey: [KEY, api.boardId, 'jobs'],
+    queryKey: [...root, 'jobs'],
     queryFn: () => api.jobs<{ jobs: ChainJob[]; index: { next_block: number; updated_at: number } | null }>(),
     refetchInterval,
   })
@@ -87,9 +92,9 @@ export function useTasks(refetchInterval = 20_000) {
 }
 
 export function useTask<T = Record<string, unknown>>(taskId: string | undefined, refetchInterval = 15_000) {
-  const { api } = useSidequest()
+  const { api, root, viewer } = useReadIdentity()
   return useQuery({
-    queryKey: [KEY, api.boardId, 'task', taskId],
+    queryKey: [...root, 'task', taskId, viewer],
     queryFn: () => api.tool<T>('get_task', { taskId }),
     enabled: taskId !== undefined,
     refetchInterval,
@@ -99,9 +104,9 @@ export function useTask<T = Record<string, unknown>>(taskId: string | undefined,
 export function useApplications<T = Array<{ id: string; worker: string; agentId: string; note: string }>>(
   taskId: string | undefined,
 ) {
-  const { api } = useSidequest()
+  const { api, root, viewer } = useReadIdentity()
   return useQuery({
-    queryKey: [KEY, api.boardId, 'applications', taskId],
+    queryKey: [...root, 'applications', taskId, viewer],
     queryFn: () => api.tool<T>('list_applications', { taskId }),
     enabled: taskId !== undefined,
     refetchInterval: 15_000,
@@ -115,8 +120,8 @@ export function useTxSender() {
 
 function useInvalidate() {
   const qc = useQueryClient()
-  const { api } = useSidequest()
-  return () => qc.invalidateQueries({ queryKey: [KEY, api.boardId] })
+  const { root } = useReadIdentity()
+  return () => qc.invalidateQueries({ queryKey: root })
 }
 
 export interface PublishInput {

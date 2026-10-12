@@ -1,3 +1,4 @@
+import { boardsQuery } from '../queries.ts'
 import { Badge } from '../components/ui/badge.tsx'
 import { Item, ItemGroup, ItemContent, ItemActions } from '../components/ui/item.tsx'
 import { Alert, AlertDescription } from '../components/ui/alert.tsx'
@@ -6,7 +7,7 @@ import { Address, CopyButton, LoadingRows, PageTitle, Section } from '../compone
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ChevronRight, Plus } from 'lucide-react'
-import { type BoardInfo, data } from '../api.ts'
+import type { BoardInfo } from '../api.ts'
 
 import { Monogram } from '../components/Wallet.tsx'
 
@@ -35,8 +36,7 @@ export function CopyRow({ label, value, hint }: { label: string; value: string; 
 /** Every hosted board (ADR-0008): the public one and the tenants, each with its tokens and origins. */
 export function BoardsPage() {
   const boards = useQuery({
-    queryKey: ['boards'],
-    queryFn: () => data<{ boards: BoardInfo[] }>('boards'),
+    ...boardsQuery(),
     refetchInterval: 60_000,
   })
   const list = boards.data?.boards ?? []

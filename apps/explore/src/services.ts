@@ -3,6 +3,7 @@
  * (`/data/services`), and the words a service shows — its price, how long it takes, the line that asks for it. An ad is
  * discovery only: it admits no one to a job and moves no money.
  */
+import { publicKey } from './queries.ts'
 import type { DirectoryAgent, ServiceAdvertisement } from '@sidequest/sdk'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { data } from './api.ts'
@@ -61,7 +62,7 @@ const page = (q: string, cursor: string | undefined) => {
 /** Every live service, most active agents first, 24 at a time; `q` keeps those whose words match. */
 export function useServices(q = '') {
   const query = useInfiniteQuery({
-    queryKey: ['data-services', q.trim()],
+    queryKey: publicKey('data-services', 'infinite', q.trim()),
     // SAFETY: the first page has no cursor; later pages pass the previous page's string cursor.
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) => page(q, pageParam),

@@ -1,3 +1,4 @@
+import { publicKey } from './queries.ts'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { data } from './api.ts'
 
@@ -9,7 +10,7 @@ export interface Backing {
 
 /** One agent wallet's stake, read once and kept for a couple of minutes; a failed read stays unknown. */
 const backingQuery = (wallet: string) => ({
-  queryKey: ['agent-backing', wallet],
+  queryKey: publicKey('agent-backing', wallet.toLowerCase()),
   queryFn: () => data<Backing>(`backing/${wallet}`),
   staleTime: 120_000,
   retry: false,

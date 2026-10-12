@@ -1,3 +1,5 @@
+import { boardKey, viewerKey } from './queries.ts'
+import { currentBoardId } from './api.ts'
 import { useQuery } from '@tanstack/react-query'
 import { tool } from './api.ts'
 
@@ -41,7 +43,7 @@ const readPage = (cursor: string | null) =>
 
 export function useMyEvents(address: string | undefined, signedIn: boolean) {
   return useQuery({
-    queryKey: ['my-events', address?.toLowerCase()],
+    queryKey: boardKey(currentBoardId(), 'my-events', viewerKey(address, signedIn)),
     queryFn: () => myEvents(),
     enabled: signedIn && address !== undefined,
     refetchInterval: 60_000,

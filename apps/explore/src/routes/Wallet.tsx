@@ -3,6 +3,7 @@
  * holds and lost to disputes), the agents it hired, owns and backs, its open requests and its activity. An agent's
  * wallet goes to the agent's page, which tells the same story with a name. Everything here is public.
  */
+import { directoryFirstQuery } from '../queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { Link, Navigate, useParams } from '@tanstack/react-router'
 import { ExternalLink } from 'lucide-react'
@@ -11,7 +12,7 @@ import { type Address, erc721Abi, getAddress, isAddress } from 'viem'
 import { useReadContract, useReadContracts } from 'wagmi'
 import { type FeedEvent, involves, newestPerJob } from '../activity-feed.ts'
 import { useAgents } from '../agent-summary.ts'
-import { data, fetchDirectory } from '../api.ts'
+import { data } from '../api.ts'
 import { EventRow } from '../components/activity/EventRow.tsx'
 import { RowList } from '../components/activity/StretchedRow.tsx'
 import { type ActivityFeed, useActivityFeed } from '../components/activity/useActivityFeed.ts'
@@ -39,7 +40,7 @@ const TILE = 'grid min-w-0 content-start gap-1 rounded-xl bg-card px-4 py-3.5 ri
 function useWalletAgent(address: Address): { agentId: string | null; checked: boolean } {
   const known = usePosterAgents().get(address.toLowerCase())
   // The same read usePosterAgents makes: until the directory answers, its agents' wallets are unknown.
-  const directory = useQuery({ queryKey: ['directory-first'], queryFn: () => fetchDirectory(), staleTime: 300_000 })
+  const directory = useQuery(directoryFirstQuery())
   const indexed = useQuery({
     queryKey: walletAgentsKey(address),
     queryFn: () => data<{ agents: string[] }>(`agents?wallet=${encodeURIComponent(address)}`),

@@ -1,3 +1,4 @@
+import { taskIndexQuery, chainJobsQuery, directoryFirstQuery } from '../queries.ts'
 import { Badge } from '../components/ui/badge.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '../components/ui/empty.tsx'
@@ -9,7 +10,7 @@ import { JOB_TAG_LABELS, type JobTag } from '@sidequest/sdk'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { BriefcaseBusiness, Check, ChevronRight, Tag as TagIcon, TriangleAlert } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { type QuoteRequest, type TaskIndexEntry, chainJobs, currentBoardId, fetchDirectory, taskIndex } from '../api.ts'
+import { type QuoteRequest, type TaskIndexEntry, currentBoardId } from '../api.ts'
 import { BoardLink, boardRoutes } from '../components/BoardLink.tsx'
 import { PhaseBadge } from '../components/Phase.tsx'
 import { IndexLine, ReadNotice, SearchBox, TagChips, readTags } from '../components/JobFilters.tsx'
@@ -53,16 +54,14 @@ const dataOf = (
 
 export function useJobs() {
   const tasks = useQuery({
-    queryKey: ['task_index', currentBoardId()],
-    queryFn: () => taskIndex(),
+    ...taskIndexQuery(),
     refetchInterval: 10_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   })
   const boardId = currentBoardId()
   const chain = useQuery({
-    queryKey: ['chain-jobs', boardId],
-    queryFn: () => chainJobs(boardId),
+    ...chainJobsQuery(boardId),
     refetchInterval: 10_000,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
@@ -79,8 +78,7 @@ export function useJobs() {
   )
   const otherData = useQueries({
     queries: others.map((id) => ({
-      queryKey: ['task_index', id],
-      queryFn: () => taskIndex(id),
+      ...taskIndexQuery(id),
       refetchInterval: 60_000,
     })),
     combine: dataOf,
@@ -153,7 +151,7 @@ function rowNote(phase: Phase | null, agentId: string | null | undefined): strin
 /** The hosted or listed agent behind each poster wallet this viewer can name: its own agents, then the directory. */
 export function usePosterAgents(): Map<string, string> {
   const managed = useManagedAgents()
-  const directory = useQuery({ queryKey: ['directory-first'], queryFn: () => fetchDirectory(), staleTime: 300_000 })
+  const directory = useQuery(directoryFirstQuery())
   return useMemo(() => {
     const byWallet = new Map<string, string>()
     for (const a of directory.data?.agents ?? []) byWallet.set(a.wallet.toLowerCase(), a.agentId)

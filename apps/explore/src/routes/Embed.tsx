@@ -1,3 +1,4 @@
+import { boardKey } from '../queries.ts'
 import { Badge } from '../components/ui/badge.tsx'
 import { Button } from '../components/ui/button.tsx'
 import { Alert, AlertDescription } from '../components/ui/alert.tsx'
@@ -46,11 +47,11 @@ export function EmbedPage() {
   const { isConnected } = useAccount()
   const { connect, connectors } = useConnect()
   const board = useQuery({
-    queryKey: ['get_board', boardId],
+    queryKey: boardKey(boardId, 'get_board', boardId),
     queryFn: async () => (await tool<{ board: BoardInfo }>('get_board')).board,
   })
   const task = useQuery({
-    queryKey: ['embed-task', taskId],
+    queryKey: boardKey(boardId, 'embed-task', taskId, auth.address?.toLowerCase(), auth.signedIn),
     queryFn: () => tool<{ jobId: string | null }>('get_task', { taskId }),
     enabled: taskId !== null,
     refetchInterval: 10_000,

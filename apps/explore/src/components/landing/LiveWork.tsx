@@ -1,3 +1,4 @@
+import { publicKey } from '../../queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
@@ -66,7 +67,7 @@ interface BoardNumbers {
 
 function BoardLine({ indexedThrough }: { indexedThrough: number | null }) {
   const stats = useQuery({
-    queryKey: ['landing-stats'],
+    queryKey: publicKey('landing-stats'),
     queryFn: () => data<BoardNumbers>('stats'),
     refetchInterval: 60000,
   })

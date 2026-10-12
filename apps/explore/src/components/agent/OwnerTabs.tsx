@@ -1,3 +1,4 @@
+import { managedKey } from '../../queries.ts'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import type { Address } from 'viem'
@@ -27,6 +28,8 @@ const triggerClass = 'flex-none px-0 min-h-9 pointer-coarse:min-h-11 group-data-
  * approvals (waiting first, then the decided ones) and Manage (budget, wallet, backing, connection, access). The tab
  * is kept in the URL; an approval link (`?tab=approvals&approval=<id>`) opens Approvals with that approval in view.
  */
+const canReadStatus = (signedIn: boolean, state: string) => signedIn && state !== 'pending'
+
 export function OwnerTabs({
   managed,
   overview,
@@ -49,10 +52,10 @@ export function OwnerTabs({
   const pending = mine.filter((a) => a.status === 'pending').length
   const unfinished = mine.filter(unfinishedApproval).length
   const status = useQuery({
-    queryKey: ['managed-agent-status', managed.id, auth.address],
+    queryKey: managedKey('managed-agent-status', auth.address, auth.signedIn, managed.id),
     queryFn: () => agentStatus(managed.id),
     refetchInterval: 20000,
-    enabled: managed.state !== 'pending',
+    enabled: canReadStatus(auth.signedIn, managed.state),
   })
   const now = useNow()
   const items = needsYou({
@@ -143,7 +146,7 @@ function Approvals({
   const approvals = useManagedApprovals()
   const mine = (approvals.data?.approvals ?? []).filter((a) => a.agent_id === managed.id)
   const { waiting, recovering, past } = splitApprovals(mine)
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['managed-approvals', auth.address] })
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['managed-approvals', auth.address?.toLowerCase()] })
   const shown = useRef(false)
   const loaded = approvals.data !== undefined
   useEffect(() => {

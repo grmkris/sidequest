@@ -1,3 +1,5 @@
+import { boardKey, viewerKey } from './queries.ts'
+import { currentBoardId } from './api.ts'
 import { useQuery } from '@tanstack/react-query'
 import { tool } from './api.ts'
 
@@ -74,7 +76,7 @@ export const pendingLink = {
 /** Whether this wallet is linked; polled while a code waits for the bot. */
 export function useTelegramStatus(wallet: string | undefined, signedIn: boolean, waiting: boolean) {
   return useQuery({
-    queryKey: ['telegram_status', wallet?.toLowerCase()],
+    queryKey: boardKey(currentBoardId(), 'telegram_status', viewerKey(wallet, signedIn)),
     queryFn: () => tool<TelegramStatus>('telegram_status', { wallet }),
     enabled: wallet !== undefined && signedIn,
     refetchInterval: waiting ? 3_000 : false,

@@ -1,3 +1,4 @@
+import { managedKey } from '../queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
@@ -128,8 +129,9 @@ export function AgentApprovePage() {
   const auth = useAuth()
   const agents = useManagedAgents()
   const proposal = useQuery({
-    queryKey: ['proposal', agentKey],
+    queryKey: managedKey('proposal', auth.address, auth.signedIn, agentKey),
     queryFn: () => readProposal(agentKey),
+    enabled: auth.signedIn,
     refetchInterval: (query) => proposalPoll(query.state.data, query.state.dataUpdateCount),
   })
   const agent = agents.data?.agents.find((row) => row.id === agentKey)

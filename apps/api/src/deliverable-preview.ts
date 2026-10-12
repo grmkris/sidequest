@@ -37,9 +37,9 @@ const MANIFEST_BYTES = 64 * 1024
 const HEAD_BYTES = 256 * 1024
 const TIMEOUT_MS = 4000
 const MAX_REDIRECTS = 3
-/** Seconds a preview is cached: a found one for an hour; a miss (nothing to show, or not on chain) for ten minutes. */
+/** Seconds a preview is cached: a found one for an hour; a miss (nothing to show, or not on chain) for thirty seconds. */
 const HIT = 3600
-const MISS = 600
+const MISS = 30
 
 export const isPreviewPath = (path: string) => path.startsWith('/data/deliverables/')
 

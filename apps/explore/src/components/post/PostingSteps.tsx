@@ -1,3 +1,4 @@
+import { publicKey } from '../../queries.ts'
 import * as sdk from '@sidequest/sdk'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -75,7 +76,7 @@ function usePostingState({ taskId, owner, ctx, publish, fundingKey }: ReviewProp
     }
   }, [fundingKey, taskId, publish])
   const plan = useQuery({
-    queryKey: ['bond-funding', fundingKey, publish.data],
+    queryKey: publicKey('bond-funding', fundingKey, publish.data),
     enabled: hydrated && error === null && frozen === null,
     queryFn: () => sdk.preparePublishFunding(ctx, getAddress(owner), publish),
     retry: false,

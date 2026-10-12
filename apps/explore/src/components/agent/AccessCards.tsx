@@ -35,7 +35,7 @@ function RolesCard({ agent }: { agent: ManagedAgent }) {
       // Each connection's access follows the roles at once.
       await Promise.all([
         queries.invalidateQueries({ queryKey: ['managed-agents'] }),
-        queries.invalidateQueries({ queryKey: ['agent-connections', agent.id] }),
+        queries.invalidateQueries({ queryKey: ['agent-connections'] }),
       ])
     } catch (failure) {
       setError(errorText(failure, 'The roles could not be saved'))

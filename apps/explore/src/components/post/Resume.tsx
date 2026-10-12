@@ -1,3 +1,4 @@
+import { boardKey, viewerKey } from '../../queries.ts'
 import { cn } from '../../lib/cn.ts'
 import { Badge } from '../ui/badge.tsx'
 import { Button } from '../ui/button.tsx'
@@ -75,7 +76,7 @@ export function ResumeOffer({
   const api = boardApi(boardId)
   const routes = boardRoutes(boardId)
   const task = useQuery({
-    queryKey: ['resume-offer', boardId, taskId, auth.signedIn],
+    queryKey: boardKey(boardId, 'resume-offer', boardId, taskId, viewerKey(auth.address, auth.signedIn)),
     queryFn: () => api.tool<SavedOffer>('get_task', { taskId }),
   })
   const [txs, setTxs] = useState<TxRequest[] | null>(null)

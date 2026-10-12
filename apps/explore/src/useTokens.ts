@@ -1,17 +1,15 @@
+import { boardsQuery } from './queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useSyncExternalStore } from 'react'
 import { type Address, erc20Abi, isAddress } from 'viem'
 import { useReadContracts } from 'wagmi'
-import { type BoardInfo, data } from './api.ts'
 import { type TokenMeta, registerTokens, subscribeTokens, tokenMeta, tokenRegistryVersion } from './format.ts'
 import { chain } from './wallet.ts'
 
 /** Loads every board's tokens (symbol and decimals as the board read them on-chain) into the amount formatter. */
 export function useTokenRegistry(): void {
   const q = useQuery({
-    queryKey: ['data-boards'],
-    queryFn: () => data<{ boards: BoardInfo[] }>('boards'),
-    staleTime: 300_000,
+    ...boardsQuery(),
   })
   // Idempotent: a known address keeps its first entry.
   useEffect(() => {

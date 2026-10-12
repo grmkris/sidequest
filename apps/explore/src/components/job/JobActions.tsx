@@ -1,3 +1,5 @@
+import { boardKey } from '../../queries.ts'
+import { refreshJob } from '../../query-refresh.ts'
 import { Badge } from '../ui/badge.tsx'
 import { Button } from '../ui/button.tsx'
 import { Field, FieldLabel } from '../ui/field.tsx'
@@ -38,6 +40,7 @@ import { paidJob } from './HireAgain.tsx'
 export type JobEvent = 'approved' | 'rejected' | 'cancelled' | 'disputed' | 'settled'
 
 export interface ActionJob {
+  jobId?: string
   taskId: string
   boardId: string
   reward: string | null
@@ -144,7 +147,11 @@ export function JobActions({
   }
   const done = (kind: string, hashes: string[]) => {
     setTxs(null)
-    void qc.invalidateQueries()
+    void refreshJob(qc, {
+      boardId: job.boardId,
+      taskId: job.taskId,
+      ...(job.jobId === undefined ? {} : { jobId: job.jobId }),
+    })
     const messages: Record<string, string> = {
       approve: `Paid ${paid} to ${agent}`,
       reject: 'Rejected. The dispute window is open.',
@@ -184,7 +191,7 @@ export function JobActions({
               query.queryKey[0] === 'get_task' &&
               query.queryKey[1] === job.boardId &&
               query.queryKey[2] === job.taskId &&
-              query.queryKey[3] === address &&
+              query.queryKey[3] === address?.toLowerCase() &&
               query.queryKey[4] === signedIn,
           },
           (current) => (current === undefined ? current : { ...current, selection: refreshed.selection ?? null }),
@@ -506,7 +513,7 @@ function Applications({
       [],
   )
   const apps = useQuery({
-    queryKey: ['applications', job.boardId, job.taskId, address, signedIn],
+    queryKey: boardKey(job.boardId, 'applications', job.boardId, job.taskId, address?.toLowerCase(), signedIn),
     queryFn: () =>
       boardApi(job.boardId).tool<Array<{ id: string; worker: string; agent_id: string; note: string }>>(
         'list_applications',

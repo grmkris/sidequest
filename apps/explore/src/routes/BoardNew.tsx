@@ -1,3 +1,4 @@
+import { boardsQuery } from '../queries.ts'
 import { Button } from '../components/ui/button.tsx'
 import { Field, FieldLabel, FieldDescription } from '../components/ui/field.tsx'
 import { Input } from '../components/ui/input.tsx'
@@ -9,7 +10,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { Check, KeyRound } from 'lucide-react'
 import { useState } from 'react'
-import { type BoardInfo, data, tool } from '../api.ts'
+import { type BoardInfo, tool } from '../api.ts'
 import { PrivyLogin } from '../components/Privy.tsx'
 
 import type { useSignedIn } from '../components/Wallet.tsx'
@@ -53,7 +54,7 @@ function Choices({
 /** Self-serve board creation (ADR-0008): the signed-in wallet becomes the owner. */
 export function BoardNewPage({ auth }: { auth: ReturnType<typeof useSignedIn> }) {
   const navigate = useNavigate()
-  const pub = useQuery({ queryKey: ['boards'], queryFn: () => data<{ boards: BoardInfo[] }>('boards') })
+  const pub = useQuery({ ...boardsQuery() })
   const template = pub.data?.boards.find((b) => b.public)
   const [slug, setSlug] = useState('')
   const [name, setName] = useState('')

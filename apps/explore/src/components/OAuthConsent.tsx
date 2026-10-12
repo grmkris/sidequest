@@ -1,3 +1,4 @@
+import { managedKey } from '../queries.ts'
 import { Button } from './ui/button.tsx'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from './ui/empty.tsx'
 import { Alert, AlertDescription } from './ui/alert.tsx'
@@ -27,7 +28,7 @@ function rolesText(roles: readonly ('work' | 'hire')[]): string {
 export function OAuthConsent({ requestId }: { requestId: string }) {
   const auth = useAuth()
   const request = useQuery({
-    queryKey: ['oauth-request', requestId, auth.address],
+    queryKey: managedKey('oauth-request', auth.address, auth.signedIn, requestId),
     queryFn: () =>
       agentEndpoint<{
         request: OAuthClientIdentity & { scopes: string[]; resource: string; expiresAt: number }
@@ -39,7 +40,7 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
     retry: false,
   })
   const agents = useQuery({
-    queryKey: ['managed-agents', auth.address],
+    queryKey: managedKey('managed-agents', auth.address, auth.signedIn),
     queryFn: () => agentEndpoint<{ agents: ManagedAgent[] }>('/api/agents'),
     enabled: auth.signedIn,
   })

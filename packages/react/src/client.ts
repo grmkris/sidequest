@@ -64,9 +64,21 @@ export function createBoardApi(options: BoardApiOptions) {
       ? memoryStorage()
       : (options.storage ?? (typeof sessionStorage === 'undefined' ? memoryStorage() : sessionStorage))
   const session = () => storage.getItem(SESSION_KEY)
+  let revision = 0
+  const listeners = new Set<() => void>()
+  const subscribeSession = (listener: () => void) => {
+    listeners.add(listener)
+    return () => {
+      listeners.delete(listener)
+    }
+  }
+  const sessionRevision = () => revision
   const setSession = (token: string | null) => {
+    if (token === session()) return
     if (token === null) storage.removeItem(SESSION_KEY)
     else storage.setItem(SESSION_KEY, token)
+    revision++
+    for (const listener of listeners) listener()
   }
   const tool = async <T = unknown>(name: string, args: Record<string, unknown> = {}): Promise<T> => {
     const token = session()
@@ -96,6 +108,8 @@ export function createBoardApi(options: BoardApiOptions) {
     baseUrl,
     boardId,
     apiBase,
+    subscribeSession,
+    sessionRevision,
     tool,
     data,
     session,

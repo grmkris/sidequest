@@ -3,6 +3,7 @@
  * page. Same query keys as before, so every view reads one cache. Only a signed-in operator has any; the server
  * scopes both lists to the session's operator.
  */
+import { managedKey } from './queries.ts'
 import { type UseQueryResult, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { type AgentLiveness, agentStatus } from './agent-orb.ts'
@@ -30,7 +31,7 @@ function usePrivate<T>(query: UseQueryResult<T>, live: boolean): UseQueryResult<
 export function useManagedAgents() {
   const auth = useAuth()
   const query = useQuery({
-    queryKey: ['managed-agents', auth.address],
+    queryKey: managedKey('managed-agents', auth.address, auth.signedIn),
     queryFn: () => agentEndpoint<{ agents: ManagedAgent[] }>('/api/agents'),
     // Before a network's launch there are no managed agents to read.
     enabled: auth.signedIn && writesOpen,
@@ -42,7 +43,7 @@ export function useManagedAgents() {
 export function useManagedApprovals() {
   const auth = useAuth()
   const query = useQuery({
-    queryKey: ['managed-approvals', auth.address],
+    queryKey: managedKey('managed-approvals', auth.address, auth.signedIn),
     queryFn: () => agentEndpoint<{ approvals: AgentApproval[] }>('/api/approvals'),
     // Before a network's launch there are no managed agents to read.
     enabled: auth.signedIn && writesOpen,

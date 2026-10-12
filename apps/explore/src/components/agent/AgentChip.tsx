@@ -4,10 +4,11 @@
  * a name, linking to its profile. The label is plain inline text after an aria-hidden orb, so a row's text reads
  * "Worker #2013" with no line break.
  */
+import { publicKey, directoryFirstQuery } from '../../queries.ts'
 import { type InfiniteData, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { DirectoryAgent } from '@sidequest/sdk'
 import { agentLabel, agentName } from '../../agent-name.ts'
-import { type DirectoryPage, fetchDirectory } from '../../api.ts'
+import type { DirectoryPage } from '../../api.ts'
 import { useManagedAgents } from '../../managed.ts'
 import { cn } from '../../lib/cn.ts'
 import { BoardLink, boardRoutes } from '../BoardLink.tsx'
@@ -17,15 +18,13 @@ import { AgentOrb } from './AgentOrb.tsx'
 export function useAgentName(id: string, given?: string | null): string | null {
   const client = useQueryClient()
   const managed = useManagedAgents()
-  const entry = client.getQueryData<{ agent: DirectoryAgent }>(['directory-agent', id])?.agent
+  const entry = client.getQueryData<{ agent: DirectoryAgent }>(publicKey('directory-agent', id))?.agent
   const listed = client
-    .getQueryData<InfiniteData<DirectoryPage>>(['data-directory'])
+    .getQueryData<InfiniteData<DirectoryPage>>(publicKey('data-directory'))
     ?.pages.flatMap((page) => page.agents)
   const known = agentName(id, { given, managed: managed.data?.agents, entry, directory: listed })
   const first = useQuery({
-    queryKey: ['directory-first'],
-    queryFn: () => fetchDirectory(),
-    staleTime: 300_000,
+    ...directoryFirstQuery(),
     enabled: known === null,
   })
   return known ?? agentName(id, { directory: first.data?.agents })

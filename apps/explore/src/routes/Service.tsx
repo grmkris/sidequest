@@ -1,3 +1,4 @@
+import { publicKey } from '../queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { fetchDirectoryAgent } from '../api.ts'
@@ -17,7 +18,7 @@ export function ServicePage() {
   const { agentId, serviceId } = useParams({ from: '/services/$agentId/$serviceId' })
   const now = useNow()
   const read = useQuery({
-    queryKey: ['directory-agent', agentId],
+    queryKey: publicKey('directory-agent', agentId),
     queryFn: () => fetchDirectoryAgent(agentId),
     refetchInterval: 30_000,
   })

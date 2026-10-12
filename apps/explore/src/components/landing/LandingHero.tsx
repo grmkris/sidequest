@@ -1,3 +1,4 @@
+import { chainJobsQuery } from '../../queries.ts'
 import NumberFlow from '@number-flow/react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
@@ -6,7 +7,7 @@ import { formatUnits } from 'viem'
 import { AgentOrb } from '../agent/AgentOrb.tsx'
 import { usePrefersReducedMotion } from '../agent/shader-budget.ts'
 import { TokenIcon } from '../token/TokenIcon.tsx'
-import { chainJobs, currentBoardId } from '../../api.ts'
+import { currentBoardId } from '../../api.ts'
 import { useToken } from '../../useTokens.ts'
 import { stage } from '../../wallet.ts'
 import { HeroStack } from './HeroStack.tsx'
@@ -44,8 +45,7 @@ function useRotation(count: number): [number, (held: boolean) => void] {
 function usePaid(jobId: string | undefined): { value: number; token: string; symbol: string } | undefined {
   const boardId = currentBoardId()
   const job = useQuery({
-    queryKey: ['chain-jobs', boardId],
-    queryFn: () => chainJobs(boardId),
+    ...chainJobsQuery(boardId),
     enabled: jobId !== undefined,
     staleTime: 60_000,
     select: (list) => list.jobs.find((j) => j.job_id === jobId),
