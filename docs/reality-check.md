@@ -1287,3 +1287,40 @@ deferred with their limitations documented. No economic transaction was submitte
 
 Sanitized readback: [2026-10-12-dev.json](evidence/commons-feedback/2026-10-12-dev.json).
 Implementation/audit outcomes: [feedback status](agents/feedback-status.md).
+
+## 12 October 2026 — release review fixes on dev, promoted to prod-testnet
+
+**Released SHA:** `15f1c17795f351274a6e71573a4b90b89b803749`, the orchestrator's review of the day's Claude and Codex
+commits (about 30 fixes from deadline/backing order to the MCP 202, cache policy and silent sign-in guard) plus
+the role containers. Its parent `0436875c` passed `heavy bun --no-env-file run check` in a clean detached worktree;
+the two later commits are a docs handoff and a crew-script fix. [CI run 38246617008](https://github.com/grmkris/sidequest/actions/runs/38246617008)
+passed verify, deploy-dev, smoke-dev and drift-dev. Floors from that verify: API 690 passed / 17 skipped, Explore
+452, board 471 / 52 skipped.
+
+**Live-verified on dev:**
+
+- `/health` and `/release.json` read Monad testnet, `mainnetLive: false`, `writesOpen: true`.
+- Goblin's MCP client on agent 2211: `request_quotes` with no deadlines answered `invalid`, "deliveryDeadline and
+  quoteDeadline are required: …" (not a backing refusal or the bond-horizon message); `show_hiring_dashboard` put
+  request `8cda84efaf91e35a`, past its quote deadline, under "needs your action" with "accepting quotes" empty.
+- Earlier candidate `580e1ee6` on dev: public reads cache `public, max-age=0, s-maxage=10`; `/agent/2211?back=7.5`
+  opened the Back sheet with 7.5 and the address bar returned to `/agent/2211`.
+- The served Explore bundle carries the selection prompt "The reward is paid when you accept the delivery, or when its
+  review window ends without a reply."
+- Roles as containers from a worktree pinned to `15f1c177`: `sq-arbiter` signed in to both boards as
+  `0x96eE…4716` (runner `sq-arbiter@netcup`) and idled on the old runner's lease until it expired, then polled each
+  minute; `sq-moderator` and `sq-maintainer` resumed from their copied cursors. The tmux arbiter is stopped. The dev
+  crew (9 bots) runs `15f1c177`.
+
+**Prod-testnet:** the same SHA via [CI run 38248203257](https://github.com/grmkris/sidequest/actions/runs/38248203257)
+(deploy verified with a no-op re-plan; smoke green; drift clean on the job's second attempt after a failed
+programmatic inspection). Readback: health ok on Monad testnet, `/release.json` `writesOpen: true` and
+`mainnetLive: false`, anonymous MCP `tools/list` 401, indexer 43 s behind head.
+
+**Not live-verified:** goblin checks 2 (a dated `request_quotes` posts) and 4 (fresh 0-SIDE agent, one-click
+"Register and connect", immediate `insufficient-backing`) were skipped on dev by Kristjan and move to prod-testnet;
+an expired request under "finished"; the MCP 202 in Workers Logs (the Cloudflare connection needs a new sign-in).
+
+**Open:** a hosted `create_task` backing refusal still waits on the sponsor's pending-send check before the board's
+own checks (15.7 s on 12 Oct). Reordering it would let a prepared action freeze on stale chain state, so it waits for
+a reviewed change.

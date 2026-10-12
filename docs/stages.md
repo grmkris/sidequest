@@ -55,6 +55,17 @@ not authenticated host acceptance or a live mainnet proof.
 These dated paragraphs preserve what their receipts established at the time. Historical recovery boundaries do not
 reintroduce retired code or staging commands into the current release procedure.
 
+### Release review fixes on dev and prod-testnet — 12 October 2026
+
+The orchestrator released `15f1c17795f351274a6e71573a4b90b89b803749` to dev
+([CI 38246617008](https://github.com/grmkris/sidequest/actions/runs/38246617008)) and, on Kris's go, to prod
+([CI 38248203257](https://github.com/grmkris/sidequest/actions/runs/38248203257)). The prod deploy updated three
+resources and its re-plan was a no-op; the first drift step failed inside the programmatic inspection after the CLI
+drift passed, and the job's re-run (attempt 2) deployed nothing new, smoked green and read drift clean. Both stages
+read Monad testnet 10143, writes open and `mainnetLive:false`; prod's anonymous MCP answered 401 and its indexer was
+current. The arbiter, moderator and maintainer now run as `sq-*` containers pinned to the released SHA
+(`crew/bin/roles.ts`), replacing the tmux arbiter. Evidence: [reality check](reality-check.md).
+
 ### G1e testnet source and receipt evidence — 8 October 2026
 
 The G1e contract cutover is recorded as **source and receipt evidence**, not a hosted release. Candidate source
