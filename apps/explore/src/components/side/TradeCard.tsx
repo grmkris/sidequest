@@ -5,7 +5,7 @@
  */
 import { usePrivy } from '@privy-io/react-auth'
 import * as sdk from '@sidequest/sdk'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Check } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
 import { erc20Abi, parseUnits } from 'viem'
@@ -13,18 +13,15 @@ import { useBalance, useReadContract } from 'wagmi'
 import { useBondPolicy } from '../../bond-policy.ts'
 import { formatAmount } from '../../format.ts'
 import { publicKey } from '../../queries.ts'
-import { refreshBalances } from '../../query-refresh.ts'
 import { type Edited, type SideTrade, fillText, sideTrade, tradeAmounts, wholeUp } from '../../side-sheet.ts'
 import { stakeContext } from '../../stake-context.ts'
-import { friendlyError } from '../../txErrors.ts'
 import { chain, deployed, deployment, getSideLink, isMainnet, privyAppId, writesOpen } from '../../wallet.ts'
 import { GasWarning, SWAP_GAS } from '../GasWarning.tsx'
 import { AddressRow, Segmented } from '../kit.tsx'
 import { AmountField } from '../money/AmountField.tsx'
 import { usePrivyAuthenticated } from '../Privy.tsx'
 import { TestnetFaucet } from '../TestnetFaucet.tsx'
-import { TxSteps } from '../TxSteps.tsx'
-import type { WalletStep } from '../txOperation.ts'
+import { SavedTrade, useTradeSend } from './TradeSend.tsx'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
 import { useAuth } from '../Wallet.tsx'
@@ -202,38 +199,6 @@ function TradeDone({
   )
 }
 
-/** Sending a trade: its steps while the wallet confirms, then what it returned. */
-function useTradeSend(l: sdk.Launcher | null, address: `0x${string}` | undefined) {
-  const ctx = stakeContext()
-  const qc = useQueryClient()
-  const [steps, setSteps] = useState<{ id: string; txs: WalletStep[]; trade: Trade; out: bigint } | null>(null)
-  const [done, setDone] = useState<{ trade: Trade; out: bigint } | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [preparing, setPreparing] = useState(false)
-  const send = async (trade: Trade, amounts: NonNullable<ReturnType<typeof tradeAmounts>>) => {
-    if (l === null || address === undefined) return
-    setPreparing(true)
-    setError(null)
-    try {
-      const deadline = Math.floor(Date.now() / 1000) + 600
-      const input = { owner: address, side: trade, amountIn: amounts.amountIn, minOut: amounts.minOut, deadline }
-      const txs = await sdk.launcherTransactions(ctx, l, input)
-      const id = `nadfun:${trade}:${address}:${amounts.amountIn}:${Date.now()}`
-      setSteps({ id, txs, trade, out: amounts.expectedOut })
-    } catch (e) {
-      setError(friendlyError(e))
-    } finally {
-      setPreparing(false)
-    }
-  }
-  const finish = () => {
-    void refreshBalances(qc)
-    if (steps !== null) setDone({ trade: steps.trade, out: steps.out })
-    setSteps(null)
-  }
-  return { steps, done, error, preparing, send, finish, again: () => setDone(null), clearError: () => setError(null) }
-}
-
 export function TradeCard({
   need,
   onBusyChange,
@@ -264,20 +229,19 @@ export function TradeCard({
         }}
       />
     )
-  if (sending.steps !== null && address !== undefined)
+  if (sending.saved !== null && address !== undefined)
     return (
-      <TxSteps
-        taskId={sending.steps.id}
-        txs={sending.steps.txs}
+      <SavedTrade
+        trade={sending.saved}
         owner={address}
-        reportToBoard={false}
-        allowSponsorship={false}
-        autoStart
+        fresh={sending.fresh}
+        error={sending.error}
         onBusyChange={onBusyChange}
         onDone={() => {
           sending.finish()
           form.clear()
         }}
+        onDiscard={sending.discard}
       />
     )
   return <TradeForm l={l} address={address} form={form} sending={sending} onSignIn={onSignIn} />
@@ -366,7 +330,7 @@ function TradeForm({
         <TradeButton
           state={state}
           label={ctaLabel(state, trade, amounts)}
-          ready={view.ready}
+          ready={view.ready && sending.loaded}
           busy={sending.preparing}
           onSignIn={onSignIn}
           onSend={() => {
