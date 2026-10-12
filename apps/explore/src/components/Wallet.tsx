@@ -1,12 +1,14 @@
 import { Button } from './ui/button.tsx'
 import { cn } from '../lib/cn.ts'
 import { type ReactNode, createContext, useContext, useEffect, useRef, useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { ChevronUp } from 'lucide-react'
+import type { Address } from 'viem'
 import { useAccount, useDisconnect, useSignMessage } from 'wagmi'
 import { session, setSession, tool } from '../api.ts'
 import { askedKey, isRefusal, silentSignable } from '../sign-in.ts'
 import { chain } from '../wallet.ts'
 import { PrivyLogin, usePrivyLogout, usePrivyModalOpen, usePrivySilentSigner } from './Privy.tsx'
+import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from './ui/popover.tsx'
 
 /** Which address the stored session belongs to, and until when (seconds): a session outlives the tab now. */
 const OWNER_KEY = 'sidequest.session-owner'
@@ -141,8 +143,9 @@ export function useSignOut(auth: ReturnType<typeof useSignedIn>) {
 }
 
 /**
- * Who is signed in, compactly: the login button, a Sign in button when the signature is still missing, or the
- * address. `full` adds Sign out (the sidebar); on a phone the address links to Me, where signing out lives.
+ * A wallet that is logged in but not yet signed in to the board: Sign in, and beside it the wallet's mark, which opens
+ * the way out. `full` is the sidebar (mark, address and chevron); the phone's header shows the mark alone. Once signed
+ * in, the account row takes over (`AccountLink`).
  */
 export function AccountControl({
   auth,
@@ -155,31 +158,47 @@ export function AccountControl({
 }) {
   const signOut = useSignOut(auth)
   if (auth.address === undefined) return <PrivyLogin />
+  const signIn = (
+    <Button busy={account.busy} size="sm" className="shrink-0" onClick={() => void account.signIn()}>
+      Sign in
+    </Button>
+  )
+  const menu = <AccountMenu address={auth.address} signOut={signOut} full={full} />
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
-      {auth.signedIn ? (
-        // The link is the 44 px target; the pill inside it is what shows.
-        <Link to="/account" className="flex min-h-11 min-w-0 items-center" aria-label="Your wallet">
-          <span className="flex min-w-0 items-center gap-2 rounded-full bg-muted py-1 pr-3 pl-1 text-ui font-medium">
-            <Monogram seed={auth.address} />
-            <span className="truncate font-mono text-ui">
-              {auth.address.slice(0, 6)}…{auth.address.slice(-4)}
-            </span>
-          </span>
-        </Link>
-      ) : (
-        <Button busy={account.busy} size="sm" onClick={() => void account.signIn()}>
-          Sign in
-        </Button>
-      )}
-      {/* Always a way out, even when the signature was declined. */}
-      {full && (
-        <Button variant="link" size="sm" onClick={signOut}>
-          Sign out
-        </Button>
-      )}
+      {full ? menu : signIn}
+      {full ? signIn : menu}
       {account.error !== null && <span className="basis-full text-xs text-destructive-text">{account.error}</span>}
     </div>
+  )
+}
+
+/** The wallet's mark: it opens the full address and Sign out, always a way out, even when the signature was declined. */
+function AccountMenu({ address, signOut, full }: { address: Address; signOut: () => void; full: boolean }) {
+  const short = `${address.slice(0, 6)}…${address.slice(-4)}`
+  return (
+    <Popover>
+      <PopoverTrigger
+        aria-label={`Account ${short}`}
+        className={cn(
+          'flex min-h-11 min-w-11 items-center gap-2 rounded-lg text-sm transition-colors duration-(--dur-fast) hover:bg-muted',
+          full ? 'min-w-0 flex-1 px-2' : 'justify-center',
+        )}
+      >
+        <Monogram seed={address} size={full ? 'sm' : 'md'} />
+        {full && <span className="min-w-0 flex-1 truncate text-left font-mono text-ui">{short}</span>}
+        {full && <ChevronUp aria-hidden className="size-4 shrink-0 text-muted-foreground" />}
+      </PopoverTrigger>
+      <PopoverContent side={full ? 'top' : 'bottom'} align={full ? 'start' : 'end'} sideOffset={6} className="w-64">
+        <PopoverTitle className="font-mono text-ui font-normal [overflow-wrap:anywhere]">{address}</PopoverTitle>
+        <p className="text-xs text-pretty text-muted-foreground">
+          Sign in to use your agents and approvals here. Signing out logs this wallet out, so you can use another email.
+        </p>
+        <Button variant="secondary" size="sm" onClick={signOut}>
+          Sign out
+        </Button>
+      </PopoverContent>
+    </Popover>
   )
 }
 
