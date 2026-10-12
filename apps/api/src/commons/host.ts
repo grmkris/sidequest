@@ -15,6 +15,7 @@ import {
   sqlLayer,
   toolSpecs,
   errorCode,
+  commonsInputError,
   type CommonsError,
   type ToolRunner,
 } from '@sidequest/commons'
@@ -50,8 +51,8 @@ const executeSpec = <I, O>(
 ) =>
   Effect.gen(function* () {
     const address = caller.address === undefined ? undefined : Schema.decodeUnknownSync(Address)(caller.address)
-    const input = yield* Schema.decodeUnknownEffect(spec.input)(args).pipe(
-      Effect.mapError(() => new BoardError('invalid', 'Invalid Commons tool input')),
+    const input = yield* Schema.decodeUnknownEffect(spec.input)(args, { reportInput: false }).pipe(
+      Effect.mapError((error) => new BoardError('invalid', commonsInputError(error))),
     )
     const output = yield* spec
       .run(address, input)

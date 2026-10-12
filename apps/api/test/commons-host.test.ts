@@ -169,6 +169,45 @@ it('preserves BoardError codes for invalid input, authentication and absent jobs
   })
 })
 
+it('reads numeric and string gap IDs and reports safe field constraints through the real host', async () => {
+  const f = await fixture()
+  const report = await f.host.run(
+    'report_gap',
+    { address: maintainer },
+    {
+      gap_type: 'missing_tool',
+      what_i_needed: 'Read one report',
+      what_i_tried: 'Used list_gaps',
+    },
+  )
+  expect(await f.host.run('list_gaps', {}, { gapId: report.gapId })).toEqual(
+    await f.host.run('list_gaps', {}, { gapId: String(report.gapId) }),
+  )
+  await expect(f.host.run('list_gaps', {}, { limit: 101 })).rejects.toMatchObject({
+    code: 'invalid',
+    message: expect.stringMatching(/limit/),
+  })
+  const secret = 'SECRET_FIXTURE_VALUE'.repeat(100)
+  let message = ''
+  try {
+    await f.host.run(
+      'report_gap',
+      { address: maintainer },
+      {
+        gap_type: 'error',
+        what_i_needed: secret,
+        what_i_tried: 'Workaround',
+        user_goal: secret,
+      },
+    )
+  } catch (error) {
+    if (error instanceof Error) message = error.message
+  }
+  expect(message).toMatch(/what_i_needed/)
+  expect(message).toMatch(/1000/)
+  expect(message).not.toContain('SECRET_FIXTURE_VALUE')
+})
+
 it('disables every tool without stage roles, exposing only disabled list_roles', async () => {
   const f = await fixture('prod')
   await expect(

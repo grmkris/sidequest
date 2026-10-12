@@ -21,6 +21,7 @@ import { hideContent, unhideContent, setItemStatus } from './roles/actions.ts'
 import { listRoles } from './roles/list.ts'
 import { linkGaps, setGapStatus } from './roles/gap-actions.ts'
 import { enabled } from './roles/holders.ts'
+import { commonsInputError } from './input-error.ts'
 
 export type ToolScope = 'read' | 'write' | 'role'
 export type ToolReview = readonly [boolean, boolean, boolean]
@@ -53,8 +54,8 @@ function spec<I, O>(
           : yield* Schema.decodeUnknownEffect(Address)(caller).pipe(
               Effect.mapError(() => new Invalid({ message: 'Invalid caller address' })),
             )
-      const decoded = yield* Schema.decodeUnknownEffect(input)(raw).pipe(
-        Effect.mapError(() => new Invalid({ message: 'Invalid Commons tool input' })),
+      const decoded = yield* Schema.decodeUnknownEffect(input)(raw, { reportInput: false }).pipe(
+        Effect.mapError((error) => new Invalid({ message: commonsInputError(error) })),
       )
       const result = yield* run(address, decoded)
       return yield* Schema.decodeUnknownEffect(output)(result).pipe(Effect.orDie)
