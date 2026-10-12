@@ -165,6 +165,9 @@ jobs:
           GITHUB_APP_ID: ${{ vars.SQ_GITHUB_APP_ID }}
           GITHUB_APP_INSTALLATION_ID: ${{ vars.SQ_GITHUB_APP_INSTALLATION_ID }}
           PROD_ADMISSION_DRAIN: ${{ vars.PROD_ADMISSION_DRAIN }}
+          # Mainnet launch inputs (docs/mainnet-runbook.md §3.9); unset on testnet, where the runner drops them.
+          SIDEQUEST_PROD_ARTIFACT: ${{ vars.SIDEQUEST_PROD_ARTIFACT }}
+          HYPERSYNC_URL: ${{ vars.HYPERSYNC_URL }}
         run: bun run deploy:prod
       - name: Smoke prod
         run: bun run smoke prod

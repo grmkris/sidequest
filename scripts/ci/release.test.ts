@@ -72,6 +72,40 @@ test('local settings do not inherit the box signing/RPC credentials or stale sta
   expect(() => assembleEnv('dev', infra, { CI: 'true', CLOUDFLARE_ACCOUNT_ID: 'foreign' })).toThrow('does not match')
 })
 
+test("a deploy's launch inputs come from its command line or CI, never two different values", () => {
+  const prod: StageFile = { ...infra, stage: 'prod', origin: 'https://sidequest.exchange' }
+  const artifact = 'docs/p0-prod-artifact.json'
+  // The runbook names them on the command line of a local deploy.
+  expect(
+    assembleEnv(
+      'prod',
+      prod,
+      { SIDEQUEST_PROD_ARTIFACT: artifact, PROD_ADMISSION_DRAIN: '0' },
+      { RELAY_PRIVATE_KEY: 'k' },
+    ),
+  ).toMatchObject({ SIDEQUEST_PROD_ARTIFACT: artifact, PROD_ADMISSION_DRAIN: '0' })
+  // The stage env alone still works, and an agreeing command line is fine.
+  expect(assembleEnv('prod', prod, { PROD_ADMISSION_DRAIN: '1' }, { PROD_ADMISSION_DRAIN: '1' })).toMatchObject({
+    PROD_ADMISSION_DRAIN: '1',
+  })
+  expect(() => assembleEnv('prod', prod, { PROD_ADMISSION_DRAIN: '0' }, { PROD_ADMISSION_DRAIN: '1' })).toThrow(
+    'PROD_ADMISSION_DRAIN differs between the command line and prod.env',
+  )
+  // CI passes an unset GitHub variable as empty: it stays unset, so the indexer keeps its HyperSync default.
+  const ci = assembleEnv('prod', prod, {
+    CI: 'true',
+    SIDEQUEST_PROD_ARTIFACT: artifact,
+    HYPERSYNC_URL: '',
+    PROD_ADMISSION_DRAIN: '0',
+  })
+  expect(ci).toMatchObject({ SIDEQUEST_PROD_ARTIFACT: artifact, PROD_ADMISSION_DRAIN: '0' })
+  expect('HYPERSYNC_URL' in ci).toBe(false)
+  // Other SIDEQUEST_ settings still never come from the environment.
+  expect(assembleEnv('prod', prod, { CI: 'true', SIDEQUEST_NETWORK: 'monad-mainnet' }).SIDEQUEST_NETWORK).toBe(
+    'monad-testnet',
+  )
+})
+
 test('refuses unset required values by name', () => {
   expect(() => validateEnv({ RELAY_PRIVATE_KEY: 'unset' }, ['RELAY_PRIVATE_KEY'])).toThrow('RELAY_PRIVATE_KEY')
 })

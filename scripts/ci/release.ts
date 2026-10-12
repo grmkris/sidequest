@@ -57,6 +57,10 @@ const REQUIRED_SECRETS = [
   'GITHUB_APP_PRIVATE_KEY',
   'CLOUDFLARE_API_TOKEN',
 ] as const
+/** What one deploy is for, named on its command line (the runbook's `SIDEQUEST_PROD_ARTIFACT=… PROD_ADMISSION_DRAIN=…`)
+ *  or in the CI environment; the stage env may hold them too, but never a different value. Empty is unset, as GitHub
+ *  passes an unset variable. */
+const LAUNCH_INPUTS: readonly string[] = ['SIDEQUEST_PROD_ARTIFACT', 'PROD_ADMISSION_DRAIN', 'HYPERSYNC_URL']
 const STATE_CREDENTIAL = resolve(homedir(), '.alchemy/credentials/default/cloudflare-state-store.json')
 // Api is not a public deep export: derive its installed sibling from the StateStore entrypoint.
 // Do not use the generic HttpStateApi version: State.ts compares the Worker version in Api.
@@ -112,6 +116,29 @@ export const readStageEnv = (stage: Stage, env = process.env): Record<string, st
   return Object.fromEntries(Object.entries(values).filter((entry): entry is [string, string] => entry[1] !== undefined))
 }
 
+const launchInput = (key: string): boolean => LAUNCH_INPUTS.includes(key)
+
+/** Whether a variable of the invoking environment reaches the deploy: never stage controls or Alchemy settings, and in a
+ *  local run never the box's own credentials and settings, which come from the stage env instead. */
+const inherited = (key: string, localRun: boolean, settings: ReadonlySet<string>): boolean => {
+  if ((key.startsWith('SIDEQUEST_') && key !== 'SIDEQUEST_ALLOW_PROD') || key.startsWith('ALCHEMY_')) return false
+  return !localRun || !(settings.has(key) || key.startsWith('SQ_GITHUB_APP_'))
+}
+
+/** The launch inputs a deploy runs with: the command line's (or CI's), else the stage env's, never two different ones. */
+const launchInputs = (stage: Stage, base: NodeJS.ProcessEnv, local: Record<string, string>): Record<string, string> => {
+  const inputs: Record<string, string> = {}
+  for (const key of LAUNCH_INPUTS) {
+    const given = base[key] || undefined
+    const staged = local[key] || undefined
+    if (given !== undefined && staged !== undefined && given !== staged)
+      fail(`${key} differs between the command line and ${stage}.env`)
+    const value = given ?? staged
+    if (value !== undefined) inputs[key] = value
+  }
+  return inputs
+}
+
 export const assembleEnv = (
   stage: Stage,
   infra: StageFile,
@@ -131,19 +158,14 @@ export const assembleEnv = (
     'GITHUB_APP_INSTALLATION_ID',
     'ARBITER_MODEL_BASE_URL',
     'SCREENING_MODEL',
-    'PROD_ADMISSION_DRAIN',
   ])
-  for (const [key, value] of Object.entries(base)) {
-    if (
-      value === undefined ||
-      (key.startsWith('SIDEQUEST_') && key !== 'SIDEQUEST_ALLOW_PROD') ||
-      key.startsWith('ALCHEMY_') ||
-      (localRun && (settings.has(key) || key.startsWith('SQ_GITHUB_APP_')))
-    )
-      continue
-    env[key] = value
-  }
-  Object.assign(env, local)
+  for (const [key, value] of Object.entries(base))
+    if (value !== undefined && !launchInput(key) && inherited(key, localRun, settings)) env[key] = value
+  Object.assign(
+    env,
+    Object.fromEntries(Object.entries(local).filter(([key]) => !launchInput(key))),
+    launchInputs(stage, base, local),
+  )
   if (env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_ACCOUNT_ID !== infra.cloudflare.accountId)
     fail('CLOUDFLARE_ACCOUNT_ID does not match the stage file')
   Object.assign(env, {
