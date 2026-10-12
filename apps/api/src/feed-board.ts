@@ -27,7 +27,9 @@ export function boardFeedEvents(board: Sql, input: BoardToolEvent): FeedEvent[] 
   const result = (input.result ?? {}) as Record<string, unknown>
   const base = `${publicOrigin()}${boardId === 'public' ? '' : `/b/${encodeURIComponent(boardId)}`}`
   const jobUrl = (task: { id: string; job_id: string | null }) =>
-    `${base}/job/${encodeURIComponent(task.job_id ?? task.id)}`
+    task.job_id === null
+      ? `${publicOrigin()}/account?resume=${encodeURIComponent(task.id)}&board=${encodeURIComponent(boardId)}`
+      : `${base}/job/${encodeURIComponent(task.job_id)}`
   const task = (taskId: string | undefined) =>
     taskId === undefined
       ? undefined

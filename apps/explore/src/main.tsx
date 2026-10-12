@@ -26,7 +26,7 @@ import { ServicesPage } from './routes/Services.tsx'
 import { ServicePage } from './routes/Service.tsx'
 import { WelcomePage } from './routes/Welcome.tsx'
 import { AccountPage } from './routes/Account.tsx'
-import { JobPage } from './routes/Job.tsx'
+import { JobLinkPage } from './routes/JobLink.tsx'
 import { ActivityPage } from './routes/Activity.tsx'
 import { CommonsPage } from './routes/Commons.tsx'
 import { RoadmapItemPage } from './routes/RoadmapItem.tsx'
@@ -114,7 +114,7 @@ const job = createRoute({
   getParentRoute: () => root,
   path: '/job/$jobId',
   component: function JobRoute() {
-    return <JobPage auth={useAuth()} />
+    return <JobLinkPage auth={useAuth()} />
   },
 })
 const request = createRoute({
@@ -262,7 +262,7 @@ const boardJob = createRoute({
   getParentRoute: () => board,
   path: '/job/$jobId',
   component: function BoardJobRoute() {
-    return <JobPage auth={useAuth()} />
+    return <JobLinkPage auth={useAuth()} />
   },
 })
 const boardRequest = createRoute({

@@ -45,6 +45,31 @@ const call = (tool: string, args: Record<string, unknown>, result: unknown) => (
 })
 
 describe('board feed hook', () => {
+  it.each(['public', 'team'])('links %s task notices to their draft resume or published chain job', async (boardId) => {
+    const { board } = await setup()
+    const notices = () => [
+      ...boardFeedEvents(board, { ...call('apply', { taskId: 't1' }, { applicationId: 'a9' }), boardId }),
+      ...boardFeedEvents(board, {
+        ...call('submit_selection', { taskId: 't1', nonce: '5' }, { ok: true, worker }),
+        boardId,
+      }),
+    ]
+    const draftNotices = notices()
+    expect(draftNotices).toHaveLength(2)
+    for (const event of draftNotices) {
+      expect(event.url).toBeDefined()
+      const url = new URL(event.url!)
+      expect(url.pathname).toBe('/account')
+      expect(url.searchParams.get('resume')).toBe('t1')
+      expect(url.searchParams.get('board')).toBe(boardId)
+    }
+    board.run("UPDATE tasks SET job_id = '42' WHERE id = 't1'")
+    const publishedNotices = notices()
+    expect(publishedNotices).toHaveLength(2)
+    for (const event of publishedNotices)
+      expect(event.url).toBe(`https://dev.sidequest.exchange${boardId === 'public' ? '' : '/b/team'}/job/42`)
+  })
+
   it('addresses quotes, applications, selections and requests to the party who must act, metadata only', async () => {
     const { board } = await setup()
     const quote = boardFeedEvents(
