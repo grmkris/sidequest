@@ -11,6 +11,8 @@ import {
 } from 'viem'
 import { callsMade, isDisabled } from '@sidequest/sdk'
 import type { Sql } from './store.ts'
+
+const min = (a: bigint, b: bigint) => (a < b ? a : b)
 import { sponsorRelayFloor } from './sponsor-policy.ts'
 
 export interface SponsorOperation {
@@ -128,9 +130,11 @@ export class SponsorRecovery {
     // The cancellation replaces this operation's reservation. If fee conditions outgrow it, recover
     // the nonce anyway; the mined receipt (including any overshoot) charges that day's ledger exactly once.
     const maxFeePerGas = affordable >= required ? (preferred < affordable ? preferred : affordable) : required
+    // Like a first send, the floor counts what the cancellation will most likely pay, not its cap.
     if (
       (await this.ctx.publicClient.getBalance({ address: this.account.address })) <
-      sponsorRelayFloor(this.ctx.deployment.network) + 100_000n * maxFeePerGas
+      sponsorRelayFloor(this.ctx.deployment.network) +
+        100_000n * min(maxFeePerGas, fees.baseFeePerGas + maxPriorityFeePerGas)
     )
       throw new Error('the sponsorship relay is below its balance floor for nonce recovery')
     const raw = await this.account.signTransaction({

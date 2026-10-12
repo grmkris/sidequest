@@ -450,6 +450,29 @@ describe('ERC-7710 sponsorship boundaries and recovery', () => {
     expect(tx.maxPriorityFeePerGas).toBeLessThan(await f.client.getGasPrice())
     expect(tx.maxFeePerGas).toBe(2n * (await f.client.getBlock()).baseFeePerGas)
   })
+  // A send reserves its cap (twice the base fee) but the floor and the daily budget count what it will likely pay.
+  it("checks the floor against a send's expected fee, while it still signs and reserves its cap", async () => {
+    const f = fixture()
+    await f.live()
+    f.client.getBlock.mockResolvedValue({ timestamp: 1_800_000_000n, baseFeePerGas: 10_000_000_000n })
+    f.client.getGasPrice.mockResolvedValue(11_000_000_000n)
+    const gas = 120_000n // 100k estimated, plus the 10% margin and 10k
+    const expected = gas * 11_000_000_000n
+    f.setBalance(sponsorRelayFloor(f.ctx.deployment.network) + expected - 1n)
+    await expect(
+      f.desk.submit(f.owner.address, f.entries([f.cancel()], f.owner.address), 'below'),
+    ).rejects.toMatchObject({ reason: 'floor' })
+    f.setBalance(sponsorRelayFloor(f.ctx.deployment.network) + expected)
+    const op = await f.desk.submit(f.owner.address, f.entries([f.cancel()], f.owner.address), 'enough')
+    const saved = f.sql.all<{ raw_tx: Hex; reserved_cost: string }>(
+      'SELECT raw_tx, reserved_cost FROM sponsor_operations WHERE id=?',
+      op.operationId,
+    )[0]!
+    const tx = parseTransaction(saved.raw_tx)
+    expect(tx.maxFeePerGas).toBe(20_000_000_000n)
+    expect(BigInt(saved.reserved_cost)).toBe(tx.gas! * 20_000_000_000n)
+  })
+
   it('enforces global cap, balance floor, wallet window, and simulation failure without persisting/broadcasting', async () => {
     const f = fixture()
     await f.live()
@@ -725,7 +748,8 @@ describe('ERC-7710 sponsorship boundaries and recovery', () => {
       f.client.sendRawTransaction.mockRejectedValueOnce(new Error('not sent'))
       await f.desk.submit(f.owner.address, f.entries([f.cancel()], f.owner.address), 'floor')
       await f.desk.revoke(f.owner.address)
-      const minimum = sponsorRelayFloor(network) + 100_000n * 2_500_000_001n
+      // The cancellation's expected price (base 1 gwei + its bumped 1.25 gwei tip), not its 2.5 gwei cap.
+      const minimum = sponsorRelayFloor(network) + 100_000n * 2_250_000_001n
       f.setBalance(minimum - 1n)
       await expect(f.boot().submit(f.owner.address, f.entries([], f.owner.address), 'floor')).rejects.toThrow(
         'balance floor',

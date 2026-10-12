@@ -27,6 +27,8 @@ import { type SponsorOperation as Operation, type SponsorResult, SponsorRecovery
 import { SPONSOR_LIMITS, sponsorBudget, sponsorRelayFloor } from './sponsor-policy.ts'
 import { GrantStore, type GrantRow } from './grants.ts'
 import { checkGrantCall, checkHireFunding, type GrantCall, type CheckedGrantCall } from './grant-calls.ts'
+
+const min = (a: bigint, b: bigint) => (a < b ? a : b)
 import { redeemGrantBatch } from './hire-batch.ts'
 export { SPONSOR_LIMITS, sponsorBudget } from './sponsor-policy.ts'
 export type { SponsorResult } from './sponsor-recovery.ts'
@@ -441,16 +443,21 @@ export class SponsorDesk {
             })
           })
         if (gas > SPONSOR_LIMITS.gas) throw this.#refuse('cap', 'the sponsored transaction exceeds the gas cap')
-        const { maxFeePerGas, maxPriorityFeePerGas } = await sdk.transactionFees(ctx.publicClient)
+        const { maxFeePerGas, maxPriorityFeePerGas, baseFeePerGas } = await sdk.transactionFees(ctx.publicClient)
+        // The send may pay up to its cap (twice the base fee), which it reserves; the budget and the floor count what it
+        // will most likely pay (Monad bills the whole limit at base fee plus tip), so the relay is not refused early.
         const cost = gas * maxFeePerGas
+        const expected = gas * min(maxFeePerGas, baseFeePerGas + maxPriorityFeePerGas)
         const day = Math.floor(this.#d.now() / 86400) * 86400
         const daily = this.#d.sql.all<{ cost: string }>(
           'SELECT cost FROM sponsor_operations WHERE charged_day=? AND cost IS NOT NULL UNION ALL SELECT cost FROM sponsor_replacements WHERE charged_day=? AND cost IS NOT NULL',
           day,
           day,
         )
-        // Charge only receipts. All unresolved sends were reconciled above; this send reserves its maximum cost.
-        if (daily.reduce((sum, op) => sum + BigInt(op.cost!), cost) > sponsorBudget(ctx.deployment.network).dailyWei)
+        // Charge only receipts. All unresolved sends were reconciled above; this send counts its expected cost.
+        if (
+          daily.reduce((sum, op) => sum + BigInt(op.cost!), expected) > sponsorBudget(ctx.deployment.network).dailyWei
+        )
           throw this.#refuse('cap', 'the relay’s daily sponsorship budget is exhausted')
         const recent = this.#d.sql.all<{ calls: number }>(
           'SELECT calls FROM sponsor_operator_usage WHERE owner=? AND created_at > ?',
@@ -470,7 +477,7 @@ export class SponsorDesk {
           throw this.#refuse('cap', 'the operator daily sponsored publish count is exhausted')
         if (
           (await ctx.publicClient.getBalance({ address: relay.account.address })) <
-          sponsorRelayFloor(ctx.deployment.network) + cost
+          sponsorRelayFloor(ctx.deployment.network) + expected
         )
           throw this.#refuse('floor', 'the sponsorship relay is below its balance floor')
         const nonce = await ctx.publicClient.getTransactionCount({
