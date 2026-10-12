@@ -14,8 +14,10 @@ export interface Launcher {
 
 export const nadRouterAbi = parseAbi([
   'function getAmountOut(address token, uint256 amountIn, bool isBuy) view returns (uint256)',
+  'function getAmountIn(address token, uint256 amountOut, bool isBuy) view returns (uint256)',
   'function buyWithNative((uint256 amountOutMin, address token, address to, uint256 deadline) params) payable returns (uint256)',
   'function sellToNative((uint256 amountIn, uint256 amountOutMin, address token, address to, uint256 deadline) params) returns (uint256)',
+  'function isGraduated(address token) view returns (bool)',
 ])
 
 /** Gas limits with room over measured testnet trades (buy 714,573; sell 668,821): Monad charges the limit. */
@@ -42,6 +44,26 @@ export function launcherQuote(ctx: Ctx, l: Launcher, side: 'buy' | 'sell', amoun
     abi: nadRouterAbi,
     functionName: 'getAmountOut',
     args: [l.side, amountIn, side === 'buy'],
+  })
+}
+
+/** Whether SIDE has left nad.fun's bonding curve for its DEX pair: the V2 router's own answer (never the V1 Lens). */
+export function launcherGraduated(ctx: Ctx, l: Launcher): Promise<boolean> {
+  return ctx.publicClient.readContract({
+    address: l.router,
+    abi: nadRouterAbi,
+    functionName: 'isGraduated',
+    args: [l.side],
+  })
+}
+
+/** The MON a buy of exactly `side` SIDE takes now, after the router's fees: what Explore shows the bond costs. */
+export function launcherSideCost(ctx: Ctx, l: Launcher, side: bigint): Promise<bigint> {
+  return ctx.publicClient.readContract({
+    address: l.router,
+    abi: nadRouterAbi,
+    functionName: 'getAmountIn',
+    args: [l.side, side, true],
   })
 }
 

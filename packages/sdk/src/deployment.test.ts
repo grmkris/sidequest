@@ -174,7 +174,30 @@ describe('network meta', () => {
     expect(networkMeta('monad-mainnet').getSide).toBeUndefined() // no SIDE before the launch commit
     const launched = { ...c, nadfun: { app: 'https://nad.fun' }, sidequest: { token: side } }
     expect(networkMetaFromConfig(launched).getSide).toBe(`https://nad.fun/tokens/${side}`)
+    expect(networkMetaFromConfig(launched).side).toBe(side)
+    expect(networkMeta('monad-mainnet').side).toBeUndefined()
     expect(() => networkMetaFromConfig({ ...launched, sidequest: { token: 'SIDE' } })).toThrow('token address')
+  })
+  it("lists SIDE's other pages with its address once the config names SIDE, and refuses anything but https paths", () => {
+    const c = currentConfig()
+    const side = '0x1111111111111111111111111111111111117777'
+    expect(networkMeta('monad-testnet').sidePages).toEqual([])
+    expect(networkMeta('monad-mainnet').sidePages).toEqual([]) // no SIDE before the launch commit
+    const launched = { ...c, sidequest: { token: side }, sidePages: mainnet.sidePages }
+    expect(networkMetaFromConfig(launched).sidePages).toEqual([
+      { name: 'MonadVision', href: `https://monadvision.com/token/${side}`, graduated: false },
+      { name: 'DEX Screener', href: `https://dexscreener.com/monad/${side}`, graduated: true },
+    ])
+    for (const url of [
+      'http://monadvision.com/token/{token}',
+      'https://monadvision.com/token/',
+      'javascript:alert(1)//{token}',
+      'https://monadvision.com/token/{token}?ref=x',
+    ])
+      expect(() => networkMetaFromConfig({ ...launched, sidePages: [{ name: 'X', url }] })).toThrow('sidePages')
+    expect(() =>
+      networkMetaFromConfig({ ...launched, sidePages: [{ name: ' ', url: 'https://a.b/{token}' }] }),
+    ).toThrow('sidePages')
   })
   it('reads the first-party wallets, crew agents and demo jobs, empty until named', () => {
     const c = currentConfig()

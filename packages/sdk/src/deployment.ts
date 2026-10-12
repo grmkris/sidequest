@@ -239,6 +239,8 @@ export interface DeploymentConfig {
   links?: { testnet?: string; mainnet?: string; x?: string }
   /** The launcher SIDE trades on (mainnet): its app's origin; the token's page is `<app>/tokens/<SIDE>`. */
   nadfun?: { app?: string; [key: string]: unknown }
+  /** See `NetworkMeta.sidePages`: each `url` names SIDE as `{token}`. */
+  sidePages?: { name: string; url: string; graduated?: boolean }[]
   /** The deploy recipe's input; `token` is the existing SIDE it deploys against (contracts/script/SidequestRecipe.sol). */
   sidequest?: { token?: string; [key: string]: unknown }
   /** See `NetworkMeta.firstParty`. */
@@ -323,12 +325,18 @@ export function deployment(network: Network): Deployment {
  * - `getSide`: SIDE's page on its launcher, where people get it while it has no market of ours: `nadfun.app` and the
  *   SIDE address (`sidequest.token`, then the deployed `factory`). Absent until both are known.
  * - `usdPegged`: tokens Explore values at one US dollar each in its estimates. Anything else needs a live price.
+ * - `sidePages`: SIDE's pages besides its launcher (a block explorer, a market tracker), with the SIDE address filled in;
+ *   a `graduated` page lists it only once SIDE trades on a DEX pair (trackers index no bonding curve). Empty until SIDE
+ *   is known.
  * - `firstParty`: Sidequest's own wallets (the Safe, the official account, the crew) and crew Agent IDs, so a job
  *   between them is labelled a related party; `demoJobs` are the founder demo hires. Empty until the config names them.
  */
 export interface NetworkMeta {
   readonly links: { readonly testnet?: string; readonly mainnet?: string; readonly x?: string }
   readonly getSide?: string
+  /** SIDE's address once the config names it (`sidequest.token`, then the deployed `factory`), before any deployment. */
+  readonly side?: Address
+  readonly sidePages: readonly { readonly name: string; readonly href: string; readonly graduated: boolean }[]
   readonly usdPegged: readonly Address[]
   readonly firstParty: {
     readonly addresses: readonly Address[]
@@ -350,12 +358,31 @@ function originAt(name: string, origin: string | undefined): string | undefined 
   return origin
 }
 
-/** SIDE's page on its launcher: `nadfun.app` and the SIDE address (the recipe's input, then the deployed one). */
+/** SIDE's address: the recipe's input, then the deployed one; undefined until the config names either. */
+function sideOf(c: DeploymentConfig): Address | undefined {
+  const side = c.sidequest?.token ?? c.deployment.factory
+  if (side === undefined) return undefined
+  if (!validAddress(side)) throw new Error('Network config SIDE must be a token address')
+  return side
+}
+
+/** SIDE's page on its launcher: `nadfun.app` and the SIDE address. */
 function getSideFromConfig(c: DeploymentConfig): string | undefined {
   const app = originAt('nadfun.app', c.nadfun?.app)
-  const side = c.sidequest?.token ?? c.deployment.factory
-  if (side !== undefined && !validAddress(side)) throw new Error('Network config SIDE must be a token address')
+  const side = sideOf(c)
   return app === undefined || side === undefined ? undefined : `${app}/tokens/${side}`
+}
+
+const SIDE_PAGE = /^https:\/\/[a-z0-9.-]+\/[A-Za-z0-9/._~-]*\{token\}[A-Za-z0-9/._~-]*$/
+
+/** SIDE's other pages: each named, on https, with `{token}` in its path. */
+function sidePagesFromConfig(c: DeploymentConfig): NetworkMeta['sidePages'] {
+  const pages = c.sidePages ?? []
+  if (!pages.every((p) => p.name.trim() !== '' && SIDE_PAGE.test(p.url)))
+    throw new Error('Network config sidePages must name https pages with {token} in the path')
+  const side = sideOf(c)
+  if (side === undefined) return []
+  return pages.map((p) => ({ name: p.name, href: p.url.replace('{token}', side), graduated: p.graduated === true }))
 }
 
 const DECIMAL_ID = /^[1-9][0-9]*$/
@@ -377,8 +404,11 @@ export function networkMetaFromConfig(c: DeploymentConfig): NetworkMeta {
   const usdPegged = c.usdPegged ?? []
   if (!usdPegged.every(validAddress)) throw new Error('Network config usdPegged must list token addresses')
   const getSide = getSideFromConfig(c)
+  const side = sideOf(c)
   return {
     ...(getSide === undefined ? {} : { getSide }),
+    ...(side === undefined ? {} : { side }),
+    sidePages: sidePagesFromConfig(c),
     links: Object.fromEntries(
       Object.entries({ testnet: testnetOrigin, mainnet: mainnetOrigin, x }).filter(
         (entry): entry is [string, string] => entry[1] !== undefined,

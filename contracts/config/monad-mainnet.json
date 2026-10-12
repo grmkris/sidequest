@@ -70,6 +70,10 @@
     "wmon": "0x3bd359C1119dA7Da1D913D1C4D2B7c461115433A",
     "creatorFeeVault": "0x687f9172D5F4798694811333C5C5696afCF4F6f4"
   },
+  "sidePages": [
+    { "name": "MonadVision", "url": "https://monadvision.com/token/{token}" },
+    { "name": "DEX Screener", "url": "https://dexscreener.com/monad/{token}", "graduated": true }
+  ],
   "sidequest": {
     "minimumCreatorBond": 1000000000000000000000000,
     "maxMinimumCreatorBond": 100000000000000000000000000,

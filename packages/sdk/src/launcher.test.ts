@@ -3,7 +3,15 @@ import { createPublicClient, decodeFunctionData, erc20Abi, http, type Address } 
 import testnet from '../../../contracts/config/monad-testnet.json' with { type: 'json' }
 import type { Ctx } from './actions.ts'
 import { deployment, stack } from './deployment.ts'
-import { launcherQuote, launcherTransactions, MONAD_RESERVE_BALANCE, nadRouterAbi, nativeBuyCap } from './launcher.ts'
+import {
+  launcherGraduated,
+  launcherQuote,
+  launcherSideCost,
+  launcherTransactions,
+  MONAD_RESERVE_BALANCE,
+  nadRouterAbi,
+  nativeBuyCap,
+} from './launcher.ts'
 
 const d = deployment('monad-testnet')
 const l = d.launcher!
@@ -75,6 +83,23 @@ describe("SIDE on nad.fun's router", () => {
       deadline: 99,
     })
     expect(covered.map((tx) => tx.to)).toEqual([l.router])
+  })
+
+  it('asks the V2 router whether SIDE has graduated', async () => {
+    const publicClient = createPublicClient({ transport: http('http://unit.invalid') })
+    const read = vi.spyOn(publicClient, 'readContract').mockResolvedValue(true)
+    expect(await launcherGraduated({ deployment: d, stack: stack(d, 'main'), publicClient }, l)).toBe(true)
+    expect(read).toHaveBeenCalledWith(
+      expect.objectContaining({ address: l.router, functionName: 'isGraduated', args: [l.side] }),
+    )
+  })
+
+  it('costs a SIDE amount in MON through getAmountIn, as a buy', async () => {
+    const { c, read } = ctx({ amountOut: 67n })
+    expect(await launcherSideCost(c, l, 1_000_000n)).toBe(67n)
+    expect(read).toHaveBeenLastCalledWith(
+      expect.objectContaining({ address: l.router, functionName: 'getAmountIn', args: [l.side, 1_000_000n, true] }),
+    )
   })
 
   it("keeps Monad's 10 MON reserve in a delegated wallet's buy, and none in a plain wallet's", () => {
