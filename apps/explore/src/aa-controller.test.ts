@@ -23,21 +23,28 @@ class FakeFixture {
   lost = false
   rejectWrite = false
   reportFails = false
+  refused = false
+  fee = 1_000_000_000n
   sequence = 0n
   delegated = true
   reverted = false
+  quietReceipt = false
+  quietLogs = false
   log: string[] = []
   signed: string[] = []
   answer = async (method: string) => {
     this.log.push(method)
     if (method === 'eth_getCode') return this.code()
     if (method === 'eth_blockNumber') return '0x10'
-    if (method === 'eth_getLogs') return []
+    if (method === 'eth_getLogs') {
+      if (this.quietLogs) throw new Error('quiet logs')
+      return []
+    }
     if (method === 'eth_getUserOperationByHash') return null
     if (method === 'pimlico_getTokenQuotes')
       return { quotes: [{ paymaster: base.admin, exchangeRate: '0x1', postOpGas: '0x1' }] }
     if (method === 'pimlico_getUserOperationGasPrice')
-      return { fast: { maxFeePerGas: toHex(1_000_000_000n), maxPriorityFeePerGas: '0x1' } }
+      return { fast: { maxFeePerGas: toHex(this.fee), maxPriorityFeePerGas: '0x1' } }
     if (method === 'eth_estimateUserOperationGas')
       return {
         callGasLimit: '0x30d40',
@@ -48,26 +55,37 @@ class FakeFixture {
       }
     if (method === 'pm_getPaymasterStubData' || method === 'pm_getPaymasterData')
       return { paymaster: base.admin, paymasterData: '0x00' }
-    if (method === 'eth_sendUserOperation') {
-      expect(this.stored?.aa?.built?.op.signature).not.toBe(sdk.ESTIMATE_SIGNATURE)
-      expect(this.stored?.aa?.submittedAt).toBe(this.time)
-      if (this.lost) throw new Error('lost answer')
-      this.hasReceipt = true
-      return this.stored!.aa!.built!.userOpHash
-    }
-    if (method === 'eth_getUserOperationReceipt')
-      return this.hasReceipt
-        ? { success: !this.reverted, actualGasCost: '0x10', receipt: { transactionHash: txHash } }
-        : null
+    if (method === 'eth_sendUserOperation') return this.sendAnswer()
+    if (method === 'eth_getUserOperationReceipt') return this.receiptAnswer()
     throw new Error(`Unexpected ${method}`)
+  }
+  sendAnswer() {
+    expect(this.stored?.aa?.built?.op.signature).not.toBe(sdk.ESTIMATE_SIGNATURE)
+    expect(this.stored?.aa?.submittedAt).toBe(this.time)
+    if (this.lost) throw new Error('lost answer')
+    if (this.refused) throw new sdk.AaError('refused', 'gas moved')
+    this.hasReceipt = true
+    return this.stored!.aa!.built!.userOpHash
+  }
+  receiptAnswer() {
+    if (this.quietReceipt) throw new Error('quiet receipt')
+    return this.hasReceipt
+      ? { success: !this.reverted, actualGasCost: '0x10', receipt: { transactionHash: txHash } }
+      : null
   }
   fetcher: typeof fetch = async (_input, init) => {
     const body = Schema.decodeUnknownSync(RequestBody)(JSON.parse(Schema.decodeUnknownSync(Schema.String)(init?.body)))
-    const result =
-      body.method === 'eth_call'
-        ? word(JSON.stringify(body.params).includes('0x35567e1a') ? this.sequence : 0n)
-        : await this.answer(body.method)
-    return new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result }))
+    try {
+      const result =
+        body.method === 'eth_call'
+          ? word(JSON.stringify(body.params).includes('0x35567e1a') ? this.sequence : 0n)
+          : await this.answer(body.method)
+      return new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result }))
+    } catch (error) {
+      if (error instanceof sdk.AaError)
+        return Response.json({ jsonrpc: '2.0', id: 1, error: { code: -32000, message: error.message } })
+      throw error
+    }
   }
   deps = fixtureDependencies(this)
   code() {
@@ -156,6 +174,23 @@ describe('persisted browser user-operation sending', () => {
     expect(f.record()?.aa?.built).toBeUndefined()
   })
 
+  it('clears a definite refusal so the next send rebuilds gas and asks for a new signature', async () => {
+    const f = fixture()
+    const controller = new BrowserUserOp(f.deps)
+    await controller.load()
+    await controller.prepare()
+    f.refused = true
+    await expect(controller.send()).rejects.toThrow('Gas prices moved before it went out; review and confirm again.')
+    expect(f.record()?.aa).toEqual({ actionId: f.record()!.aa!.actionId, outcome: 'refused', block: '0x10' })
+    expect(f.signed).toHaveLength(1)
+    f.refused = false
+    f.fee++
+    await controller.prepare()
+    await controller.send()
+    expect(f.signed).toHaveLength(2)
+    expect(f.log.filter((method) => method === 'eth_sendUserOperation')).toHaveLength(2)
+  })
+
   it('reconciles a reload and never rebuilds or resends during the 120-second pending window', async () => {
     const f = fixture(),
       controller = new BrowserUserOp(f.deps)
@@ -165,6 +200,7 @@ describe('persisted browser user-operation sending', () => {
     await expect(controller.send()).rejects.toMatchObject({ code: 'uncertain' })
     const original = f.record()?.aa?.built
     const restored = new BrowserUserOp(f.deps)
+    const originalAction = f.record()!.aa!.actionId
     await restored.load()
     await restored.send()
     expect(f.log.filter((method) => method === 'eth_sendUserOperation')).toHaveLength(1)
@@ -173,10 +209,16 @@ describe('persisted browser user-operation sending', () => {
     f.clock(1_120_001)
     f.loseSend(false)
     await restored.reconcile()
+    expect(f.record()?.aa?.built).toBeUndefined()
+    await expect(restored.send()).rejects.toThrow('Review the gas cost first.')
+    f.fee++
+    await restored.prepare()
     await restored.send()
     expect(f.log.filter((method) => method === 'eth_sendUserOperation')).toHaveLength(2)
-    expect(f.record()?.aa?.built).toEqual(original)
-    expect(f.signed).toHaveLength(1)
+    expect(f.record()?.aa?.built).not.toEqual(original)
+    expect(f.record()?.aa?.actionId).toBe(originalAction)
+    expect(f.record()?.aa?.built?.op.nonce).toBe(original!.op.nonce)
+    expect(f.signed).toHaveLength(2)
   })
 
   it('keeps a mined action when reporting fails and retries only the report after reload', async () => {
@@ -204,6 +246,10 @@ describe('persisted browser user-operation sending', () => {
     f.clock(1_120_001)
     await expect(new BrowserUserOp(f.deps).load()).rejects.toThrow('lane was used')
     expect(f.log.filter((method) => method === 'eth_sendUserOperation')).toHaveLength(1)
+    expect(f.log.filter((method) => method === 'eth_estimateUserOperationGas')).toHaveLength(1)
+    expect(f.signed).toHaveLength(1)
+    await expect(controller.prepare()).rejects.toThrow('lane was used')
+    await expect(controller.send()).rejects.toThrow('lane was used')
   })
 })
 
@@ -245,4 +291,46 @@ it('a reverted receipt remains saved and cannot cause another broadcast', async 
   await expect(new BrowserUserOp(f.deps).load()).rejects.toThrow('Gas was charged')
   expect(f.log.filter((method) => method === 'eth_sendUserOperation')).toHaveLength(1)
   expect(f.log).not.toContain('report')
+})
+
+it('retains an uncertain signed attempt beyond 120 seconds when receipt reads fail', async () => {
+  const f = fixture()
+  const controller = new BrowserUserOp(f.deps)
+  await controller.load()
+  await controller.prepare()
+  f.loseSend(true)
+  await expect(controller.send()).rejects.toMatchObject({ code: 'uncertain' })
+  const original = f.record()!.aa!.built
+  f.quietReceipt = true
+  f.clock(1_120_001)
+  await expect(controller.reconcile()).rejects.toThrow('receipt is unavailable')
+  await expect(controller.prepare()).rejects.toThrow('receipt is unavailable')
+  await expect(controller.send()).rejects.toThrow('receipt is unavailable')
+  expect(f.record()!.aa!.built).toEqual(original)
+  expect(f.signed).toHaveLength(1)
+  expect(f.log.filter((method) => method === 'eth_estimateUserOperationGas')).toHaveLength(1)
+  expect(f.log.filter((method) => method === 'eth_sendUserOperation')).toHaveLength(1)
+})
+it('persists spent proof when logs fail and never rebuilds across reload and nonce-provider drift', async () => {
+  const f = fixture()
+  const controller = new BrowserUserOp(f.deps)
+  await controller.load()
+  await controller.prepare()
+  f.loseSend(true)
+  await expect(controller.send()).rejects.toMatchObject({ code: 'uncertain' })
+  f.consumeLane()
+  f.quietLogs = true
+  f.clock(1_120_001)
+  await expect(controller.reconcile()).rejects.toThrow('lane was used')
+  expect(f.record()!.aa!.spent).toBe(true)
+  const original = f.record()!.aa!.built
+  f.sequence = 0n
+  const restored = new BrowserUserOp(f.deps)
+  await expect(restored.load()).rejects.toThrow('lane was used')
+  await expect(restored.prepare()).rejects.toThrow('lane was used')
+  await expect(restored.send()).rejects.toThrow('lane was used')
+  expect(f.record()!.aa!.built).toEqual(original)
+  expect(f.signed).toHaveLength(1)
+  expect(f.log.filter((method) => method === 'eth_estimateUserOperationGas')).toHaveLength(1)
+  expect(f.log.filter((method) => method === 'eth_sendUserOperation')).toHaveLength(1)
 })

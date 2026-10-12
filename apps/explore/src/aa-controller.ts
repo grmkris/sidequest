@@ -47,6 +47,12 @@ export class BrowserUserOp {
     await this.deps.write(record)
     this.#update({ record })
   }
+  async #retryable(record: OpRecord, outcome: 'refused' | 'dropped') {
+    const aa = record.aa!
+    const retry = { actionId: aa.actionId, outcome, ...(aa.block === undefined ? {} : { block: aa.block }) }
+    await this.#write({ ...record, aa: retry })
+    this.#update({ built: null, pending: false })
+  }
   async load() {
     const previous = await this.deps.read()
     const saved = previous ?? { ...emptyJournal(), batch: true }
@@ -93,13 +99,19 @@ export class BrowserUserOp {
     }
     const outcome = await reconcileUserOp(this.deps.rpc, built, aa, this.#now())
     this.#update({ pending: outcome.at !== 'dropped' })
+    if (outcome.at === 'dropped') {
+      await this.#retryable(record, 'dropped')
+      return outcome.at
+    }
     if (outcome.at === 'receipt') {
       const next = { ...record, aa: { ...aa, receipt: outcome.receipt } }
       await this.#write(next)
       await this.#finish(next)
     }
-    if (outcome.at === 'unknown')
+    if (outcome.at === 'unknown') {
+      if (outcome.spent === true) await this.#write({ ...record, aa: { ...aa, spent: true } })
       throw new Error('The action lane was used but its receipt is unavailable. Reconcile before sending again.')
+    }
     return outcome.at
   }
   #validate(built: sdk.BuiltUserOp) {
@@ -148,10 +160,10 @@ export class BrowserUserOp {
   }
   async prepare() {
     await this.deps.guard()
-    const record = await this.#record()
+    let record = await this.#record()
     if (record.aa!.built !== undefined) {
-      await this.reconcile()
-      return
+      if ((await this.reconcile()) !== 'dropped') return
+      record = await this.#record()
     }
     const { deployment, rpc, sender } = this.deps
     if (deployment.aa === null) throw new Error('USDC gas is unavailable on this network.')
@@ -199,8 +211,11 @@ export class BrowserUserOp {
   }
   async send() {
     await this.deps.guard()
-    const record = await this.#record()
-    if (record.aa!.built !== undefined && (await this.reconcile()) !== 'dropped') return
+    let record = await this.#record()
+    if (record.aa!.built !== undefined) {
+      if ((await this.reconcile()) !== 'dropped') return
+      record = await this.#record()
+    }
     const built = await this.#signed(record)
     this.#validate(built)
     await this.deps.guard()
@@ -213,11 +228,20 @@ export class BrowserUserOp {
       ...record,
       batch: true,
       from: built.op.sender,
-      aa: { ...record.aa!, built: storeBuilt(built), submittedAt: this.#now(), block },
+      aa: { actionId: record.aa!.actionId, built: storeBuilt(built), submittedAt: this.#now(), block },
     }
     await this.#write(next)
     this.#update({ built, pending: true })
-    await sdk.sendUserOp(this.deps.rpc.bundler, built, built.op.signature)
+    try {
+      await sdk.sendUserOp(this.deps.rpc.bundler, built, built.op.signature)
+    } catch (error) {
+      if (error instanceof sdk.AaError && error.code === 'refused') {
+        const current = await this.#record()
+        await this.#retryable(current, 'refused')
+        throw new Error('Gas prices moved before it went out; review and confirm again.', { cause: error })
+      }
+      throw error
+    }
     await this.#poll()
   }
   async #poll() {

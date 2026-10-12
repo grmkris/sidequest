@@ -1,7 +1,7 @@
 /** Journal first, then build/sign/send. Every retry reconciles all hashes and the operation's nonce lane. */
 import * as sdk from '@sidequest/sdk'
-import { field, hexField, quantity, type Json } from '@sidequest/sdk'
-import { type Address, type Hex, decodeEventLog, encodeEventTopics, parseAbi, toHex } from 'viem'
+import { hexField, quantity } from '@sidequest/sdk'
+import { type Address, type Hex } from 'viem'
 import { AgentFailure } from './agent-failure.ts'
 import type { AgentSigning } from './agent-signing.ts'
 import { requireGasBudget, withGasFloat, type AgentBatchScope } from './agent-batch.ts'
@@ -35,9 +35,6 @@ export interface UserOpSubmitter {
   operation(id: string): Promise<UserOpResult | undefined>
 }
 
-const eventAbi = parseAbi([
-  'event UserOperationEvent(bytes32 indexed userOpHash,address indexed sender,address indexed paymaster,uint256 nonce,bool success,uint256 actualGasCost,uint256 actualGasUsed)',
-])
 const queues = new Map<string, Promise<void>>()
 const freezeCall = (call: sdk.Call) => ({ ...call, value: call.value.toString() })
 const terminal = (row: UserOpRow) => row.status === 'confirmed' || row.status === 'reverted'
@@ -152,7 +149,7 @@ export class UserOpDesk implements UserOpSubmitter {
         calls: input.calls.map(freezeCall),
         evidenceCall: input.evidenceCall === undefined ? null : freezeCall(input.evidenceCall),
       }),
-      fromBlock: this.deps.context.deployment.deployBlock,
+      fromBlock: 0n,
     })
     row = await this.#reconcile(row)
     if (terminal(row) || ['pending', 'uncertain', 'spent'].includes(row.status)) return result(row)
@@ -232,39 +229,19 @@ export class UserOpDesk implements UserOpSubmitter {
 
   async #landed(row: UserOpRow): Promise<UserOpRow | undefined> {
     const aa = this.#aa()
-    const logs = await this.deps.rpc.node('eth_getLogs', [
-      {
-        address: aa.entryPoint,
-        fromBlock: toHex(BigInt(row.from_block)),
-        toBlock: 'latest',
-        topics: encodeEventTopics({ abi: eventAbi, eventName: 'UserOperationEvent', args: { sender: row.sender } }),
-      },
-    ])
-    if (!Array.isArray(logs)) throw new sdk.AaError('unavailable', 'Missing EntryPoint logs')
-    for (const log of logs) {
-      const landed = this.#event(row, log)
-      if (landed !== undefined) return landed
-    }
-    return undefined
-  }
-
-  #event(row: UserOpRow, log: Json): UserOpRow | undefined {
-    if (field(log, 'removed') === true) return undefined
-    if (hexField(field(log, 'address'), 'event address').toLowerCase() !== this.#aa().entryPoint.toLowerCase())
-      return undefined
-    const topicValues = field(log, 'topics')
-    if (!Array.isArray(topicValues) || topicValues.length !== 4)
-      throw new sdk.AaError('unavailable', 'Invalid event topics')
-    // SAFETY: this event has exactly four hex topics, checked above and by hexField.
-    const topics = topicValues.map((topic) => hexField(topic, 'event topic')) as [Hex, Hex, Hex, Hex]
-    const event = decodeEventLog({ abi: eventAbi, data: hexField(field(log, 'data'), 'event data'), topics })
-    const args = event.args
-    if (args.sender.toLowerCase() !== row.sender || args.nonce !== sdk.laneNonce(BigInt(row.nonce_key)))
-      return undefined
-    return this.deps.store.finish(row.id, args.userOpHash, {
-      status: args.success ? 'success' : 'reverted',
-      txHash: hexField(field(log, 'transactionHash'), 'bundle transaction'),
-      actualGasCost: args.actualGasCost,
+    // Attempts have no sent-block field yet; the helper clamps this fallback to latest - 5000, never deployBlock.
+    const event = await sdk.findUserOpEvent(
+      this.deps.rpc.node,
+      aa.entryPoint,
+      row.sender,
+      sdk.laneNonce(BigInt(row.nonce_key)),
+      0n,
+    )
+    if (event === null) return undefined
+    return this.deps.store.finish(row.id, event.userOpHash, {
+      status: event.success ? 'success' : 'reverted',
+      txHash: event.txHash,
+      actualGasCost: event.actualGasCost,
     })
   }
 

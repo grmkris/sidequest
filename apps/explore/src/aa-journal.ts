@@ -44,6 +44,8 @@ const AaRecord = Schema.Struct({
   built: Schema.optionalKey(StoredBuilt),
   submittedAt: Schema.optionalKey(Natural),
   block: Schema.optionalKey(Quantity),
+  spent: Schema.optionalKey(Schema.Boolean),
+  outcome: Schema.optionalKey(Schema.Literals(['refused', 'dropped'])),
   receipt: Schema.optionalKey(Schema.Struct({ txHash: HashValue, status: Schema.Literals(['success', 'reverted']) })),
 })
 export type AaJournal = Schema.Schema.Type<typeof AaRecord>

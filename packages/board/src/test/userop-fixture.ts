@@ -148,6 +148,8 @@ export function userOpFixture() {
         return state.code === 'delegated' ? `0xef0100${deployment.delegation.delegator.slice(2)}` : '0x'
       case 'eth_getTransactionCount':
         return '0x0'
+      case 'eth_blockNumber':
+        return '0x1388'
       case 'eth_getLogs':
         return state.logs
       case 'eth_call': {
