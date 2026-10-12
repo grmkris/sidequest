@@ -4,7 +4,13 @@
  * wagmi as before. Either way the person still confirms.
  */
 import { useCallback } from 'react'
-import { type Hex, type TypedDataDefinition, serializeTypedData } from 'viem'
+import {
+  type Hex,
+  type TypedDataDefinition,
+  getTypesForEIP712Domain,
+  serializeTypedData,
+  validateTypedData,
+} from 'viem'
 import { useSendTransaction, useSignTypedData } from 'wagmi'
 import { type WalletPrompt, usePrivyPromptWallet } from './components/Privy.tsx'
 import type { walletStepRequest } from './components/txOperation.ts'
@@ -13,13 +19,25 @@ export type { WalletPrompt }
 /** A transaction's screen has no title of its own: Privy names the network and the amount. */
 export type TxPrompt = Pick<WalletPrompt, 'description' | 'buttonText'>
 
+/**
+ * Typed data exactly as viem sends a JSON-RPC wallet (`eth_signTypedData_v4`): the EIP712Domain type derived from the
+ * domain, validated, then serialized. Without that type a wallet hashes an empty domain and signs something else.
+ */
+export function walletTypedData(typedData: TypedDataDefinition): string {
+  const types = { EIP712Domain: getTypesForEIP712Domain({ domain: typedData.domain }), ...typedData.types }
+  // SAFETY: the same definition with the domain's type added, as viem's signTypedData adds it; validated just below.
+  const full = { ...typedData, types } as TypedDataDefinition
+  validateTypedData(full)
+  return serializeTypedData(full)
+}
+
 export function useSignTypedDataWithPrompt() {
   const privy = usePrivyPromptWallet()
   const { mutateAsync: signTypedDataAsync } = useSignTypedData()
   return useCallback(
-    // The same serialization wagmi sends a JSON-RPC wallet, so the signature is the one it would have asked for.
+    // What wagmi would send the wallet, so the signature is the one it would have asked for.
     async (typedData: TypedDataDefinition, prompt: WalletPrompt): Promise<Hex> =>
-      privy === null ? signTypedDataAsync(typedData) : privy.signTypedData(serializeTypedData(typedData), prompt),
+      privy === null ? signTypedDataAsync(typedData) : privy.signTypedData(walletTypedData(typedData), prompt),
     [privy, signTypedDataAsync],
   )
 }

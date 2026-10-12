@@ -1,5 +1,7 @@
 import { expect, it } from 'vitest'
-import { prompts, stepsPrompt } from './wallet-prompt.ts'
+import { getTypesForEIP712Domain, hashTypedData } from 'viem'
+import { prompts, stepsPrompt, walletTypedData } from './wallet-prompt.ts'
+import { typedDataArgs } from './typed-data.ts'
 
 it('every wallet prompt names what it allows, briefly, with a short button', () => {
   const all = [
@@ -33,4 +35,35 @@ it('a transaction says what its steps do, and why a call to itself goes to your 
     description: '2 steps in one transaction: Approve SIDE for the vault; Back this wallet.',
     buttonText: 'Send',
   })
+})
+
+// 12 Oct on dev: without the EIP712Domain type Privy signed an empty domain and the registration grant was refused.
+it('sends the wallet the typed data wagmi would, with the domain type it hashes', () => {
+  const board = JSON.stringify({
+    types: {
+      EIP712Domain: [
+        { name: 'name', type: 'string' },
+        { name: 'version', type: 'string' },
+        { name: 'chainId', type: 'uint256' },
+        { name: 'verifyingContract', type: 'address' },
+      ],
+      Grant: [
+        { name: 'delegate', type: 'address' },
+        { name: 'salt', type: 'uint256' },
+      ],
+    },
+    primaryType: 'Grant',
+    domain: { name: 'DelegationManager', version: '1', chainId: 10143, verifyingContract: `0x${'11'.repeat(20)}` },
+    message: {
+      delegate: `0x${'22'.repeat(20)}`,
+      salt: '60247279481910972239656324876737415394005608883608232257022683240022167938067',
+    },
+  })
+  const args = typedDataArgs(board)
+  const sent = JSON.parse(walletTypedData(args))
+  expect(sent.types.EIP712Domain).toEqual(getTypesForEIP712Domain({ domain: sent.domain }))
+  expect(sent.message.salt).toBe('60247279481910972239656324876737415394005608883608232257022683240022167938067')
+  expect(hashTypedData({ ...sent, message: { ...sent.message, salt: BigInt(sent.message.salt) } })).toBe(
+    hashTypedData(args),
+  )
 })
