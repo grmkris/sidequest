@@ -1,4 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest'
+import { encodeAbiParameters, getAddress, pad, parseAbiParameters } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { stageProfile, validateStageProfile } from '../../../infra/stage.ts'
 import testnet from '../../../contracts/config/monad-testnet.json' with { type: 'json' }
@@ -92,9 +93,33 @@ test('testnet prod checks chain, stage signer keys and all four owners without m
     attesterKey = `0x${'2'.repeat(64)}` as const
   const p = { ...stageProfile('prod')!, relay: privateKeyToAccount(relayKey).address }
   const config = { ...testnet, roles: { ...testnet.roles, attester: privateKeyToAccount(attesterKey).address } }
-  const env = { MONAD_RPC_URL: 'https://rpc.example', RELAY_PRIVATE_KEY: relayKey, ATTESTER_PRIVATE_KEY: attesterKey }
-  const fetcher = vi.fn(async () => Response.json({ result: '0x279f' })) as unknown as typeof fetch
-  const call = vi.fn(async () => `0x${testnet.deployment.sidequest.safe.slice(2).padStart(64, '0')}` as `0x${string}`)
+  const signerKey = `0x${'3'.repeat(64)}` as const
+  const env = {
+    MONAD_RPC_URL: 'https://rpc.example',
+    RELAY_PRIVATE_KEY: relayKey,
+    ATTESTER_PRIVATE_KEY: attesterKey,
+    PIMLICO_API_KEY: 'pim_test',
+    TESTNET_PAYMASTER_SIGNER_KEY: signerKey,
+  }
+  // The chain and Pimlico answer eth_chainId; Pimlico also lists the EntryPoint (ADR-0023).
+  const fetcher = vi.fn(async (_url: string, init: RequestInit) => {
+    const asked = await new Request('https://rpc.test', init).text()
+    const entryPoints = [testnet.accountAbstraction.entryPoint]
+    return Response.json({ result: asked.includes('eth_supportedEntryPoints') ? entryPoints : '0x279f' })
+  }) as unknown as typeof fetch
+  const signerWord = pad(privateKeyToAccount(signerKey).address)
+  // getDepositInfo: 1 MON deposit, staked, 1 MON stake, a day's delay, no withdrawal.
+  const depositInfo = encodeAbiParameters(parseAbiParameters('uint256, bool, uint112, uint32, uint48'), [
+    10n ** 18n,
+    true,
+    10n ** 18n,
+    86_400,
+    0,
+  ])
+  const ownerWord = pad(getAddress(testnet.deployment.sidequest.safe))
+  const call = vi.fn(async (_to: string, data: `0x${string}`) =>
+    data.startsWith('0x238ac933') ? signerWord : data.startsWith('0x5287ce12') ? depositInfo : ownerWord,
+  )
   const reader = () => ({
     call,
     code: async () => '0x01',
@@ -102,7 +127,10 @@ test('testnet prod checks chain, stage signer keys and all four owners without m
     storage: async () => '0x00' as `0x${string}`,
   })
   await assertTestnetProdConfig(p, config, env, fetcher, reader)
-  expect(call).toHaveBeenCalledTimes(4)
+  expect(call).toHaveBeenCalledTimes(6)
+  await expect(
+    assertTestnetProdConfig(p, config, { ...env, TESTNET_PAYMASTER_SIGNER_KEY: attesterKey }, fetcher, reader),
+  ).rejects.toThrow("signer is not the Worker's key")
   await expect(
     assertTestnetProdConfig(p, config, { ...env, RELAY_PRIVATE_KEY: attesterKey }, fetcher, reader),
   ).rejects.toThrow('relay')

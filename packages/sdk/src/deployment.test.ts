@@ -181,12 +181,20 @@ describe('network meta', () => {
   it("lists SIDE's other pages with its address once the config names SIDE, and refuses anything but https paths", () => {
     const c = currentConfig()
     const side = '0x1111111111111111111111111111111111117777'
-    expect(networkMeta('monad-testnet').sidePages).toEqual([])
+    // Testnet SIDE has no nad.fun site and no tracker: MonadVision's testnet explorer only.
+    expect(networkMeta('monad-testnet').sidePages).toEqual([
+      {
+        name: 'MonadVision',
+        href: `https://testnet.monadvision.com/token/${testnet.sidequest.token}`,
+        graduated: false,
+      },
+    ])
     expect(networkMeta('monad-mainnet').sidePages).toEqual([]) // no SIDE before the launch commit
     const launched = { ...c, sidequest: { token: side }, sidePages: mainnet.sidePages }
     expect(networkMetaFromConfig(launched).sidePages).toEqual([
       { name: 'MonadVision', href: `https://monadvision.com/token/${side}`, graduated: false },
-      { name: 'DEX Screener', href: `https://dexscreener.com/monad/${side}`, graduated: true },
+      // Listed from day one: its page fills in once SIDE leaves the curve (Kris, 12 Oct).
+      { name: 'DEX Screener', href: `https://dexscreener.com/monad/${side}`, graduated: false },
     ])
     for (const url of [
       'http://monadvision.com/token/{token}',

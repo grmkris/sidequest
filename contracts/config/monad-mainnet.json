@@ -72,7 +72,7 @@
   },
   "sidePages": [
     { "name": "MonadVision", "url": "https://monadvision.com/token/{token}" },
-    { "name": "DEX Screener", "url": "https://dexscreener.com/monad/{token}", "graduated": true }
+    { "name": "DEX Screener", "url": "https://dexscreener.com/monad/{token}" }
   ],
   "sidequest": {
     "minimumCreatorBond": 1000000000000000000000000,
