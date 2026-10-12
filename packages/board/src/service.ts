@@ -775,20 +775,41 @@ export class Board {
           'forbidden',
           `agent ${agentId}'s wallet is not the signed-in wallet: sign in with the agent's wallet to post as it`,
         )
-      return { agentId, hosted: false }
+      // A hosted agent naming its own ID is still hosted: it cannot stake in a publish batch either.
+      return { agentId, hosted: (await this.#hostedAgent(creator)) === agentId }
     }
     if (this.#config.hostedCreators === undefined) return { agentId: this.#noPosterAgent(), hosted: false }
-    const facts = await settleWithin(
-      this.#config.hostedCreators({ addresses: [creator], allowances: [] }),
-      POSTER_READ_MS,
-    )
-    if (facts === undefined) {
+    const hosted = await this.#hostedAgent(creator)
+    if (hosted === undefined) {
       if (this.#config.requirePosterAgent === true)
         throw new BoardError('unavailable', 'the hosted agent lookup did not answer; retry the same call')
       return { agentId: null, hosted: false }
     }
-    const hosted = facts.agents.find((a) => eq(a.address, creator))?.agentId
-    return hosted === undefined ? { agentId: this.#noPosterAgent(), hosted: false } : { agentId: hosted, hosted: true }
+    return hosted === null ? { agentId: this.#noPosterAgent(), hosted: false } : { agentId: hosted, hosted: true }
+  }
+
+  /** The hosted agent behind a wallet: its ID, null when none, undefined when the lookup did not answer in time. */
+  async #hostedAgent(wallet: Address): Promise<string | null | undefined> {
+    if (this.#config.hostedCreators === undefined) return null
+    const facts = await settleWithin(
+      this.#config.hostedCreators({ addresses: [wallet], allowances: [] }),
+      POSTER_READ_MS,
+    )
+    if (facts === undefined) return undefined
+    return facts.agents.find((a) => eq(a.address, wallet))?.agentId ?? null
+  }
+
+  /** A picked quote's poster: the agent its request was admitted as, hosted when that agent is the caller's. */
+  async #pickPoster(
+    creator: Address,
+    quote: { requestHash: string },
+  ): Promise<{ agentId: string | null; hosted: boolean }> {
+    const agentId =
+      this.#sql.all<{ creator_agent_id: string | null }>(
+        'SELECT creator_agent_id FROM quote_requests WHERE request_hash = ?',
+        quote.requestHash,
+      )[0]?.creator_agent_id ?? null
+    return { agentId, hosted: agentId !== null && (await this.#hostedAgent(creator)) === agentId }
   }
 
   /** A hosted poster's post needs the bond's backing free behind it now; anyone else's is checked at publish. */
@@ -991,18 +1012,9 @@ export class Board {
     const stack = input.stack ?? 'main'
     const ctx = this.#ctx(stack)
     await this.#requireUnpaused(stack)
-    // A picked hire inherits the agent its request was admitted as; the executor checks its backing at publish.
+    // A picked hire inherits the agent its request was admitted as, and is checked for backing like a direct post.
     const poster =
-      quote === null
-        ? await this.#poster(ctx, creator, input.agentId)
-        : {
-            agentId:
-              this.#sql.all<{ creator_agent_id: string | null }>(
-                'SELECT creator_agent_id FROM quote_requests WHERE request_hash = ?',
-                quote.requestHash,
-              )[0]?.creator_agent_id ?? null,
-            hosted: false,
-          }
+      quote === null ? await this.#poster(ctx, creator, input.agentId) : await this.#pickPoster(creator, quote)
     const posterAgent = poster.agentId
     const bondPolicy = await sdk.readBondPolicy(ctx)
     const creatorBond = input.creatorBond ?? formatUnits(bondPolicy.minimumCreatorBond, 18)

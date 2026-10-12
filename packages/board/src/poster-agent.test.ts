@@ -35,11 +35,15 @@ const chainReads: Record<string, unknown> = {
 }
 
 function fixture(options: { require: boolean; lookup?: 'ok' | 'down'; available?: bigint }) {
+  const backing = { available: options.available }
   const base = sdk.context('monad-testnet', 'main', 'http://127.0.0.1:1')
   const read = vi.fn(
     async ({ functionName, args }: { functionName: string; args?: readonly unknown[] | undefined }) => {
-      if (functionName === 'getAgentWallet') return args?.[0] === 2081n ? selfRun : zeroAddress
-      if (functionName === 'availableOf' && options.available !== undefined) return options.available
+      if (functionName === 'getAgentWallet') {
+        if (args?.[0] === 2081n) return selfRun
+        return args?.[0] === 2029n ? hosted : zeroAddress
+      }
+      if (functionName === 'availableOf' && backing.available !== undefined) return backing.available
       if (functionName in chainReads) return chainReads[functionName]
       if (functionName.startsWith('MAX_')) return sdk.MAX_SIDEQUEST_WINDOW
       throw new Error(`unexpected chain read: ${functionName}`)
@@ -94,7 +98,7 @@ function fixture(options: { require: boolean; lookup?: 'ok' | 'down'; available?
     Object.fromEntries(
       (await board.listQuoteRequests({})).map((r) => [String(r.creator).toLowerCase(), r.creatorAgentId]),
     )
-  return { board, request, create, agents }
+  return { board, request, create, agents, backing, offer, token }
 }
 
 it('lets any wallet post where agents are not required, recording the agent when one resolves', async () => {
@@ -204,4 +208,27 @@ it('names a missing deadline before anything else, so an unbacked agent is not s
     )
     .catch((error: unknown) => error)
   expect(pastQuote).toMatchObject({ code: 'invalid', message: expect.stringContaining('quote deadline') })
+})
+
+it('checks a hosted agent that names its own agentId, as when it does not', async () => {
+  const f = fixture({ require: true, available: 0n })
+  const refusal = await f.request(hosted, { agentId: '2029' }).catch((error: unknown) => error)
+  expect(refusal).toMatchObject({ code: 'conflict', reason: 'insufficient-backing' })
+})
+
+it('checks the backing of a hosted pick before the pick is saved', async () => {
+  const f = fixture({ require: true })
+  const posted = await f.request(hosted)
+  f.backing.available = 0n
+  const refusal = await f.board
+    .createTask(
+      { address: hosted },
+      { ...f.offer, token: f.token, reward: '1' },
+      {
+        requestHash: posted.requestHash,
+        quoteHash: `0x${'1'.repeat(64)}`,
+      },
+    )
+    .catch((error: unknown) => error)
+  expect(refusal).toMatchObject({ code: 'conflict', reason: 'insufficient-backing' })
 })
