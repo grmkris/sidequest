@@ -140,8 +140,10 @@ export async function mcpRoute(input: {
           }
         : result,
     })
-  // A notification (or a client's JSON-RPC response) has no id: accepted, nothing to answer.
-  if (id === undefined) return { status: 202, headers: { 'cache-control': 'no-store' } }
+  // A notification has no id; a client's JSON-RPC response has an id but no method, and a result or an error.
+  // Either is accepted with nothing to answer.
+  const response = body.method === undefined && ('result' in body || 'error' in body)
+  if (id === undefined || response) return { status: 202, headers: { 'cache-control': 'no-store' } }
   const capabilities = {
     tools: { listChanged: false },
     prompts: {},

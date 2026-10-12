@@ -523,6 +523,13 @@ describe('protocol gaps from the goblin run', () => {
     },
   )
 
+  it.each([
+    { jsonrpc: '2.0', id: 7, result: {} },
+    { jsonrpc: '2.0', id: 8, error: { code: -1, message: 'declined' } },
+  ])("accepts a client's own JSON-RPC response with 202 and no body (%o)", async (reply) => {
+    expect(await send(reply)).toEqual({ status: 202, headers: { 'cache-control': 'no-store' } })
+  })
+
   it('answers a notification sent with an id leniently, never as an unknown method', async () => {
     expect((await send({ jsonrpc: '2.0', id: 3, method: 'notifications/initialized' })).body).toEqual({
       jsonrpc: '2.0',
