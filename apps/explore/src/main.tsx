@@ -160,12 +160,14 @@ const services = createRoute({
 const service = createRoute({
   getParentRoute: () => root,
   path: '/services/$agentId/$serviceId',
+  staticData: { measure: 'narrow' },
   component: ServicePage,
 })
 // A new account's three steps; it opens by itself after the first sign-in (WelcomeOpener in the shell).
 const welcome = createRoute({
   getParentRoute: () => root,
   path: '/welcome',
+  staticData: { measure: 'narrow' },
   component: () => (
     <LaunchGate title="Set up Sidequest">
       <WelcomePage />
@@ -189,6 +191,7 @@ const wallet = createRoute({
 const connect = createRoute({
   getParentRoute: () => root,
   path: '/connect',
+  staticData: { measure: 'narrow' },
   component: ConnectPage,
 })
 // /agents/<id> is a natural guess for an agent's page (the list was /agents); the page lives at /agent/<id>.
@@ -202,6 +205,7 @@ const agentsAlias = createRoute({
 const agentNew = createRoute({
   getParentRoute: () => root,
   path: '/agents/new',
+  staticData: { measure: 'narrow' },
   component: () => (
     <LaunchGate title="Create an agent">
       <AgentNewPage />
@@ -211,16 +215,23 @@ const agentNew = createRoute({
 const agentApprove = createRoute({
   getParentRoute: () => root,
   path: '/agents/approve/$agentKey',
+  staticData: { measure: 'narrow' },
   component: () => (
     <LaunchGate title="Approve your agent">
       <AgentApprovePage />
     </LaunchGate>
   ),
 })
-const account = createRoute({ getParentRoute: () => root, path: '/account', component: AccountPage })
+const account = createRoute({
+  getParentRoute: () => root,
+  path: '/account',
+  staticData: { measure: 'narrow' },
+  component: AccountPage,
+})
 const admin = createRoute({
   getParentRoute: () => root,
   path: '/admin',
+  staticData: { measure: 'narrow' },
   component: () => (
     <LaunchGate title="Admin">
       <AdminPage />
@@ -230,6 +241,7 @@ const admin = createRoute({
 const sponsorship = createRoute({
   getParentRoute: () => root,
   path: '/sponsorship',
+  staticData: { measure: 'narrow' },
   component: () => (
     <LaunchGate title="Gas sponsorship">
       <SponsorshipPage />
@@ -237,18 +249,35 @@ const sponsorship = createRoute({
   ),
 })
 // Commons: the lobby, roadmap, gaps and roles (one global place; job threads live on job pages).
-const commons = createRoute({ getParentRoute: () => root, path: '/commons', component: CommonsPage })
+const commons = createRoute({
+  getParentRoute: () => root,
+  path: '/commons',
+  staticData: { measure: 'narrow' },
+  component: CommonsPage,
+})
 const roadmapItem = createRoute({
   getParentRoute: () => root,
   path: '/commons/roadmap/$itemId',
+  staticData: { measure: 'narrow' },
   component: RoadmapItemPage,
 })
-const gap = createRoute({ getParentRoute: () => root, path: '/commons/gaps/$gapId', component: GapPage })
+const gap = createRoute({
+  getParentRoute: () => root,
+  path: '/commons/gaps/$gapId',
+  staticData: { measure: 'narrow' },
+  component: GapPage,
+})
 // Tenant boards (ADR-0008): the same pages under /b/<slug>, plus the boards directory, creation and the widget.
-const boards = createRoute({ getParentRoute: () => root, path: '/boards', component: BoardsPage })
+const boards = createRoute({
+  getParentRoute: () => root,
+  path: '/boards',
+  staticData: { measure: 'narrow' },
+  component: BoardsPage,
+})
 const boardNew = createRoute({
   getParentRoute: () => root,
   path: '/boards/new',
+  staticData: { measure: 'narrow' },
   component: function BoardNewRoute() {
     const auth = useAuth()
     return (
@@ -341,6 +370,10 @@ const router = createRouter({
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
+  }
+  interface StaticDataRouteOption {
+    /** A form or a page of reading: its body stops at 42rem under the full-width title (Shell). */
+    measure?: 'narrow'
   }
 }
 

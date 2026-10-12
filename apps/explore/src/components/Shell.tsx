@@ -9,7 +9,7 @@ import { cn } from '../lib/cn.ts'
  * the account's mark, at its right, and a tab bar of the places, clear of the notch and the home indicator. Content
  * scrolls under the translucent chrome.
  */
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link, useLocation, useMatches } from '@tanstack/react-router'
 import { BriefcaseBusiness, LayoutGrid, type LucideIcon, MessagesSquare, Plus } from 'lucide-react'
 import type { ComponentProps, ReactNode } from 'react'
 import { currentBoardId } from '../api.ts'
@@ -127,18 +127,18 @@ function Brand() {
   )
 }
 
-/** How wide a page reads: the landing in full; a job or request in two columns from 1024 px; anything else, one. */
-const pageWidth = (pathname: string) =>
-  pathname === '/'
-    ? 'max-w-7xl'
-    : /\/(job|request)\//.test(pathname) || pathname === '/services'
-      ? 'max-w-5xl'
-      : 'max-w-3xl'
+/**
+ * Every page reads in one column, so its title starts at the same place wherever you go. A form or a page of reading
+ * declares `staticData: { measure: 'narrow' }` on its route: everything but its header then stops at 42rem, left-aligned
+ * under the full-width title, and so do its loading and error states.
+ */
+const useNarrow = () => useMatches({ select: (matches) => matches.at(-1)?.staticData.measure === 'narrow' })
 
 export function Shell({ children }: { children: ReactNode }) {
   const auth = useAuth()
   const account = useAutoSignIn(auth)
   const paused = usePaused()
+  const narrow = useNarrow()
   const { pathname } = useLocation()
   const managed = useManagedAgents()
   const approvals = useManagedApprovals()
@@ -237,10 +237,7 @@ export function Shell({ children }: { children: ReactNode }) {
           id="main-content"
           tabIndex={-1}
           key={pathname}
-          className={cn(
-            'mx-auto grid min-w-0 w-full animate-[view-in_0.32s_var(--ease-sheet)] gap-7 pt-5 pr-[max(1rem,var(--safe-right))] pb-[calc(6.5rem+var(--safe-bottom))] pl-[max(1rem,var(--safe-left))] outline-none lg:px-10 lg:pt-10 lg:pb-16',
-            pageWidth(pathname),
-          )}
+          className="mx-auto grid w-full max-w-5xl min-w-0 animate-[view-in_0.32s_var(--ease-sheet)] gap-7 pt-5 pr-[max(1rem,var(--safe-right))] pb-[calc(6.5rem+var(--safe-bottom))] pl-[max(1rem,var(--safe-left))] outline-none lg:px-10 lg:pt-10 lg:pb-16"
         >
           <LaunchBanner />
           {paused && (
@@ -257,7 +254,7 @@ export function Shell({ children }: { children: ReactNode }) {
               </a>
             </div>
           )}
-          {children}
+          <div className={cn('grid min-w-0 gap-7', narrow && '[&>*:not(header)]:max-w-2xl')}>{children}</div>
         </main>
       </div>
 
