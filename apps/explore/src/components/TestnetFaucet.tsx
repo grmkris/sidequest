@@ -37,6 +37,7 @@ export function TestnetFaucet({ address }: { address: `0x${string}` }) {
   const done = () => {
     setSteps(null)
     void refreshBalances(qc)
+    void reads.refetch()
   }
   const claim = () => {
     if (last === undefined) return toast('The faucet status is still loading. Try again in a moment.')

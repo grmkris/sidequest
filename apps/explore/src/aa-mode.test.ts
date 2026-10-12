@@ -31,7 +31,7 @@ describe('browser payment mode', () => {
   it('allows a faucet user operation with zero USDC', () => {
     expect(
       paymentMode({
-        aa,
+        aa: { ...aa, paymaster: null },
         gasTokenBalance: 0n,
         carriedGasToken: 0n,
         nativeBalance: 0n,

@@ -1,9 +1,23 @@
 import { agentEndpoint, type ManagedAgent } from './api.ts'
 
+interface GasAllowanceStatus {
+  hash: string
+  status: string
+  token: string
+  limit: string
+  left: string
+  used: string
+  periodSeconds: number
+  periodStart: number
+  periodEnd: number
+  expiresAt: number
+}
+
 export interface AgentStatus {
   /** A live OAuth family proves the coding agent has connected; activity is only presence data. */
   connected: boolean
   agent: ManagedAgent
+  gasAllowances?: GasAllowanceStatus[]
   allowances: Array<{
     hash: string
     token: string

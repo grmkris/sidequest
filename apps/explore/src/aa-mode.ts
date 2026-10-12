@@ -18,7 +18,7 @@ export interface PaymentModeInput {
 export function paymentMode(input: PaymentModeInput): PaymentMode {
   if (
     input.aa !== null &&
-    input.aa.paymaster !== null &&
+    (input.aa.paymaster !== null || input.sponsor) &&
     input.nativeValue === 0n &&
     (input.sponsor || input.carriedGasToken + input.gasTokenBalance >= input.aa.maxCostPerOp) &&
     (input.canSignAuthorization || input.delegated)

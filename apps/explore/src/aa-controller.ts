@@ -1,5 +1,5 @@
 import * as sdk from '@sidequest/sdk'
-import { type Address, type Hex, type TypedDataDefinition, isHex } from 'viem'
+import { type Address, type Hex, type TypedDataDefinition, encodeFunctionData, isHex } from 'viem'
 import { Schema } from 'effect'
 import { restoreBuilt, storeBuilt } from './aa-journal.ts'
 import { maxCostCopy } from './aa-mode.ts'
@@ -110,13 +110,14 @@ export class BrowserUserOp {
     if (aa === null || actual === null)
       throw new Error('The saved operation has no readable gas configuration or calls.')
     const approval = aa.paymaster === null ? [] : [sdk.approveCall(aa.gasToken, aa.paymaster, aa.standingApproval)]
-    const sameCalls = actual.length === expected.length || actual.length === expected.length + 1
+    const sameCalls =
+      actual.length === expected.length || (this.deps.sponsor === undefined && actual.length === expected.length + 1)
     const allowed = expected.concat(actual.length === expected.length ? [] : approval)
     if (
       built.op.sender.toLowerCase() !== sender.toLowerCase() ||
       built.chainId !== deployment.chainId ||
       built.entryPoint.toLowerCase() !== aa.entryPoint.toLowerCase() ||
-      built.op.paymaster?.toLowerCase() !== aa.paymaster?.toLowerCase() ||
+      !this.#paymasterAllowed(built) ||
       built.maxCost > aa.maxCostPerOp ||
       !sameCalls ||
       sdk.executeCalldata(allowed).toLowerCase() !== built.op.callData.toLowerCase()
@@ -124,6 +125,26 @@ export class BrowserUserOp {
       throw new Error(
         'The saved operation differs from the reviewed wallet, network, calls or gas limit. Reconcile before continuing.',
       )
+  }
+  #paymasterAllowed(built: sdk.BuiltUserOp): boolean {
+    if (this.deps.sponsor !== 'faucet')
+      return built.op.paymaster?.toLowerCase() === this.deps.deployment.aa?.paymaster?.toLowerCase()
+    const { deployment, txs, sender } = this.deps
+    const faucet = deployment.testnetFaucet
+    if (
+      deployment.chainId !== 10143 ||
+      faucet === null ||
+      txs.length !== 1 ||
+      built.maxCost !== 0n ||
+      built.op.paymaster === undefined
+    )
+      return false
+    const claim = sdk.testnetFaucetAbi
+    return (
+      txs[0]!.to.toLowerCase() === faucet.toLowerCase() &&
+      txs[0]!.data.toLowerCase() ===
+        encodeFunctionData({ abi: claim, functionName: 'drip', args: [sender] }).toLowerCase()
+    )
   }
   async prepare() {
     await this.deps.guard()

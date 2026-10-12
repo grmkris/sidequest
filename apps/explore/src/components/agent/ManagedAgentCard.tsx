@@ -17,6 +17,7 @@ import { ListingCard } from './ListingCard.tsx'
 import {
   AgentOwnedBacking,
   Connection,
+  GasBudgetCard,
   ManageCard,
   WalletEarnings,
   WeeklyBudget,
@@ -70,7 +71,9 @@ export function ManagedAgentCard({ agent, onBack }: { agent: ManagedAgent; onBac
       try {
         await agentAction(agent.id, 'revoke')
       } catch {
-        failures.push('On-chain disablement is incomplete. Reconcile again, or renew operator sponsorship if needed.')
+        failures.push(
+          'On-chain disablement is incomplete. Reconcile again, or fund your operator wallet with USDC or MON.',
+        )
       }
       await refresh()
       setError(failures.length === 0 ? null : failures.join(' '))
@@ -100,6 +103,7 @@ export function ManagedAgentCard({ agent, onBack }: { agent: ManagedAgent; onBac
       {!stopped && agent.state !== 'active' && <AgentNew initial={agent} />}
       {agent.state === 'active' && (
         <>
+          <GasBudgetCard agent={agent} onChanged={() => void refresh()} />
           <WeeklyBudget agent={agent} status={status} onChanged={() => void refresh()} />
           <WalletEarnings agent={agent} action={action} />
           <AgentOwnedBacking agent={agent} action={action} onBack={onBack} />

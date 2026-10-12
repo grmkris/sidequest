@@ -5,6 +5,7 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { describe, expect, it } from 'vitest'
 import { BrowserUserOp, type UserOpDependencies, type UserOpView } from './aa-controller.ts'
 import { browserAaRpc } from './aa-request.ts'
+import { faucetClaim } from './faucet-claim.ts'
 import type { OpRecord } from './components/txJournal.ts'
 
 const key = privateKeyToAccount(`0x${'22'.repeat(32)}`)
@@ -218,7 +219,12 @@ it('the first faucet operation carries authorization and only its one faucet cal
     ...signedAuthorization,
     yParity: signedAuthorization.yParity ?? 0,
   }
-  const deps = { ...f.deps, sponsor: 'faucet' as const, authorize: async () => authorization }
+  const deps = {
+    ...f.deps,
+    txs: faucetClaim(base, key.address, 0n).txs,
+    sponsor: 'faucet' as const,
+    authorize: async () => authorization,
+  }
   const controller = new BrowserUserOp(deps)
   await controller.load()
   await controller.prepare()
