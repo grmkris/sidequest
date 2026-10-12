@@ -52,6 +52,11 @@ export interface BuildInput {
   readonly authorization?: SignedAuthorization | undefined
   /** Testnet only: our paymaster sponsors a faucet claim instead of charging the gas token. */
   readonly sponsor?: 'faucet' | undefined
+  /**
+   * The least call gas the batch needs, whatever the estimate says: calls that push payouts revert with
+   * `TransferGasTooLow` below a fixed reserve, which an estimate does not see (Explore's `gas.ts` floors).
+   */
+  readonly minCallGas?: bigint | undefined
 }
 
 /** An operation ready to sign, the most its gas may cost and the hash it will go by. */
@@ -131,12 +136,16 @@ function withPaymaster(op: UserOperation, answer: Json, paymaster: Address): Use
   )
 }
 
-/** The bundler's estimate into the operation. Monad bills the whole limit: the call gets 10% for state moving, no more. */
-function withEstimate(op: UserOperation, gas: Json): UserOperation {
+/**
+ * The bundler's estimate into the operation. Monad bills the whole limit: the call gets 10% for state moving, no more,
+ * and never less than the batch's own floor.
+ */
+function withEstimate(op: UserOperation, gas: Json, minCallGas: bigint): UserOperation {
+  const estimated = (quantity(field(gas, 'callGasLimit'), 'call gas') * 11n) / 10n
   return paymasterLimits(
     {
       ...op,
-      callGasLimit: (quantity(field(gas, 'callGasLimit'), 'call gas') * 11n) / 10n,
+      callGasLimit: estimated > minCallGas ? estimated : minCallGas,
       verificationGasLimit: quantity(field(gas, 'verificationGasLimit'), 'verification gas'),
       preVerificationGas: quantity(field(gas, 'preVerificationGas'), 'pre-verification gas'),
     },
@@ -199,6 +208,7 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
   op = withEstimate(
     op,
     await input.bundler('eth_estimateUserOperationGas', [toBundlerJson(op, input.authorization), aa.entryPoint]),
+    input.minCallGas ?? 0n,
   )
   const maxCost = tokenQuote === null ? 0n : maxTokenCost(op, tokenQuote)
   if (maxCost > aa.maxCostPerOp)

@@ -95,6 +95,11 @@ describe('building a user operation', () => {
     expect(built.maxCost > 0n && built.maxCost <= aa.maxCostPerOp).toBe(true)
   })
 
+  it("keeps the call gas at the batch's floor when the estimate is below it", async () => {
+    expect((await build(services(), { minCallGas: 300_000n })).op.callGasLimit).toBe(300_000n)
+    expect((await build(services(), { minCallGas: 100_000n })).op.callGasLimit).toBe((0x30d40n * 11n) / 10n)
+  })
+
   it('appends the standing approval only while the paymaster allowance is short', async () => {
     const short = decodeExecuteCalldata((await build(services({ allowance: 99_999n }))).op.callData)!
     expect(short).toHaveLength(2)
