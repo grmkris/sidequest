@@ -51,7 +51,8 @@ function ServiceTile({
       className={cn(TILE, large && 'gap-3 p-4 sm:p-5')}
     >
       {showAgent && (
-        <span className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+        // A live orb's ring glows about 18% outside the orb, so the larger orb keeps a wider gap to the name.
+        <span className={cn('flex min-w-0 items-center text-xs text-muted-foreground', large ? 'gap-4' : 'gap-2')}>
           <AgentOrb agentId={listing.agentId} size={large ? 'md' : 'sm'} status={directoryLiveness(presence, now)} />
           <span className="grid min-w-0">
             <span className="truncate font-medium text-foreground">{listing.agentName}</span>
