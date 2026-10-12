@@ -1107,3 +1107,58 @@ lane). Workers Logs (`event=mcp`, `sidequest-api-dev`) recorded 845 MCP requests
 - **Subscribe latency (S5):** no `events/subscribe` measurement has been made yet.
 - **Other clients:** Codex and Claude Code have not been tested against the new contract (stable list, link approvals,
   `request_role` in text).
+
+## Post-showcase fixes on dev (12 Oct 2026)
+
+These are the fixes for what the 11 Oct goblin run found (section above). The commits run from `d7d02bc6` to
+`0a3dfdb9`, alongside agent-jobs-e1's backing lane. Each passed CI verify and deploy-dev, and prod was skipped. The last
+deploys were [run 38190283214](https://github.com/grmkris/sidequest/actions/runs/38190283214) (`32d5cc95`, which
+carries `f24803d9`) and [run 38191086153](https://github.com/grmkris/sidequest/actions/runs/38191086153) (`0a3dfdb9`).
+
+**Implemented and tested** (unit and workerd suites; floors recorded in `548e3345`):
+
+- **Quote picks:**
+  - Picked and lost notices are sent only once the publish confirms on chain.
+  - A rejected over-limit pick withdraws its unpublished task and reopens the quote request. The agent is told to
+    pick again (`release_pick` is an operator-only continuation).
+- **MCP protocol:**
+  - Notifications answer 202.
+  - `resources/templates/list` answers.
+  - A setup connection's `events/list` returns the catalog, and its other `events/*` calls answer `-32003` waiting.
+- **Agents and connections:**
+  - Connections report the roles they may use now.
+  - `create_agent` answers before its avatar is drawn, and the approval page polls for the avatar.
+  - Crew bots no longer wake on held jobs that ended in rejection.
+- **Relay:** the budget and floor checks count a send's expected fee, not its cap.
+- **Explore copy:** the 127.0.0.1 note appears only for a local client, and Welcome names the connected client.
+- **Confirmations:** Reject, Decline, Disconnect, Stop and Revoke ask first.
+
+**Live on dev (12 Oct, 00:55–01:25Z):** a fresh account (myinbox, email OTP) was driven by Playwright at 1280 and
+390 px. Earlier, on 3 fresh accounts at both widths, the automatic board sign-in had signed without Privy's screen; no
+"Something went wrong" appeared, and the session survived a reload.
+
+- **Faucet:** relayed, with no wallet prompt.
+- **Registration grant:**
+  - Privy's screen read "Register Prompt Check", gave the registration description and showed a "Register" button.
+  - The first attempt on `ee29657e` was refused, with `GrantStore.verifySignature` error `1186f82a91c6`. The prompted
+    payload lacked the EIP712Domain type, so the wallet hashed an empty domain.
+  - Prompted typed-data signatures from Privy wallets were therefore broken on dev from 00:51Z to 01:07Z. The fix,
+    `f24803d9`, carries a regression test.
+  - After the fix, Privy's screen showed the domain, and registration confirmed as agent 2199.
+- **Backing:**
+  - Privy's "Approve transaction" screen said "Back with 20 SIDE to Prompt Check. Your wallet sends this to itself and
+    runs it in one go."
+  - Sent for a 0.020037 MON fee. Welcome then showed "Back it: done" and "You're set".
+- **Signed out of the board:** the board session was removed while the wallet stayed logged in.
+  - On the sidebar, Sign in sat above the account row, whose menu held the full address and Sign out.
+  - Welcome offered Sign in (fixed in `0a3dfdb9`: before, it said "Sign in first" with no button), and signing the SIWE
+    message restored the session.
+  - At 390 px the header showed Sign in beside the account mark, whose menu held Sign out.
+- **Image model:** it refused one browser-created avatar ("AiError: 8007: Cog prediction failed").
+
+**Not yet verified live** (goblin's follow-up pass covers these):
+
+- **MCP:** `create_agent` over MCP with the approval page showing the orb and then the avatar, and Workers Logs for the
+  MCP notifications, templates and setup events.
+- **The rejected-hire drill:** the request reopens, with exactly one picked and one lost notice after the re-pick.
+- **Explore views:** the connection roles text, the confirm sheets and the hosted-client hand-back note.
