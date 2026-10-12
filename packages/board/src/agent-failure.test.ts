@@ -61,6 +61,16 @@ describe('agentFailureReply', () => {
     expect(log).toHaveBeenCalledWith(reply.errorId, secret)
   })
 
+  it('retries a failed read with its arguments and preserves that guidance across the tenant boundary', () => {
+    const log = vi.fn()
+    const reply = agentFailureReply(new Error('SECRET_PROVIDER'), 'Read failed', log, 'error', 'read')
+    expect(reply).toMatchObject({ code: 'error', reason: 'internal', retry: 'read' })
+    expect(reply.message).toContain('retry this read with the same arguments')
+    expect(reply.message).not.toMatch(/operationKey|SECRET_PROVIDER/)
+    expect(agentFailureReply(failureFromReply(reply), 'Outer failure', log)).toEqual(reply)
+    expect(log).toHaveBeenCalledTimes(1)
+  })
+
   it('logs only static diagnostics through the default sink, never message or body text', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {

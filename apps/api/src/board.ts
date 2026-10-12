@@ -21,6 +21,7 @@ import {
   hostedCreatorFacts,
   type HostedCreatorFacts,
   type HostedCreatorQuery,
+  readOnlyHostedTools,
 } from '@sidequest/board'
 import { fromD1 } from '@sidequest/indexer'
 import * as sdk from '@sidequest/sdk'
@@ -43,7 +44,7 @@ import { stakingSnapshot } from './staking-index.ts'
 import { oauthRoute, resolveOAuth } from './oauth.ts'
 import { terminateGrantSubscriptions } from './webhooks.ts'
 import type { OAuthGrant } from './oauth.ts'
-import { OPERATOR_CONTINUATIONS, toolDecision } from './mcp-policy.ts'
+import { OPERATOR_CONTINUATIONS, requiredToolScope, toolAnnotations, toolDecision } from './mcp-policy.ts'
 import { resourceBoard } from './oauth-validation.ts'
 import { runAgent, type AgentExecuteRequest } from './agent-runtime.ts'
 import { agentManagement } from './agent-management.ts'
@@ -290,7 +291,18 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
           try {
             return await executeAgent(req)
           } catch (error) {
-            return toJson(agentFailureReply(error, 'Hosted agent execution failed'))
+            return toJson(
+              agentFailureReply(
+                error,
+                'Hosted agent execution failed',
+                undefined,
+                'unavailable',
+                (requiredToolScope(req.tool) === 'sidequest:read' && toolAnnotations(req.tool).readOnlyHint) ||
+                  req.tool === 'setup_status'
+                  ? 'read'
+                  : 'same-key',
+              ),
+            )
           } finally {
             syncListeners()
           }
@@ -731,7 +743,13 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
             // The one safe boundary for tenant replies: board refusals keep their code and fields, a decoded revert
             // keeps its error name, and anything else (RPC or provider text) becomes a logged error id.
             return toJson(
-              agentFailureReply(e, 'The board could not complete this call', undefined, 'error') satisfies BoardReply,
+              agentFailureReply(
+                e,
+                'The board could not complete this call',
+                undefined,
+                'error',
+                readOnlyHostedTools.has(req.tool) ? 'read' : 'same-key',
+              ) satisfies BoardReply,
             )
           }
         }),

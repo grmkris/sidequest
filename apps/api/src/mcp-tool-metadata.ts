@@ -15,7 +15,7 @@ const envelope = (result: Record<string, unknown>) =>
     code: stringOutput,
     message: stringOutput,
     reason: stringOutput,
-    retry: { type: 'string', enum: ['same-key', 'new-key', 'after-operator', 'none'] },
+    retry: { type: 'string', enum: ['same-key', 'new-key', 'after-operator', 'none', 'read'] },
   })
 const hostedOutput = envelope(
   objectOutput({

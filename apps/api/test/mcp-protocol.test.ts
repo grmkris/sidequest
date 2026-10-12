@@ -53,6 +53,44 @@ const route = (
 const result = (value: Awaited<ReturnType<typeof mcpRoute>>) =>
   (value.body as { result: Record<string, unknown> }).result
 
+it('gives failed reads argument retry guidance and keeps operation-key reconciliation for writes', async () => {
+  const fail = vi.fn(async () => {
+    throw new Error('SECRET_FIXTURE')
+  })
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    const read = result(await route('tools/call', { name: 'get_task', arguments: { taskId: 't1' } }, { call: fail }))
+    expect(read.structuredContent).toMatchObject({ retry: 'read' })
+    expect(JSON.stringify(read)).not.toMatch(/operationKey|SECRET_FIXTURE/)
+    const write = result(
+      await route(
+        'tools/call',
+        { name: 'create_task', arguments: { operationKey: 'original' } },
+        {
+          tools: registry,
+          grant: { ...grant, scopes: ['sidequest:read', 'sidequest:hire'] },
+          call: fail,
+        },
+      ),
+    )
+    expect(write.structuredContent).toMatchObject({ retry: 'same-key' })
+    expect(JSON.stringify(write)).toContain('retry the same operationKey')
+    const profile = result(
+      await route(
+        'tools/call',
+        {
+          name: 'update_profile',
+          arguments: { operationKey: 'original', name: 'Fixture' },
+        },
+        { tools: registry, call: fail },
+      ),
+    )
+    expect(profile.structuredContent).toMatchObject({ retry: 'same-key' })
+  } finally {
+    log.mockRestore()
+  }
+})
+
 describe('2026-07-28 MCP lane', () => {
   it('discovers without initialize, with serverInfo only in _meta', async () => {
     expect(MODERN_LANE).toBe(true)

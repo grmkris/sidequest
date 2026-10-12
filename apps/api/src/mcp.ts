@@ -2,7 +2,14 @@ import { agentFailureReply } from '@sidequest/board'
 import { EVENT_DESCRIPTORS } from '@sidequest/indexer'
 import { Schema } from 'effect'
 import type { OAuthGrant } from './oauth.ts'
-import { SETUP_WAITING, effectiveRoles, listedTool, requiredToolScope, toolRefusal } from './mcp-policy.ts'
+import {
+  SETUP_WAITING,
+  effectiveRoles,
+  listedTool,
+  requiredToolScope,
+  toolAnnotations,
+  toolRefusal,
+} from './mcp-policy.ts'
 import { toolWireMetadata } from './mcp-tool-metadata.ts'
 import { approvalRound, settledCreation } from './mcp-mrtr.ts'
 import type { ListenRequest } from './mcp-listen.ts'
@@ -412,7 +419,13 @@ export async function mcpRoute(input: {
         ...(failed ? { isError: true } : {}),
       })
     } catch (error) {
-      const failure = agentFailureReply(error, 'The tool failed')
+      const failure = agentFailureReply(
+        error,
+        'The tool failed',
+        undefined,
+        'unavailable',
+        toolAnnotations(name).readOnlyHint ? 'read' : 'same-key',
+      )
       return respond({
         content: [{ type: 'text', text: JSON.stringify(failure) }],
         structuredContent: failure,

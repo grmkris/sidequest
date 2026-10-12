@@ -3,7 +3,7 @@ import * as sdk from '@sidequest/sdk'
 import { BoardError } from './board-error.ts'
 
 /** What the caller should do next. `same-key` is safe: the operation journal resumes or reconciles it. */
-export type AgentRetry = 'same-key' | 'new-key' | 'after-operator' | 'none'
+export type AgentRetry = 'same-key' | 'new-key' | 'after-operator' | 'none' | 'read'
 
 /** A refusal an agent can act on: a stable reason, a retry rule and, when known, how long to wait. */
 export class AgentFailure extends BoardError {
@@ -28,7 +28,7 @@ export interface AgentFailureReply {
   readonly errorId?: string
 }
 
-const RETRIES = new Set<string>(['same-key', 'new-key', 'after-operator', 'none'])
+const RETRIES = new Set<string>(['same-key', 'new-key', 'after-operator', 'none', 'read'])
 
 /**
  * The reply for a failed hosted action. Board errors keep their code, message and any reason, retry and retryAfter
@@ -40,6 +40,7 @@ export function agentFailureReply(
   fallback: string,
   log: (errorId: string, error: unknown) => void = defaultLog,
   fallbackCode = 'unavailable',
+  fallbackRetry: 'same-key' | 'read' = 'same-key',
 ): AgentFailureReply {
   if (error instanceof BoardError) {
     const extra = error as unknown as { reason?: unknown; retry?: unknown; retryAfter?: unknown; errorId?: unknown }
@@ -71,9 +72,9 @@ export function agentFailureReply(
   return {
     ok: false,
     code: fallbackCode,
-    message: `${fallback} (error ${errorId}); retry the same operationKey`,
+    message: `${fallback} (error ${errorId}); ${fallbackRetry === 'read' ? 'retry this read with the same arguments' : 'retry the same operationKey'}`,
     reason: 'internal',
-    retry: 'same-key',
+    retry: fallbackRetry,
     errorId,
   }
 }
