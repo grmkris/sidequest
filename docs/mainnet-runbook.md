@@ -94,7 +94,8 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
    - the Safe policy the launch gate reads back (§3.7): `deployment.sidequest.safeOwners`, the exact owner set, and
      `deployment.sidequest.safeThreshold`;
    - the Privy app id and approval;
-   - the RPC and HyperSync providers;
+   - the RPC provider by its origin (the keyed URL stays in the `MONAD_RPC_URL` secret, and in `MONAD_MAINNET_RPC_URL`
+     for `--live`), and the HyperSync URL;
    - `admission.drain` (§3.9, §3.11).
 
    `bun scripts/preflight-prod.ts <artifact>` checks its structure.
@@ -389,6 +390,9 @@ SIDEQUEST_PROD_ARTIFACT=docs/p0-prod-artifact.json PROD_ADMISSION_DRAIN=1 bun ru
 - With `admission.drain: true` in the artifact, the deploy is drained: reads and authenticated recovery work, and new
   hosted writes are refused.
 - A missing or empty `PROD_ADMISSION_DRAIN` also drains, and the artifact's mode must match the runtime value.
+- The command line's `SIDEQUEST_PROD_ARTIFACT` and `PROD_ADMISSION_DRAIN` reach the deploy; the runner refuses a value
+  that differs from `prod.env`. A CI deploy takes them, and `HYPERSYNC_URL`, from the GitHub `prod` environment's
+  variables. Smoke expects `/release.json` to match `MAINNET_LIVE`, so a drained deploy smokes green with writes closed.
 - `assertDeployConfig` runs before any resource: structure, provider and Privy mapping, dedicated secret sources,
   the signing keys against the configured relay and attester, and the RPC's chain id. It also checks Explore's pinned
   `explore.mainnetLive`, which must equal `MAINNET_LIVE` in `packages/sdk/src/release.ts` and be false while drained.
