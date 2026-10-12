@@ -181,7 +181,13 @@ function withSponsorGas(op: UserOperation, answer: Json): UserOperation {
   }
 }
 
-function withChargedMargin(op: UserOperation): UserOperation {
+/**
+ * Pre-verification gas prices the operation's calldata, and the bundler measures it with our placeholder signature and
+ * the paymaster's stub data. The real signature and paymaster data have fewer zero bytes, so the bare estimate comes up
+ * a few dozen gas short at send (seen live on dev: 310563 sent, 310601 required). 10% covers that. A sponsor keeps a
+ * higher value we give it and signs over it.
+ */
+function withPreVerificationMargin(op: UserOperation): UserOperation {
   return { ...op, preVerificationGas: (op.preVerificationGas * 110n + 99n) / 100n }
 }
 
@@ -248,7 +254,7 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
     await input.bundler('eth_estimateUserOperationGas', [toBundlerJson(op, input.authorization), aa.entryPoint]),
     input.minCallGas ?? 0n,
   )
-  if (!sponsored) op = withChargedMargin(op)
+  op = withPreVerificationMargin(op)
   const maxCost = tokenQuote === null ? 0n : maxTokenCost(op, tokenQuote)
   if (maxCost > aa.maxCostPerOp)
     throw new AaError('ceiling', `the gas could cost up to ${maxCost} base units, above the ${aa.maxCostPerOp} ceiling`)

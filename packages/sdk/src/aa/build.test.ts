@@ -151,7 +151,9 @@ describe('building a user operation', () => {
     expect(capped.log).not.toContain('paymaster:pm_getPaymasterData')
   })
 
-  it('never pads sponsored pre-verification gas before the final signed paymaster answer', async () => {
+  it("asks a sponsor to sign the padded pre-verification gas, then keeps the sponsor's own value", async () => {
+    // Live on dev (12 Oct): the bare estimate came up 38 gas short at send, because the real signature has fewer zero
+    // bytes than the placeholder. Pimlico keeps a higher value it is given and signs over it.
     const s = services()
     const paymaster = s.paymaster
     let finalGas = 0n
@@ -160,8 +162,8 @@ describe('building a user operation', () => {
       return paymaster(method, params)
     }
     const built = await build(s, { sponsor: 'faucet' })
-    expect(finalGas).toBe(0x19000n)
-    expect(built.op.preVerificationGas).toBe(0x19000n)
+    expect(finalGas).toBe((0x19000n * 110n + 99n) / 100n)
+    expect(built.op.preVerificationGas).toBe(finalGas)
     expect(built.maxCost).toBe(0n)
   })
 
