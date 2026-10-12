@@ -70,6 +70,7 @@ const HEADERS = {
 export async function installationToken(app: GitHubApp, now = Math.floor(Date.now() / 1000)): Promise<string> {
   const res = await fetch(`https://api.github.com/app/installations/${app.installationId}/access_tokens`, {
     method: 'POST',
+    signal: AbortSignal.timeout(10_000),
     headers: { ...HEADERS, authorization: `Bearer ${await appJwt(app, now)}` },
   })
   if (!res.ok) throw new Error(`GitHub App token: HTTP ${res.status}`)
