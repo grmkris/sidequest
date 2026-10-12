@@ -1,5 +1,6 @@
 /** The agent-first clean break is atomic and runs once in each existing object. */
 import type { Sql } from './store.ts'
+import { migrateUserOpSchema } from './userop-store.ts'
 
 export const RETIRED_FLEET_TABLES = [
   'managed_agents',
@@ -106,6 +107,7 @@ export function migrateAgentSchema(sql: Sql): void {
   })
   createAgentProfiles(sql)
   createSetupOAuth(sql)
+  migrateUserOpSchema(sql)
 }
 
 function createSetupOAuth(sql: Sql): void {
