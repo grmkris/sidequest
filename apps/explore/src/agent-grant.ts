@@ -20,13 +20,13 @@ export type ReviewSpec =
     }
 
 export function reviewAgentGrant(prepared: PreparedGrant, expected: ReviewSpec) {
-  const context = { deployment, stack: deployment.stacks.main! }
+  const context = { deployment, stack: deployment.stacks.main }
   const grant = sdk.parseDelegation(JSON.stringify(prepared.grant))
   const spec = {
     ...expected,
     start: prepared.description.validAfter,
     salt: grant.salt,
-  } as sdk.GrantSpec
+  } satisfies sdk.GrantSpec
   sdk.assertGrant(context, spec, grant)
   if (sdk.delegationHash(grant) !== prepared.hash) throw new Error('The permission hash does not match the review')
   if (spec.start > Math.floor(Date.now() / 1000) + 60) throw new Error('The permission starts too far in the future')
