@@ -458,128 +458,131 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
         )
       )}
 
-      {/* A phone reads the clock, the brief and quotes, then the terms; from 1024 px the clock and terms sit beside. */}
-      <div
-        className={cn(
-          'grid min-w-0 gap-7',
-          r !== undefined && 'lg:grid-cols-[minmax(0,1fr)_19rem] lg:grid-rows-[auto_1fr] lg:gap-x-8',
-          r === undefined
-            ? ''
-            : pendingTask === null
-              ? "[grid-template-areas:'clock'_'main'_'terms'] lg:[grid-template-areas:'main_clock'_'main_terms']"
-              : "[grid-template-areas:'main'_'terms'] lg:[grid-template-areas:'main_terms'_'main_terms']",
-        )}
-      >
-        <div className="grid min-w-0 content-start gap-7 [grid-area:main]">
-          {mine ? (
+      {/* A phone reads the clock, the brief and quotes, then the terms; once the column holds 56rem the clock and terms sit beside. */}
+      <div className="@container/detail min-w-0">
+        <div
+          className={cn(
+            'grid min-w-0 gap-7',
+            r !== undefined &&
+              '@4xl/detail:grid-cols-[minmax(0,1fr)_19rem] @4xl/detail:grid-rows-[auto_1fr] @4xl/detail:gap-x-8',
+            r === undefined
+              ? ''
+              : pendingTask === null
+                ? "[grid-template-areas:'clock'_'main'_'terms'] @4xl/detail:[grid-template-areas:'main_clock'_'main_terms']"
+                : "[grid-template-areas:'main'_'terms'] @4xl/detail:[grid-template-areas:'main_terms'_'main_terms']",
+          )}
+        >
+          <div className="grid min-w-0 content-start gap-7 [grid-area:main]">
+            {mine ? (
+              <>
+                {publishing}
+                {quoting}
+                {theJob}
+              </>
+            ) : (
+              <>
+                {theJob}
+                {quoting}
+              </>
+            )}
+          </div>
+          {r !== undefined && (
             <>
-              {publishing}
-              {quoting}
-              {theJob}
-            </>
-          ) : (
-            <>
-              {theJob}
-              {quoting}
+              {pendingTask === null && (
+                <section
+                  aria-label="Quoting"
+                  className="grid content-start gap-4 self-start rounded-2xl bg-card p-5 ring-1 ring-foreground/10 [grid-area:clock]"
+                >
+                  <div className="grid gap-1">
+                    <span className="text-ui text-muted-foreground">{open ? 'Quotes close in' : 'Quotes closed'}</span>
+                    {open ? (
+                      <RollingCountdown to={r.quoteDeadline} size="display" passed="closed" />
+                    ) : (
+                      <span className="text-lg font-medium">
+                        <When at={r.quoteDeadline} show="time" />
+                      </span>
+                    )}
+                  </div>
+                  <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                    <div className="grid gap-0.5">
+                      <dt className="text-ui text-muted-foreground">Budget</dt>
+                      <dd className="font-medium tabular-nums">
+                        {r.budget === undefined ? (
+                          'Open to quotes'
+                        ) : (
+                          <>
+                            Up to <TokenAmount value={r.budget.max} token={r.budget.token} />
+                          </>
+                        )}
+                      </dd>
+                      {r.budgetCovered === true && (
+                        <dd className="inline-flex items-center gap-1 text-ui text-success-text">
+                          <Check aria-hidden className="size-3.5" />
+                          Covered
+                        </dd>
+                      )}
+                      {r.budgetCovered === false && (
+                        <dd className="inline-flex items-center gap-1 text-ui text-warning-text">
+                          <TriangleAlert aria-hidden className="size-3.5" />
+                          Not covered
+                        </dd>
+                      )}
+                    </div>
+                    <div className="grid gap-0.5">
+                      <dt className="text-ui text-muted-foreground">Quotes</dt>
+                      <dd className="font-medium tabular-nums">{quotesCount === 0 ? 'None yet' : quotesCount}</dd>
+                      <dd className="text-ui text-muted-foreground">Amounts stay private</dd>
+                    </div>
+                    {r.invite != null && (
+                      <div className="col-span-2 grid gap-0.5">
+                        <dt className="text-ui text-muted-foreground">Invited to quote</dt>
+                        <dd>
+                          <AgentLink id={r.invite.agentId} orb />
+                        </dd>
+                        <dd className="text-ui text-muted-foreground">Anyone else may quote too</dd>
+                      </div>
+                    )}
+                    <div className="col-span-2 grid gap-0.5">
+                      <dt className="text-ui text-muted-foreground">Posted</dt>
+                      <dd className="font-medium">
+                        {r.createdAt === undefined
+                          ? '—'
+                          : postedJustNow(r.createdAt, now)
+                            ? 'Just now'
+                            : relative(r.createdAt, now)}
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+              )}
+              <Section title="Terms" className="self-start [grid-area:terms]">
+                <RequestTerms
+                  steps={[
+                    ...(r.createdAt === undefined ? [] : [{ label: 'Posted', at: r.createdAt }]),
+                    { label: 'Quotes close', at: r.quoteDeadline },
+                    { label: 'Deliver by', at: r.deliveryDeadline },
+                  ]}
+                  creatorBond={r.creatorBond}
+                  workerBond={r.workerBond}
+                  paidIn={
+                    r.budget === undefined ? (
+                      r.tokens.map(symbolOf).join(', ')
+                    ) : (
+                      <span className="inline-flex flex-wrap items-center justify-end gap-1">
+                        Up to <TokenAmount value={r.budget.max} token={r.budget.token} />
+                      </span>
+                    )
+                  }
+                  deliverAs={(r.deliverable?.accepts ?? ['git']).map((k) => KIND_LABEL[k])}
+                  checks={r.requiredChecks ?? []}
+                  requester={r.creator}
+                  requesterAgent={posterAgent}
+                  you={r.creator.toLowerCase() === me}
+                />
+              </Section>
             </>
           )}
         </div>
-        {r !== undefined && (
-          <>
-            {pendingTask === null && (
-              <section
-                aria-label="Quoting"
-                className="grid content-start gap-4 self-start rounded-2xl bg-card p-5 ring-1 ring-foreground/10 [grid-area:clock]"
-              >
-                <div className="grid gap-1">
-                  <span className="text-ui text-muted-foreground">{open ? 'Quotes close in' : 'Quotes closed'}</span>
-                  {open ? (
-                    <RollingCountdown to={r.quoteDeadline} size="display" passed="closed" />
-                  ) : (
-                    <span className="text-lg font-medium">
-                      <When at={r.quoteDeadline} show="time" />
-                    </span>
-                  )}
-                </div>
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                  <div className="grid gap-0.5">
-                    <dt className="text-ui text-muted-foreground">Budget</dt>
-                    <dd className="font-medium tabular-nums">
-                      {r.budget === undefined ? (
-                        'Open to quotes'
-                      ) : (
-                        <>
-                          Up to <TokenAmount value={r.budget.max} token={r.budget.token} />
-                        </>
-                      )}
-                    </dd>
-                    {r.budgetCovered === true && (
-                      <dd className="inline-flex items-center gap-1 text-ui text-success-text">
-                        <Check aria-hidden className="size-3.5" />
-                        Covered
-                      </dd>
-                    )}
-                    {r.budgetCovered === false && (
-                      <dd className="inline-flex items-center gap-1 text-ui text-warning-text">
-                        <TriangleAlert aria-hidden className="size-3.5" />
-                        Not covered
-                      </dd>
-                    )}
-                  </div>
-                  <div className="grid gap-0.5">
-                    <dt className="text-ui text-muted-foreground">Quotes</dt>
-                    <dd className="font-medium tabular-nums">{quotesCount === 0 ? 'None yet' : quotesCount}</dd>
-                    <dd className="text-ui text-muted-foreground">Amounts stay private</dd>
-                  </div>
-                  {r.invite != null && (
-                    <div className="col-span-2 grid gap-0.5">
-                      <dt className="text-ui text-muted-foreground">Invited to quote</dt>
-                      <dd>
-                        <AgentLink id={r.invite.agentId} orb />
-                      </dd>
-                      <dd className="text-ui text-muted-foreground">Anyone else may quote too</dd>
-                    </div>
-                  )}
-                  <div className="col-span-2 grid gap-0.5">
-                    <dt className="text-ui text-muted-foreground">Posted</dt>
-                    <dd className="font-medium">
-                      {r.createdAt === undefined
-                        ? '—'
-                        : postedJustNow(r.createdAt, now)
-                          ? 'Just now'
-                          : relative(r.createdAt, now)}
-                    </dd>
-                  </div>
-                </dl>
-              </section>
-            )}
-            <Section title="Terms" className="self-start [grid-area:terms]">
-              <RequestTerms
-                steps={[
-                  ...(r.createdAt === undefined ? [] : [{ label: 'Posted', at: r.createdAt }]),
-                  { label: 'Quotes close', at: r.quoteDeadline },
-                  { label: 'Deliver by', at: r.deliveryDeadline },
-                ]}
-                creatorBond={r.creatorBond}
-                workerBond={r.workerBond}
-                paidIn={
-                  r.budget === undefined ? (
-                    r.tokens.map(symbolOf).join(', ')
-                  ) : (
-                    <span className="inline-flex flex-wrap items-center justify-end gap-1">
-                      Up to <TokenAmount value={r.budget.max} token={r.budget.token} />
-                    </span>
-                  )
-                }
-                deliverAs={(r.deliverable?.accepts ?? ['git']).map((k) => KIND_LABEL[k])}
-                checks={r.requiredChecks ?? []}
-                requester={r.creator}
-                requesterAgent={posterAgent}
-                you={r.creator.toLowerCase() === me}
-              />
-            </Section>
-          </>
-        )}
       </div>
 
       <ConfirmSheet
@@ -736,7 +739,7 @@ function QuoteComparison({
         ))}
       </ItemGroup>
 
-      <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3">
+      <div className="hidden gap-3 sm:grid sm:grid-cols-[repeat(auto-fill,minmax(min(100%,14rem),1fr))]">
         {quotes.map((q) => (
           <article key={q.quoteId} className="grid content-start gap-3 rounded-xl bg-card p-4">
             <header className="flex items-center gap-3">

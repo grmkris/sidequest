@@ -382,121 +382,123 @@ export function JobPage({
         phase !== null && <NextStep phase={phase} />
       )}
 
-      {/* One column on a phone (the work, the money, the rest); two from 1024 px, the money and milestones beside. */}
-      <div
-        className={cn(
-          'grid min-w-0 gap-7 lg:grid-cols-[minmax(0,1fr)_19rem] lg:grid-rows-[auto_1fr] lg:gap-x-8',
-          delivered
-            ? "[grid-template-areas:'hero'_'side'_'body'] lg:[grid-template-areas:'hero_side'_'body_side']"
-            : "[grid-template-areas:'side'_'body'] lg:[grid-template-areas:'body_side'_'body_side']",
-        )}
-      >
-        {delivered && (
-          <div className="grid min-w-0 content-start gap-7 [grid-area:hero]">
-            <DeliveryHero where={{ boardId, taskId, hash: d?.job.deliverable }} jobId={jobId} />
-            <Delivered
-              deliverables={(t?.deliverables ?? []).map((x) => ({
-                deliverable_hash: x.deliverable_hash,
-                descriptor: x.descriptor ?? { kind: 'git', url: x.repo, ref: x.branch, sha: x.sha },
-                check: x.check ?? null,
-              }))}
-              evidence={d?.evidence ?? []}
-            />
-          </div>
-        )}
-
-        <aside className="grid min-w-0 content-start gap-4 [grid-area:side] lg:sticky lg:top-6 lg:self-start">
-          {reward !== null && (
-            <Money phase={phase} reward={reward} token={token} agentId={agentId} charge={chargeOf(d)} />
+      {/* One column on a phone (the work, the money, the rest); two once the column holds 56rem, the money and milestones beside. */}
+      <div className="@container/detail min-w-0">
+        <div
+          className={cn(
+            'grid min-w-0 gap-7 @4xl/detail:grid-cols-[minmax(0,1fr)_19rem] @4xl/detail:grid-rows-[auto_1fr] @4xl/detail:gap-x-8',
+            delivered
+              ? "[grid-template-areas:'hero'_'side'_'body'] @4xl/detail:[grid-template-areas:'hero_side'_'body_side']"
+              : "[grid-template-areas:'side'_'body'] @4xl/detail:[grid-template-areas:'body_side'_'body_side']",
           )}
-          {d !== undefined && (
-            <JobStory
-              events={d.timeline ?? []}
-              phase={phase}
-              job={{ token, reward, agentId, deliveryDeadline: d.job.delivery_deadline, creator: d.job.creator }}
-            />
-          )}
-        </aside>
-
-        <div className="grid min-w-0 content-start gap-7 [grid-area:body]">
-          {screening !== undefined && (screening.verdict === 'reject' || screening.verdict === 'caution') && (
-            // The verdict is advice, but a worker deciding whether to take the job should see it before the brief.
-            // Advice, not a block: the screener also flags ordinary briefs (a competitive teardown, job 16), so not red.
-            <Alert>
-              <CircleAlert aria-hidden />
-              <AlertTitle>
-                {screening.verdict === 'reject'
-                  ? 'An AI screener flagged this brief as risky'
-                  : 'An AI screener flagged this brief for a closer look'}
-              </AlertTitle>
-              <AlertDescription className="[overflow-wrap:anywhere]">
-                {screening.reasons[0] !== undefined && <span className="block">{screening.reasons[0]}</span>}
-                Its verdict is advice; read the brief before you take the job.
-              </AlertDescription>
-            </Alert>
+        >
+          {delivered && (
+            <div className="grid min-w-0 content-start gap-7 [grid-area:hero]">
+              <DeliveryHero where={{ boardId, taskId, hash: d?.job.deliverable }} jobId={jobId} />
+              <Delivered
+                deliverables={(t?.deliverables ?? []).map((x) => ({
+                  deliverable_hash: x.deliverable_hash,
+                  descriptor: x.descriptor ?? { kind: 'git', url: x.repo, ref: x.branch, sha: x.sha },
+                  check: x.check ?? null,
+                }))}
+                evidence={d?.evidence ?? []}
+              />
+            </div>
           )}
 
-          {offer.brief !== undefined && (
-            <Section title="The job">
-              <JobOfferBrief offer={offer} met={phase?.key === 'completed'} />
-            </Section>
-          )}
+          <aside className="grid min-w-0 content-start gap-4 [grid-area:side] @4xl/detail:sticky @4xl/detail:top-6 @4xl/detail:self-start">
+            {reward !== null && (
+              <Money phase={phase} reward={reward} token={token} agentId={agentId} charge={chargeOf(d)} />
+            )}
+            {d !== undefined && (
+              <JobStory
+                events={d.timeline ?? []}
+                phase={phase}
+                job={{ token, reward, agentId, deliveryDeadline: d.job.delivery_deadline, creator: d.job.creator }}
+              />
+            )}
+          </aside>
 
-          {taskId !== undefined && <Thread boardId={boardId} taskId={taskId} jobId={jobId} />}
-
-          {d !== undefined && (d.job.violation !== null || d.ruling !== null) && (
-            <Dispute d={d} boardId={boardId} taskId={taskId} auth={auth} isParty={roles.length > 0} />
-          )}
-
-          {writesOpen &&
-            phase?.key === 'completed' &&
-            agentId !== null &&
-            auth.address !== undefined &&
-            creator?.toLowerCase() === auth.address.toLowerCase() && (
-              <div className="grid gap-1.5">
-                <HireAgainLink jobId={jobId} />
-                <p className="px-4 text-ui text-muted-foreground">
-                  A new direct hire of Agent ID {agentId} with the same token, reward and terms. You review it before
-                  anything is sent.
-                </p>
-              </div>
+          <div className="grid min-w-0 content-start gap-7 [grid-area:body]">
+            {screening !== undefined && (screening.verdict === 'reject' || screening.verdict === 'caution') && (
+              // The verdict is advice, but a worker deciding whether to take the job should see it before the brief.
+              // Advice, not a block: the screener also flags ordinary briefs (a competitive teardown, job 16), so not red.
+              <Alert>
+                <CircleAlert aria-hidden />
+                <AlertTitle>
+                  {screening.verdict === 'reject'
+                    ? 'An AI screener flagged this brief as risky'
+                    : 'An AI screener flagged this brief for a closer look'}
+                </AlertTitle>
+                <AlertDescription className="[overflow-wrap:anywhere]">
+                  {screening.reasons[0] !== undefined && <span className="block">{screening.reasons[0]}</span>}
+                  Its verdict is advice; read the brief before you take the job.
+                </AlertDescription>
+              </Alert>
             )}
 
-          {writesOpen &&
-            phase?.key === 'hire-open' &&
-            auth.signedIn &&
-            auth.address !== undefined &&
-            !roles.includes('creator') && (
-              <FeeQuote jobId={jobId} holding={sidequest.holding} viewer={auth.address as Account} token={token} />
+            {offer.brief !== undefined && (
+              <Section title="The job">
+                <JobOfferBrief offer={offer} met={phase?.key === 'completed'} />
+              </Section>
             )}
 
-          {writesOpen &&
-            token !== null &&
-            auth.signedIn &&
-            auth.address !== undefined &&
-            phase !== null &&
-            !phase.terminal &&
-            ['active', 'submitted'].includes(t?.chain.status ?? '') && (
-              <TopUp
-                boardId={boardId}
-                jobId={jobId}
-                holding={sidequest.holding}
-                token={token as Account}
-                viewer={auth.address as Account}
+            {taskId !== undefined && <Thread boardId={boardId} taskId={taskId} jobId={jobId} />}
+
+            {d !== undefined && (d.job.violation !== null || d.ruling !== null) && (
+              <Dispute d={d} boardId={boardId} taskId={taskId} auth={auth} isParty={roles.length > 0} />
+            )}
+
+            {writesOpen &&
+              phase?.key === 'completed' &&
+              agentId !== null &&
+              auth.address !== undefined &&
+              creator?.toLowerCase() === auth.address.toLowerCase() && (
+                <div className="grid gap-1.5">
+                  <HireAgainLink jobId={jobId} />
+                  <p className="px-4 text-ui text-muted-foreground">
+                    A new direct hire of Agent ID {agentId} with the same token, reward and terms. You review it before
+                    anything is sent.
+                  </p>
+                </div>
+              )}
+
+            {writesOpen &&
+              phase?.key === 'hire-open' &&
+              auth.signedIn &&
+              auth.address !== undefined &&
+              !roles.includes('creator') && (
+                <FeeQuote jobId={jobId} holding={sidequest.holding} viewer={auth.address as Account} token={token} />
+              )}
+
+            {writesOpen &&
+              token !== null &&
+              auth.signedIn &&
+              auth.address !== undefined &&
+              phase !== null &&
+              !phase.terminal &&
+              ['active', 'submitted'].includes(t?.chain.status ?? '') && (
+                <TopUp
+                  boardId={boardId}
+                  jobId={jobId}
+                  holding={sidequest.holding}
+                  token={token as Account}
+                  viewer={auth.address as Account}
+                />
+              )}
+
+            {writesOpen && listed !== undefined && listed.executionBudget !== null && boardId === currentBoardId() && (
+              <BudgetPanel
+                task={listed}
+                status={t?.chain.status ?? d?.job.status ?? 'unknown'}
+                roles={roles}
+                signedIn={auth.signedIn}
+                address={auth.address}
               />
             )}
 
-          {writesOpen && listed !== undefined && listed.executionBudget !== null && boardId === currentBoardId() && (
-            <BudgetPanel
-              task={listed}
-              status={t?.chain.status ?? d?.job.status ?? 'unknown'}
-              roles={roles}
-              signedIn={auth.signedIn}
-              address={auth.address}
-            />
-          )}
-
-          <Details d={d} listed={listed} t={t} offer={offer} viewer={auth.address} />
+            <Details d={d} listed={listed} t={t} offer={offer} viewer={auth.address} />
+          </div>
         </div>
       </div>
 
@@ -551,14 +553,16 @@ function JobSkeleton() {
         <Skeleton className="h-6 w-3/5" />
         <Skeleton className="h-5 w-2/5" />
       </header>
-      <div className="grid min-w-0 gap-7 lg:grid-cols-[minmax(0,1fr)_19rem] lg:gap-x-8" aria-hidden>
-        <div className="grid content-start gap-7">
-          <Skeleton className="h-64 rounded-xl" />
-          <Skeleton className="h-40 rounded-xl" />
-        </div>
-        <div className="grid content-start gap-4">
-          <Skeleton className="h-24 rounded-2xl" />
-          <Skeleton className="h-40 rounded-xl" />
+      <div className="@container/detail min-w-0" aria-hidden>
+        <div className="grid min-w-0 gap-7 @4xl/detail:grid-cols-[minmax(0,1fr)_19rem] @4xl/detail:gap-x-8">
+          <div className="grid content-start gap-7">
+            <Skeleton className="h-64 rounded-xl" />
+            <Skeleton className="h-40 rounded-xl" />
+          </div>
+          <div className="grid content-start gap-4">
+            <Skeleton className="h-24 rounded-2xl" />
+            <Skeleton className="h-40 rounded-xl" />
+          </div>
         </div>
       </div>
     </>
