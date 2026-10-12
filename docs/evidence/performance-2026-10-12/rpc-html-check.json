@@ -1,0 +1,38 @@
+[
+  {
+    "width": 390,
+    "colorScheme": "light",
+    "http": 200,
+    "documentOverflow": false,
+    "sourceLinks": 7,
+    "keyboardToggle": true,
+    "pageErrors": 0
+  },
+  {
+    "width": 390,
+    "colorScheme": "dark",
+    "http": 200,
+    "documentOverflow": false,
+    "sourceLinks": 7,
+    "keyboardToggle": true,
+    "pageErrors": 0
+  },
+  {
+    "width": 1440,
+    "colorScheme": "light",
+    "http": 200,
+    "documentOverflow": false,
+    "sourceLinks": 7,
+    "keyboardToggle": true,
+    "pageErrors": 0
+  },
+  {
+    "width": 1440,
+    "colorScheme": "dark",
+    "http": 200,
+    "documentOverflow": false,
+    "sourceLinks": 7,
+    "keyboardToggle": true,
+    "pageErrors": 0
+  }
+]

@@ -1,0 +1,439 @@
+{
+  "date": "2026-10-12T00:52:28.165Z",
+  "origin": "https://dev.sidequest.exchange",
+  "conditions": "Chromium, 390x844, no CPU/network throttle, anonymous fresh contexts, ~5s observation",
+  "results": [
+    {
+      "route": "/jobs",
+      "status": 200,
+      "title": "Sidequest",
+      "paint": [
+        {
+          "name": "first-paint",
+          "ms": 484
+        },
+        {
+          "name": "first-contentful-paint",
+          "ms": 1356
+        }
+      ],
+      "lcp": 1908,
+      "cls": 0.018370382144460493,
+      "longTasks": 4553,
+      "scriptResources": [
+        {
+          "path": "/assets/index-CnAQdXNW.js",
+          "transfer": 425001,
+          "decoded": 1425947,
+          "duration": 483
+        },
+        {
+          "path": "/assets/dist-BNDOj6VR.js",
+          "transfer": 125535,
+          "decoded": 318984,
+          "duration": 37
+        }
+      ],
+      "headings": [
+        "Activity"
+      ],
+      "skeletons": 0,
+      "overflow": false,
+      "reads": [
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/boards",
+          "startMs": 1250,
+          "durationMs": 173,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/activity",
+          "startMs": 1251,
+          "durationMs": 173,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/api/task_index",
+          "startMs": 1250,
+          "durationMs": 174,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/boards",
+          "startMs": 1251,
+          "durationMs": 204,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/api/list_quote_requests",
+          "startMs": 1251,
+          "durationMs": 260,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/jobs",
+          "startMs": 1251,
+          "durationMs": 301,
+          "status": 200
+        },
+        {
+          "host": "testnet-rpc.monad.xyz",
+          "path": "/",
+          "startMs": 1364,
+          "durationMs": 271,
+          "status": 200,
+          "rpcMethods": [
+            "eth_call"
+          ]
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/activity",
+          "startMs": 1616,
+          "durationMs": 1832,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/profiles",
+          "startMs": 1834,
+          "durationMs": 1909,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/directory",
+          "startMs": 1251,
+          "durationMs": 2494,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/deliverables/8a2a23cb9d94877d/0x836553154948d2be9712ef95695b02f0cd40cec7246f50d0b439e578bd4947b1/preview",
+          "startMs": 3499,
+          "durationMs": 1235,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/deliverables/ec9f0a2cc5ca7757/0xb65b7aec10874f2fc5d80130fa7da5c5a93a05dc41e09ce0ce1c283c74e3f428/preview",
+          "startMs": 3500,
+          "durationMs": 1234,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/deliverables/b68df5b8360b28a9/0x464afa29ad16a3a03ce2d478b266021c3045515abaf1ff6161f83172eded0e8c/preview",
+          "startMs": 3500,
+          "durationMs": 1234,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/deliverables/3844dd60e99bbae7/0xb08f455e33a6cc80afa064356203bf85677e62f27b76d3eed9e715e8246f375b/preview",
+          "startMs": 3516,
+          "durationMs": 1218,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/deliverables/cdfabc306a2fe373/0x41654d6eafacbf79ee04455fedc785fb2ed73b08e32da52e01ffa265eefa79a8/preview",
+          "startMs": 3500,
+          "durationMs": 1234,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/deliverables/8706c2a2608d543d/0x65e62c2aa34bbff80d4f6cdb5cb472323dbc94b64b50b10cb3ac1426ce36d312/preview",
+          "startMs": 3500,
+          "durationMs": 1234,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/deliverables/148758fe755a4944/0xb01b0f5efc057ad6cd9751b28bda204b7c82ef6ec7397fc936c74a9320d48961/preview",
+          "startMs": 3516,
+          "durationMs": 1218,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/jobs",
+          "startMs": 4546,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "route": "/job/84",
+      "status": 200,
+      "title": "Sidequest",
+      "paint": [
+        {
+          "name": "first-paint",
+          "ms": 756
+        },
+        {
+          "name": "first-contentful-paint",
+          "ms": 2308
+        }
+      ],
+      "lcp": 5452,
+      "cls": 0.21083200360756005,
+      "longTasks": 1243,
+      "scriptResources": [
+        {
+          "path": "/assets/index-CnAQdXNW.js",
+          "transfer": 425001,
+          "decoded": 1425947,
+          "duration": 1093
+        },
+        {
+          "path": "/assets/dist-BNDOj6VR.js",
+          "transfer": 125516,
+          "decoded": 318984,
+          "duration": 61
+        }
+      ],
+      "headings": [
+        "Quick FAQ: three questions about goblin"
+      ],
+      "skeletons": 0,
+      "overflow": false,
+      "reads": [
+        {
+          "host": "testnet-rpc.monad.xyz",
+          "path": "/",
+          "startMs": 2349,
+          "durationMs": 129,
+          "status": 200,
+          "rpcMethods": [
+            "eth_call"
+          ]
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/job/84",
+          "startMs": 2708,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/job/84",
+          "startMs": 2763,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/directory",
+          "startMs": 2264,
+          "durationMs": 997,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/boards",
+          "startMs": 2264,
+          "durationMs": 1418,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/jobs/84",
+          "startMs": 2264,
+          "durationMs": 2174,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/profiles",
+          "startMs": 4703,
+          "durationMs": 151,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/deliverables/8a2a23cb9d94877d/0x836553154948d2be9712ef95695b02f0cd40cec7246f50d0b439e578bd4947b1/preview",
+          "startMs": 4703,
+          "durationMs": 162,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/jobs",
+          "startMs": 2258,
+          "durationMs": 2620,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/api/list_messages",
+          "startMs": 4703,
+          "durationMs": 584,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/api/get_task",
+          "startMs": 4703,
+          "durationMs": 665,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/api/task_index",
+          "startMs": 2258,
+          "durationMs": 3141,
+          "status": 200
+        }
+      ]
+    },
+    {
+      "route": "/agent/2036",
+      "status": 200,
+      "title": "Sidequest",
+      "paint": [
+        {
+          "name": "first-paint",
+          "ms": 336
+        },
+        {
+          "name": "first-contentful-paint",
+          "ms": 1064
+        }
+      ],
+      "lcp": 1252,
+      "cls": 0.6275188211112849,
+      "longTasks": 779,
+      "scriptResources": [
+        {
+          "path": "/assets/index-CnAQdXNW.js",
+          "transfer": 425724,
+          "decoded": 1425947,
+          "duration": 352
+        },
+        {
+          "path": "/assets/dist-BNDOj6VR.js",
+          "transfer": 125386,
+          "decoded": 318984,
+          "duration": 20
+        }
+      ],
+      "headings": [
+        "Grok Bot"
+      ],
+      "skeletons": 0,
+      "overflow": false,
+      "reads": [
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/profiles",
+          "startMs": 942,
+          "durationMs": 168,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/boards",
+          "startMs": 943,
+          "durationMs": 168,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/directory/2036",
+          "startMs": 943,
+          "durationMs": 168,
+          "status": 200
+        },
+        {
+          "host": "testnet-rpc.monad.xyz",
+          "path": "/",
+          "startMs": 1090,
+          "durationMs": 163,
+          "status": 200,
+          "rpcMethods": [
+            "eth_call"
+          ]
+        },
+        {
+          "host": "testnet-rpc.monad.xyz",
+          "path": "/",
+          "startMs": 1089,
+          "durationMs": 165,
+          "status": 200,
+          "rpcMethods": [
+            "eth_call"
+          ]
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/agent/2036",
+          "startMs": 1239,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/agent/2036",
+          "startMs": 1275,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/agents/2036",
+          "startMs": 943,
+          "durationMs": 1284,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/activity",
+          "startMs": 2260,
+          "durationMs": 63,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/api/task_index",
+          "startMs": 2254,
+          "durationMs": 114,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/api/list_quote_requests",
+          "startMs": 2254,
+          "durationMs": 138,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/jobs",
+          "startMs": 2254,
+          "durationMs": 153,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/backing/0x77899d992e137F2616dfaF5e832A1BD462AcE1c1",
+          "startMs": 1271,
+          "durationMs": 1825,
+          "status": 200
+        },
+        {
+          "host": "dev.sidequest.exchange",
+          "path": "/data/directory",
+          "startMs": 2255,
+          "durationMs": 969,
+          "status": 200
+        }
+      ]
+    }
+  ]
+}

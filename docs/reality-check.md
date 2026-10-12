@@ -1191,10 +1191,10 @@ was submitted. This does not establish a deployed Explore performance improvemen
   That local configuration was left untouched. These changes were not pushed
   or deployed by this review; subsequent full-gate stages were not reached.
 
-Probe script: `/tmp/sidequest-rpc-review/probe.ts`; HTML receipts:
-`/tmp/sidequest-rpc-review/html-check.json`; full-gate log:
-`/tmp/sidequest-rpc-review/full-check.log`. These scratch files are local and
-ephemeral. The durable values, boundaries and recommendations are also in the
+Probe script: [`rpc-probe.ts`](evidence/performance-2026-10-12/rpc-probe.ts.txt) (saved as text); HTML receipts:
+[`rpc-html-check.json`](evidence/performance-2026-10-12/rpc-html-check.json); full-gate log:
+[`rpc-full-check.log`](evidence/performance-2026-10-12/rpc-full-check.log), copied from the review's scratch
+directory on 12 October. The durable values, boundaries and recommendations are also in the
 [architecture review](architecture-review.md#what-the-supplied-rpc-batching-references-mean-here).
 
 ## 12 October 2026 — live pass: backing requirement, readable prompts and agent setup on dev

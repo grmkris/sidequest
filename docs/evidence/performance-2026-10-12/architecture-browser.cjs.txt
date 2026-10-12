@@ -1,0 +1,43 @@
+const { chromium } = require(require.resolve('playwright-core', { paths: ['/home/kristjan/code/agent-jobs/apps/explore'] }));
+const assert = require('node:assert/strict');
+(async () => {
+  const browser = await chromium.launch({ headless: true, executablePath: '/home/kristjan/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome' });
+  const results = [];
+  try {
+    for (const width of [320, 390, 768, 1440]) for (const colorScheme of ['light', 'dark']) {
+      const page = await browser.newPage({viewport:{width,height:950},colorScheme});
+      const errors = [];
+      page.on('pageerror', e => errors.push(String(e)));
+      page.on('console', m => { if(m.type()==='error') errors.push(m.text()); });
+      await page.goto('file:///home/kristjan/code/agent-jobs/docs/architecture.html');
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+      assert.equal(overflow, false, `overflow at ${width} ${colorScheme}`);
+      for (const [name,id] of [['Hire','hire'],['Index','index'],['Dispute','dispute']]) {
+        await page.getByRole('button',{name,exact:true}).click();
+        assert.equal(await page.locator(`#flow-${id}`).isVisible(),true);
+        assert.equal(await page.locator('.flow:visible').count(),1);
+      }
+      for (const [name,expected] of [['Published',[100,0,0,0,0]],['Activated',[30,70,0,0,0]],['Paid and settled',[0,0,70,30,0]],['Refunded and settled',[0,0,0,0,100]]]) {
+        await page.getByRole('button',{name,exact:true}).click();
+        const actual = await page.locator('.money-grid .balance').allTextContents();
+        assert.deepEqual(actual.map(Number),expected);
+      }
+      const broken = await page.evaluate(() => [...document.querySelectorAll('a[href^="#"]')].filter(a => !document.getElementById(a.hash.slice(1))).map(a => a.hash));
+      assert.deepEqual(broken,[]);
+      assert.deepEqual(errors,[]);
+      await page.getByRole('button',{name:'Hire',exact:true}).click();
+      await page.getByRole('button',{name:'Activated',exact:true}).click();
+      if ((width===1440 && colorScheme==='light') || (width===390 && colorScheme==='dark')) {
+        await page.screenshot({path:`/tmp/sidequest-architecture-${width}-${colorScheme}.png`,fullPage:true});
+        await page.locator('.diagram').screenshot({path:`/tmp/sidequest-map-${width}-${colorScheme}.png`});
+      }
+      results.push({width,colorScheme,flows:3,moneyStates:4,overflow,errors:errors.length});
+      await page.close();
+    }
+    const plain = await browser.newPage({javaScriptEnabled:false});
+    await plain.goto('file:///home/kristjan/code/agent-jobs/docs/architecture.html');
+    assert.equal(await plain.locator('.flow:visible').count(),3);
+    await plain.close();
+    console.log(JSON.stringify({passed:results.length,results,noScript:'all flows readable'}));
+  } finally { await browser.close(); }
+})().catch(e => { console.error(e); process.exitCode=1; });

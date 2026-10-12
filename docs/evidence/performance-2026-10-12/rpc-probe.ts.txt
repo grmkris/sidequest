@@ -1,0 +1,56 @@
+import { createPublicClient, http } from '/home/kristjan/code/agent-jobs/node_modules/viem/index.ts'
+import { monadTestnet } from '/home/kristjan/code/agent-jobs/node_modules/viem/chains/index.ts'
+import * as sdk from '/home/kristjan/code/agent-jobs/packages/sdk/src/index.ts'
+const d = sdk.deployment('monad-testnet')
+const h = d.sidequest!
+const logs: Record<string, { posts: number, rpc: number }> = {}
+function client(mode: string) {
+  logs[mode] = { posts: 0, rpc: 0 }
+  return createPublicClient({
+    chain: monadTestnet,
+    ...(mode === 'auto' ? { batch: { multicall: true } } : {}),
+    transport: http(undefined, {
+      retryCount: 0, timeout: 15000,
+      ...(mode === 'json' ? { batch: { wait: 0 } } : {}),
+      fetchFn: async (input, init) => {
+        const body = JSON.parse(String(init?.body))
+        logs[mode]!.posts++
+        logs[mode]!.rpc += Array.isArray(body) ? body.length : 1
+        return fetch(input, init)
+      },
+    }),
+  })
+}
+const raw = client('raw'), auto = client('auto'), json = client('json'), explicit = client('explicit')
+const blockNumber = await raw.getBlockNumber({ cacheTime: 0 })
+const code = await raw.getCode({ address: monadTestnet.contracts.multicall3.address, blockNumber })
+if (!code || code === '0x') throw new Error('Missing Multicall3 code')
+console.log(JSON.stringify({ chainId: monadTestnet.id, blockNumber: String(blockNumber), multicallCodeBytes: (code.length - 2)/2, setupPosts: logs.raw.posts }))
+const ctx = (publicClient: any) => ({ publicClient, deployment: d, stack: d.stacks.main! })
+const contracts = [
+ { address: h.vault, abi: sdk.stakeVaultAbi, functionName: 'poolOf', args: [d.relay] },
+ { address: h.feeSchedule, abi: sdk.feeScheduleAbi, functionName: 'schedule' },
+ { address: h.vault, abi: sdk.stakeVaultAbi, functionName: 'positionOf', args: [d.relay, d.relay] },
+] as const
+const same = (v: unknown) => JSON.stringify(v, (_, item) => typeof item === 'bigint' ? item.toString() : item)
+let expected: string | undefined
+for (let round=0; round<3; round++) {
+ const modes = round%2 ? ['explicit', 'json', 'auto', 'raw'] : ['raw', 'auto', 'json', 'explicit']
+ for (const mode of modes) {
+  logs[mode] = { posts: 0, rpc: 0 }
+  const start = performance.now()
+  let result
+  if (mode === 'explicit') {
+   const [pool,schedule,position] = await explicit.multicall({ contracts, blockNumber, allowFailure:false })
+   result = [{account:d.relay,blockNumber,...sdk.backingOf(pool,schedule)}, {account:d.relay,delegator:d.relay,blockNumber,...sdk.positionIn(pool,position)}]
+  } else {
+   const c = ctx(mode === 'raw' ? raw : mode === 'auto' ? auto : json)
+   result = await Promise.all([sdk.getBacking(c, d.relay, { blockNumber }), sdk.getPosition(c, d.relay, d.relay, { blockNumber })])
+  }
+  const value = same(result)
+  expected ??= value
+  if (value !== expected) throw new Error('Mismatched economic results')
+  console.log(JSON.stringify({ round: round+1, mode, ms: Math.round(performance.now()-start), ...logs[mode], valuesEqual: true }))
+  await Bun.sleep(1000)
+ }
+}

@@ -1,0 +1,10 @@
+$ bun run format:check && bun run agents:check && bun run graph && bun run migrations:check && bun run dupes && bun run typecheck && bun run lint:gate && bun run test && bun run test:scripts
+$ oxfmt -c oxfmt.config.ts --check
+Checking formatting...
+
+.claude/settings.local.json (0ms)
+
+Format issues found in above 1 files. Run without `--check` to fix.
+Finished in 1012ms on 1135 files using 16 threads.
+error: script "format:check" exited with code 1
+error: script "check" exited with code 1

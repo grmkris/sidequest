@@ -1014,7 +1014,7 @@ scores or field Core Web Vitals.
 
 Network timings include browser scheduling and download time, not just server
 execution. These samples do not isolate a provider outage or establish a p95.
-The full request-timing sample is saved locally at `/tmp/sidequest-data-timing.json`.
+The full request-timing sample is in [`data-timing.json`](evidence/performance-2026-10-12/data-timing.json).
 
 ### What the supplied RPC batching references mean here
 
@@ -1530,7 +1530,7 @@ deployed service health, authenticated user acceptance or live chain behavior.
   MONAD_TESTNET_RPC_URL -u MONAD_RPC_URL bun --no-env-file run --cwd
   packages/indexer test` — **53 passed, 1 live test skipped; 8 files passed,
   1 skipped** (4.04 s).
-- **Explainer browser harness:** `node /tmp/sidequest-architecture-browser.cjs`
+- **Explainer browser harness:** [`architecture-browser.cjs`](evidence/performance-2026-10-12/architecture-browser.cjs.txt) (saved as text)
   — **8 viewport/theme combinations passed** (320, 390, 768 and 1440 px in
   light and dark mode). It exercised all three flow controls and four money
   states, checked no document overflow, page/console errors or broken fragment
