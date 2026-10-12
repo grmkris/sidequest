@@ -19,6 +19,7 @@
 #                                  the file is [{"account": "0x…", "side": "5000000"}, …] in whole SIDE
 #   exit buy|sell plan|send <amt>  L12b: the exit-test wallet buys with <amt> MON, or sells <amt> SIDE (all by default)
 #   bond plan|send <SIDE>          after launch: the Safe re-sets Holding's minimum creator bond (kept at about $10 or less)
+#   fund plan|send <address> <SIDE>  the Safe sends SIDE to an address (the official account's task budget, a faucet)
 #
 # Addresses come from contracts/config/<network>.json (`nadfun`, `launchKit`, `sidequest`, `deployment`). Keystores,
 # plans and receipts live in $KIT_HOME (default ~/.sidequest-kit). Runs on macOS bash 3.2 and on Linux; needs cast,
@@ -469,6 +470,28 @@ cmd_bond() {
   say "minimumCreatorBond is now $(cast from-wei "$(num "$(cast call --rpc-url "$RPC" "$holding" 'minimumCreatorBond()(uint256)')")") SIDE."
 }
 
+# The Safe sends SIDE to an address: the official account's task budget, or a testnet faucet.
+cmd_fund() {
+  local mode=${1:-} to=${2:-} side=${3:-} owner safe token wei data sig
+  [[ "$to" =~ ^0x[0-9a-fA-F]{40}$ && -n "$side" ]] || die "usage: fund plan|send <address> <whole SIDE>"
+  owner=$(addr owner)
+  safe=$(safe_addr)
+  check_safe "$safe"
+  token=$(side_token)
+  wei=$(cast to-wei "$side")
+  [[ "$(calc "$wei <= $(side_balance "$token" "$safe")")" == 1 ]] || die "the Safe holds less than $side SIDE"
+  data=$(cast calldata 'transfer(address,uint256)' "$to" "$wei")
+  sig=$(owner_signature "$owner")
+  [[ "$(cast call --rpc-url "$RPC" --from "$owner" "$safe" "$EXEC(bool)" "$token" 0 "$data" 0 0 0 0 $ZERO $ZERO "$sig")" == true ]] \
+    || die "the transfer simulation failed"
+  say "The Safe $safe sends $side SIDE to $to."
+  [[ "$mode" == send ]] || return 0
+  go_check
+  unlock owner
+  send_tx owner "$safe" 0 "$EXEC" "$token" 0 "$data" 0 0 0 0 $ZERO $ZERO "$sig"
+  say "$to now holds $(cast from-wei "$(side_balance "$token" "$to")") SIDE; the Safe holds $(cast from-wei "$(side_balance "$token" "$safe")")."
+}
+
 case "${1:-}" in
   setup) cmd_setup ;;
   addresses) cmd_addresses ;;
@@ -488,5 +511,6 @@ case "${1:-}" in
   backing) cmd_backing "${2:-}" "${3:-}" ;;
   exit) cmd_exit "${2:-}" "${3:-plan}" "${4:-}" ;;
   bond) cmd_bond "${2:-}" "${3:-}" ;;
-  *) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//' && exit 2 ;;
+  fund) cmd_fund "${2:-}" "${3:-}" "${4:-}" ;;
+  *) sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//' && exit 2 ;;
 esac
