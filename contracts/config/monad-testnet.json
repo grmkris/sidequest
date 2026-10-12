@@ -27,6 +27,7 @@
   },
   "accountAbstraction": {
     "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+    "paymaster": "0x998Df34AA25Ab2C4d907B783C5D9a76DD62a38C9",
     "paymasterKind": "sidequest-testnet",
     "gasToken": "0x534b2f3A21130d7a60830c2Df862319e593943A3",
     "standingApproval": "1000000",
@@ -144,5 +145,6 @@
     "tokenImplementation": "0xFD870fEbeeA5C1Cd5b10cd950eFF8f4d63dc81f1",
     "wmon": "0x5a4E0bFDeF88C9032CB4d24338C5EB3d3870BfDd",
     "creatorFeeVault": "0xfEB12B7698e296C57BBF9f0c9b38B3e908285A99"
-  }
+  },
+  "sidePages": [{ "name": "MonadVision", "url": "https://testnet.monadvision.com/token/{token}" }]
 }
