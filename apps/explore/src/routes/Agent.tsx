@@ -6,6 +6,8 @@ import { BaseError, ContractFunctionRevertedError, maxUint256, zeroAddress } fro
 import { useReadContracts } from 'wagmi'
 import { isNew } from '../agent-stats.ts'
 import { type ChainJob, fetchDirectoryAgent } from '../api.ts'
+import { agentName } from '../agent-name.ts'
+import { useAgentProfile } from '../agent-profiles.ts'
 import { AgentJobs } from '../components/agent/AgentJobs.tsx'
 import { BackingStrip, BackingPlaceholder } from '../components/agent/BackingStrip.tsx'
 import { HeroStats } from '../components/agent/HeroStats.tsx'
@@ -257,6 +259,7 @@ export function AgentPage() {
 
 function Profile({ id }: { id: string }) {
   const identity = useAgentIdentity(id)
+  const hosted = useAgentProfile(id)
   const record = useAgentRecord(id)
   const directory = useQuery({
     queryKey: publicKey('directory-agent', id),
@@ -383,6 +386,13 @@ function Profile({ id }: { id: string }) {
       {wallet !== undefined && identity.exists !== false && (
         <BackSheet
           id={id}
+          name={
+            agentName(id, {
+              // As the header names it (ProfileHeader): the hosted profile, the registered one, the directory's.
+              given: hosted?.name ?? (identity.profile?.kind === 'json' ? identity.profile.name : null),
+              entry: directory.data?.agent,
+            }) ?? undefined
+          }
           wallet={wallet}
           viewer={address}
           open={backing}
@@ -400,6 +410,7 @@ function Profile({ id }: { id: string }) {
  */
 function BackSheet({
   id,
+  name,
   wallet,
   viewer,
   open,
@@ -407,6 +418,8 @@ function BackSheet({
   initialAmount,
 }: {
   id: string
+  /** The agent's registered name, for the sheet's title ("Back Livepass Scout"). */
+  name: string | undefined
   wallet: `0x${string}`
   viewer: `0x${string}` | undefined
   open: boolean
@@ -423,7 +436,7 @@ function BackSheet({
   return (
     <BackingManager
       owner={viewer}
-      scope={{ kind: 'agent', account: wallet, agentId: id }}
+      scope={{ kind: 'agent', account: wallet, agentId: id, ...(name === undefined || name === '' ? {} : { name }) }}
       sheet={{ open, onOpenChange }}
       initialAmount={initialAmount}
     />

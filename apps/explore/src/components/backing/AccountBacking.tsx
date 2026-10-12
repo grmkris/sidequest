@@ -88,7 +88,7 @@ export function AgentFormSheet({
 }
 
 /** The backing risk in one line, and the whole of it a tap away, rather than a block of small print over the form. */
-function BackingRisk() {
+export function BackingRisk() {
   return (
     <Disclosure summary="If the agent is slashed, every backer loses the same share" className="-mx-1 -my-1">
       <p className="px-1 pt-1 pb-2 text-ui text-pretty text-muted-foreground">{DELEGATION_RISK}</p>

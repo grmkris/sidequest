@@ -9,10 +9,16 @@ import { type Address, encodeFunctionData, erc20Abi, parseSignature, zeroAddress
 import { useBalance, useReadContract } from 'wagmi'
 import { prompts, useSignTypedDataWithPrompt } from '../wallet-prompt.ts'
 import { DelegationForm, exactFactory } from './DelegationForm.tsx'
-import { DELEGATION_RISK, DelegationPositions, factoryValue, walletAgentsKey } from './DelegationPositions.tsx'
+import { DelegationPositions, factoryValue, walletAgentsKey } from './DelegationPositions.tsx'
 import { HoldingControls } from './HoldingControls.tsx'
 import { GasWarning } from './GasWarning.tsx'
-import { AgentFormSheet, BackingSheets, PositionsUnavailable, useReveal } from './backing/AccountBacking.tsx'
+import {
+  AgentFormSheet,
+  BackingRisk,
+  BackingSheets,
+  PositionsUnavailable,
+  useReveal,
+} from './backing/AccountBacking.tsx'
 import { BackingOverview } from './backing/BackingOverview.tsx'
 import { emptyJournal, txJournalKey, writeTxJournalDurable } from './txJournal.ts'
 
@@ -51,7 +57,7 @@ export function BackingManager({
   initialAmount,
 }: {
   owner: Address
-  scope?: { kind: 'account' } | { kind: 'agent'; account: Address; agentId?: string }
+  scope?: { kind: 'account' } | { kind: 'agent'; account: Address; agentId?: string; name?: string }
   /** Agent scope only: the form opens in this sheet instead of inline. */
   sheet?: BackingSheet
   /** SIDE to fill the amount with, e.g. an agent's shortfall from a `?back=` link. */
@@ -81,7 +87,7 @@ function Stake({
   contracts: SidequestContracts
   owner: Address
   initialAccount: Address | undefined
-  scope: { kind: 'account' } | { kind: 'agent'; account: Address; agentId?: string }
+  scope: { kind: 'account' } | { kind: 'agent'; account: Address; agentId?: string; name?: string }
   sheet: BackingSheet | undefined
   initialAmount: string | undefined
 }) {
@@ -159,6 +165,9 @@ function Stake({
   const agents = directory.data?.agents ?? []
   const labelSources = { owner, managed: managed.data?.agents, directory: agents }
   const nameOf = (target: Address) => {
+    // The agent's page knows the name it registered, before any directory or managed list does.
+    if (scope.kind === 'agent' && scope.name !== undefined && target.toLowerCase() === scope.account.toLowerCase())
+      return scope.name
     const walletAgents = queryClient.getQueryData<{ agents: string[] }>(walletAgentsKey(target))?.agents
     return positionLabel(target, { ...labelSources, walletAgents }).name
   }
@@ -383,9 +392,7 @@ function Stake({
               onBackAgent={() => setSheet('pick')}
             />
           )
-        : agentSheet === undefined && (
-            <p className="rounded-xl bg-warning/14 p-4 text-sm leading-relaxed text-warning-text">{DELEGATION_RISK}</p>
-          )}
+        : agentSheet === undefined && <BackingRisk />}
 
       {initial.error !== null && (
         <Alert variant="destructive">
