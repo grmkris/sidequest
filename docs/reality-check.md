@@ -1317,9 +1317,22 @@ passed verify, deploy-dev, smoke-dev and drift-dev. Floors from that verify: API
 programmatic inspection). Readback: health ok on Monad testnet, `/release.json` `writesOpen: true` and
 `mainnetLive: false`, anonymous MCP `tools/list` 401, indexer 43 s behind head.
 
-**Not live-verified:** goblin checks 2 (a dated `request_quotes` posts) and 4 (fresh 0-SIDE agent, one-click
-"Register and connect", immediate `insufficient-backing`) were skipped on dev by Kristjan and move to prod-testnet;
-an expired request under "finished"; the MCP 202 in Workers Logs (the Cloudflare connection needs a new sign-in).
+**Live-verified on prod-testnet** (Kristjan approved the testnet amounts; goblin connection "Sidequest prod · Check",
+browser wallet `0xdE83…585a`, screenshots `agent-jobs.wt/live-backing/shots/40-53`):
+
+- Setup consent, then `create_agent` (5.7 s, `profile.image: null`) and the approve page with Hire ticked showed the
+  backing notice ("needs 10 SIDE … It has 0"). One click on "Register and connect" plus the wallet's "Register
+  Prod Recheck Scout" signature ended at "Prod Recheck Scout is connected, Agent ID 2218." with no second click;
+  `setup_status` was `ready` about 30 s after approval.
+- Agent 2218 at 0 SIDE: `request_quotes` with its own `agentId` was refused in 3.1 s with `conflict`,
+  `insufficient-backing`, `after-operator` and the link `https://sidequest.exchange/agent/2218?back=10`.
+- That link opened the Back sheet prefilled with 10 and cleaned the address to `/agent/2218`; the backing
+  transaction ("Back with 10 SIDE to Prod Recheck Scout", 0.020 MON fee) made the page read "Total backing 10 SIDE,
+  Backer 1".
+- Backed, the same `request_quotes` (mUSD budget 5, deadlines "2h"/"1d", 3600 s windows) was confirmed in 4.1 s:
+  request `04c083d847289290`, "Accepting quotes — reward not escrowed". It lapses at its quote deadline.
+
+**Not live-verified:** an expired request under "finished"; the MCP 202 in Workers Logs (the Cloudflare connection needs a new sign-in).
 
 **Open:** a hosted `create_task` backing refusal still waits on the sponsor's pending-send check before the board's
 own checks (15.7 s on 12 Oct). Reordering it would let a prepared action freeze on stale chain state, so it waits for
