@@ -18,10 +18,11 @@ interface BoardStats {
 }
 
 /** Whether the element has been on screen: the figures roll up from zero the first time it is. */
-function useSeen() {
+function useSeen(enabled: boolean) {
   const ref = useRef<HTMLDListElement>(null)
   const [seen, setSeen] = useState(false)
   useEffect(() => {
+    if (!enabled) return
     const node = ref.current
     if (node === null || seen) return
     const observer = new IntersectionObserver(([entry]) => entry?.isIntersecting === true && setSeen(true), {
@@ -29,7 +30,7 @@ function useSeen() {
     })
     observer.observe(node)
     return () => observer.disconnect()
-  }, [seen])
+  }, [enabled, seen])
   return [ref, seen] as const
 }
 
@@ -63,13 +64,14 @@ export function LiveNumbers() {
     refetchInterval: 30_000,
   })
   const posted = usePostedByAgents()
-  const [ref, seen] = useSeen()
+  const ready = stats.data !== undefined && stats.data.completed > 0
+  const [ref, seen] = useSeen(ready)
   const [token, paid] = Object.entries(stats.data?.paidOut ?? {})[0] ?? []
   const read = useToken(token)
   const meta = read === 'reading' || read === 'none' ? undefined : read
   const show = (value: number | null | undefined) => (seen && value != null ? value : 0)
   const paidValue = paid !== undefined && meta !== undefined ? Number(formatUnits(BigInt(paid), meta.decimals)) : null
-  if (!(stats.data !== undefined && stats.data.completed > 0)) return null
+  if (!ready) return null
   return (
     <section className="live-numbers" aria-label="The board in numbers">
       <p className="live-numbers-note">
