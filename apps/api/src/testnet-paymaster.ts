@@ -156,6 +156,24 @@ function checkedGas(op: UserOperation): void {
     throw new AaError('refused', 'invalid paymaster gas limits or fees')
 }
 
+/** Decodable callData alone is not enough: arbitrary smart accounts may ignore it after obtaining a quote. */
+async function checkedAccount(options: TestnetPaymasterOptions, raw: Json | undefined, sender: Address): Promise<void> {
+  const delegator = options.deployment.delegation.delegator
+  const auth = field(raw, 'eip7702Auth')
+  if (auth !== undefined) {
+    if (
+      quantity(field(auth, 'chainId'), 'authorization chain') !== 10143n ||
+      !isAddressEqual(address(field(auth, 'address'), 'authorization delegate'), delegator)
+    )
+      throw new AaError('refused', '7702 authorization must use the configured DeleGator and chain')
+    // The bundler verifies the signed authorization before including it; a bad signature cannot change account code.
+    return
+  }
+  const code = hexField(await options.node('eth_getCode', [sender, 'latest']), 'account code')
+  if (code.toLowerCase() !== `0xef0100${delegator.slice(2).toLowerCase()}`)
+    throw new AaError('refused', 'sender must use the configured DeleGator or carry its 7702 authorization')
+}
+
 /** A gas pull counts only in the first call, to the configured manager, with single default transfer execution. */
 async function gasPull(options: TestnetPaymasterOptions, op: UserOperation, call: Call | undefined): Promise<bigint> {
   const aa = checkedConfig(options)
@@ -309,6 +327,7 @@ export function testnetPaymasterRpc(options: TestnetPaymasterOptions): JsonRpc {
     checkedGas(op)
     const signer = signingAccount(options.signerKey)
     signingRate(op.sender, time)
+    await checkedAccount(options, params[0], op.sender)
     const cost = maxTokenCost(op, await tokenQuote(options))
     if (cost > aa.maxCostPerOp) throw new AaError('ceiling', 'gas-token cost exceeds the configured ceiling')
     await checkFunding(options, op, calls, cost)

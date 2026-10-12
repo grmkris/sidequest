@@ -69,6 +69,7 @@ export function node(over: { balance?: bigint; allowance?: bigint; failPull?: bo
   const calls: Json[][] = []
   const rpc: JsonRpc = async (method, params) => {
     calls.push([method, ...params])
+    if (method === 'eth_getCode') return `0xef0100${testnet.delegation.delegator.slice(2)}`
     // SAFETY: fixture callers emit the standard eth_call object; contract responses are encoded independently.
     const call = params[0] as { to: Address; from?: Address; data: Hex }
     if (call.from !== undefined) {

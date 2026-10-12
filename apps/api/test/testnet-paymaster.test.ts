@@ -175,4 +175,29 @@ describe('testnet paymaster ERC-7677 service', () => {
       s.rpc('pm_getPaymasterData', paymasterParams({ ...operation(), maxPriorityFeePerGas: 101_000_000_000n })),
     ).rejects.toMatchObject({ code: 'refused' })
   })
+
+  it('refuses arbitrary account code and permits only the configured first-op 7702 delegate', async () => {
+    const s = service()
+    const untrusted = testnetPaymasterRpc({
+      deployment: charged,
+      node: async (method, params) => (method === 'eth_getCode' ? '0x1234' : s.chain.rpc(method, params)),
+      signerKey,
+      now: () => s.time,
+    })
+    await expect(untrusted('pm_getPaymasterData', paymasterParams())).rejects.toMatchObject({ code: 'refused' })
+    const params = paymasterParams()
+    const raw = toBundlerJson(operation())
+    await expect(
+      untrusted('pm_getPaymasterData', [
+        { ...raw, eip7702Auth: { chainId: '0x279f', address: work.to } },
+        ...params.slice(1),
+      ]),
+    ).rejects.toMatchObject({ code: 'refused' })
+    await expect(
+      untrusted('pm_getPaymasterData', [
+        { ...raw, eip7702Auth: { chainId: '0x279f', address: charged.delegation.delegator } },
+        ...params.slice(1),
+      ]),
+    ).resolves.toHaveProperty('paymasterData')
+  })
 })
