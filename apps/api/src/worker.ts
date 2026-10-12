@@ -171,6 +171,10 @@ export default class Api extends Cloudflare.Worker<Api>()(
       PRIVY_POLICY_ID: process.env.PRIVY_POLICY_ID || '',
       PRIVY_APP_SECRET: Redacted.make(runtimeSecret('PRIVY_APP_SECRET') || 'unset'),
       PRIVY_SIGNER_KEY: Redacted.make(runtimeSecret('PRIVY_SIGNER_KEY') || 'unset'),
+      PIMLICO_API_KEY: Redacted.make(runtimeSecret('PIMLICO_API_KEY') || 'unset'),
+      ...((stageProfile()?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') === 'monad-testnet'
+        ? { TESTNET_PAYMASTER_SIGNER_KEY: Redacted.make(process.env.TESTNET_PAYMASTER_SIGNER_KEY || 'unset') }
+        : {}),
       TELEGRAM_BOT_TOKEN: Redacted.make(runtimeSecret('TELEGRAM_BOT_TOKEN') || 'unset'),
       TELEGRAM_WEBHOOK_SECRET: Redacted.make(runtimeSecret('TELEGRAM_WEBHOOK_SECRET') || 'unset'),
       // Retain existing binding names for guarded staging updates; these obsolete lists are ignored.
