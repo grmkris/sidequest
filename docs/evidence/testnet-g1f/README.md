@@ -24,6 +24,11 @@ tokens; Kris's call). Testnet MON limited the dev buy to 9.5 MON (0.01% of suppl
 Uniswap `liquidity` block is gone, so testnet has no market of ours; Explore's "Get SIDE" opens testnet.nad.fun, as on
 mainnet. The SDK's G1e market tests now read the archived config.
 
-**Still to do after the dev deploy:** the Privy routine-policy cutover for G1f's Holding and core; re-pinning the
-role containers and the crew (release session); prod-testnet's release on Kris's go; and a live recheck. Every hosted
-agent re-backs and its operator re-approves on G1f.
+**Privy (done 12 Oct).** `sidequest-cutover.ts update-policy` then `verify` moved the one routine policy that serves dev
+and prod-testnet to G1f: 11 rules, hash `76eeb6c6…` (was `eccbb87b…`), Selection pinned to G1f's Holding and the two
+authorizations to G1f's core ([evidence](2026-10-12-privy.json)). The generated docs were regenerated with G1f's
+addresses (`4070fe2a`).
+
+**Still to do:** re-pinning the role containers and the crew (release session); prod-testnet's release on Kris's go;
+and a live recheck. Every hosted agent re-backs, and each operator revokes and re-signs its sponsorship delegation, on
+G1f; gas grants renew themselves.

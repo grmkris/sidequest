@@ -1,0 +1,27 @@
+{
+  "observedAt": "2026-10-12T15:28:11.000Z",
+  "step": "G1f routine-policy update (sidequest-cutover.ts update-policy, then verify)",
+  "appId": "cmui9skoc01zr0dl03tyahirs",
+  "adminId": "q4bhp78wp2ialt6ffv2pv3mg",
+  "signerId": "q82i8vfysvn523j6mx69wljn",
+  "policyId": "ocog6r948i9p93x6ucd4f3db",
+  "verifiedAt": "2026-10-12T15:27:58.544Z",
+  "previousPolicySha256": "eccbb87bb383ced89eaa1da402b8b5445cee2b1a17ac5a700b9870c580773f9f",
+  "desiredPolicySha256": "76eeb6c61d54573781556e264eeb46b7a05febbb556869b14b3d5ced4e42dd03",
+  "policyRuleCount": 11,
+  "freshTargets": {
+    "Allow Selection": "0x6E35f8faB65b5294094A260C952B5d1efCA6c348",
+    "Allow SetBudgetAuthorization": "0xE5E912F99551B0520C172DEC7296816Bb103f573",
+    "Allow SubmitAuthorization": "0xE5E912F99551B0520C172DEC7296816Bb103f573"
+  },
+  "relayAddresses": [
+    "0xC4173dBC98ffd6F5785E8Fba85E9e5bd8b3F5058",
+    "0xa6D3eC73053152221af873789aEd179E506b1F0E"
+  ],
+  "chainId": 10143,
+  "policyUpdateJournalCleared": true,
+  "servesStages": [
+    "dev",
+    "prod (testnet)"
+  ]
+}
