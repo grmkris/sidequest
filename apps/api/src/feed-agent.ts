@@ -3,6 +3,7 @@
  * permission granted. The agent reads them in `inbox`; the operator gets one Telegram link to the signing page, which
  * never approves anything by itself. Ids are deterministic, and nothing here ever fails the action that produced it.
  */
+import { Option, Schema } from 'effect'
 import type { AgentExecuteResult, AgentRow, ApprovalRow } from '@sidequest/board'
 import type { AsyncSql } from '@sidequest/indexer'
 import type { Network } from '@sidequest/sdk'
@@ -115,11 +116,14 @@ export function decisionFeedEvents(
   network: Network,
   agent: Agent,
   approval: ApprovalRow,
-  operation: { tool: string; action_key: string },
+  operation: { tool: string; action_key: string; intent_json?: string },
   now: number,
 ): AgentEvents {
   if (agent.address === null || approval.status === 'pending') return { events: [] }
   const approved = approval.status !== 'rejected'
+  // A declined over-budget pick sent nothing, and its quote request opens again for another pick.
+  const reopened = !approved && approval.kind === 'hire-over-limit' && operation.tool === 'pick_quote'
+  const requestId = reopened ? requestOf(operation.intent_json) : undefined
   return {
     events: [
       {
@@ -131,11 +135,25 @@ export function decisionFeedEvents(
         url: approvalUrl(network, agent, approval.id),
         summary: approved
           ? `Your operator approved ${KIND_WORDS[approval.kind]}; retry ${operation.tool} with the same operationKey for the result.`
-          : `Your operator rejected ${KIND_WORDS[approval.kind]}; do not retry it unchanged.`,
-        ...(approved ? { next: { tool: operation.tool, args: { operationKey: operation.action_key } } } : {}),
+          : requestId !== undefined
+            ? `Your operator declined this hire; nothing was sent. Quote request ${requestId} is open again: pick another quote with a new operationKey.`
+            : `Your operator rejected ${KIND_WORDS[approval.kind]}; do not retry it unchanged.`,
+        ...(approved
+          ? { next: { tool: operation.tool, args: { operationKey: operation.action_key } } }
+          : requestId !== undefined
+            ? { next: { tool: 'list_quotes', args: { requestId } } }
+            : {}),
       },
     ],
   }
+}
+
+const Intent = Schema.Struct({ requestId: Schema.String })
+
+/** The quote request a pick_quote operation was made on. */
+function requestOf(intentJson: string | undefined): string | undefined {
+  if (intentJson === undefined) return undefined
+  return Option.getOrUndefined(Schema.decodeUnknownOption(Schema.fromJsonString(Intent))(intentJson))?.requestId
 }
 
 /** Writes the rows and the operator's Telegram link, if any; logs and swallows every failure. */

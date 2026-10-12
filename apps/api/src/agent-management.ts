@@ -10,6 +10,9 @@ import {
   GrantStore,
   RelaySender,
   SponsorDesk,
+  errorDiagnostics,
+  type AgentOperationRow,
+  type ApprovalRow,
   type Sql,
 } from '@sidequest/board'
 import * as sdk from '@sidequest/sdk'
@@ -38,6 +41,16 @@ function hex(body: Record<string, unknown>, key: string, size: number): Hex {
   return value as Hex
 }
 
+/** Runs one agent operation for its operator (approve, retry, or release a declined pick). */
+type ExecuteForOperator = (
+  agentId: string,
+  tool: string,
+  args: Record<string, unknown>,
+  key: string,
+  approvalId?: string,
+  boardId?: string,
+) => Promise<unknown>
+
 export async function agentManagement(input: {
   readonly request: AgentRouteRequest
   readonly sql: Sql
@@ -48,14 +61,7 @@ export async function agentManagement(input: {
   readonly relayKey: Hex
   readonly rpcUrl: string
   readonly now: () => number
-  readonly execute: (
-    agentId: string,
-    tool: string,
-    args: Record<string, unknown>,
-    key: string,
-    approvalId?: string,
-    boardId?: string,
-  ) => Promise<unknown>
+  readonly execute: ExecuteForOperator
 }) {
   const { request, sql, context, operator, bindings, now } = input
   const { action, body } = request
@@ -171,7 +177,8 @@ export async function agentManagement(input: {
         decisionFeedEvents(context.deployment.network, agent, approval, operation, now()),
         now(),
       )
-    if (approval.status !== 'approved') return { approval }
+    if (approval.status !== 'approved')
+      return { approval, ...(await reopenDeclinedPick(approval, operation, input.execute)) }
     return input.execute(
       agent.id,
       operation.tool,
@@ -263,4 +270,32 @@ export async function agentManagement(input: {
   if (action === 'registration-confirm')
     return onboarding.register(id, operator, hex(body, 'hash', 64), hex(body, 'signature', 130))
   throw new BoardError('not-found', 'No such agent lifecycle action')
+}
+
+/**
+ * A declined over-budget pick reopens its quote request at once, rather than on the agent's next call: running the
+ * declined operation makes the executor release the never-published pick. Never fails the decision.
+ */
+export async function reopenDeclinedPick(
+  approval: Pick<ApprovalRow, 'id' | 'kind' | 'status' | 'agent_id'>,
+  operation: Pick<AgentOperationRow, 'tool' | 'intent_json' | 'action_key' | 'board_id'>,
+  execute: ExecuteForOperator,
+): Promise<{ reopened?: boolean }> {
+  if (approval.status !== 'rejected' || approval.kind !== 'hire-over-limit' || operation.tool !== 'pick_quote')
+    return {}
+  try {
+    const result = await execute(
+      approval.agent_id,
+      operation.tool,
+      // SAFETY: an operation's intent is the JSON object of the arguments it was begun with.
+      JSON.parse(operation.intent_json) as Record<string, unknown>,
+      operation.action_key,
+      approval.id,
+      operation.board_id,
+    )
+    return { reopened: result instanceof Object && 'next' in result }
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'pick-reopen-failed', approvalId: approval.id, ...errorDiagnostics(error) }))
+    return { reopened: false }
+  }
 }

@@ -99,6 +99,19 @@ describe('management feed events', () => {
     ).toBeUndefined()
     expect(decisionFeedEvents(network, agent, approval, operation, now).events).toEqual([])
   })
+
+  it('tells the agent a declined over-budget pick sent nothing and reopened its request', () => {
+    const pick = {
+      tool: 'pick_quote',
+      action_key: 'p1',
+      intent_json: JSON.stringify({ requestId: 'r7', quoteId: 'q1' }),
+    }
+    const declined = { ...approval, kind: 'hire-over-limit' as const, status: 'rejected' as const }
+    expect(decisionFeedEvents(network, agent, declined, pick, now).events[0]).toMatchObject({
+      summary: expect.stringContaining('Quote request r7 is open again'),
+      next: { tool: 'list_quotes', args: { requestId: 'r7' } },
+    })
+  })
 })
 
 describe('inbox tool', () => {

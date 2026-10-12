@@ -16,7 +16,7 @@ import {
 import { type Hex, decodeFunctionData, encodeFunctionData, erc20Abi } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { afterEach, expect, it, vi } from 'vitest'
-import { agentManagement } from '../src/agent-management.ts'
+import { agentManagement, reopenDeclinedPick } from '../src/agent-management.ts'
 
 const databases: DatabaseSync[] = []
 afterEach(() => {
@@ -366,3 +366,39 @@ it.each([
     expect(f.signTypedData).toHaveBeenCalledTimes(3) // Only routine gas grants, no one-off approval signature.
   },
 )
+
+// A declined over-budget pick reopens its quote request when the operator decides, not on the agent's next call.
+it('reopens a declined over-budget pick at once, and runs nothing for any other decision', async () => {
+  const execute = vi.fn(async () => ({ status: 'rejected', next: { tool: 'list_quotes', args: { requestId: 'r1' } } }))
+  const pick = {
+    tool: 'pick_quote',
+    intent_json: JSON.stringify({ requestId: 'r1', quoteId: 'q1' }),
+    action_key: 'pick-1',
+    board_id: 'public',
+  }
+  const declined = { id: '0xop', kind: 'hire-over-limit' as const, status: 'rejected' as const, agent_id: 'scout' }
+  expect(await reopenDeclinedPick(declined, pick, execute)).toEqual({ reopened: true })
+  expect(execute).toHaveBeenCalledWith(
+    'scout',
+    'pick_quote',
+    { requestId: 'r1', quoteId: 'q1' },
+    'pick-1',
+    '0xop',
+    'public',
+  )
+  execute.mockClear()
+  expect(await reopenDeclinedPick({ ...declined, kind: 'unstake' }, pick, execute)).toEqual({})
+  expect(await reopenDeclinedPick(declined, { ...pick, tool: 'create_task' }, execute)).toEqual({})
+  expect(await reopenDeclinedPick({ ...declined, status: 'approved' }, pick, execute)).toEqual({})
+  expect(execute).not.toHaveBeenCalled()
+  const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    expect(await reopenDeclinedPick(declined, pick, boardUnavailable)).toEqual({ reopened: false })
+  } finally {
+    spy.mockRestore()
+  }
+})
+
+async function boardUnavailable(): Promise<never> {
+  throw new Error('board unavailable')
+}
