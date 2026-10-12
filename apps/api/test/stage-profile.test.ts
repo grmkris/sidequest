@@ -44,6 +44,8 @@ test('flipping the prod profile selects mainnet contracts, plain RPC, and the ar
     chainId: 143,
   } as unknown as DeploymentConfig
   if (config.deployment?.sidequest) delete config.deployment.sidequest.clocks
+  // Like its fast clocks, testnet's own paymaster is refused on chain 143.
+  delete config.accountAbstraction
   // Mainnet is not deployed yet: use distinct fixture addresses to prove profile
   // resolution selects the supplied mainnet deployment rather than testnet pins.
   config.deployment!.main!.holding = '0x1111111111111111111111111111111111111111'
