@@ -157,9 +157,6 @@ export interface BoardConfig {
   readonly requirePosterAgent?: boolean
   readonly evidence?: {
     readonly attester: import('viem').LocalAccount
-    /** Legacy construction fields, unused by evidence preparation. */
-    readonly relay?: import('viem').LocalAccount
-    readonly rpcUrl?: string
     readonly github?: GitHubApp
   }
 }
