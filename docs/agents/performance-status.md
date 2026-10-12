@@ -60,3 +60,16 @@ server binds only to Tailscale: `http://100.105.51.45:8765/architecture.html#cle
 
 Status: implementation and local owning checks recorded; no claim of deployed
 performance improvement. Temporary logs are local receipts, not durable CI artifacts.
+
+### Final shared-checkout gate receipt
+
+`bun --no-env-file run lint:gate` exited 1 after 29 s with **no increases**
+and three stale baseline entries: two in `apps/explore/src/routes/Request.tsx`
+and one in `packages/board/src/service.ts`. Those reductions come from the
+concurrent lanes, whose code and baseline ownership were preserved.
+Receipt: `/tmp/sidequest-lint-final-check.log`.
+
+Documentation commit: `e9a7f52a`. The served HTML was fetched over Tailscale and
+compared byte-for-byte with the committed file. The runtime implementation
+commits are present in the locally observed `origin/dev` history through
+`644eea75`; that is Git evidence only, not a CI or deployment receipt.
