@@ -24,7 +24,7 @@ Amounts and shares in the result are decimal base-unit strings. `unlockAt` is Un
 
 ## Required creator bond and unfilled listings
 
-Every publication requires a creator bond from active available SIDE backing. It starts at 10 SIDE on testnet and 1,000,000 SIDE on mainnet. The Safe can adjust the floor for new publications, capped at 1,000 SIDE on testnet and 100,000,000 SIDE on mainnet. Clients read the floor live; omitted creator bonds default to it. Worker bonds may still be zero.
+Every publication requires a creator bond from active available SIDE backing. It starts at 10 SIDE on testnet and 1,000,000 SIDE on mainnet. The Safe can adjust the floor for new publications, capped at 1,000 SIDE on testnet and 100,000,000 SIDE on mainnet. On mainnet it keeps the floor at about $10 or less and announces each change in Commons first. Clients read the floor live; omitted creator bonds default to it. Worker bonds may still be zero.
 
 If nobody activates the job, expiry forfeits the snapshotted percentage of the creator bond to the current treasury, initially 25%, and releases the remainder. A cancel strictly before ten minutes after publication is free; at ten minutes it forfeits. The Safe may set the rate for future jobs from zero to 50%. Existing published terms keep their snapshot. There is no posting fee.
 
