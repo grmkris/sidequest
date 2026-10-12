@@ -12,7 +12,7 @@ launcher). The `legacy-final` tag preserves the retired protocol; `mining-final`
 - `SidequestEvaluator` is the per-offer evaluator. The approver accepts or rejects, an arbitrator rules during the
   frozen appeal window, and permissionless timeouts settle silence, missed delivery, and arbitration expiry. It records
   evidence and feedback without allowing a classifier to move money.
-- `StakeVault` tracks delegated SIDE shares and reservations. `reserve` requires an admitted Holding; `release`, `slash` and treasury `forfeit` consume only the caller's own reservations; unstaking uses a fourteen-day production cooldown and Holding admission uses its timelock. A slash sends SIDE to `SidequestConstants.SLASH_SINK` (`0x…dEaD`), because SIDE has no `burn`.
+- `StakeVault` tracks delegated SIDE shares and reservations. `reserve` requires an admitted Holding; `release`, `slash` and treasury `forfeit` consume only the caller's own reservations; unstaking uses a fourteen-day production cooldown and Holding admission uses its timelock. A slash sends SIDE to its configured `slashRecipient`, the treasury at launch. The constructor refuses zero. The owner (the Safe) can call `setSlashRecipient` without a timelock; zero and the vault itself refuse, and `SlashRecipientSet(previous, recipient)` records every change. `Slashed` keeps its event signature.
 - SIDE (`IFactory`) is a plain ERC-20 with 18 decimals and permit: a fixed one-billion supply, no mint, burn or admin hook.
 - Every owned contract inherits `NoRenounce`: ownership moves in two steps and can never be renounced.
 - `FeeSchedule` supplies the worker's fee rate and treasury address; schedule changes have a three-day notice.
@@ -32,7 +32,7 @@ forfeit rate (initially 2500 bps, owner-adjustable from 0 to the constant 5000 b
 `publishedAt + CANCEL_GRACE` (600 seconds) releases all backing. Never-activated cancellation after that boundary,
 or expiry regardless of grace, forfeits `creatorBond * snapshotBps / 10_000` rounded down to the current treasury.
 `BondForfeited` records the transfer; `BondReleased` records the remainder. This is the explicit exception to HR-001;
-activated jobs still release rather than burn at/after expiry. `StakeVault.forfeit` removes only this Holding's
+activated jobs still release rather than slash at/after expiry. `StakeVault.forfeit` removes only this Holding's
 reservation and pool assets without reducing SIDE supply, including pro-rata queued backing and empty-pool reset.
 A core pause is recorded by `notePause` and excuses a deadline that falls inside the pause interval.
 
@@ -49,10 +49,10 @@ bootstraps the Holding, and transfers ownership to the Safe. It mints nothing.
 accepts the four ownership transfers. The core's `ADMIN_ROLE` and `DEFAULT_ADMIN_ROLE` are granted to the Safe and
 renounced by the deployer in the same fresh deployment.
 
-The input includes `safe`, `defaultArbitrator`, `margin`, `minimumCreatorBond`, `maxMinimumCreatorBond`,
+The input includes `safe`, `slashRecipient`, `defaultArbitrator`, `margin`, `minimumCreatorBond`, `maxMinimumCreatorBond`,
 `unfilledForfeitBps`, four fee thresholds and rates, the SIDE `token`, and optional clock values. Mainnet requires the
 production clock tuple. The output contains `core`, `factory` (SIDE), `rewardTokens`, `sidequest` (block, safe, factory,
-vault, feeSchedule, clocks), and `main` (`kind: "sidequest-v1"`, factory, holding, evaluator, `openTokens: true`).
+vault, slashRecipient, feeSchedule, clocks), and `main` (`kind: "sidequest-v1"`, factory, holding, evaluator, `openTokens: true`).
 
 On testnet, `SeedPool.s.sol` sends four transactions from the seeder: deploy the `SeedHelper`, approve SIDE, approve
 USDC, and call `seed()`. The helper initializes or repairs the target pool, mints the full-range position to the Safe,
@@ -80,14 +80,16 @@ bounded pushes protect the settlement path. The quoted activation rate also appl
 leave each contribution discoverable through `claimTopUpRefund`.
 
 The Safe controls fee proposals, Holding admission/revocation, verifier configuration, the default arbitrator, and the
-creator-bond floor and unfilled-forfeit rate. The core admin can pause, upgrade, and withdraw escrow while paused. Pause and evaluator
+creator-bond floor, unfilled-forfeit rate, and immediate slash-recipient changes. The core admin can pause, upgrade, and withdraw escrow while paused. Pause and evaluator
 `notePause` must be batched atomically by the Safe. The protocol therefore depends on these disclosed admin powers.
 
 ## Stake and fees
 
 `delegate`, `delegateWithPermit`, and `delegateFor` mint a delegator's shares backing an account. Only the share owner
 can request or cancel undelegation and withdraw after cooldown; queued shares remain exposed to pending reservations.
-Slashing sends SIDE to the sink and changes every position's asset value pro rata. Admission has a twenty-one-day
+Slashing sends SIDE to the current recipient and changes every position's asset value pro rata. Existing testnet
+vaults retain the dead address; off-chain receipt checks accept that legacy transfer or the configured recipient.
+`burnBond` and `*BondBurned` keep their ABI names and denote a slash rather than token destruction. Admission has a twenty-one-day
 notice, free exit has a fourteen-day production cooldown (a backer has a week to leave after a Holding is proposed), and callers can deny a Holding new reservations for their own account. Revocation preserves
 settlement of existing reservations. See `test/sidequest/StakeVaultDelegation.t.sol`, `StakeVaultLedger.t.sol`,
 `StakeVaultInvariants.t.sol`, and `Invariants.t.sol`.

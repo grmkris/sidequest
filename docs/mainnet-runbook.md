@@ -21,7 +21,10 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
   The protocol mints nothing: the deploy points at the existing token.
 - **No mining at launch.** The mining reserve, distributor and team vesting are gone from the contracts (tag
   `mining-final` keeps the old code). Protocol fees collect in the Safe; their use is decided later.
-- **Slashing.** SIDE has no `burn`, so a slash sends the bond to `0x000000000000000000000000000000000000dEaD`.
+- **Slashing.** A slash sends the reserved SIDE to `StakeVault.slashRecipient`, the treasury (the Safe) at launch.
+  The Safe can change it immediately to a nonzero address other than the vault; `SlashRecipientSet` records every
+  change. There is no timelock because routing never changes the backer's loss. Stakers decide later what it funds
+  ([ADR-0024](adr/0024-slashed-side-goes-to-the-treasury.md)); existing testnet vaults retain the dead address.
 - **Gate.** Mainnet goes only after Kris's A01–A08 by hand on prod-testnet and R7 passing on the commit that launches.
 - **Stages.** `sidequest.exchange` (prod) runs on testnet until the launch. At launch it flips to 143 through
   `infra/prod.json` and a redeploy; `dev.sidequest.exchange` stays on testnet.
@@ -39,7 +42,7 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
   nad.fun router with the 5% dev buy and the creator fee paid to the Safe, and must have no `burn`. The launch gate
   refuses while the four handovers are pending and passes after `SafeAccept` with the 1-of-1 pin. Rehearsing the 2-of-3
   due by 20 Oct, it then refuses the stale pin and passes the new one. Then two
-  hires paid in SIDE (one settled, one missed whose worker bond must land in the sink) and a small buy and sell. R7
+  hires paid in SIDE (one settled, one missed whose worker bond must land at the vault's configured recipient, the Safe) and a small buy and sell. R7
   must pass again on the launching commit before the go; it prints the exact gas budget (§2).
 - **The launch kit on testnet.** `contracts/script/launch-kit.sh` made a 1-of-1 Safe and a token through nad.fun's
   testnet API (listed with its links, creator fee to the Safe), moved the dev buy, and bought and sold; its backing batch
@@ -84,6 +87,10 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
    | `sidequest.schedule.bps` | uint[4] | fee per tier: `[3000, 1000, 300, 100]` |
    | `sidequest.schedule.treasury` | address | the Safe |
    | `sidequest.token` | address | SIDE, from §3.2: the recipe checks 18 decimals, the 1e9 supply, Sidequest/SIDE, and that its code is the nad.fun clone of `nadfun.tokenImplementation` on `nadfun.curve` |
+
+   Fill `sidequest.slashRecipient` with the same Safe address as `sidequest.safe` at launch; the shipped `null`
+   recipient is an unset launch input, and the recipe refuses it. PromoteSidequest records the live recipient in
+   `deployment.sidequest.slashRecipient`; R7 and the launch kit compare it with the config and vault getter.
 
    Then, outside `sidequest`:
    - `knownTokens` = [USDC (= `x402.usdc`), SIDE]. Leave `deployment.rewardTokens` absent: PromoteSidequest takes the
@@ -447,7 +454,7 @@ sharing come back later as a new design with its own funding source and review.
   MultiSendCallOnly batch of core `pause` + evaluator `notePause` (D13), which `/admin` builds. `/admin`
   refuses a lone `pause` or `unpause`. While paused, rulings and acceptances still land, and a payout or refund the core
   refuses is deferred (`PayoutDeferred` / `RefundDeferred`) rather than reverted. `rejectAfterDeliveryDeadline` waits
-  for the unpause, and a delivery deadline inside a recorded pause refunds the creator without burning the worker's
+  for the unpause, and a delivery deadline inside a recorded pause refunds the creator without slashing the worker's
   bond. The core's `emergencyWithdraw` works only while paused and only for the Safe. Unpause is the same atomic pair;
   an unrecorded end counts as still paused.
 - **A payout or refund deferred** (`PayoutDeferred` / `RefundDeferred`): anyone calls `retryDeferred(jobId)`, then

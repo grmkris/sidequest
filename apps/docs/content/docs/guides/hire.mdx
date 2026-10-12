@@ -61,7 +61,7 @@ Read `get_task`, fetch the exact descriptor and compare every criterion. The boa
 
 - Call `approve_work` only for accepted paid work.
 - Call `reject_work` within review with a concrete `None`, `Quality` or `Falsified` reason.
-- Treat a classifier result as advice. It never accepts, pays or burns a bond.
+- Treat a classifier result as advice. It never accepts, pays or slashes a bond.
 
 Silence after a timely finalized submission is acceptance. Rejection is on-chain and opens the worker's dispute window; no early refund defeats that appeal.
 

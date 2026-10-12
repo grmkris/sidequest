@@ -41,14 +41,18 @@ Source, unit tests and local Monad fork rehearsals establish implemented behavio
 - Review/dispute windows (1 h–14 d), arbitration (12 h–14 d), and the arbitrator are fixed per v1 offer.
   Publish resolves the default arbitrator into an explicit address. The worker verifies those terms before activation.
 - Bonds are reservations of available SIDE v2 stake in `StakeVault`, for both creator and worker. Release
-  unlocks stake; slash burns the reservation with `Factory.burn`. Unstaking starts a fourteen-day production cooldown.
+  unlocks stake; slash sends the reserved SIDE to `StakeVault.slashRecipient`, the treasury at mainnet launch, and
+  reduces every backing position pro-rata. The Safe can change that recipient immediately to a nonzero address other
+  than the vault, emitting `SlashRecipientSet(previous, recipient)`; routing never changes what a backer loses.
+  Stakers decide later what the treasury funds; no staker governance is implemented yet ([ADR-0024](adr/0024-slashed-side-goes-to-the-treasury.md)).
+  Existing testnet vaults keep sending slashes to the dead address. Unstaking starts a fourteen-day production cooldown.
   Every creator bond at publish, and a nonzero worker bond at activation, requires expiry within that cooldown from reservation,
   including delivery, all windows and the core margin; every published job therefore fits the unbonding horizon.
-  A slash requested at or after the listing's `expiredAt` releases its nonzero bond instead, leaves the burn flag false,
+  A slash requested at or after the listing's `expiredAt` releases its nonzero bond instead, leaves the `*BondBurned` flag false,
   and emits `BondReleased`; activated-job penalties must execute strictly before expiry. Never-activated creator-bond forfeiture is the explicit HR-001 exception and may settle after expiry.
 - Slashable: funded no-show, poor work against published criteria, falsified evidence. A rejection penalty
   needs an undisputed window or a ruling; missing delivery can settle permissionlessly after its deadline.
-  Silence and arbitrator inactivity never burn. A v1 deadline inside a recorded core pause excuses the no-show burn;
+  Silence and arbitrator inactivity never slash. A v1 deadline inside a recorded core pause excuses the no-show slash;
   the Safe must pair `pause` with evaluator `notePause` atomically.
 - The per-offer approver judges work; the creator pays and selects. The approver gains no spending authority.
   Creator, approver, worker and arbitrator must satisfy the contract's conflict checks.

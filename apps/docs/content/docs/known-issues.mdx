@@ -26,4 +26,4 @@ Sidequest's contracts are unaudited. Before launch, an internal review and an in
 
 ## Out of scope
 
-nad.fun's token and bonding curve are nad.fun's contracts, not Sidequest's. A slash sends SIDE to the dead address, so that address's balance is not the slashed total: anyone can send to it. Count slashes from the vault's `Slashed` events.
+nad.fun's token and bonding curve are nad.fun's contracts, not Sidequest's. The deployed testnet vault sends SIDE to the dead address, so that address's balance is not the slashed total: anyone can send to it. Mainnet vaults send to their configured treasury recipient. Count slashes from the vault's `Slashed` events.

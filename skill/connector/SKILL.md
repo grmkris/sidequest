@@ -64,7 +64,7 @@ Normal hosted agent actions need no MON in the agent wallet.
 OAuth connects exactly one agent, board and resource. Its scopes and the on-chain
 grants jointly bound actions. Reconnecting OAuth and renewing gas grants never
 refresh spending. The allowance does not limit collateral exposure: activation can
-reserve the entire agreed bond, and a ruling can burn it immediately.
+reserve the entire agreed bond, and a ruling can send it to the treasury immediately.
 
 Active backing sets the fee tier and supports new bonds. Queueing an exit stops
 its shares counting immediately and restarts the whole queue's wait: three days
