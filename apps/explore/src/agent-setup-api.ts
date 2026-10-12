@@ -51,10 +51,21 @@ export function proposalPoll(proposal: Proposal | null | undefined, fetches: num
   return proposal?.image === null && fetches < 30 ? 4_000 : false
 }
 
+const loopback = (url: URL) => url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+
 /** The OAuth redirect a consent answers with: https, or a loopback http address for a local client. */
 export function clientRedirect(redirectUrl: string): string {
   const url = new URL(redirectUrl)
-  const loopback = url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
-  if (url.protocol !== 'https:' && !loopback) throw new Error('The client redirect is unavailable')
+  if (url.protocol !== 'https:' && !loopback(url)) throw new Error('The client redirect is unavailable')
   return url.href
+}
+
+/** Where a consent hands the tab back: a local client's loopback page, or a hosted client's own site. */
+export function handBack(redirectUrl: string): { local: boolean; host: string } | null {
+  try {
+    const url = new URL(redirectUrl)
+    return { local: loopback(url), host: url.host }
+  } catch {
+    return null
+  }
 }

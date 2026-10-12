@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clientRedirect, proposalPoll } from './agent-setup-api.ts'
+import { clientRedirect, handBack, proposalPoll } from './agent-setup-api.ts'
 
 describe('clientRedirect', () => {
   it('follows an https client or a loopback one, and nothing else', () => {
@@ -19,5 +19,13 @@ describe('proposalPoll', () => {
     expect(proposalPoll({ ...proposal, image: '/avatars/a.png' }, 1)).toBe(false)
     expect(proposalPoll(null, 1)).toBe(false)
     expect(proposalPoll(undefined, 0)).toBe(false)
+  })
+})
+
+describe('handBack', () => {
+  it('names 127.0.0.1 only for a local client, and a hosted client by its host', () => {
+    expect(handBack('http://127.0.0.1:8765/callback')).toEqual({ local: true, host: '127.0.0.1:8765' })
+    expect(handBack('https://goblin.example/oauth/callback')).toEqual({ local: false, host: 'goblin.example' })
+    expect(handBack('not a url')).toBeNull()
   })
 })

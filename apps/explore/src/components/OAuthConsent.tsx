@@ -85,7 +85,9 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
         </AlertDescription>
       </Alert>
     )
-  const setup = request.data?.setup?.available === true ? <SetupConnect requestId={requestId} /> : null
+  const redirectUri = request.data?.request.redirectUri
+  const setup =
+    request.data?.setup?.available === true ? <SetupConnect requestId={requestId} redirectUri={redirectUri} /> : null
   // Someone without an agent yet starts with the coding agent's setup; anyone else, with their agents.
   const noAgents = agents.data !== undefined && !agents.data.agents.some((row) => row.state === 'active')
   return (
@@ -135,7 +137,7 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
           >
             Use this agent for this connection
           </Button>
-          <HandBackNote />
+          <HandBackNote redirectUri={redirectUri} />
           <BudgetAndBacking agent={agent} operator={auth.address!} />
         </Section>
       )}
