@@ -13,7 +13,8 @@ import {
 import type { Ctx } from './actions.ts'
 import archived from '../../../contracts/config/archive/pre-g1d-monad-testnet.json' with { type: 'json' }
 import archivedG1d from '../../../contracts/config/archive/pre-g1e-monad-testnet.json' with { type: 'json' }
-import { deployment, deploymentFromConfig, stack } from './deployment.ts'
+import archivedG1e from '../../../contracts/config/archive/pre-g1f-monad-testnet.json' with { type: 'json' }
+import { deploymentFromConfig, stack } from './deployment.ts'
 import { minOutFor, permit2Abi, sidePrice, swapTransactions, universalRouterAbi } from './market.ts'
 
 const owner: Address = '0x00000000000000000000000000000000000000aa'
@@ -24,6 +25,11 @@ const previous = deploymentFromConfig('monad-testnet', {
 const g1d = deploymentFromConfig('monad-testnet', {
   ...archivedG1d,
   deployment: { ...archivedG1d.deployment, main: { ...archivedG1d.deployment.main, kind: 'sidequest-v1' } },
+})
+// G1e is archived since G1f moved testnet SIDE to nad.fun's launcher (12 Oct); its Uniswap market stays tested here.
+const g1e = deploymentFromConfig('monad-testnet', {
+  ...archivedG1e,
+  deployment: { ...archivedG1e.deployment, main: { ...archivedG1e.deployment.main, kind: 'sidequest-v1' } },
 })
 
 function decodeSwap(data: Hex) {
@@ -59,7 +65,7 @@ describe.each([
   {
     // G1e's SIDE sorts after mUSD again, so the quote is currency0 as before G1d.
     generation: 'G1e',
-    d: deployment('monad-testnet'),
+    d: g1e,
     poolId: '0x4eb903f29419f209c25c85a75aafad8f5f3dd0a79f4a6f5cba11f4d854e09a4d',
     quoteIs0: true,
     sqrtPriceX96: 7922816251426433759354395033600000000n,

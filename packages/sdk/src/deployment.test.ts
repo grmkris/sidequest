@@ -134,7 +134,8 @@ describe('network meta', () => {
   it('links SIDE on its launcher once the config names both the launcher and SIDE', () => {
     const c = currentConfig()
     const side = '0x1111111111111111111111111111111111117777'
-    expect(networkMeta('monad-testnet').getSide).toBeUndefined()
+    // G1f (12 Oct): testnet SIDE is a nad.fun testnet launch, so testnet links its launcher page too.
+    expect(networkMeta('monad-testnet').getSide).toBe(`https://testnet.nad.fun/tokens/${testnet.sidequest.token}`)
     expect(networkMeta('monad-mainnet').getSide).toBeUndefined() // no SIDE before the launch commit
     const launched = { ...c, nadfun: { app: 'https://nad.fun' }, sidequest: { token: side } }
     expect(networkMetaFromConfig(launched).getSide).toBe(`https://nad.fun/tokens/${side}`)

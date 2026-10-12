@@ -41,13 +41,13 @@
     "x": "https://x.com/sidequest_0"
   },
   "deployment": {
-    "block": 69362272,
-    "core": "0x5914B7de3E80F1e8460901b4eBd6D19B15f9147e",
-    "factory": "0xbf0A7336d774729af63d415b5A6bDae8731b2e9B",
+    "block": 70431065,
+    "core": "0xE5E912F99551B0520C172DEC7296816Bb103f573",
+    "factory": "0xF4c211303e00716819E08E735Be2136329557777",
     "main": {
-      "evaluator": "0x13a38Bf23B7e6F748769d54dEA0017235DD0E120",
-      "factory": "0xbf0A7336d774729af63d415b5A6bDae8731b2e9B",
-      "holding": "0x8E2C39f28119F21566D88ba18028B95c1F19Bb31",
+      "evaluator": "0xD8041Ed6FEAbF9e31F1bAA99A95eb09E618c9d75",
+      "factory": "0xF4c211303e00716819E08E735Be2136329557777",
+      "holding": "0x6E35f8faB65b5294094A260C952B5d1efCA6c348",
       "kind": "sidequest-v1",
       "openTokens": true
     },
@@ -57,7 +57,7 @@
       "0x7523106F742B1445b14b0992eE2eA41A3691dc24"
     ],
     "sidequest": {
-      "block": 69362265,
+      "block": 70431058,
       "clocks": {
         "feeDelay": 300,
         "holdingDelay": 262800,
@@ -67,12 +67,12 @@
         "proposalGrace": 1800,
         "unstakeDelay": 259200
       },
-      "factory": "0xbf0A7336d774729af63d415b5A6bDae8731b2e9B",
-      "feeSchedule": "0x9e0CE88C25f5989fd9bC79c88EdB791f9f701033",
-      "safe": "0x77923113FD1a71Ad91F81064C3c05cA1EfB44CD8",
-      "vault": "0x0281F52d12ADbBe48DeF22a79ADef9A2308BD81b"
+      "factory": "0xF4c211303e00716819E08E735Be2136329557777",
+      "feeSchedule": "0x3d6d98d3c4ff2aB9102797DA7d3d3c0eD1188498",
+      "safe": "0x78d5A4DB279C6850a07278A5A8EE76296740E438",
+      "vault": "0x795243DF7f2e84b6EaCF69811F20B4d36980c366"
     },
-    "testnetFaucet": "0x553b9256ac6C4114C61B6faAb06679757C7D4399"
+    "testnetFaucet": "0x6b8AA596f30d765E4F3C6ec2B1e994F19098df33"
   },
   "sidequest": {
     "clocks": {
@@ -84,7 +84,7 @@
       "feeDelay": 300,
       "proposalGrace": 1800
     },
-    "safe": "0x77923113FD1a71Ad91F81064C3c05cA1EfB44CD8",
+    "safe": "0x78d5A4DB279C6850a07278A5A8EE76296740E438",
     "defaultArbitrator": "0x96eE4e1660744A4dE92D9E22476C501063524716",
     "margin": 3600,
     "minimumCreatorBond": 10000000000000000000,
@@ -103,32 +103,14 @@
         300,
         100
       ],
-      "treasury": "0x77923113FD1a71Ad91F81064C3c05cA1EfB44CD8"
+      "treasury": "0x78d5A4DB279C6850a07278A5A8EE76296740E438"
     },
     "allocation": {
       "treasury": "0x77923113FD1a71Ad91F81064C3c05cA1EfB44CD8",
       "ecosystem": "0xeF41b657Ecc8b710e6e32c7c255B891836F060b7",
       "liquidity": "0xe5B7054e177e833D63f8d0548ffa9ecfC4289A71"
     },
-    "token": "0xbf0A7336d774729af63d415b5A6bDae8731b2e9B"
-  },
-  "liquidity": {
-    "uniswapV4": {
-      "poolManager": "0x451D64ab3b650040d2aE1886602b97ed6eDc643d",
-      "positionManager": "0x3Bb14E3D0Cd50aBe3EdACa06d06c29C78676C31A",
-      "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
-      "stateView": "0xB639209539c61BaF67AC04876315786F8D0b153c",
-      "universalRouter": "0x1b7bFCd2870329B987191910D85c22C7287f3c22",
-      "quoter": "0x869834d127b230283fe63E0d0A9bEB67216a94C7",
-      "minHopPrice": true
-    },
-    "quote": "0x6B56D64150818f91f5112B285e806ec6C78EADe8",
-    "fee": 3000,
-    "tickSpacing": 60,
-    "factoryAmount": 10000000,
-    "quoteAmount": 1000,
-    "maxRepairCost": 5,
-    "positionOwner": "0x77923113FD1a71Ad91F81064C3c05cA1EfB44CD8"
+    "token": "0xF4c211303e00716819E08E735Be2136329557777"
   },
   "boards": [
     "https://dev.sidequest.exchange",
@@ -139,12 +121,6 @@
     "explorer": "https://testnet.monadscan.com",
     "nadfun": {
       "api": "https://dev-api.nadapp.net",
-      "app": "https://testnet.nad.fun",
-      "router": "0x75588668999cA0557b78046b8a5E86b47b9234ec",
-      "curve": "0x27063a38eC0D3281D354090EB92e669Ed1eB956C",
-      "tokenImplementation": "0xFD870fEbeeA5C1Cd5b10cd950eFF8f4d63dc81f1",
-      "wmon": "0x5a4E0bFDeF88C9032CB4d24338C5EB3d3870BfDd",
-      "creatorFeeVault": "0xfEB12B7698e296C57BBF9f0c9b38B3e908285A99",
       "protocolManager": "0x2F98030aBD7c59e3E5Dc6b4b66b6008821d0fB41"
     },
     "safe": {
@@ -153,5 +129,13 @@
       "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
       "multiSendCallOnly": "0x9641d764fc13c8B624c04430C7356C1C7C8102e2"
     }
+  },
+  "nadfun": {
+    "app": "https://testnet.nad.fun",
+    "router": "0x75588668999cA0557b78046b8a5E86b47b9234ec",
+    "curve": "0x27063a38eC0D3281D354090EB92e669Ed1eB956C",
+    "tokenImplementation": "0xFD870fEbeeA5C1Cd5b10cd950eFF8f4d63dc81f1",
+    "wmon": "0x5a4E0bFDeF88C9032CB4d24338C5EB3d3870BfDd",
+    "creatorFeeVault": "0xfEB12B7698e296C57BBF9f0c9b38B3e908285A99"
   }
 }
