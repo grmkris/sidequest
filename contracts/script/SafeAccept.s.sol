@@ -12,7 +12,7 @@ import {SidequestSafeAccept, ISafe} from "./SidequestSafeAccept.sol";
 ///
 ///         Without `--broadcast` it is a dry run. `--sig "check()"` only reads back the four owners. Chain 143 also
 ///         needs MAINNET_GO=yes and signs from a keystore, never a raw key: `--account sidequest-safe-owner
-///         --password-file ~/.config/sidequest/safe-owner.password` (docs/mainnet-runbook.md §3.5). Sends up to four
+///         --password-file ~/.config/sidequest/safe-owner.password` (docs/mainnet-runbook.md §3.6). Sends up to four
 ///         transactions, from the owner, to the Safe.
 contract SafeAccept is Script {
     function run() external {
