@@ -8,13 +8,14 @@
  */
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover'
 import { ExternalLink } from 'lucide-react'
-import { type ReactNode, createContext, useContext, useRef, useState } from 'react'
+import { type ReactNode, type RefObject, createContext, useContext, useRef, useState } from 'react'
 import { amount, tokenMeta } from '../../format.ts'
 import { cn } from '../../lib/cn.ts'
 import { MONAD_BADGE, TOKEN_LOGOS } from '../../tokens.generated.ts'
 import { useToken } from '../../useTokens.ts'
-import { chain } from '../../wallet.ts'
+import { chain, sideToken } from '../../wallet.ts'
 import { Popover, PopoverContent } from '../ui/popover.tsx'
+import { useSideSheet } from '../side/SideToken.tsx'
 import { TokenIcon, tokenSource } from './TokenIcon.tsx'
 
 const Static = createContext(false)
@@ -99,14 +100,19 @@ function TokenPopover({
         {children}
       </PopoverPrimitive.Trigger>
       <PopoverContent container={container} side="bottom" align="start" className="w-64">
-        <TokenCard token={token} />
+        {/* Get SIDE only outside sheets: a second modal over one would leave Privy's prompts inert. */}
+        <TokenCard token={token} trigger={container === undefined ? trigger : null} />
       </PopoverContent>
     </Popover>
   )
 }
 
-/** What the token is, for the popover: identity, how far it can be trusted, its address and its explorer page. */
-function TokenCard({ token }: { token: string }) {
+/**
+ * What the token is, for the popover: identity, how far it can be trusted, its address and its explorer page; for SIDE,
+ * Get SIDE, which opens the SIDE sheet and returns focus to `trigger` (null inside a sheet, where it is left out).
+ */
+function TokenCard({ token, trigger }: { token: string; trigger: RefObject<HTMLButtonElement | null> | null }) {
+  const sheet = useSideSheet()
   const a = token.toLowerCase()
   const meta = tokenMeta(a)
   const listed = TOKEN_LOGOS[`${chain.id}:${a}`]
@@ -152,6 +158,14 @@ function TokenCard({ token }: { token: string }) {
         View on {chain.blockExplorers?.default.name ?? 'the explorer'}
         <ExternalLink aria-hidden className="size-3.5 text-muted-foreground" />
       </a>
+      {sheet !== null && trigger !== null && a === sideToken?.toLowerCase() && (
+        <PopoverPrimitive.Close
+          className="inline-flex items-center gap-1.5 text-left text-sm font-medium text-foreground hover:underline"
+          onClick={() => sheet.open({ returnFocus: trigger.current })}
+        >
+          Get SIDE
+        </PopoverPrimitive.Close>
+      )}
     </div>
   )
 }

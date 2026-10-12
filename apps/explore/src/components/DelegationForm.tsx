@@ -5,6 +5,8 @@ import { Address as AddressText, Section, Segmented } from './kit.tsx'
 import type { Address } from 'viem'
 import { duration } from '../duration.ts'
 import { factoryAmount } from '../stake.ts'
+import { formatNumber } from '../format.ts'
+import { SideChip } from './side/SideToken.tsx'
 
 import { factoryValue } from './DelegationPositions.tsx'
 
@@ -24,6 +26,7 @@ export function DelegationForm({
   onText,
   onSubmit,
   framed = true,
+  onGetSide,
 }: {
   account: Address
   owner: Address
@@ -41,11 +44,15 @@ export function DelegationForm({
   onSubmit: () => void
   /** Inside a sheet, which carries its own title, the form goes without its section. */
   framed?: boolean
+  /** Closes the sheet the form sits in before the SIDE sheet opens over it. */
+  onGetSide?: (() => void) | undefined
 }) {
   const value = factoryAmount(text)
   const maximum = mode === 'add' ? wallet : active
   const invalid = text.trim() !== '' && value === null
   const tooMuch = value !== null && maximum !== undefined && value > maximum
+  /** The SIDE the wallet lacks for this backing, which the SIDE sheet offers to buy. */
+  const lacking = mode === 'add' && value !== null && wallet !== undefined && value > wallet ? value - wallet : null
   const own = account.toLowerCase() === owner.toLowerCase()
   const form = (
     <form
@@ -120,7 +127,21 @@ export function DelegationForm({
       {tooMuch && (
         <Alert variant="destructive">
           <AlertDescription>
-            {mode === 'add' ? 'That is more SIDE than your wallet holds.' : 'That is more than your active position.'}
+            {mode === 'add' ? (
+              <>
+                That is more SIDE than your wallet holds.
+                {lacking !== null && (
+                  <>
+                    {' '}
+                    <SideChip variant="link" need={lacking} onOpen={onGetSide}>
+                      Get {formatNumber(lacking, 18)} SIDE
+                    </SideChip>
+                  </>
+                )}
+              </>
+            ) : (
+              'That is more than your active position.'
+            )}
           </AlertDescription>
         </Alert>
       )}

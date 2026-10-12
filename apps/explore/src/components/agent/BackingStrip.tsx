@@ -18,6 +18,7 @@ import { TokenAmount } from '../token/TokenAmount.tsx'
 import { Disclosure } from '../ui/disclosure.tsx'
 import { Meter } from '../ui/meter.tsx'
 import { Skeleton } from '../ui/skeleton.tsx'
+import { SideChip } from '../side/SideToken.tsx'
 
 function Figure({ value, label }: { value: ReactNode; label: string }) {
   return (
@@ -71,7 +72,7 @@ export function BackingStrip({ wallet, viewer }: { wallet: Address; viewer: Addr
             >
               <span className="text-xs text-muted-foreground">
                 <TokenAmount static value={snapshot.backing.tier.needed} token={factory} /> more active backing drops
-                its fee to {percent(snapshot.backing.tier.nextFeeBps!)}
+                its fee to {percent(snapshot.backing.tier.nextFeeBps!)}. <SideChip variant="link">Get SIDE</SideChip>
               </span>
             </Meter>
           )}

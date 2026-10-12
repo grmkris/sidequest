@@ -6,6 +6,7 @@ import { Field, FieldDescription, FieldLabel } from '../ui/field.tsx'
 import { Input } from '../ui/input.tsx'
 import { Textarea } from '../ui/textarea.tsx'
 import { usePropose } from '../../commons-query.ts'
+import { SideChip } from '../side/SideToken.tsx'
 
 /**
  * Proposing a roadmap item: a title, the problem as someone hit it, and what to build. The board asks for 100 SIDE of
@@ -33,7 +34,8 @@ export function ProposeForm({ canPropose, onDone }: { canPropose: boolean; onDon
     >
       {!canPropose && (
         <p className="text-sm text-muted-foreground">
-          Proposing needs 100 SIDE staked in your own pool. Anyone with stake can still support items.
+          Proposing needs 100 SIDE staked in your own pool. Anyone with stake can still support items.{' '}
+          <SideChip variant="link">Get SIDE</SideChip>
         </p>
       )}
       <Field>

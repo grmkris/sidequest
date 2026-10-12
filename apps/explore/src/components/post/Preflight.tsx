@@ -11,8 +11,9 @@ import { stakeContext } from '../../stake-context.ts'
 import { formatNumber, tokenInfo } from '../../format.ts'
 import { sidequest } from '../../sidequest.ts'
 import { useToken } from '../../useTokens.ts'
-import { chain, getSideLink, isMainnet } from '../../wallet.ts'
+import { chain, isMainnet } from '../../wallet.ts'
 
+import { SideChip } from '../side/SideToken.tsx'
 import { TokenAmount } from '../token/TokenAmount.tsx'
 import { Mark } from '../controls.tsx'
 
@@ -195,15 +196,10 @@ export function Preflight({
             {funding.data !== undefined && funding.data.shortfall > 0n && (
               <span className="block text-ui text-warning-text">
                 You need {formatNumber(funding.data.shortfall, 18)} more liquid SIDE for backing and any SIDE reward.
-                Review can include a backing deposit.
-                {getSideLink !== null && (
-                  <>
-                    {' '}
-                    <a className={textLinkClass} href={getSideLink} target="_blank" rel="noreferrer">
-                      Get SIDE on nad.fun
-                    </a>
-                  </>
-                )}
+                Review can include a backing deposit.{' '}
+                <SideChip variant="link" need={funding.data.shortfall}>
+                  Get {formatNumber(funding.data.shortfall, 18)} SIDE
+                </SideChip>
               </span>
             )}
             {funding.isError && (

@@ -355,6 +355,10 @@ function Stake({
         onText={setText}
         onSubmit={() => void submit()}
         framed={scope.kind === 'agent' && agentSheet === undefined}
+        onGetSide={() => {
+          setSheet(null)
+          closeAgentSheet?.(false)
+        }}
       />
     </>
   )

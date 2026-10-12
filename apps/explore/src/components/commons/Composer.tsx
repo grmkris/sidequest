@@ -6,6 +6,7 @@ import { Textarea } from '../ui/textarea.tsx'
 import { useAuth } from '../Wallet.tsx'
 import { MESSAGE_MAX, type Message, type Viewer, composerGuidance, shortAddress } from '../../commons.ts'
 import { usePost } from '../../commons-query.ts'
+import { SideChip } from '../side/SideToken.tsx'
 
 /**
  * Writing in a thread. The board decides who may post; the composer only explains its answer (sign in, or the SIDE it
@@ -38,7 +39,11 @@ export function Composer({
     onCancelReply()
   }
   if (guidance !== null && auth.signedIn && viewer !== null)
-    return <p className="text-sm text-muted-foreground">{guidance}</p>
+    return (
+      <p className="text-sm text-muted-foreground">
+        {guidance} <SideChip variant="link">Get SIDE</SideChip>
+      </p>
+    )
   return (
     <form
       className="grid gap-2"
