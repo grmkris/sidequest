@@ -3,7 +3,7 @@ import { Button } from './ui/button.tsx'
 import { Item, ItemGroup, ItemContent, ItemDescription, ItemActions } from './ui/item.tsx'
 import { Link } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
-import { Details, Address, CopyButton, Section, textLinkClass } from './kit.tsx'
+import { AddressRow, Details, Section, textLinkClass } from './kit.tsx'
 import { TestnetFaucet } from './TestnetFaucet.tsx'
 import { SideChip, useSideSheet } from './side/SideToken.tsx'
 import { Fragment, useState } from 'react'
@@ -14,7 +14,7 @@ import { approxUsd } from '../usd.ts'
 import { type BalanceRow, useWalletBalances, useWalletTokens } from '../wallet-balances.ts'
 import { TokenIcon } from './token/TokenIcon.tsx'
 import { TokenAmount } from './token/TokenAmount.tsx'
-import { chain, deployment, explorer, isMainnet } from '../wallet.ts'
+import { chain, deployment, isMainnet } from '../wallet.ts'
 
 /**
  * The signed-in Privy wallet's balances and how to fund it: people send MON (gas) and the reward/bond tokens to this
@@ -41,7 +41,6 @@ function FundPanel({ address, onClose }: { address: `0x${string}`; onClose: () =
     ),
     query: { refetchInterval: 10_000 },
   })
-  const [copied, setCopied] = useState(false)
   return (
     <div className="absolute right-0 z-20 mt-2 w-80 rounded-lg border border-border bg-card p-4 text-sm shadow-lg">
       <div className="mb-2 flex items-center justify-between">
@@ -55,21 +54,7 @@ function FundPanel({ address, onClose }: { address: `0x${string}`; onClose: () =
         address on {chain.name}, from any wallet you already have.
       </p>
       <Details summary="Technical details" className="mb-3">
-        <div className="flex items-center gap-2">
-          <code className="break-all rounded bg-muted px-2 py-1 text-xs">{address}</code>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              await navigator.clipboard.writeText(address)
-              setCopied(true)
-            }}
-          >
-            {copied ? 'Copied' : 'Copy'}
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Explorer: <Address value={address} />
-        </p>
+        <AddressRow value={address} />
       </Details>
       <ul className="mb-3 flex flex-col gap-1">
         <li className="flex justify-between">
@@ -162,7 +147,7 @@ function StakedRow({ value, usd }: { value: bigint; usd: number | undefined }) {
     <Item render={<Link to="/account" hash="backing" />}>
       <ItemContent className="min-w-0 flex-1">
         SIDE staked
-        <ItemDescription className="block text-xs text-muted-foreground">Staked</ItemDescription>
+        <ItemDescription className="block text-xs text-muted-foreground">Behind agents</ItemDescription>
       </ItemContent>
       <Amount token={deployment.factory} value={value} decimals={18} text={undefined} usd={usd} />
       <ItemActions>
@@ -191,31 +176,45 @@ export function WalletCard({ address }: { address: `0x${string}` }) {
           </>
         ) : (
           <>
-            Testnet: SIDE, mUSD and mEUR come from Get test tokens, MON from{' '}
+            Testnet MON comes from{' '}
             <a className={textLinkClass} href="https://faucet.monad.xyz" target="_blank" rel="noreferrer">
               faucet.monad.xyz
             </a>
-            . Test tokens have no value.
+            .
           </>
         )
       }
     >
-      <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl bg-muted/60 px-3 py-2">
-        <code className="min-w-0 flex-1 break-all font-mono text-ui">{address}</code>
-        <CopyButton value={address} label="Copy address" />
-        <a className={textLinkClass} href={explorer('address', address)} target="_blank" rel="noreferrer">
-          Explorer
-        </a>
-      </div>
+      <AddressRow value={address} />
       <ItemGroup>
         {rows.map((row) => (
           <Fragment key={row.token ?? row.symbol}>
-            <Item>
+            {/* SIDE opens the SIDE sheet (buy, sell, its address and pages), as "SIDE staked" opens Backing. */}
+            <Item
+              {...(row.role === 'bond' && sheet !== null
+                ? {
+                    render: (
+                      <button
+                        type="button"
+                        aria-haspopup="dialog"
+                        aria-label={`SIDE: ${shown(row) ?? formatNumber(row.value!, row.decimals)} in your wallet. Buy or sell`}
+                        onClick={() => sheet.open()}
+                      />
+                    ),
+                    className: 'w-full text-left',
+                  }
+                : {})}
+            >
               <ItemContent className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-                {row.role === 'bond' && sheet !== null ? <SideChip variant="compact" className="w-fit" /> : row.symbol}
+                {row.symbol}
                 <ItemDescription className="block text-xs text-muted-foreground">{WHAT[row.role]}</ItemDescription>
               </ItemContent>
               <Amount token={row.token} value={row.value} decimals={row.decimals} text={shown(row)} usd={row.usd} />
+              {row.role === 'bond' && sheet !== null && (
+                <ItemActions>
+                  <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
+                </ItemActions>
+              )}
             </Item>
             {row.role === 'bond' && staked.value !== undefined && <StakedRow value={staked.value} usd={staked.usd} />}
           </Fragment>
