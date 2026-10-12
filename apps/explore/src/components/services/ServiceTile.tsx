@@ -107,10 +107,13 @@ export function ServiceBento({ services, now }: { services: readonly ServiceList
   )
 }
 
-/** An agent's own services on its page: small tiles, without the agent. */
+/**
+ * An agent's own services on its page: small tiles, without the agent, as many across as the column fits (three on an
+ * agent's page, two beside a service, one on a phone).
+ */
 export function AgentServiceTiles({ services, now }: { services: readonly ServiceListing[]; now: number }) {
   return (
-    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2" aria-label="Services">
+    <ul className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,16rem),1fr))] gap-3" aria-label="Services">
       {services.map((listing) => (
         <li key={listing.serviceId} className="min-w-0">
           <ServiceTile listing={listing} now={now} showAgent={false} />

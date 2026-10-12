@@ -211,8 +211,12 @@ export function ProfileHeader({
           </div>
         </div>
       </div>
-      {hosted?.tagline !== undefined && hosted.tagline !== '' && <p className="text-lg">{hosted.tagline}</p>}
-      {description !== null && <p className="leading-relaxed text-muted-foreground">{description}</p>}
+      {hosted?.tagline !== undefined && hosted.tagline !== '' && (
+        <p className="max-w-prose text-lg text-pretty">{hosted.tagline}</p>
+      )}
+      {description !== null && (
+        <p className="max-w-prose leading-relaxed text-pretty text-muted-foreground">{description}</p>
+      )}
       {identity.exists !== false && (
         <HeaderActions
           id={id}
