@@ -932,7 +932,7 @@ export const tools: Record<string, Tool> = {
 
   submit_ruling: {
     description:
-      'Arbitrator: the signature over the Ruling from prepare_ruling. The board checks it against the arbitrator key and relays ruleWithSignature (the relay pays gas and holds no authority).',
+      'Arbitrator: the signature over the Ruling from prepare_ruling. The board checks and stores it, then returns transactions, the ruling nonce and landed state. Send ruleWithSignature from the arbitrator wallet paying MON, then report_transaction.',
     inputSchema: {
       type: 'object',
       properties: { ...taskId, signature: str('0x signature.') },

@@ -138,8 +138,8 @@ export interface BoardConfig {
   /** Jev's model endpoint (advisory screening at publish); absent → "unscreened". */
   readonly screening?: ModelEndpoint
   /**
-   * The relay that sends signed rulings (`ruleWithSignature`). It holds no authority: the evaluator checks the
-   * arbitrator's signature. Absent: `submit_ruling` returns the transaction for anyone to send.
+   * Legacy relay configuration for account upgrades and sponsorship. Rulings are always prepared for the
+   * arbitrator to send from its own funded wallet.
    */
   readonly relay?: { readonly account: import('viem').LocalAccount; readonly rpcUrl: string }
   /** Hosted tenants route every relay send to the shared sponsorship object's durable nonce ledger. */
@@ -3090,11 +3090,32 @@ export class Board {
   }
 
   #ruling(taskId: string, disputedAt: number): RulingRow | undefined {
-    return this.#sql.all<RulingRow>(
+    const row = this.#sql.all<RulingRow>(
       'SELECT * FROM rulings WHERE task_id = ? AND disputed_at = ?',
       taskId,
       disputedAt,
     )[0]
+    if (row === undefined || row.tx_hash !== null) return row
+    const confirmed = this.#sql.all<{ tx_hash: string }>(
+      `SELECT tx_hash FROM operations WHERE task_id=? AND kind='rule' AND status='confirmed' AND created_at>=?
+       AND json_extract(detail, '$.reasonHash')=? AND json_extract(detail, '$.forWorker')=?
+       AND json_extract(detail, '$.slashLoser')=? ORDER BY created_at LIMIT 1`,
+      taskId,
+      row.created_at,
+      row.reason_hash,
+      row.for_worker,
+      row.slash_loser,
+    )[0]
+    if (confirmed !== undefined) {
+      this.#sql.run(
+        'UPDATE rulings SET tx_hash=? WHERE task_id=? AND disputed_at=?',
+        confirmed.tx_hash,
+        taskId,
+        disputedAt,
+      )
+      return { ...row, tx_hash: confirmed.tx_hash }
+    }
+    return row
   }
 
   /**
@@ -3397,10 +3418,7 @@ export class Board {
     return { upgraded: true, txHash: hash }
   }
 
-  /**
-   * The signed ruling: checked against the arbitrator key on the chain, stored, and relayed with
-   * `ruleWithSignature` (the relay pays gas and holds no authority). Idempotent: a relayed ruling returns its hash.
-   */
+  /** Stores a checked signature and prepares the arbitrator-funded send; chain nonce reads reconcile retries. */
   async submitRuling(caller: Caller, input: { taskId: string; signature: string }) {
     this.#requireCaller(caller)
     const task = this.#task(input.taskId)
@@ -3414,73 +3432,56 @@ export class Board {
     })
     const row = this.#ruling(task.id, disputedAt)
     if (row === undefined) throw new BoardError('not-found', 'no decision recorded; prepare_ruling first')
-    if (row.tx_hash !== null)
-      return { txHash: row.tx_hash, relayed: true, task: await this.getTask(caller, { taskId: task.id }) }
     const ruling = this.#rulingMessage(row)
     const arbitrator = await this.#arbitratorOf(task)
-    const valid = await ctx.publicClient.verifyTypedData({
-      address: arbitrator,
-      domain: sdk.evaluatorDomain(ctx.deployment.chainId, ctx.stack.evaluator),
-      types: sdk.rulingTypes,
-      primaryType: 'Ruling',
-      message: { ...ruling },
-      signature: input.signature as Hex,
-    })
-    if (!valid) throw new BoardError('forbidden', 'the signature is not the arbitrator’s over this ruling')
-    this.#sql.run(
-      'UPDATE rulings SET signature = ? WHERE task_id = ? AND disputed_at = ?',
-      input.signature,
-      task.id,
-      disputedAt,
-    )
-    const tx = this.#tx(
-      ctx,
-      'ruleWithSignature: settles the dispute as ruled',
-      ctx.stack.evaluator,
-      encodeFunctionData({
-        abi: sidequest.evaluatorAbi(ctx),
-        functionName: 'ruleWithSignature',
-        args: [ruling, input.signature as Hex],
-      }),
-      sdk.V1_GAS.evaluator,
-    )
-    const relay = this.#config.relay
-    // A crash after an earlier relay: the nonce is spent, so that ruling is on-chain; never send a second one.
+    // SAFETY: viem validates the signature's encoding and signer against the exact persisted ruling below.
+    const signature = (row.signature ?? input.signature) as Hex
     const spent = await sidequest.rulingNonceUsed(ctx, arbitrator, ruling.nonce)
     if (spent && (await sdk.caseOf(ctx, this.#jobId(task))).outcome === 0)
       throw new BoardError(
         'conflict',
         'the ruling nonce was cancelled; prepare_ruling returns a new nonce for the recorded decision',
       )
-    if (spent)
-      return {
-        relayed: true,
-        txHash: null,
-        note: 'this ruling is already on-chain (its nonce is spent)',
-        task: await this.getTask(caller, { taskId: task.id }),
-      }
-    if (relay === undefined)
-      return { relayed: false, transactions: [tx], next: 'Anyone may send it; then report_transaction.' }
-    const hash = await this.#sendRelay({
-      key: `ruling:${ctx.stack.evaluator}:${ruling.nonce}:${input.signature}`,
-      to: tx.to,
-      data: tx.data,
-      ...(tx.gas === undefined ? {} : { gas: tx.gas }),
-    })
-    const receipt = await ctx.publicClient.waitForTransactionReceipt({ hash })
-    this.#sql.run(
-      'UPDATE rulings SET tx_hash = ? WHERE task_id = ? AND disputed_at = ?',
-      receipt.transactionHash,
-      task.id,
-      disputedAt,
-    )
-    this.#sql.run(
-      "UPDATE operations SET status = 'confirmed', tx_hash = ?, updated_at = ? WHERE task_id = ? AND kind = 'rule' AND status = 'prepared'",
-      receipt.transactionHash,
-      this.#now(),
-      task.id,
-    )
-    return { txHash: receipt.transactionHash, relayed: true, task: await this.getTask(caller, { taskId: task.id }) }
+    if (!spent) {
+      const valid = await ctx.publicClient.verifyTypedData({
+        address: arbitrator,
+        domain: sdk.evaluatorDomain(ctx.deployment.chainId, ctx.stack.evaluator),
+        types: sdk.rulingTypes,
+        primaryType: 'Ruling',
+        message: { ...ruling },
+        signature,
+      })
+      if (!valid) throw new BoardError('forbidden', 'the signature is not the arbitrator’s over this ruling')
+      this.#sql.run(
+        'UPDATE rulings SET signature = ? WHERE task_id = ? AND disputed_at = ?',
+        signature,
+        task.id,
+        disputedAt,
+      )
+    }
+    return {
+      nonce: row.nonce,
+      landed: spent,
+      relayed: false,
+      txHash: row.tx_hash,
+      transactions: [
+        this.#tx(
+          ctx,
+          'ruleWithSignature: settles the dispute as ruled',
+          ctx.stack.evaluator,
+          encodeFunctionData({
+            abi: sidequest.evaluatorAbi(ctx),
+            functionName: 'ruleWithSignature',
+            args: [ruling, signature],
+          }),
+          sdk.V1_GAS.evaluator,
+        ),
+      ],
+      next: spent
+        ? 'This ruling is already onchain.'
+        : 'Send from the arbitrator wallet paying MON, then report_transaction.',
+      state: spent ? 'landed' : 'prepared',
+    }
   }
 
   /** Voids an unsent v1 ruling before a retry. The decision stays recorded; only its authorization changes. */

@@ -1,19 +1,23 @@
 /**
  * One arbiter pass (plan B2.4): hold the lease, then for every open dispute on the board without a decision, read
  * the bundle, let the model propose, and sign only what the deterministic gate allows. The board records the
- * decision per dispute and relays the signed ruling; the harness sends a locally rebuilt cancellation on a v1 retry
+ * decision per dispute and prepares the signed ruling; the arbitrator pays MON to send it; the harness sends a locally rebuilt cancellation on a v1 retry
  * from the arbitrator wallet, and never signs a message it did not rebuild itself: the Ruling it signs uses the evaluator domain from the SDK deployment, the
  * job from the bundle and exactly the validated proposal.
  */
 import { type DisputeBundle, type DisputeThread, checkRulingRequest, validateProposal } from '@sidequest/board'
 import * as sdk from '@sidequest/sdk'
 import { type Hex, type LocalAccount, encodeFunctionData } from 'viem'
+import type { RulingSend } from './ruling-journal.ts'
+import type { RulingResult } from './runtime.ts'
 
 export interface BoardLike {
   call<T = any>(tool: string, args?: Record<string, unknown>): Promise<T>
 }
 
 export interface ArbiterDeps {
+  readonly sendRuling?: (intended: RulingSend) => Promise<RulingResult>
+  readonly resumeRuling?: (taskId: string) => Promise<RulingResult | undefined>
   readonly board: BoardLike
   readonly account: LocalAccount
   readonly network: sdk.Network
@@ -77,6 +81,18 @@ export async function arbitrateOnce(deps: ArbiterDeps): Promise<{ lease: boolean
 }
 
 async function decide(deps: ArbiterDeps, d: DisputeRow, now: () => number, log: (m: string) => void): Promise<Outcome> {
+  const resumed = await deps.resumeRuling?.(d.taskId)
+  if (resumed !== undefined && d.decision !== null) {
+    if (resumed.txHash !== null)
+      await deps.board.call('report_transaction', { taskId: d.taskId, txHash: resumed.txHash })
+    return {
+      taskId: d.taskId,
+      result: 'ruled',
+      forWorker: d.decision.forWorker,
+      slashLoser: d.decision.slashLoser,
+      txHash: resumed.txHash,
+    }
+  }
   if (now() >= d.arbitrationEndsAt) return { taskId: d.taskId, result: 'skipped', why: 'the window has closed' }
   const {
     bundle,
@@ -100,48 +116,9 @@ async function decide(deps: ArbiterDeps, d: DisputeRow, now: () => number, log: 
   // A decision already recorded for this dispute (by this runner before a crash, or by another harness) is final:
   // re-use it and never ask the model again (R114-08). It still passes the same deterministic gate.
   const recorded = d.decision
-  if (recorded !== null) {
-    const cancellation = await deps.board.call<{
-      resolved: boolean
-      nonce: string | null
-      transactions: sdk.TxRequest[]
-    }>('cancel_ruling', { taskId: d.taskId })
-    if (cancellation.resolved)
-      return { taskId: d.taskId, result: 'skipped', why: 'the dispute is already resolved on-chain' }
-    if (cancellation.transactions.length > 0) {
-      if (
-        cancellation.nonce === null ||
-        !/^\d+$/.test(cancellation.nonce) ||
-        BigInt(cancellation.nonce) >= 2n ** 256n
-      ) {
-        return { taskId: d.taskId, result: 'skipped', why: 'invalid ruling cancellation nonce' }
-      }
-      const transaction: sdk.TxRequest = {
-        description: 'Cancel the previous ruling authorization',
-        chainId,
-        to: stack.evaluator,
-        value: '0',
-        data: encodeFunctionData({
-          abi: sdk.sidequestEvaluatorAbi,
-          functionName: 'cancelRuling',
-          args: [BigInt(cancellation.nonce)],
-        }),
-      }
-      const offered = cancellation.transactions[0]!
-      if (
-        cancellation.transactions.length !== 1 ||
-        offered.chainId !== chainId ||
-        offered.to.toLowerCase() !== stack.evaluator.toLowerCase() ||
-        offered.data !== transaction.data ||
-        offered.value !== '0'
-      ) {
-        return { taskId: d.taskId, result: 'skipped', why: 'ruling cancellation request refused' }
-      }
-      if (!deps.sendCancellation)
-        return { taskId: d.taskId, result: 'skipped', why: 'ruling cancellation needs the arbitrator wallet' }
-      await deps.sendCancellation(transaction)
-    }
-  }
+  if (recorded !== null && (await cancelRecordedRuling(deps, d.taskId, chainId, stack.evaluator)))
+    return { taskId: d.taskId, result: 'skipped', why: 'the dispute is already resolved on-chain' }
+
   const raw =
     recorded !== null && recorded.reason !== null
       ? { forWorker: recorded.forWorker, slashLoser: recorded.slashLoser, reason: recorded.reason }
@@ -175,15 +152,107 @@ async function decide(deps: ArbiterDeps, d: DisputeRow, now: () => number, log: 
     primaryType: 'Ruling',
     message: request.ruling,
   })
-  const submitted = await deps.board.call<{ txHash?: string; relayed: boolean }>('submit_ruling', {
-    taskId: d.taskId,
+  const sent = await submitAndSendRuling(deps, d.taskId, {
+    chainId,
+    evaluator: stack.evaluator,
+    ruling: request.ruling,
     signature,
   })
+
   return {
     taskId: d.taskId,
     result: 'ruled',
     forWorker: proposal.forWorker,
     slashLoser: proposal.slashLoser,
-    txHash: submitted.txHash ?? null,
+    txHash: sent.txHash,
   }
+}
+
+async function cancelRecordedRuling(
+  deps: ArbiterDeps,
+  taskId: string,
+  chainId: number,
+  evaluator: Hex,
+): Promise<boolean> {
+  const cancellation = await deps.board.call<{
+    resolved: boolean
+    nonce: string | null
+    transactions: sdk.TxRequest[]
+  }>('cancel_ruling', { taskId: taskId })
+  if (cancellation.resolved) return true
+  if (cancellation.transactions.length > 0) {
+    if (cancellation.nonce === null || !/^\d+$/.test(cancellation.nonce) || BigInt(cancellation.nonce) >= 2n ** 256n) {
+      throw new Error('invalid ruling cancellation nonce')
+    }
+    const transaction: sdk.TxRequest = {
+      description: 'Cancel the previous ruling authorization',
+      chainId,
+      to: evaluator,
+      value: '0',
+      data: encodeFunctionData({
+        abi: sdk.sidequestEvaluatorAbi,
+        functionName: 'cancelRuling',
+        args: [BigInt(cancellation.nonce)],
+      }),
+    }
+    const offered = cancellation.transactions[0]!
+    if (
+      cancellation.transactions.length !== 1 ||
+      offered.chainId !== chainId ||
+      offered.to.toLowerCase() !== evaluator.toLowerCase() ||
+      offered.data !== transaction.data ||
+      offered.value !== '0'
+    ) {
+      throw new Error('ruling cancellation request refused')
+    }
+    if (!deps.sendCancellation) throw new Error('ruling cancellation needs the arbitrator wallet')
+    await deps.sendCancellation(transaction)
+  }
+  return false
+}
+
+async function submitAndSendRuling(
+  deps: ArbiterDeps,
+  taskId: string,
+  prepared: { chainId: number; evaluator: Hex; ruling: sdk.Ruling; signature: Hex },
+): Promise<RulingResult> {
+  const { chainId, evaluator, ruling, signature } = prepared
+  const submitted = await deps.board.call<{
+    txHash: Hex | null
+    landed: boolean
+    nonce: string
+    transactions: sdk.TxRequest[]
+  }>('submit_ruling', {
+    taskId: taskId,
+    signature,
+  })
+  const transaction: sdk.TxRequest = {
+    description: 'Send the signed ruling',
+    chainId,
+    to: evaluator,
+    value: '0',
+    data: encodeFunctionData({
+      abi: sdk.sidequestEvaluatorAbi,
+      functionName: 'ruleWithSignature',
+      args: [ruling, signature],
+    }),
+  }
+  const offered = submitted.transactions[0]
+  if (
+    submitted.nonce !== ruling.nonce.toString() ||
+    submitted.transactions.length !== 1 ||
+    offered === undefined ||
+    offered.chainId !== chainId ||
+    offered.to.toLowerCase() !== transaction.to.toLowerCase() ||
+    offered.value !== '0' ||
+    offered.data !== transaction.data
+  )
+    throw new Error('ruling transaction request refused')
+  if (!submitted.landed && deps.sendRuling === undefined) throw new Error('ruling needs the funded arbitrator wallet')
+  const sent = submitted.landed
+    ? { txHash: submitted.txHash }
+    : await deps.sendRuling!({ taskId: taskId, nonce: submitted.nonce, transaction: { ...transaction, value: '0' } })
+  if (sent.txHash !== null) await deps.board.call('report_transaction', { taskId: taskId, txHash: sent.txHash })
+
+  return sent
 }
