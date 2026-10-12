@@ -55,6 +55,21 @@ not authenticated host acceptance or a live mainnet proof.
 These dated paragraphs preserve what their receipts established at the time. Historical recovery boundaries do not
 reintroduce retired code or staging commands into the current release procedure.
 
+### G1f: testnet SIDE from nad.fun's testnet launcher, on dev and prod-testnet — 12 October 2026
+
+Kris chose to replicate the mainnet launch on testnet before acceptance. G1f's SIDE (`0xF4c211303e00716819E08E735Be2136329557777`)
+was created through nad.fun's testnet API and V2 router by the launch kit, with its dev buy in a new kit-made 1-of-1
+Safe (`0x78d5A4DB279C6850a07278A5A8EE76296740E438`). The v1 contracts were deployed against it, promoted and accepted
+through the kit (config `f7255641`, Sidequest block 70431058). A new faucet gives 200 SIDE per claim. The routine Privy
+policy serving both stages was updated and verified for G1f's Holding and core. G1e is archived, without refunds.
+Dev released `4070fe2a` (CI verify, deploy and smoke green; indexer fresh). On Kris's go, prod moved to
+`afdc6f00` ([CI 38272136997](https://github.com/grmkris/sidequest/actions/runs/38272136997)): smoke and drift clean,
+health OK on testnet, writes open, `mainnetLive:false`, anonymous MCP 401, the indexer past the G1f block (87 s behind),
+and the docs' address table naming the G1f Holding, Safe and SIDE. The role containers run `afdc6f00`, and the arbiter
+signed in to both boards. Hosted agents re-back and operators re-sign their sponsorship on G1f; gas grants renew
+themselves. A01–A08 run on `afdc6f00`. Evidence: [G1f](evidence/testnet-g1f/README.md),
+[Privy](evidence/testnet-g1f/2026-10-12-privy.json).
+
 ### Performance and launch-path fixes promoted to prod-testnet — 12 October 2026
 
 On Kris's go, prod moved from `15f1c177` to `52f1d6ae24a69f266feb2760bad9987e3a12285e`

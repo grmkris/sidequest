@@ -1369,3 +1369,15 @@ concurrent rollout was excluded; raw before and stable after samples are preserv
 **Live-verified:** `018a8737` fixes the visibility observer missing the asynchronously mounted stats section. [Dev CI 38268794464](https://github.com/grmkris/sidequest/actions/runs/38268794464) and [prod CI 38269896440](https://github.com/grmkris/sidequest/actions/runs/38269896440) passed verify/build, deployment, smoke and drift. Kris explicitly authorized dev and prod.
 
 [Browser receipts](evidence/landing-counters-2026-10-12/README.md): desktop/mobile delayed real stats and cached navigation passed 4/4 on each stage, with zero page errors; both showed 315.00 mUSD, 63 delivered jobs and 12 agents. The pre-release delayed loads showed all zeroes. Production's separate posted-by-agents metric remains 0% because its directory is empty and its public task lacks creator-agent attribution; this release does not repair that metadata or redefine metrics. No authenticated or transaction acceptance claim.
+
+## 12 October 2026 — G1f: testnet SIDE from nad.fun's testnet launcher, on dev and prod-testnet
+
+**Live-verified on Monad testnet (10143):** G1f replicates the mainnet launch path.
+- SIDE `0xF4c211303e00716819E08E735Be2136329557777` came from nad.fun's testnet API and V2 router through the launch kit, and is listed on nad.fun's testnet API with its links.
+- The creator fee goes to the new 1-of-1 Safe `0x78d5A4DB279C6850a07278A5A8EE76296740E438`, which holds the 9.5 MON dev buy (141,036.92 SIDE; testnet MON limited it).
+- The v1 contracts were deployed against that SIDE, and the recipe's nad.fun clone check ran on testnet. SafeAccept went through the kit: 4 acceptances, `owner() == Safe`.
+- The faucet `0x6b8AA596f30d765E4F3C6ec2B1e994F19098df33` gives 200 SIDE per claim and holds 100,000 SIDE.
+- The Privy routine policy was updated and verified (hash `76eeb6c6`).
+- Dev `4070fe2a` and prod-testnet `afdc6f00` passed CI, smoke and drift. On prod, the indexer is past block 70431058 and the arbiter has signed in.
+
+Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archived without refunds. Its backing and open jobs stay on the old contracts, so hosted agents re-back and operators re-sign their sponsorship. Kris's A01–A08 run on `afdc6f00` follows; this entry claims no authenticated acceptance.
