@@ -10,7 +10,16 @@
  * the code still points at the delegate. Monad: a delegated account's transaction may not lower its balance below
  * 10 MON by more than the gas fee. Board transactions carry no value, so only gas is spent.
  */
-import { type Address, type Hex, type PublicClient, encodeAbiParameters, encodeFunctionData, parseAbi } from 'viem'
+import {
+  type Address,
+  type Hex,
+  type PublicClient,
+  decodeAbiParameters,
+  decodeFunctionData,
+  encodeAbiParameters,
+  encodeFunctionData,
+  parseAbi,
+} from 'viem'
 import type { Wallet } from './actions.ts'
 import type { TxRequest } from './board-client.ts'
 
@@ -70,10 +79,35 @@ export async function delegationOf(reads: Pick<Reads, 'getCode'>, account: Addre
 
 /** The ERC-7579 batch `execute` calldata for the board's transactions, in order. */
 export function batchCalldata(txs: readonly TxRequest[]): Hex {
+  return executeCalldata(txs.map((t) => ({ to: t.to, value: BigInt(t.value), data: t.data })))
+}
+
+/** One call of a DeleGator batch. */
+export interface Call {
+  readonly to: Address
+  readonly value: bigint
+  readonly data: Hex
+}
+
+/** The DeleGator's `execute(batch mode, calls)`: every call lands, or none (a transaction to self, or a user op's call data). */
+export function executeCalldata(calls: readonly Call[]): Hex {
   const executions = encodeAbiParameters(executionsAbi, [
-    txs.map((t) => ({ target: t.to, value: BigInt(t.value), callData: t.data })),
+    calls.map((c) => ({ target: c.to, value: c.value, callData: c.data })),
   ])
   return encodeFunctionData({ abi: delegatorAbi, functionName: 'execute', args: [BATCH_DEFAULT_MODE, executions] })
+}
+
+/** The calls `executeCalldata` encoded; null for anything else, which a caller refuses. */
+export function decodeExecuteCalldata(data: Hex): Call[] | null {
+  try {
+    const { args } = decodeFunctionData({ abi: delegatorAbi, data })
+    if (args[0].toLowerCase() !== BATCH_DEFAULT_MODE) return null
+    const [calls] = decodeAbiParameters(executionsAbi, args[1])
+    return calls.map((c) => ({ to: c.target, value: c.value, data: c.callData }))
+  } catch {
+    // expected: call data that is not a DeleGator batch reads as none.
+    return null
+  }
 }
 
 /**
