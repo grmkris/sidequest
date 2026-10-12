@@ -11,7 +11,7 @@ const TITLES: Record<string, string> = {
   commons: 'Commons',
   account: 'Account',
   connect: 'Connect your agent',
-  sponsorship: 'Gas sponsorship',
+  sponsorship: 'Gas payments',
   welcome: 'Set up Sidequest',
   admin: 'Admin',
   wallet: 'Wallet',
