@@ -5,7 +5,7 @@ import { boardApi, currentBoardId } from '../api.ts'
 import { boardKey } from '../queries.ts'
 import { Alert, AlertDescription } from '../components/ui/alert.tsx'
 import { Button } from '../components/ui/button.tsx'
-import { LoadingRows } from '../components/kit.tsx'
+import { LoadingRows, PageTitle } from '../components/kit.tsx'
 import type { useSignedIn } from '../components/Wallet.tsx'
 import { JobPage } from './Job.tsx'
 
@@ -37,17 +37,26 @@ function LegacyTaskLink({ taskId }: { taskId: string }) {
       void navigate({ to: '/job/$jobId', params: { jobId: read.data.jobId }, replace: true })
     else void navigate({ to: '/b/$boardId/job/$jobId', params: { boardId, jobId: read.data.jobId }, replace: true })
   }, [read.data, boardId, taskId, navigate])
-  if (read.isLoading || read.data !== undefined) return <LoadingRows rows={3} />
+  if (read.isLoading || read.data !== undefined)
+    return (
+      <>
+        <PageTitle>Opening job</PageTitle>
+        <LoadingRows rows={3} />
+      </>
+    )
   return (
-    <Alert variant="destructive">
-      <AlertDescription>
-        This job link could not be resolved: {read.error?.message ?? 'invalid task ID'}.{' '}
-        {validTaskId && (
-          <Button variant="link" onClick={() => void read.refetch()}>
-            Retry
-          </Button>
-        )}
-      </AlertDescription>
-    </Alert>
+    <>
+      <PageTitle>{validTaskId ? 'Job link unavailable' : 'That is not a Job ID'}</PageTitle>
+      <Alert variant="destructive">
+        <AlertDescription>
+          This job link could not be resolved: {read.error?.message ?? 'invalid task ID'}.{' '}
+          {validTaskId && (
+            <Button variant="link" onClick={() => void read.refetch()}>
+              Retry
+            </Button>
+          )}
+        </AlertDescription>
+      </Alert>
+    </>
   )
 }

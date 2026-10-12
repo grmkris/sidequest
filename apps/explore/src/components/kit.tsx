@@ -229,7 +229,8 @@ export function Segmented<T extends string>({
 /** Rows of placeholder while a list loads, so loading never reads as "empty". */
 export function LoadingRows({ rows = 3 }: { rows?: number }) {
   return (
-    <ItemGroup>
+    <ItemGroup role="presentation">
+      <output className="sr-only">Loading</output>
       {Array.from({ length: rows }, (_, i) => (
         <Item key={i}>
           <ItemContent className="gap-2 py-1">

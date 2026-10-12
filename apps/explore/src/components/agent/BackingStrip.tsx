@@ -12,11 +12,12 @@ import { sidequest } from '../../sidequest.ts'
 import { percent } from '../../stake.ts'
 import { deployed } from '../../wallet.ts'
 import { DELEGATION_RISK } from '../DelegationPositions.tsx'
-import { Address as AddressText, LoadingRows, Section } from '../kit.tsx'
+import { Address as AddressText, Section } from '../kit.tsx'
 import { Countdown, useNow } from '../Time.tsx'
 import { TokenAmount } from '../token/TokenAmount.tsx'
 import { Disclosure } from '../ui/disclosure.tsx'
 import { Meter } from '../ui/meter.tsx'
+import { Skeleton } from '../ui/skeleton.tsx'
 
 function Figure({ value, label }: { value: ReactNode; label: string }) {
   return (
@@ -45,13 +46,16 @@ export function BackingStrip({ wallet, viewer }: { wallet: Address; viewer: Addr
   return (
     <Section title="Backing">
       {read.isPending ? (
-        <LoadingRows rows={2} />
-      ) : read.isError || snapshot === undefined ? (
+        <BackingSkeleton />
+      ) : snapshot === undefined ? (
         <p className="px-1 text-ui text-muted-foreground">
           This agent&apos;s backing can&apos;t be read right now; it retries.
         </p>
       ) : (
-        <div className="grid gap-3 rounded-xl bg-card px-4 py-3 ring-1 ring-foreground/10">
+        <div className="grid min-h-40 gap-3 rounded-xl bg-card px-4 py-3 ring-1 ring-foreground/10">
+          {read.isError && (
+            <p className="text-xs text-muted-foreground">Showing last known backing; the refresh is unavailable.</p>
+          )}
           <dl className="flex flex-wrap gap-x-8 gap-y-3">
             <Figure value={<TokenAmount value={snapshot.backing.assets} token={factory} />} label="Total backing" />
             <Figure value={snapshot.delegatorCount} label={snapshot.delegatorCount === 1 ? 'Backer' : 'Backers'} />
@@ -66,8 +70,8 @@ export function BackingStrip({ wallet, viewer }: { wallet: Address; viewer: Addr
               className="gap-1.5"
             >
               <span className="text-xs text-muted-foreground">
-                <TokenAmount value={snapshot.backing.tier.needed} token={factory} /> more active backing drops its fee
-                to {percent(snapshot.backing.tier.nextFeeBps!)}
+                <TokenAmount static value={snapshot.backing.tier.needed} token={factory} /> more active backing drops
+                its fee to {percent(snapshot.backing.tier.nextFeeBps!)}
               </span>
             </Meter>
           )}
@@ -136,5 +140,34 @@ export function BackingStrip({ wallet, viewer }: { wallet: Address; viewer: Addr
         </div>
       )}
     </Section>
+  )
+}
+
+/** Same backing panel footprint while the wallet and then its snapshot load. */
+export function BackingPlaceholder() {
+  if (!deployed) return null
+  return (
+    <Section title="Backing">
+      <BackingSkeleton />
+    </Section>
+  )
+}
+
+function BackingSkeleton() {
+  return (
+    <div className="grid min-h-40 gap-3 rounded-xl bg-card px-4 py-3 ring-1 ring-foreground/10">
+      <output className="sr-only">Loading agent backing</output>
+      <div className="flex gap-8" aria-hidden>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="grid gap-1">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+        ))}
+      </div>
+      <Skeleton className="h-3 w-4/5" />
+      <Skeleton className="h-1.5 w-full" />
+      <Skeleton className="h-5 w-16" />
+    </div>
   )
 }

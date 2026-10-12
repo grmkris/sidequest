@@ -1,3 +1,4 @@
+import { SkipLink } from './RouteAccessibility.tsx'
 import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { cn } from '../lib/cn.ts'
@@ -40,6 +41,7 @@ function SideAddress({ address, className }: { address: string; className?: stri
 export function LandingShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh">
+      <SkipLink />
       <TestnetEdge />
       <header className="material-chrome material-edge-bottom sticky top-0 z-30 pt-[var(--safe-top)]">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 pr-[max(1.25rem,var(--safe-right))] pl-[max(1.25rem,var(--safe-left))]">
@@ -72,7 +74,12 @@ export function LandingShell({ children }: { children: ReactNode }) {
           </span>
         </div>
       </header>
-      <main className="mx-auto grid max-w-5xl gap-16 pt-12 pr-[max(1.25rem,var(--safe-right))] pb-[max(3rem,var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] sm:pt-24">
+
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto grid max-w-5xl gap-16 pt-12 pr-[max(1.25rem,var(--safe-right))] pb-[max(3rem,var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] sm:pt-24"
+      >
         <LaunchBanner />
         {children}
         <footer className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t pt-6 text-xs text-muted-foreground">

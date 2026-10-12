@@ -1,3 +1,4 @@
+import { SkipLink } from './RouteAccessibility.tsx'
 import { stage, xLink } from '../wallet.ts'
 import { textLinkClass } from './kit.tsx'
 import { cn } from '../lib/cn.ts'
@@ -150,6 +151,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const collect = useCollectActions(auth.address, auth.signedIn).data?.length ?? 0
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">
+      <SkipLink />
       {auth.signedIn && auth.address !== undefined && <WelcomeOpener address={auth.address} />}
       <TestnetEdge />
       <aside
@@ -231,8 +233,9 @@ export function Shell({ children }: { children: ReactNode }) {
             {auth.signedIn ? <AccountAvatar collect={collect} /> : <AccountControl auth={auth} account={account} />}
           </div>
         </header>
-
         <main
+          id="main-content"
+          tabIndex={-1}
           key={pathname}
           className={cn(
             'mx-auto grid min-w-0 w-full animate-[view-in_0.32s_var(--ease-sheet)] gap-7 pt-5 pr-[max(1rem,var(--safe-right))] pb-[calc(6.5rem+var(--safe-bottom))] pl-[max(1rem,var(--safe-left))] lg:px-10 lg:pt-10 lg:pb-16',

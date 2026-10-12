@@ -7,7 +7,7 @@ import { useReadContracts } from 'wagmi'
 import { isNew } from '../agent-stats.ts'
 import { type ChainJob, fetchDirectoryAgent } from '../api.ts'
 import { AgentJobs } from '../components/agent/AgentJobs.tsx'
-import { BackingStrip } from '../components/agent/BackingStrip.tsx'
+import { BackingStrip, BackingPlaceholder } from '../components/agent/BackingStrip.tsx'
 import { HeroStats } from '../components/agent/HeroStats.tsx'
 import { NewAgentCard } from '../components/agent/NewAgentCard.tsx'
 import { OwnerTabs } from '../components/agent/OwnerTabs.tsx'
@@ -290,42 +290,60 @@ function Profile({ id }: { id: string }) {
           </p>
         </div>
       )}
-      {record.isLoading ? (
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 rounded-xl" />
-          ))}
-        </div>
-      ) : record.error !== null ? (
-        <p className="text-ui text-destructive-text">
-          This agent&apos;s record is unavailable right now. Its identity is read from the chain.
-        </p>
-      ) : record.data === null && identity.exists === false ? (
-        <Empty className="border border-dashed">
-          <EmptyHeader>
-            <EmptyTitle>No Agent ID {id}</EmptyTitle>
-            <EmptyDescription>
-              Nothing is registered under this number on the ERC-8004 identity registry.{' '}
-              <Link to="/connect" className="text-foreground underline decoration-foreground/30 underline-offset-4">
-                Register an agent
-              </Link>
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : isNew(record.data) ? (
-        managed === undefined ? (
-          <NewAgentCard />
-        ) : null
-      ) : (
-        <HeroStats record={record.data!} now={now} owner={managed !== undefined} />
-      )}
+      <div className="min-h-40 sm:min-h-28">
+        {record.isError && record.data != null && (
+          <p className="text-ui text-muted-foreground">Showing the last known record; the refresh is unavailable.</p>
+        )}
+        {record.isLoading ? (
+          <div className="grid gap-3">
+            <output className="sr-only">Loading agent record</output>
+            <div className="flex flex-wrap gap-x-8 gap-y-3 px-1" aria-hidden>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="grid w-24 gap-1">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-6 w-20" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              ))}
+            </div>
+            <Skeleton className="h-5 w-3/4" />
+          </div>
+        ) : record.error !== null && record.data === undefined ? (
+          <p className="text-ui text-destructive-text">
+            This agent&apos;s record is unavailable right now. Its identity is read from the chain.
+          </p>
+        ) : record.data === null && identity.exists === false ? (
+          <Empty className="border border-dashed">
+            <EmptyHeader>
+              <EmptyTitle>No Agent ID {id}</EmptyTitle>
+              <EmptyDescription>
+                Nothing is registered under this number on the ERC-8004 identity registry.{' '}
+                <Link to="/connect" className="text-foreground underline decoration-foreground/30 underline-offset-4">
+                  Register an agent
+                </Link>
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : isNew(record.data) ? (
+          managed === undefined ? (
+            <NewAgentCard />
+          ) : null
+        ) : (
+          <HeroStats record={record.data!} now={now} owner={managed !== undefined} />
+        )}
+      </div>
       {directory.data?.agent !== undefined && (
         <AgentServices agent={directory.data.agent} delivered={record.data?.agent.completed ?? 0} />
       )}
       {record.data != null && !isNew(record.data) && wallet !== undefined && (
         <AgentJobs record={record.data} agentId={id} wallet={wallet} />
       )}
-      {wallet !== undefined && identity.exists !== false && <BackingStrip wallet={wallet} viewer={address} />}
+      {identity.exists !== false &&
+        (wallet !== undefined ? (
+          <BackingStrip wallet={wallet} viewer={address} />
+        ) : identity.loading ? (
+          <BackingPlaceholder />
+        ) : null)}
       {managed === undefined && identity.exists !== false && (
         <Link
           to="/connect"

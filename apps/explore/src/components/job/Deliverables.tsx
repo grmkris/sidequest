@@ -110,33 +110,35 @@ export function Delivered({
       title="Delivered"
       note="The board checks a delivery once when it is submitted; that check is advice. The approver decides."
     >
-      <ItemGroup>
-        {deliverables.map((x) => (
-          <Item key={x.deliverable_hash}>
-            <DeliverableLine d={x.descriptor} check={x.check} />
-          </Item>
-        ))}
-        {evidence.map((e) => (
-          <Item key={e.tx_hash}>
-            <ItemContent className="grid flex-1 gap-1 text-sm">
-              <span className="flex flex-wrap items-center gap-2">
-                <Badge variant={e.conclusion === 'success' ? 'success' : 'destructive'}>
-                  {e.conclusion === 'success' ? 'Check passed' : 'Check failed'}
-                </Badge>
-                <span className="text-muted-foreground">
-                  {e.onchainMatch
-                    ? 'on the delivered commit'
-                    : e.expired
-                      ? 'attestation expired'
-                      : 'on a different commit'}
+      <ItemGroup role="presentation">
+        <ul>
+          {deliverables.map((x) => (
+            <Item render={<li />} key={x.deliverable_hash}>
+              <DeliverableLine d={x.descriptor} check={x.check} />
+            </Item>
+          ))}
+          {evidence.map((e) => (
+            <Item render={<li />} key={e.tx_hash}>
+              <ItemContent className="grid flex-1 gap-1 text-sm">
+                <span className="flex flex-wrap items-center gap-2">
+                  <Badge variant={e.conclusion === 'success' ? 'success' : 'destructive'}>
+                    {e.conclusion === 'success' ? 'Check passed' : 'Check failed'}
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    {e.onchainMatch
+                      ? 'on the delivered commit'
+                      : e.expired
+                        ? 'attestation expired'
+                        : 'on a different commit'}
+                  </span>
                 </span>
-              </span>
-              <span className="flex flex-wrap items-center gap-2 text-ui text-muted-foreground">
-                Signed by <Address value={e.verifier} /> <TxLink hash={e.tx_hash} />
-              </span>
-            </ItemContent>
-          </Item>
-        ))}
+                <span className="flex flex-wrap items-center gap-2 text-ui text-muted-foreground">
+                  Signed by <Address value={e.verifier} /> <TxLink hash={e.tx_hash} />
+                </span>
+              </ItemContent>
+            </Item>
+          ))}
+        </ul>
       </ItemGroup>
     </Section>
   )

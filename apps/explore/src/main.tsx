@@ -47,10 +47,12 @@ import { AgentNewPage } from './routes/AgentNew.tsx'
 import { AgentApprovePage } from './routes/AgentApprove.tsx'
 import { HomePage } from './routes/Home.tsx'
 import { recoverOnce } from './app-recovery.ts'
+import { useRouteAccessibility } from './components/RouteAccessibility.tsx'
 
 function Layout() {
   const location = useLocation()
   useTokenRegistry()
+  useRouteAccessibility()
   // The embedded widget (ADR-0008) has no site chrome: the host page is the chrome.
   if (location.pathname.startsWith('/embed/')) return <Outlet />
   if (location.pathname === '/')

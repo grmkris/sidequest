@@ -75,7 +75,7 @@ export function BoardsPage() {
       ) : (
         list.map((b) => (
           <Section key={b.id}>
-            <ItemGroup>
+            <ItemGroup role="presentation">
               {b.public ? (
                 <Item render={<Link to="/" />}>
                   <BoardHead board={b} />
