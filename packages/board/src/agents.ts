@@ -96,7 +96,7 @@ export function agentOperationId(agentId: string, key: string): Hex {
 }
 
 const transitions: Readonly<Record<AgentState, readonly AgentState[]>> = {
-  created: ['upgraded', 'revoked'],
+  created: ['upgraded', 'grants-live', 'revoked'],
   upgraded: ['grants-live', 'revoked'],
   'grants-live': ['registered', 'revoked'],
   registered: ['active', 'revoked'],

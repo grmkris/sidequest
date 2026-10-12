@@ -9,12 +9,14 @@ import { SponsorDesk } from './sponsor.ts'
 import { allowanceAvailable } from './agent-call-mapper.ts'
 import type { Sql } from './store.ts'
 import { GasAllowances, type GasAllowanceInput } from './gas-allowance.ts'
+import { AgentFailure } from './agent-failure.ts'
 
 export interface AgentLifecycleDeps {
   readonly sql: Sql
   readonly context: sdk.Ctx
   readonly now: () => number
   readonly sponsor: SponsorDesk
+  readonly hostedSend?: 'userop'
 }
 
 interface AllowanceRequest {
@@ -136,7 +138,7 @@ export class AgentLifecycle {
         spec.amount !== input.amount
       )
         throw new Error('Allowance request key changed')
-      return this.grants.prepare(operator, spec)
+      return this.#allowancePreparation(this.grants.prepare(operator, spec), prior.previous)
     }
     const prepared = this.grants.prepare(operator, {
       kind: 'allowance',
@@ -149,19 +151,32 @@ export class AgentLifecycle {
     })
     requests[input.key] = {
       hash: prepared.hash,
-      previous: this.#allowances(agent)
-        .filter(
-          (row) =>
-            row.status === 'live' &&
-            this.grants.spec(row.delegation_hash).kind === 'allowance' &&
-            (
-              this.grants.spec(row.delegation_hash) as Extract<sdk.GrantSpec, { kind: 'allowance' }>
-            ).token.toLowerCase() === input.token.toLowerCase(),
-        )
-        .map((row) => row.delegation_hash),
+      previous: this.#rewardAllowances(agent, input.token).map((row) => row.delegation_hash),
     }
     this.agents.updateOnboarding(id, { ...onboarding, allowances: requests })
-    return prepared
+    return this.#allowancePreparation(prepared, requests[input.key]!.previous)
+  }
+
+  #rewardAllowances(agent: AgentRow, token: Address): GrantRow[] {
+    return this.#allowances(agent).filter((row) => {
+      const spec = this.grants.spec(row.delegation_hash)
+      const usable =
+        this.deps.hostedSend === 'userop'
+          ? row.signature !== null && row.status !== 'disabled' && row.expires_at > this.deps.now()
+          : row.status === 'live'
+      return usable && spec.kind === 'allowance' && spec.token.toLowerCase() === token.toLowerCase()
+    })
+  }
+
+  #allowancePreparation(prepared: ReturnType<GrantStore['prepare']>, previous: Hex[]) {
+    return {
+      ...prepared,
+      previous,
+      transactions:
+        this.deps.hostedSend === 'userop'
+          ? this.#disableTransactions(previous.map((hash) => this.grants.get(hash)!))
+          : [],
+    }
   }
 
   async confirmAllowance(id: string, operator: Address, key: string, hash: Hex, signature: Hex) {
@@ -175,26 +190,21 @@ export class AgentLifecycle {
     if (this.grants.get(hash)!.expires_at <= this.deps.now())
       throw new Error('This allowance expired; prepare and sign a new request')
     await this.grants.verifySignature(hash, signature)
+    const spec = this.grants.spec(hash)
+    if (spec.kind !== 'allowance') throw new Error('Not a periodic reward allowance')
     request.previous = [
       ...new Set([
         ...request.previous,
-        ...this.#allowances(agent)
-          .filter(
-            (row) =>
-              row.delegation_hash !== hash &&
-              row.status === 'live' &&
-              row.kind === 'allowance' &&
-              (
-                this.grants.spec(row.delegation_hash) as Extract<sdk.GrantSpec, { kind: 'allowance' }>
-              ).token.toLowerCase() ===
-                (this.grants.spec(hash) as Extract<sdk.GrantSpec, { kind: 'allowance' }>).token.toLowerCase(),
-          )
+        ...this.#rewardAllowances(agent, spec.token)
+          .filter((row) => row.delegation_hash !== hash)
           .map((row) => row.delegation_hash),
       ]),
     ]
     this.agents.updateOnboarding(id, { ...JSON.parse(agent.onboarding_json), allowances: requests })
-    for (const previous of request.previous)
-      await this.#disable(operator, previous, `allowance-${hash.slice(2, 26)}-${previous.slice(2, 26)}`)
+    for (const previous of request.previous) {
+      if (this.deps.hostedSend === 'userop') await this.#confirmOperatorDisable(previous)
+      else await this.#disable(operator, previous, `allowance-${hash.slice(2, 26)}-${previous.slice(2, 26)}`)
+    }
     await this.grants.confirm(hash, signature)
     return this.status(id, operator)
   }
@@ -287,6 +297,13 @@ export class AgentLifecycle {
       (item) => item.delegation_hash.toLowerCase() === hash.toLowerCase() && item.kind === 'permission',
     )
     if (row === undefined) throw new Error('No such permission for this agent')
+    if (this.deps.hostedSend === 'userop') {
+      const transactions = await this.#operatorDisables([row])
+      return {
+        permissions: new AgentPermissions(this.deps).list(agent),
+        transactions,
+      }
+    }
     await this.deps.sponsor.ready()
     await this.#disable(operator, row.delegation_hash, `permission-${row.delegation_hash.slice(2)}`)
     return new AgentPermissions(this.deps).list(agent)
@@ -350,6 +367,7 @@ export class AgentLifecycle {
 
   stopAccess(id: string, operator: Address) {
     const agent = this.agents.owned(id, operator)
+    if (agent.state === 'revoked') return agent
     if (this.deps.sql.atomic === undefined) throw new Error('Revocation requires atomic storage')
     this.deps.sql.atomic(() => {
       this.agents.advance(id, 'revoked')
@@ -370,6 +388,13 @@ export class AgentLifecycle {
 
   async revoke(id: string, operator: Address) {
     let agent = this.stopAccess(id, operator)
+    if (this.deps.hostedSend === 'userop') {
+      const transactions = await this.#operatorDisables(this.#allowances(agent))
+      return {
+        ...(await this.status(id, operator)),
+        transactions,
+      }
+    }
     await this.deps.sponsor.ready()
     if (agent.address === null) return this.status(id, operator)
     const rows = [...this.#allowances(agent), ...this.grants.list(agent.address)]
@@ -394,5 +419,47 @@ export class AgentLifecycle {
       id,
     )
     return this.status(id, operator)
+  }
+
+  async #operatorDisables(rows: readonly GrantRow[]): Promise<sdk.TxRequest[]> {
+    const transactions: sdk.TxRequest[] = []
+    // Stop hosted use before chain reads; operator transactions may be signed after this request returns.
+    for (const row of rows) this.grants.stop(row.delegation_hash)
+    for (const row of rows) {
+      if (row.signature === null || row.status === 'disabled' || row.expires_at <= this.deps.now()) continue
+      if (await sdk.isDisabled(this.deps.context, row.delegation_hash)) {
+        this.deps.sql.run("UPDATE grants SET status='disabled' WHERE delegation_hash=?", row.delegation_hash)
+        continue
+      }
+      transactions.push(...this.#disableTransactions([row]))
+    }
+    return transactions
+  }
+
+  #disableTransactions(rows: readonly GrantRow[]): sdk.TxRequest[] {
+    return rows.flatMap((row) => {
+      if (row.signature === null || row.status === 'disabled' || row.expires_at <= this.deps.now()) return []
+      return [
+        {
+          to: this.deps.context.deployment.delegation.manager,
+          data: sdk.disableCalldata({ ...sdk.parseDelegation(row.delegation_json), signature: row.signature }),
+          value: '0',
+          chainId: this.deps.context.deployment.chainId,
+          description: 'Disable the operator allowance or permission',
+        },
+      ]
+    })
+  }
+
+  async #confirmOperatorDisable(hash: Hex): Promise<void> {
+    const row = this.grants.get(hash)!
+    if (row.expires_at > this.deps.now() && !(await sdk.isDisabled(this.deps.context, hash)))
+      throw new AgentFailure(
+        'conflict',
+        'Disable the previous reward allowance from the operator wallet before confirming its replacement',
+        'allowance-disable-required',
+        'after-operator',
+      )
+    this.deps.sql.run("UPDATE grants SET status='disabled' WHERE delegation_hash=?", hash)
   }
 }

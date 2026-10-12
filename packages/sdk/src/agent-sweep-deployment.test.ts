@@ -6,10 +6,8 @@ import { deploymentFromConfig, type DeploymentConfig } from './deployment.ts'
 const config = record as DeploymentConfig
 
 it('reads AgentSweep only from config and remains null before deployment', () => {
-  expect(
-    deploymentFromConfig('monad-testnet', { ...config, deployment: { ...config.deployment, agentSweep: undefined } })
-      .agentSweep,
-  ).toBeNull()
+  const { agentSweep: _sweep, ...undeployed } = config.deployment
+  expect(deploymentFromConfig('monad-testnet', { ...config, deployment: undeployed }).agentSweep).toBeNull()
   const address = config.erc8004.identity
   const changed = { ...config, deployment: { ...config.deployment, agentSweep: address } }
   expect(deploymentFromConfig('monad-testnet', changed).agentSweep).toBe(address)

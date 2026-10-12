@@ -1,11 +1,12 @@
 /** Journal first, then build/sign/send. Every retry reconciles all hashes and the operation's nonce lane. */
 import * as sdk from '@sidequest/sdk'
-import { field, hexField, quantity, type Json } from '../../sdk/src/aa/rpc.ts'
+import { field, hexField, quantity, type Json } from '@sidequest/sdk'
 import { type Address, type Hex, decodeEventLog, encodeEventTopics, parseAbi, toHex } from 'viem'
 import { AgentFailure } from './agent-failure.ts'
 import type { AgentSigning } from './agent-signing.ts'
 import { requireGasBudget, withGasFloat, type AgentBatchScope } from './agent-batch.ts'
 import { checkAgentBatch } from './agent-calls.ts'
+import { hostedBatchGasFloor } from './agent-gas.ts'
 import { canonicalAgentArgs } from './agents.ts'
 import { UserOpStore, type UserOpRow, thawUserOp } from './userop-store.ts'
 
@@ -154,7 +155,7 @@ export class UserOpDesk implements UserOpSubmitter {
       fromBlock: this.deps.context.deployment.deployBlock,
     })
     row = await this.#reconcile(row)
-    if (terminal(row) || ['pending', 'uncertain'].includes(row.status)) return result(row)
+    if (terminal(row) || ['pending', 'uncertain', 'spent'].includes(row.status)) return result(row)
     await this.ready(input.agentId)
     if (['building', 'dropped'].includes(row.status)) {
       const built = await sdk.buildUserOp({
@@ -165,6 +166,7 @@ export class UserOpDesk implements UserOpSubmitter {
         calls: (maxCost) => withGasFloat(scope, input.calls, maxCost),
         nonceKey: sdk.nonceKey(input.id),
         authorization: await this.#authorization(input.agentId, scope.agent.address),
+        minCallGas: hostedBatchGasFloor(this.deps.context, input.calls),
       })
       row = this.deps.store.built(input.id, built)
     }
@@ -214,11 +216,13 @@ export class UserOpDesk implements UserOpSubmitter {
     if (terminal(row)) return row
     const received = await this.#receipt(row)
     if (received !== undefined) return received
+    if (row.status === 'spent') return (await this.#landed(row)) ?? row
     const aa = this.#aa()
     if ((await sdk.laneSequence(this.deps.rpc.node, aa.entryPoint, row.sender, BigInt(row.nonce_key))) !== 0n) {
+      row = this.deps.store.spent(row.id)
       const landed = await this.#landed(row)
       // A spent lane is never rebuilt, even if the node has not returned its event yet.
-      return landed ?? this.deps.store.waiting(row.id)
+      return landed ?? row
     }
     const attempt = this.deps.store.attempts(row.id).at(-1)
     if (attempt?.sent_at === null || attempt === undefined) return row

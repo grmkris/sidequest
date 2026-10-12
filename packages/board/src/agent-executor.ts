@@ -13,17 +13,13 @@ import { AgentLifecycle } from './agent-lifecycle.ts'
 import { AgentFailure, agentFailureReply, errorDiagnostics } from './agent-failure.ts'
 import { AgentX402 } from './agent-x402.ts'
 import { x402Deployment } from './x402.ts'
-import { buildAgentBatch, type AgentBatchScope } from './agent-batch.ts'
+import { AgentUserOps } from './agent-userops.ts'
 import type { UserOpSubmitter, UserOpResult } from './userop-desk.ts'
-
-interface FrozenUserOpBatch {
-  readonly calls: readonly { readonly to: Address; readonly value: string; readonly data: Hex }[]
-  readonly evidenceCall?: { readonly to: Address; readonly value: string; readonly data: Hex }
-}
 
 export interface AgentPreparedCall {
   readonly transactions?: readonly sdk.TxRequest[]
   readonly sign?: { readonly typedData: string; readonly description?: string }
+  readonly evidenceAttestation?: sdk.SignedEvidenceAttestation | null
   readonly [key: string]: unknown
 }
 
@@ -84,11 +80,20 @@ function jsonOutput(output: AgentPreparedCall): AgentPreparedCall {
 export class AgentExecutor {
   readonly agents: AgentStore
   readonly grants: GrantStore
+  readonly userops: AgentUserOps
   #queue: Promise<unknown> = Promise.resolve()
 
   constructor(readonly deps: AgentExecutorDeps) {
     this.agents = new AgentStore(deps.sql, deps.now)
     this.grants = new GrantStore(deps.sql, deps.context)
+    this.userops = new AgentUserOps({
+      agents: this.agents,
+      grants: this.grants,
+      context: deps.context,
+      now: deps.now,
+      ...(deps.submitter === undefined ? {} : { submitter: deps.submitter }),
+      finish: (operation, address, sent) => this.#finish(operation, address, sent),
+    })
   }
 
   execute(input: AgentExecuteInput): Promise<AgentExecuteResult> {
@@ -224,7 +229,8 @@ export class AgentExecutor {
       spec = this.agents.freezeStep(operation.id, step, grantSpecJson(template))
     }
     const prepared = this.grants.prepare(agent.operator, parseGrantSpec(spec))
-    await this.grants.confirm(prepared.hash, await this.deps.signing.signGrant(agent.id, prepared.hash))
+    if (this.agents.step(operation.id, 'send-mode') !== 'userop')
+      await this.grants.confirm(prepared.hash, await this.deps.signing.signGrant(agent.id, prepared.hash))
     return approval.kind === 'unstake'
       ? { unstakeHash: prepared.hash }
       : { approvalHash: prepared.hash, allowanceHash: decision.allowanceHash }
@@ -356,82 +362,6 @@ export class AgentExecutor {
     return this.agents.freezeStep(operationId, `${prefix}${attempt}`, entries)
   }
 
-  async #submitUserOp(
-    operation: AgentOperationRow,
-    address: Address,
-    frozen: FrozenUserOpBatch,
-  ): Promise<AgentExecuteResult> {
-    const submitter = this.deps.submitter
-    if (submitter === undefined)
-      throw new AgentFailure(
-        'unavailable',
-        'This operation requires the user-operation desk',
-        'aa-unavailable',
-        'same-key',
-      )
-    const calls = frozen.calls.map((call) => ({ ...call, value: BigInt(call.value) }))
-    const evidenceCall =
-      frozen.evidenceCall === undefined
-        ? undefined
-        : { ...frozen.evidenceCall, value: BigInt(frozen.evidenceCall.value) }
-    const sent = await submitter.submit({
-      id: operation.id,
-      agentId: operation.agent_id,
-      calls,
-      ...(evidenceCall === undefined ? {} : { evidenceCall }),
-    })
-    // Dropped is retryable on its original nonce; it must never make the agent operation terminal.
-    if (sent.status === 'dropped') return { status: 'dropped', operationId: operation.id, result: sent }
-    return this.#finish(this.agents.operation(operation.id), address, sent)
-  }
-
-  async #userOpBatch(
-    operation: AgentOperationRow,
-    address: Address,
-    transactions: readonly sdk.TxRequest[],
-    approved: ApprovedAgentAction,
-  ): Promise<AgentExecuteResult> {
-    const submitter = this.deps.submitter
-    if (submitter === undefined)
-      throw new AgentFailure(
-        'unavailable',
-        'This operation requires the user-operation desk',
-        'aa-unavailable',
-        'same-key',
-      )
-    await submitter.ready(operation.agent_id)
-    const agent = this.agents.get(operation.agent_id)
-    const scope: AgentBatchScope = {
-      context: this.deps.context,
-      grants: this.grants,
-      agent: { address, operator: agent.operator, agent_id: agent.agent_id },
-      operationId: operation.id,
-      now: this.deps.now(),
-      agentSweep: this.deps.context.deployment.agentSweep,
-    }
-    const batch = await buildAgentBatch(scope, transactions, approved)
-    if (batch.approval !== undefined) {
-      if (approved.allowanceHash !== undefined)
-        throw new AgentFailure(
-          'conflict',
-          'The approved exact allowance is unavailable',
-          'allowance-unavailable',
-          'after-operator',
-        )
-      const approval = this.agents.requestApproval(
-        this.agents.operation(operation.id),
-        'hire-over-limit',
-        batch.approval,
-      )
-      return { status: 'approval', operationId: operation.id, approval }
-    }
-    const frozen = this.agents.freezeStep<FrozenUserOpBatch>(operation.id, 'userop-batch', {
-      calls: batch.calls.map((call) => ({ ...call, value: call.value.toString() })),
-    })
-    this.agents.saveOperation(operation.id, 'sending')
-    return this.#submitUserOp(operation, address, frozen)
-  }
-
   async #execute(input: AgentExecuteInput): Promise<AgentExecuteResult> {
     if (input.tool === 'x402_pay') x402Deployment(this.deps.context.deployment)
     const agent = this.agents.get(input.agentId)
@@ -495,8 +425,10 @@ export class AgentExecutor {
     const mode =
       this.agents.step<'relay' | 'userop'>(operation.id, 'send-mode') ??
       this.agents.freezeStep(operation.id, 'send-mode', this.deps.submitter === undefined ? 'relay' : 'userop')
-    const frozen = this.agents.step<FrozenUserOpBatch>(operation.id, 'userop-batch')
-    if (mode === 'userop' && frozen !== undefined) return this.#submitUserOp(operation, agent.address, frozen)
+    if (mode === 'userop') {
+      const resumed = await this.userops.resume(operation, agent.address)
+      if (resumed !== undefined) return resumed
+    }
     if (operation.stage === 'sending') {
       const action = this.agents.step<AgentPreparedCall>(operation.id, 'action')
       if (action === undefined || (action.transactions?.length ?? 0) !== 0)
@@ -551,7 +483,7 @@ export class AgentExecutor {
     const entriesStep = approved.allowanceHash === undefined ? 'entries' : `entries:${approved.allowanceHash}`
     // No sponsor link means there are no signed relay bytes. Recheck gas authority on every such retry;
     // the economic calls stay frozen, while old mappings remain available for audit.
-    if (mode === 'userop') return this.#userOpBatch(operation, agent.address, transactions, approved)
+    if (mode === 'userop') return this.userops.send(operation, agent.address, transactions, approved)
     await ensureAgentGrants(
       this.deps.context,
       this.agents,

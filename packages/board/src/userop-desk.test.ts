@@ -57,6 +57,8 @@ it('rebuilds a dropped attempt on its original nonce lane and finds a receipt fo
   const attempts = f.store.attempts(f.input.id)
   expect(attempts).toHaveLength(2)
   expect(attempts[0]!.userop_hash).toBe(first)
+  f.state.receipts[first] = { success: true, actualGasCost: '0x1', receipt: { transactionHash: txHash } }
+  expect(await f.desk.operation(f.input.id)).toMatchObject({ status: 'confirmed', userOpHash: first, txHash })
   expect(f.state.sends).toBe(2)
   expect(new Set(attempts.map((a) => JSON.parse(a.built_json).op.nonce)).size).toBe(1)
 })
@@ -77,6 +79,12 @@ it('never rebuilds a spent lane even without its event, and resolves its matchin
   f.clock.now += 121
   expect(await f.desk.submit(f.input)).toMatchObject({ status: 'pending' })
   expect(f.state.sends).toBe(1)
+  expect(f.store.require(f.input.id).status).toBe('spent')
+  f.state.sequence = 0n
+  f.clock.now += 121
+  expect(await new UserOpDesk(f.desk.deps).submit(f.input)).toMatchObject({ status: 'pending' })
+  expect(f.state.sends).toBe(1)
+  expect(f.state.estimates).toBe(1)
   const event = parseAbi([
     'event UserOperationEvent(bytes32 indexed userOpHash,address indexed sender,address indexed paymaster,uint256 nonce,bool success,uint256 actualGasCost,uint256 actualGasUsed)',
   ])
@@ -99,6 +107,11 @@ it('journals a first-op 7702 authorization for an active undelegated agent', asy
   await f.desk.submit(f.input)
   expect(f.store.require(f.input.id).authorization_json).toContain(f.context.deployment.delegation.delegator)
   expect(f.state.sends).toBe(1)
+})
+it('keeps the payout gas reserve and prefix overhead despite a smaller bundler estimate', async () => {
+  const f = fixture()
+  await f.desk.submit(f.input)
+  expect(BigInt(JSON.parse(f.store.require(f.input.id).built_json!).op.callGasLimit)).toBeGreaterThanOrEqual(1_340_000n)
 })
 it('refuses above-ceiling gas and missing gas budget before any signature or send', async () => {
   const f = fixture()

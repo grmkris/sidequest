@@ -1,7 +1,17 @@
 /** Unit-test fixture only: in-memory SQLite, signed local test account, and fake JSON-RPC fetch. */
 import { DatabaseSync } from 'node:sqlite'
 import * as sdk from '@sidequest/sdk'
-import { type Hex, encodeFunctionData, encodeFunctionResult, erc20Abi, parseAbi, decodeFunctionData, toHex } from 'viem'
+import {
+  type Hex,
+  type Address,
+  encodeFunctionData,
+  encodeFunctionResult,
+  erc20Abi,
+  parseAbi,
+  decodeFunctionData,
+  toHex,
+  isHex,
+} from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { AgentSigning } from '../agent-signing.ts'
 import { AgentStore } from '../agents.ts'
@@ -9,17 +19,22 @@ import { GrantStore } from '../grants.ts'
 import { fromNodeSqlite } from '../store.ts'
 import { UserOpStore } from '../userop-store.ts'
 import { UserOpDesk } from '../userop-desk.ts'
-import type { Json } from '../../../sdk/src/aa/rpc.ts'
+import type { Json } from '@sidequest/sdk'
 
 const nonceAbi = parseAbi(['function getNonce(address sender,uint192 key) view returns (uint256)'])
-const operator = '0x1111111111111111111111111111111111111111'
+const operatorAccount = privateKeyToAccount(`0x${'22'.repeat(32)}`)
+const operator: Address = operatorAccount.address
 const account = privateKeyToAccount(`0x${'11'.repeat(32)}`)
 
 export function userOpFixture() {
   const db = new DatabaseSync(':memory:')
   const sql = fromNodeSqlite(db)
   const clock = { now: 1_800_000_000 }
-  const responses: { receipt: Json; logs: Json[] } = { receipt: null, logs: [] }
+  const responses: { receipt: Json; logs: Json[]; receipts: Record<string, Json> } = {
+    receipt: null,
+    logs: [],
+    receipts: {},
+  }
   const state = {
     ...responses,
     sends: 0,
@@ -32,7 +47,9 @@ export function userOpFixture() {
     refused: false,
     ceiling: false,
     balance: 5_000_000n,
+    disabled: false,
     hash: sdk.EMPTY_HASH,
+    receipts: responses.receipts,
   }
   const base = sdk.context('monad-testnet', 'main', 'http://unused.invalid')
   const deployment = {
@@ -45,7 +62,8 @@ export function userOpFixture() {
     // SAFETY: the fixture responds to the only view methods exercised by the desk and batch builders.
     readContract: (async (input: { functionName: string }) => {
       const values: Record<string, Json | bigint | readonly (bigint | boolean)[]> = {
-        disabledDelegations: false,
+        disabledDelegations: state.disabled,
+        callCounts: 0n,
         getAvailableAmount: [5_000_000n, false, 0n],
         balanceOf: state.balance,
         minimumCreatorBond: 1n,
@@ -90,8 +108,10 @@ export function userOpFixture() {
     sql,
     context,
     {
-      signTypedData: async () => {
-        throw new Error('Unexpected typed-data signing')
+      signTypedData: async (_wallet, data) => {
+        // SAFETY: AgentSigning validates this fixture's typed data before requesting the local signature.
+        const typed = JSON.parse(data) as Parameters<typeof account.signTypedData>[0]
+        return account.signTypedData(typed)
       },
       signAuthorization: async (_wallet, address, chainId, nonce) =>
         account.signAuthorization({ contractAddress: address, chainId, nonce }),
@@ -164,7 +184,7 @@ export function userOpFixture() {
       case 'eth_sendUserOperation':
         return send(params)
       case 'eth_getUserOperationReceipt':
-        return state.receipt
+        return isHex(params[0]) ? (state.receipts[params[0]] ?? state.receipt) : state.receipt
       default:
         throw new Error(`Unexpected RPC ${method}`)
     }
@@ -208,6 +228,7 @@ export function userOpFixture() {
     clock,
     account,
     operator,
+    operatorAccount,
     input: { id, agentId: 'agent', calls: [settle] },
   }
 }

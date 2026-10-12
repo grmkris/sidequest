@@ -24,6 +24,7 @@ import {
   type ProfileInput,
 } from './agent-profiles.ts'
 import { profileOrigin, type ProfileSummary } from './profiles.ts'
+import { hostedUserOpDesk } from './agent-userop.ts'
 import { resourceBoard } from './oauth-validation.ts'
 
 const CreateInput = Schema.Struct({
@@ -298,14 +299,16 @@ function managedAgentSetup(input: {
     sign: async (payload) => (await sdk.p256AuthorizationSigner(binding(bindings, 'PRIVY_SIGNER_KEY')))(payload),
   })
   const onboard = async (creation: { id: string; operator: `0x${string}`; userId: string; name: string }) => {
-    if (!/^0x[0-9a-fA-F]{64}$/.test(input.relayKey))
+    const signing = new AgentSigning(sql, context, provider, now)
+    const submitter = hostedUserOpDesk({ bindings, sql, context, signing, now })
+    if (submitter === undefined && !/^0x[0-9a-fA-F]{64}$/.test(input.relayKey))
       throw new BoardError('unavailable', 'The hosted-agent relay is unavailable')
-    const relayAccount = privateKeyToAccount(input.relayKey)
+    const relayAccount = submitter === undefined ? privateKeyToAccount(input.relayKey) : undefined
     const sponsor = new SponsorDesk({
       sql,
       ctx: context,
       now,
-      relay: { account: relayAccount, rpcUrl: input.rpcUrl },
+      ...(relayAccount === undefined ? {} : { relay: { account: relayAccount, rpcUrl: input.rpcUrl } }),
       fail: (code, message) => new BoardError(code, message),
     })
     return new AgentOnboarding({
@@ -314,10 +317,11 @@ function managedAgentSetup(input: {
       now,
       publicOrigin: input.origin,
       sponsor,
-      signing: new AgentSigning(sql, context, provider, now),
+      signing,
+      ...(submitter === undefined ? {} : { submitter }),
       signerId: binding(bindings, 'PRIVY_SIGNER_ID'),
       policyId: binding(bindings, 'PRIVY_POLICY_ID'),
-      relay: new RelaySender(sql, context, relayAccount, input.rpcUrl, now),
+      ...(relayAccount === undefined ? {} : { relay: new RelaySender(sql, context, relayAccount, input.rpcUrl, now) }),
     }).create(creation, provider)
   }
   return new AgentSetup({ ...input, onboard, profiles: managedProfileUpdates(input) })

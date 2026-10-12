@@ -9,6 +9,7 @@ export type UserOpStatus =
   | 'signed'
   | 'pending'
   | 'uncertain'
+  | 'spent'
   | 'dropped'
   | 'confirmed'
   | 'reverted'
@@ -206,7 +207,7 @@ export class UserOpStore {
     return this.#atomic(() => {
       const latest = this.attempts(id).at(-1)
       if (latest === undefined) throw new Error('No signed user operation attempt')
-      if (['confirmed', 'reverted', 'failed'].includes(this.require(id).status))
+      if (['confirmed', 'reverted', 'failed', 'spent'].includes(this.require(id).status))
         throw new Error('User operation is terminal')
       this.sql.run(
         'UPDATE userop_attempts SET outcome=?,sent_at=COALESCE(sent_at,?) WHERE operation_id=? AND attempt=?',
@@ -222,8 +223,16 @@ export class UserOpStore {
 
   waiting(id: string): UserOpRow {
     const row = this.require(id)
-    if (row.status === 'confirmed' || row.status === 'reverted') return row
+    if (row.status === 'confirmed' || row.status === 'reverted' || row.status === 'spent') return row
     this.sql.run("UPDATE userop_operations SET status='pending',updated_at=? WHERE id=?", this.now(), id)
+    return this.require(id)
+  }
+
+  /** A spent lane remains spent across provider drift and restarts, until its receipt/event is found. */
+  spent(id: string): UserOpRow {
+    const row = this.require(id)
+    if (row.status === 'confirmed' || row.status === 'reverted') return row
+    this.sql.run("UPDATE userop_operations SET status='spent',updated_at=? WHERE id=?", this.now(), id)
     return this.require(id)
   }
 
