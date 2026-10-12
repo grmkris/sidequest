@@ -23,6 +23,7 @@ import { prompts, useSignTypedDataWithPrompt } from '../../wallet-prompt.ts'
 import { typedDataArgs } from '../../typed-data.ts'
 import { useTokenList } from '../../useTokens.ts'
 import { chain, deployment } from '../../wallet.ts'
+import { AmountField } from '../money/AmountField.tsx'
 
 const TYPE_WORDS: Record<string, string> = {
   'erc20-token-periodic': 'Recurring token payments',
@@ -219,13 +220,16 @@ export function PermissionApproval({
       {approval.status === 'pending' && review === null && request.adjustable && (
         <div className="grid gap-3 sm:grid-cols-2">
           {token !== null && (
-            <Field>
-              <FieldLabel className="flex-col items-stretch">
-                <span>{`Lower the amount (${meta?.symbol ?? 'base units'})`}</span>
-                <Input inputMode="decimal" value={limit} onChange={(event) => setLimit(event.target.value)} />
-              </FieldLabel>
-              <FieldDescription>Empty keeps the request; you can only lower it.</FieldDescription>
-            </Field>
+            <AmountField
+              label="Lower the amount"
+              value={limit}
+              onChange={setLimit}
+              token={token}
+              symbol={meta?.symbol ?? 'base units'}
+              placeholder="As requested"
+              hint="Empty keeps the request; you can only lower it."
+              className="sm:col-span-2"
+            />
           )}
           <Field>
             <FieldLabel className="flex-col items-stretch">

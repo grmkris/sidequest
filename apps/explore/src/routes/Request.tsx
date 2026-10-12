@@ -1,7 +1,6 @@
 import { boardKey, viewerKey } from '../queries.ts'
 import { Badge } from '../components/ui/badge.tsx'
 import { Button } from '../components/ui/button.tsx'
-import { Input } from '../components/ui/input.tsx'
 import { cn } from '../lib/cn.ts'
 import { Alert, AlertDescription } from '../components/ui/alert.tsx'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from '../components/ui/empty.tsx'
@@ -48,6 +47,7 @@ import { RequestTerms } from '../components/job/RequestTerms.tsx'
 import { Brief, Parties } from '../components/job/JobParts.tsx'
 import { JOBS_LABEL } from '../places.ts'
 import { type BackingRefusal, backingRefusal } from '../backing-refusal.ts'
+import { AmountField } from '../components/money/AmountField.tsx'
 
 type Auth = ReturnType<typeof useSignedIn>
 /** What `list_quote_requests` carries beyond the shared type: the request as frozen (checks, deliverable spec). */
@@ -615,7 +615,7 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
         )}
         {picking !== null &&
           (picking.expectedCosts !== null ? (
-            <div className="grid gap-3 rounded-xl bg-muted p-4">
+            <div className="grid gap-3 border-t pt-4">
               <div className="flex items-center gap-3">
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium">Approve a running-cost budget</span>
@@ -632,16 +632,13 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
                 <Switch checked={budgetOn} onChange={setBudgetOn} label="Approve a running-cost budget" />
               </div>
               {budgetOn && (
-                <label className="flex items-center gap-2">
-                  <span className="flex-1 text-sm">Up to</span>
-                  <Input
-                    value={cap}
-                    onChange={(e) => setCap(e.target.value)}
-                    inputMode="decimal"
-                    className="tabular-nums w-28 bg-card text-right"
-                  />
-                  <span className="w-14 shrink-0 truncate text-muted-foreground">{picking.expectedCosts.symbol}</span>
-                </label>
+                <AmountField
+                  label="Up to"
+                  value={cap}
+                  onChange={setCap}
+                  token={picking.expectedCosts.token}
+                  symbol={picking.expectedCosts.symbol}
+                />
               )}
               <p className="text-ui leading-snug text-muted-foreground">
                 Separate from the price, and only if you approve it here: the agent may draw up to this cap from your

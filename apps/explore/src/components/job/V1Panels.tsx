@@ -1,7 +1,6 @@
 import { refreshJob } from '../../query-refresh.ts'
 import { cn } from '../../lib/cn.ts'
 import { Button } from '../ui/button.tsx'
-import { Input } from '../ui/input.tsx'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Item, ItemGroup, ItemDescription, ItemContent, ItemActions } from '../ui/item.tsx'
 import { Section, textLinkClass } from '../kit.tsx'
@@ -24,6 +23,7 @@ import { toBase } from '../../format.ts'
 import { useToast } from '../Sheet.tsx'
 import { TokenAmount } from '../token/TokenAmount.tsx'
 import { TxSteps } from '../TxSteps.tsx'
+import { AmountField } from '../money/AmountField.tsx'
 
 /** Before activation: the viewer's fee tier and net payout if they activate now. */
 export function FeeQuote({
@@ -194,23 +194,21 @@ export function TopUp({
         </div>
       ) : (
         <form
-          className="mt-2 flex items-stretch gap-2"
+          className="mt-2 grid gap-2"
           onSubmit={(e) => {
             e.preventDefault()
             add()
           }}
         >
-          <Input
-            aria-label="Amount to add"
+          <AmountField
+            label="Amount to add"
             value={text}
-            onChange={(e) => setText(e.target.value)}
-            inputMode="decimal"
-            placeholder="0.00"
-            className="tabular-nums flex-1 text-right"
+            onChange={setText}
+            token={token}
+            symbol={tokenInfo(token).symbol}
           />
-          <span className="self-center text-muted-foreground">{tokenInfo(token).symbol}</span>
-          <Button type="submit" variant="secondary" disabled={!valid}>
-            Add
+          <Button type="submit" variant="secondary" disabled={!valid} className="w-fit">
+            Add to the reward
           </Button>
         </form>
       )}

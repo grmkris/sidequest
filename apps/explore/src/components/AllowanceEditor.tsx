@@ -16,6 +16,7 @@ import { AgentGrantReview } from './AgentGrantReview.tsx'
 import { useAuth } from './Wallet.tsx'
 
 import { OperatorBalances } from './OperatorBalances.tsx'
+import { AmountField } from './money/AmountField.tsx'
 
 export function AllowanceEditor({ agent, onConfirmed }: { agent: ManagedAgent; onConfirmed: () => void }) {
   const { address: operator } = useAuth()
@@ -133,18 +134,18 @@ export function AllowanceEditor({ agent, onConfirmed }: { agent: ManagedAgent; o
             </details>
           </div>
 
-          <label className="grid gap-1 text-sm">
-            <span>Weekly budget · {typeof meta === 'object' ? meta.symbol : 'token information unavailable'}</span>
-            <Input
-              value={amount}
-              onChange={(event) => {
-                setAmount(event.target.value)
-                setKey(crypto.randomUUID())
-              }}
-              aria-label="Weekly budget"
-              inputMode="decimal"
-            />
-          </label>
+          <AmountField
+            label="Weekly budget"
+            value={amount}
+            onChange={(next) => {
+              setAmount(next)
+              setKey(crypto.randomUUID())
+            }}
+            token={isAddress(token) ? token : null}
+            {...(typeof meta === 'object'
+              ? { symbol: meta.symbol }
+              : { symbol: '—', hint: 'Token information unavailable', tone: 'warning' as const })}
+          />
 
           <Button busy={busy} disabled={typeof meta !== 'object'} onClick={() => void run(prepare)}>
             Review budget
