@@ -37,9 +37,14 @@ const MANIFEST_BYTES = 64 * 1024
 const HEAD_BYTES = 256 * 1024
 const TIMEOUT_MS = 4000
 const MAX_REDIRECTS = 3
-/** Seconds a preview is cached: a found one for an hour; a miss (nothing to show, or not on chain) for thirty seconds. */
+/**
+ * Seconds a preview is cached: a found one for an hour; a delivery not yet on chain for thirty seconds (the index
+ * lags a submission); a site that answered nothing usable for five minutes, so every viewer's polling does not refetch
+ * the delivered site itself, yet a preview that appears after the site's own deploy still shows within minutes.
+ */
 const HIT = 3600
 const MISS = 30
+const SITE_MISS = 300
 
 export const isPreviewPath = (path: string) => path.startsWith('/data/deliverables/')
 
@@ -265,7 +270,7 @@ async function build(target: { taskId: string; hash: string }, deps: PreviewDeps
   return {
     status: 200,
     body: { ok: true, deliverable, preview },
-    seconds: site !== null && preview.source === null ? MISS : HIT,
+    seconds: site !== null && preview.source === null ? SITE_MISS : HIT,
   }
 }
 

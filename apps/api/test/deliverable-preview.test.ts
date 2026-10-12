@@ -341,7 +341,7 @@ describe('previewRoute', () => {
     expect(site.seen).toEqual([])
   })
 
-  it('caches a site that says nothing, or fails, for ten minutes', async () => {
+  it('caches a site that says nothing, or fails, for five minutes', async () => {
     // SAFETY: a fetch that always rejects, as a network failure does.
     const throwing = (async () => {
       throw new TypeError('network down')
@@ -349,7 +349,7 @@ describe('previewRoute', () => {
     const { res, body } = await answer(deps({ fetch: throwing }))
     expect(res.status).toBe(200)
     expect(body).toMatchObject({ preview: NO_PREVIEW })
-    expect(res.headers.get('cache-control')).toBe('public, max-age=30')
+    expect(res.headers.get('cache-control')).toBe('public, max-age=300')
   })
 })
 
