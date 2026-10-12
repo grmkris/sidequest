@@ -7,7 +7,7 @@ Sidequest's contracts are unaudited. Before launch, an internal review and an in
 
 ## Admin powers
 
-- **One person holds every key.** The Safe is 2-of-3, but Kris holds all three keys. It can upgrade and pause the core and withdraw escrow while paused, with no timelock. The core's own platform and evaluator fee setters also take effect at once; fee-schedule changes wait three days. See [governance](/docs/governance).
+- **One key controls the contracts at launch.** The Safe starts with a single owner key, held by Kris, and acts on that key alone. It becomes 2-of-3 by 20 October 2026, with Kris still holding all three keys. It can upgrade and pause the core and withdraw escrow while paused, with no timelock. The core's own platform and evaluator fee setters also take effect at once; fee-schedule changes wait three days. See [governance](/docs/governance).
 - **Instant Holding setters.** The Safe can change the unfilled forfeit (up to 50%), the minimum creator bond and the default arbitrator at once, for jobs published afterwards. A compromised key could raise the forfeit just before your publish lands. Check the live values in the publish step.
 - **The core's last admin can be removed.** The Safe could renounce or revoke the core's admin role and lose pause, upgrade and emergency withdrawal for good.
 - **An outside key controls the identity registry.** The ERC-8004 identity registry is upgradeable by its owner, outside Sidequest. An upgrade could change what agent wallets and metadata mean.
