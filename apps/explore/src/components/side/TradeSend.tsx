@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { formatAmount } from '../../format.ts'
 import { refreshBalances } from '../../query-refresh.ts'
+import { type RevertCause, type RevertReads, tradeRevertCause } from '../../side-revert.ts'
 import { quoteHolds, type tradeAmounts } from '../../side-sheet.ts'
 import {
   type SideTradeIntent,
@@ -31,11 +32,15 @@ import { Button } from '../ui/button.tsx'
 
 type Trade = SideTradeIntent['trade']
 
-/** A trade that ended without happening: which way, its reverted transaction if it reached the chain, and why. */
+/**
+ * A trade that ended without happening: the trade, its reverted transaction if it reached the chain, the wallet's
+ * words if it never did, and once read from the chain, what made it revert (`undefined` while still being read).
+ */
 export interface TradeEnded {
-  trade: Trade
+  intent: SideTradeIntent
   reverted: `0x${string}` | null
   reason: string | null
+  cause?: RevertCause | null
 }
 
 const NEWER = 'A newer SIDE trade is saved in another tab; keep it for reconciliation.'
@@ -67,7 +72,7 @@ function useSavedTrade(key: string | null) {
       let found = await loadSideTrade(localStorage, key)
       const end = found === null ? null : await sideTradeEnded(localStorage, found)
       if (found !== null && end !== null && (await clearSideTrade(localStorage, key, found.id))) {
-        if (active && end.tried) setEnded({ trade: found.trade, reverted: end.reverted, reason: null })
+        if (active && end.tried) setEnded({ intent: found, reverted: end.reverted, reason: null })
         found = null
       }
       if (!active) return
@@ -82,6 +87,43 @@ function useSavedTrade(key: string | null) {
     }
   }, [key])
   return { saved, setSaved, fresh, setFresh, loaded, error, ended, setEnded }
+}
+
+/** The chain reads behind a revert's cause, through the app's public client. */
+function revertReads(l: sdk.Launcher, owner: `0x${string}`): RevertReads {
+  const client = stakeContext().publicClient
+  return {
+    landed: async (hash) => {
+      const receipt = await client.getTransactionReceipt({ hash })
+      const block = await client.getBlock({ blockNumber: receipt.blockNumber })
+      return { block: receipt.blockNumber, timestamp: block.timestamp }
+    },
+    amountOut: (side, amountIn, blockNumber) =>
+      client.readContract({
+        address: l.router,
+        abi: sdk.nadRouterAbi,
+        functionName: 'getAmountOut',
+        args: [l.side, amountIn, side === 'buy'],
+        blockNumber,
+      }),
+    balance: (blockNumber) => client.getBalance({ address: owner, blockNumber }),
+    delegated: async () => (await sdk.delegationOf(client, owner)) !== null,
+  }
+}
+
+/** Once a reverted trade is back on the form, read from the chain what made it revert, for the notice to name. */
+function useRevertCause(
+  l: sdk.Launcher | null,
+  ended: TradeEnded | null,
+  setEnded: (update: (now: TradeEnded | null) => TradeEnded | null) => void,
+) {
+  useEffect(() => {
+    if (l === null || ended === null || ended.reverted === null || ended.cause !== undefined) return
+    const { intent, reverted } = ended
+    void tradeRevertCause(revertReads(l, intent.owner), intent, reverted).then((cause) =>
+      setEnded((now) => (now !== null && now.reverted === reverted ? { ...now, cause } : now)),
+    )
+  }, [l, ended?.reverted])
 }
 
 type Amounts = NonNullable<ReturnType<typeof tradeAmounts>>
@@ -112,6 +154,7 @@ export function useTradeSend(l: sdk.Launcher | null, address: `0x${string}` | un
   const qc = useQueryClient()
   const key = l === null || address === undefined ? null : sideTradeKey(chain.id, l.router, address)
   const { saved, setSaved, fresh, setFresh, loaded, error: loadError, ended, setEnded } = useSavedTrade(key)
+  useRevertCause(l, ended, setEnded)
   const [done, setDone] = useState<{ trade: Trade; out: bigint } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [preparing, setPreparing] = useState(false)
@@ -162,7 +205,7 @@ export function useTradeSend(l: sdk.Launcher | null, address: `0x${string}` | un
       const end = await sideTradeEnded(localStorage, trade)
       if (end === null || !end.tried) return
       if (!(await clearSideTrade(localStorage, key, trade.id))) throw new Error(NEWER)
-      setEnded({ trade: trade.trade, reverted: end.reverted, reason })
+      setEnded({ intent: trade, reverted: end.reverted, reason })
       setSaved(null)
       void refreshBalances(qc)
     }).catch((failure: unknown) => setError(friendlyError(failure)))
@@ -270,16 +313,32 @@ export function SavedTrade({
   )
 }
 
-/** Why the last trade didn't happen, above a fresh quote: reverted on the chain (with its transaction) or never sent. */
+/** What made a trade revert, in a sentence: the cause the chain shows, or only that it reverted. */
+const REVERTED: Record<RevertCause, string> = {
+  price: 'the price moved more than your slippage before it was mined',
+  deadline: 'it was mined after its 10-minute deadline',
+  reserve: `Monad keeps 10 ${MON} in upgraded wallets, and this buy would have left less`,
+}
+
+/**
+ * Why the last trade didn't happen, above a fresh quote. A revert spent gas, so it reads as a warning, with its cause
+ * and transaction; a trade the wallet never sent (cancelled, refused) changed nothing and reads plainly.
+ */
 export function TradeEndedNotice({ ended }: { ended: TradeEnded }) {
-  const what = ended.trade === 'buy' ? 'buy' : 'sale'
-  const text =
-    ended.reverted !== null
-      ? `Your last ${what} reverted on the chain, most likely because the price moved past your slippage before it was mined. Nothing was ${ended.trade === 'buy' ? 'bought' : 'sold'}; only its gas was spent.`
-      : (ended.reason ?? `Your last ${what} wasn’t sent, so nothing changed.`)
+  const buy = ended.intent.trade === 'buy'
+  if (ended.reverted === null)
+    return (
+      <output className="block rounded-xl bg-muted/60 px-4 py-3 text-sm leading-snug text-pretty">
+        {ended.reason ?? `Your last ${buy ? 'buy' : 'sale'} wasn’t sent, so nothing changed.`}
+      </output>
+    )
+  const why = ended.cause == null ? 'reverted on the chain' : `reverted: ${REVERTED[ended.cause]}`
   return (
     <output className="flex flex-wrap items-center gap-x-2 rounded-xl bg-warning/14 px-4 py-3 text-sm leading-snug text-pretty text-warning-text">
-      <span>{text} The amounts below are a fresh quote.</span>
+      <span>
+        Your last {buy ? 'buy' : 'sale'} {why}. Nothing was {buy ? 'bought' : 'sold'}; only its gas was spent. The
+        amounts below are a fresh quote.
+      </span>
       <TxLink hash={ended.reverted} />
     </output>
   )
