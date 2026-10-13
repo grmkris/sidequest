@@ -2,10 +2,9 @@
   "network": "monad-mainnet",
   "chainId": 143,
   "roles": {
-    "admin": "0x675269d710692d4d0d7166da11B76463577aad73",
-    "relay": "0xac7282b6a519665dcb71563317C71d1F357f9e7e",
-    "attester": "0x66b72404Ad8ce4C650C4f67F13AAd1Ee82F2963f",
-    "arbitrator": "0xc657F023F938BB89de590Ed96f79B775c7dDd632"
+    "admin": "0x2372209b597A3879D8868939FAc139F476173210",
+    "attester": "0xf91D385C700e6285116fD0faFEF0dfEa015A06B8",
+    "arbitrator": "0x3A7B6464c60c27B44917654bCb3A2D703F8864B7"
   },
   "erc8004": {
     "identity": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
@@ -38,7 +37,8 @@
     "facilitator": "https://x402-facilitator.molandak.org"
   },
   "knownTokens": [
-    "0x754704Bc059F8C67012fEd69BC8A327a5aafb603"
+    "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+    "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777"
   ],
   "usdPegged": [
     "0x754704Bc059F8C67012fEd69BC8A327a5aafb603"
@@ -71,16 +71,74 @@
     "creatorFeeVault": "0x687f9172D5F4798694811333C5C5696afCF4F6f4"
   },
   "sidePages": [
-    { "name": "MonadVision", "url": "https://monadvision.com/token/{token}" },
-    { "name": "DEX Screener", "url": "https://dexscreener.com/monad/{token}" }
+    {
+      "name": "MonadVision",
+      "url": "https://monadvision.com/token/{token}"
+    },
+    {
+      "name": "DEX Screener",
+      "url": "https://dexscreener.com/monad/{token}"
+    }
   ],
   "sidequest": {
-    "slashRecipient": null,
+    "slashRecipient": "0x7d363EBFcE050E6e4173ea10b5e3cBB050E8e635",
     "minimumCreatorBond": 1000000000000000000000000,
     "maxMinimumCreatorBond": 100000000000000000000000000,
-    "unfilledForfeitBps": 2500
+    "unfilledForfeitBps": 2500,
+    "safe": "0x7d363EBFcE050E6e4173ea10b5e3cBB050E8e635",
+    "defaultArbitrator": "0x3A7B6464c60c27B44917654bCb3A2D703F8864B7",
+    "margin": 3600,
+    "schedule": {
+      "thresholds": [
+        0,
+        1000000,
+        10000000,
+        50000000
+      ],
+      "bps": [
+        3000,
+        1000,
+        300,
+        100
+      ],
+      "treasury": "0x7d363EBFcE050E6e4173ea10b5e3cBB050E8e635"
+    },
+    "token": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777"
   },
-  "deployment": {},
+  "deployment": {
+    "block": 113042684,
+    "core": "0xA4178600Eee6e2A50B0fC6533bbc9e9ea5e59f60",
+    "factory": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+    "main": {
+      "evaluator": "0x8086CC2885Ad6dC3436C3389641041fBE887A804",
+      "factory": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+      "holding": "0x6919738f047E4403BbD12Cb7BbE470c85a59bBE3",
+      "kind": "sidequest-v1",
+      "openTokens": true
+    },
+    "network": "monad-mainnet",
+    "rewardTokens": [
+      "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+      "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777"
+    ],
+    "sidequest": {
+      "block": 113042677,
+      "clocks": {
+        "feeDelay": 259200,
+        "holdingDelay": 1814400,
+        "minArbitrationWindow": 43200,
+        "minDisputeWindow": 3600,
+        "minReviewWindow": 3600,
+        "proposalGrace": 604800,
+        "unstakeDelay": 1209600
+      },
+      "factory": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+      "feeSchedule": "0x9c570E8Ab9d0363aB4263D830C7e3746F1c6a2aD",
+      "safe": "0x7d363EBFcE050E6e4173ea10b5e3cBB050E8e635",
+      "slashRecipient": "0x7d363EBFcE050E6e4173ea10b5e3cBB050E8e635",
+      "vault": "0xe8082B571bE7C9C88049C7F85B3aCc50b1164E7B"
+    }
+  },
   "boards": [],
   "launchKit": {
     "rpc": "https://rpc.monad.xyz",
