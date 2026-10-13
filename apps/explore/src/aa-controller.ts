@@ -7,6 +7,13 @@ import { reconcileUserOp, userOpCalls, type BrowserAaRpc } from './aa-request.ts
 import { emptyJournal, type OpRecord } from './components/txJournal.ts'
 import type { WalletStep } from './components/txOperation.ts'
 
+/** The journal keeps only what reconcile reads: the receipt's bigint gas cost would make the record unserialisable,
+ *  so its save after a landed operation failed and the page never reported the action (13 Oct, mainnet). */
+const journalReceipt = (receipt: { readonly txHash: Hex; readonly status: 'success' | 'reverted' }) => ({
+  txHash: receipt.txHash,
+  status: receipt.status,
+})
+
 const NATIVE = { payment: 'native' } as const
 /** A saved action's gas lane: MON-paid when it says so, USDC (or sponsored) otherwise. */
 const lane = (saved: Pick<AaJournal, 'payment'>): 'token' | 'native' =>
@@ -127,7 +134,7 @@ export class BrowserUserOp {
       return outcome.at
     }
     if (outcome.at === 'receipt') {
-      const next = { ...record, aa: { ...aa, receipt: outcome.receipt } }
+      const next = { ...record, aa: { ...aa, receipt: journalReceipt(outcome.receipt) } }
       await this.#write(next)
       await this.#finish(next)
     }
@@ -302,7 +309,7 @@ export class BrowserUserOp {
       const record = await this.#record()
       const receipt = await sdk.userOpReceipt(this.deps.rpc.bundler, record.aa!.built!.userOpHash)
       if (receipt !== null) {
-        const next = { ...record, aa: { ...record.aa!, receipt } }
+        const next = { ...record, aa: { ...record.aa!, receipt: journalReceipt(receipt) } }
         await this.#write(next)
         await this.#finish(next)
         return

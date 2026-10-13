@@ -163,6 +163,9 @@ describe('persisted browser user-operation sending', () => {
     expect(f.record()?.recorded).toEqual([true])
     expect(f.record()?.hashes).toEqual([txHash])
     expect(f.log.indexOf('eth_sendUserOperation')).toBeLessThan(f.log.indexOf('report'))
+    // The real journal is JSON in localStorage: a bigint in the saved receipt failed every save after a landed op.
+    expect(() => JSON.stringify(f.record())).not.toThrow()
+    expect(f.record()?.aa?.receipt).toEqual({ txHash, status: 'success' })
   })
 
   it('never sends when the signed operation cannot be persisted', async () => {
