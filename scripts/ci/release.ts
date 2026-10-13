@@ -428,7 +428,7 @@ const configFor = (infra: StageFile): { readonly attester: string } => {
 export interface PlanRow {
   readonly fqn: string
   readonly action: string
-  readonly bindings: readonly { readonly action: string }[]
+  readonly bindings: readonly { readonly action: string; readonly sid?: string }[]
 }
 interface Snapshot {
   readonly summary: PlanCounts
@@ -469,8 +469,11 @@ export const assertSnapshotSafe = (snapshot: Snapshot, firstDeploy: boolean, ado
     firstDeploy,
     adoptMove,
   )
-  if (snapshot.resources.some((row) => row.bindings.some((binding) => binding.action === 'delete')))
-    fail('plan refused: binding deletion')
+  // Binding ids are names, never values, so the refusal can say which ones would go.
+  const deleted = snapshot.resources.flatMap((row) =>
+    row.bindings.filter((binding) => binding.action === 'delete').map((binding) => `${row.fqn}:${binding.sid ?? '?'}`),
+  )
+  if (deleted.length > 0) fail(`plan refused: binding deletion (${deleted.join(', ')})`)
   if (snapshot.actions.some((entry) => entry.action === 'delete')) fail('plan refused: action deletion')
 }
 export const assertNoop = (snapshot: Snapshot): void => {

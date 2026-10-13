@@ -185,9 +185,9 @@ test('plan refusal rules cover destructive and adoption actions', () => {
 })
 
 test('binding deletions and deleted stack actions are refused even when resource counts are safe', () => {
-  const resource = { fqn: 'Api', action: 'noop', bindings: [{ action: 'delete' }] }
+  const resource = { fqn: 'Api', action: 'noop', bindings: [{ action: 'delete', sid: 'RELAY_PRIVATE_KEY' }] }
   expect(() => assertSnapshotSafe({ summary: clean, resources: [resource], actions: [] }, false, false)).toThrow(
-    'binding deletion',
+    'binding deletion (Api:RELAY_PRIVATE_KEY)',
   )
   expect(() =>
     assertSnapshotSafe({ summary: clean, resources: [], actions: [{ action: 'delete' }] }, false, false),
