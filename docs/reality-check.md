@@ -1536,3 +1536,18 @@ Recorded for later videos in `~/code/goblin-videos/raw/sidequest-20261013/` (des
 **Not verified yet:** a disputed hire and a ruling sent by the arbiter itself, Privy policy readback on 143, anything on
 prod-testnet or mainnet. MonadVision and Monadscan served Cloudflare challenges to the recording browser, so no explorer
 stills were taken.
+
+## 13 October 2026 — first-party backing on mainnet
+
+**Live-verified on Monad mainnet (chain 143), read-only `cast` against `https://rpc.monad.xyz` at block 113135678.**
+
+- **Backing.** One Safe transaction, `0xe5cfb317fa692826bd8cfe4300911fc2e90a726201ce44ede10253f4daae2175` (block
+  113134795), emitted three `Delegated` events on the StakeVault: 2,500,000 SIDE each behind the official account
+  (`0x5884…b3E0`), Grok Bot (Agent ID 10399, `0xf3a5…b7b4`) and Patch (Agent ID 10401, `0x4437…8eb0`), with the Safe
+  as delegator. `stakeOf` reads 2,500,000 for each and `reservedOf` 0; the vault holds 7,500,000 SIDE.
+- **Fee tier.** `FeeSchedule.feeBps` reads 3000 below 1,000,000, 1000 at 1,000,000 and 2,500,000, 300 at 10,000,000
+  and 100 at 50,000,000: the three backed accounts are in the 10% tier.
+- **What is left.** The Safe holds 92,511,342.21 SIDE. Of the 20,000,000 first-party backing budget, 12,500,000 is
+  unspent (goblin is next); the 15,000,000 sponsorship budget is unspent and is planned at 1,000,000 per outside account.
+
+**Not verified yet:** goblin's mainnet registration and backing, any sponsorship, the first mainnet hire.
