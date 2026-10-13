@@ -253,37 +253,39 @@ const limitsOf = (op: UserOperation): bigint =>
   (op.paymasterVerificationGasLimit ?? 0n) +
   (op.paymasterPostOpGasLimit ?? 0n)
 
-/** The limits the bundler priced its pre-verification gas for: its own measurement, before our margin and floor. */
-const measuredLimits = (gas: Json): bigint =>
-  quantity(field(gas, 'verificationGasLimit'), 'verification gas') + quantity(field(gas, 'callGasLimit'), 'call gas')
-
 /**
- * After an unpaid estimate: the stub's paymaster limits, then pre-verification gas priced for every limit the operation
- * now names, against the limits the bundler measured. Scaling from our raised call gas instead under-priced a SIDE sale
- * whose batch floor (1.03M) is far above its estimate (614k): 573535 sent, 715771 required (live on dev, 13 Oct).
+ * The limits the bundler priced its pre-verification gas for: its own measurement, before our margin and floor. An
+ * unpaid estimate measured no paymaster.
  */
-function withStubLimits(op: UserOperation, stub: UserOperation, unpaidLimits: bigint): UserOperation {
+function measuredLimits(gas: Json, unpaid: boolean): bigint {
+  const measured =
+    quantity(field(gas, 'verificationGasLimit'), 'verification gas') + quantity(field(gas, 'callGasLimit'), 'call gas')
+  if (unpaid) return measured
+  return measured + (limit(gas, 'paymasterVerificationGasLimit') ?? 0n) + (limit(gas, 'paymasterPostOpGasLimit') ?? 0n)
+}
+
+/** After an unpaid estimate: the stub's paymaster limits. */
+function withStubLimits(op: UserOperation, stub: UserOperation): UserOperation {
   const verification = stub.paymasterVerificationGasLimit ?? op.paymasterVerificationGasLimit
   const postOp = stub.paymasterPostOpGasLimit ?? op.paymasterPostOpGasLimit
-  return scaledPreVerification(
-    {
-      ...op,
-      ...(verification === undefined ? {} : { paymasterVerificationGasLimit: verification }),
-      ...(postOp === undefined ? {} : { paymasterPostOpGasLimit: postOp }),
-    },
-    unpaidLimits,
-  )
+  return {
+    ...op,
+    ...(verification === undefined ? {} : { paymasterVerificationGasLimit: verification }),
+    ...(postOp === undefined ? {} : { paymasterPostOpGasLimit: postOp }),
+  }
 }
 
 /**
  * On Monad a bundler prices pre-verification gas from the operation's limits, because the chain bills the whole
- * limit: attaching a paymaster's limits after an unpaid estimate raises what it requires (seen live: 342947 unpaid,
- * 520126 required once our paymaster's limits were on). It is scaled by how much the limits grew.
+ * limit. Anything that raises them after the estimate raises what it requires: our paymaster's limits after an unpaid
+ * estimate (342947 unpaid, 520126 required), a SIDE sale's batch floor above its estimate (573535 sent, 715771
+ * required), a sponsored faucet claim's floor (276351 sent, 292982 required; all live on dev, 12–13 Oct). So it is
+ * scaled by how much the limits grew over the ones the bundler measured, on every path.
  */
-function scaledPreVerification(op: UserOperation, unpaidLimits: bigint): UserOperation {
-  const paid = limitsOf(op)
-  if (unpaidLimits === 0n || paid <= unpaidLimits) return op
-  return { ...op, preVerificationGas: (op.preVerificationGas * paid + unpaidLimits - 1n) / unpaidLimits }
+function scaledPreVerification(op: UserOperation, measured: bigint): UserOperation {
+  const sent = limitsOf(op)
+  if (measured === 0n || sent <= measured) return op
+  return { ...op, preVerificationGas: (op.preVerificationGas * sent + measured - 1n) / measured }
 }
 
 /**
@@ -331,7 +333,8 @@ export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
   const stub = op
   const gas = await input.bundler('eth_estimateUserOperationGas', estimateParams(input, op, unpaid))
   op = withEstimate(op, gas, input.minCallGas ?? 0n)
-  if (unpaid) op = withStubLimits(op, stub, measuredLimits(gas))
+  if (unpaid) op = withStubLimits(op, stub)
+  op = scaledPreVerification(op, measuredLimits(gas, unpaid))
   op = withPreVerificationMargin(op)
   const maxCost = tokenQuote === null ? 0n : maxTokenCost(op, tokenQuote)
   if (maxCost > aa.maxCostPerOp)
