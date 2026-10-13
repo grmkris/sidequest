@@ -3,7 +3,7 @@ import { erc20Abi } from 'viem'
 import { type Abi, type Address, type TransactionReceipt, decodeEventLog, zeroAddress } from 'viem'
 import { coreAbi, sidequestHoldingAbi, stakeVaultAbi } from './abi/index.ts'
 
-/** SidequestConstants.SLASH_SINK: where the vault sends slashed SIDE, since the launcher's token has no burn. */
+/** Legacy testnet vaults send slashed SIDE to this address. New vaults use their configured slashRecipient. */
 export const SLASH_SINK: Address = '0x000000000000000000000000000000000000dEaD'
 
 interface Event {
@@ -44,6 +44,7 @@ export interface JobEconomics {
   holding: Address
   core: Address
   vault: Address
+  slashRecipient?: Address
   factory: Address
   token: Address
   creator: Address
@@ -54,6 +55,10 @@ export interface JobEconomics {
   slashWorker: boolean
   workerCredit: bigint
   workerOwed: bigint
+}
+
+function isSlashRecipient(to: unknown, recipient: Address | undefined): boolean {
+  return eq(to, zeroAddress) || eq(to, SLASH_SINK) || (recipient !== undefined && eq(to, recipient))
 }
 
 /** Excludes setup, staking and withdrawal receipts; no current wallet total can replace this proof. */
@@ -74,12 +79,16 @@ export function verifyJobEconomics(receipts: readonly TransactionReceipt[], x: J
     exact(`side ${side} Vault slash`, amount(vault, 'Slashed', vaultMatch), slash ? bond : 0n)
   }
   const transfers = events(receipts, erc20Abi, x.factory)
-  // A slash leaves circulation: vaults up to testnet G1e burn their Factory token (recipient zero); the current vault
-  // sends it to the slash sink, because the launcher's SIDE has no burn.
+  // New vaults send a slash to the configured recipient; old testnet vaults used zero or the dead address.
   exact(
-    'SIDE slashed out of circulation by Vault',
-    amount(transfers, 'Transfer', (a) => eq(a.from, x.vault) && (eq(a.to, zeroAddress) || eq(a.to, SLASH_SINK))),
+    'SIDE slashed by Vault',
+    amount(transfers, 'Transfer', (a) => eq(a.from, x.vault) && isSlashRecipient(a.to, x.slashRecipient)),
     (x.slashCreator ? x.creatorBond : 0n) + (x.slashWorker ? x.workerBond : 0n),
+  )
+  exact(
+    'SIDE sent by Vault to an unapproved recipient',
+    amount(transfers, 'Transfer', (a) => eq(a.from, x.vault) && !isSlashRecipient(a.to, x.slashRecipient)),
+    0n,
   )
   const core = events(receipts, coreAbi, x.core).filter(
     (e) => e.args.jobId !== undefined && uint(e.args.jobId) === x.jobId,

@@ -6,7 +6,7 @@ import {ISidequestEvaluator} from "../../src/sidequest/interfaces/ISidequestEval
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {BaseV1} from "./BaseV1.t.sol";
 
-/// @dev Ports of the legacy Slashing suite to v1: a slash burns the reserved SIDE in the vault.
+/// @dev Ports of the legacy Slashing suite to v1: a slash sends the reserved SIDE to the vault's slash recipient.
 contract V1SlashingTest is BaseV1 {
     function test_noShowSlash_sharedProRataIncludingQueuedDelegator() public {
         vm.startPrank(contributor);

@@ -3,7 +3,6 @@ pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {LaunchToken} from "../mocks/LaunchToken.sol";
-import {SidequestConstants} from "../../src/sidequest/interfaces/SidequestConstants.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {IStakeVault} from "../../src/sidequest/interfaces/IStakeVault.sol";
 import {StakeVaultFixture} from "./StakeVault.t.sol";
@@ -17,7 +16,11 @@ contract DelegatedVaultHandler is Test {
     address[2] public accounts;
     uint256 public deposited;
     uint256 public withdrawn;
-    uint256 public burned;
+    uint256 public slashed;
+    uint256 public forfeited;
+    address[3] public recipients;
+    mapping(address recipient => uint256 amount) public slashPaid;
+    address public immutable forfeitRecipient;
 
     constructor(
         LaunchToken token_,
@@ -31,6 +34,8 @@ contract DelegatedVaultHandler is Test {
         holding = holding_;
         delegators = owners;
         accounts = backed;
+        recipients = [vault_.slashRecipient(), makeAddr("slash-1"), makeAddr("slash-2")];
+        forfeitRecipient = makeAddr("forfeit-recipient");
     }
 
     function delegate(uint256 payerSeed, uint256 ownerSeed, uint256 accountSeed, uint96 amount) external {
@@ -100,8 +105,11 @@ contract DelegatedVaultHandler is Test {
         uint256 reserved = vault.reservedBy(holding, account);
         if (reserved == 0) return;
         uint256 assets = bound(amount, 1, reserved);
+        address recipient = vault.slashRecipient();
         vm.prank(holding);
-        burned += vault.slash(account, assets);
+        uint256 moved = vault.slash(account, assets);
+        slashPaid[recipient] += moved;
+        slashed += moved;
     }
 
     function fullSlash(uint256 accountSeed, uint256 queuedOwnerSeed) external {
@@ -122,8 +130,26 @@ contract DelegatedVaultHandler is Test {
             vault.requestUndelegate(account, shares);
         }
         uint256 assets = vault.poolOf(account).assets;
+        address recipient = vault.slashRecipient();
         vm.prank(holding);
-        burned += vault.slash(account, assets);
+        uint256 moved = vault.slash(account, assets);
+        slashPaid[recipient] += moved;
+        slashed += moved;
+    }
+
+    function changeSlashRecipient(uint256 seed) external {
+        address owner = vault.owner();
+        vm.prank(owner);
+        vault.setSlashRecipient(recipients[seed % 3]);
+    }
+
+    function forfeit(uint256 accountSeed, uint96 amount) external {
+        address account = accounts[accountSeed % 2];
+        uint256 reserved = vault.reservedBy(holding, account);
+        if (reserved == 0) return;
+        uint256 assets = bound(amount, 1, reserved);
+        vm.prank(holding);
+        forfeited += vault.forfeit(account, assets, forfeitRecipient);
     }
 
     function warp(uint32 dt) external {
@@ -190,13 +216,22 @@ contract StakeVaultDelegationInvariantsTest is StakeVaultFixture {
     }
 
     function invariant_depositsOnlyReturnExistingAssets() public view {
-        assertEq(handler.deposited(), handler.withdrawn() + handler.burned() + vault.totalAssets());
-        assertEq(token.balanceOf(SidequestConstants.SLASH_SINK), handler.burned(), "slashed SIDE sits in the sink");
+        assertEq(
+            handler.deposited(), handler.withdrawn() + handler.slashed() + handler.forfeited() + vault.totalAssets()
+        );
+        uint256 recipientBalances;
+        for (uint256 i; i < 3; ++i) {
+            address recipient = handler.recipients(i);
+            assertEq(token.balanceOf(recipient), handler.slashPaid(recipient));
+            recipientBalances += token.balanceOf(recipient);
+        }
+        assertEq(recipientBalances, handler.slashed(), "all slashes reach their current recipient");
+        assertEq(token.balanceOf(handler.forfeitRecipient()), handler.forfeited());
         assertEq(token.totalSupply(), SUPPLY, "SIDE has no burn");
         uint256 ownersBalance;
         for (uint256 i; i < 3; ++i) {
             ownersBalance += token.balanceOf(delegators[i]);
         }
-        assertEq(ownersBalance + vault.totalAssets() + handler.burned(), initialOwnersBalance);
+        assertEq(ownersBalance + vault.totalAssets() + handler.slashed() + handler.forfeited(), initialOwnersBalance);
     }
 }

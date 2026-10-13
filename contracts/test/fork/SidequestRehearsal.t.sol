@@ -39,6 +39,7 @@ contract SidequestRehearsalForkTest is Test {
         if (c.chainId == 10143) c.clocks = SidequestRecipe.load(vm, network).clocks;
         vm.etch(safe, hex"00"); // the recipe requires code at the Safe
         c.safe = safe;
+        c.slashRecipient = safe;
         c.defaultArbitrator = arbitrator;
         c.arbitrator = arbitrator; // the fixture's own role, not the shipped config's (LAUNCH-AUDIT-FIX-001/002)
         c.margin = 1 days;

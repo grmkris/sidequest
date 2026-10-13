@@ -7,7 +7,6 @@ import {ERC8183} from "../../src/vendor/erc8183/ERC8183.sol";
 import {ERC8183WithAuthorization} from "../../src/vendor/erc8183/ERC8183WithAuthorization.sol";
 import {MockPaymentToken} from "../../src/MockPaymentToken.sol";
 import {LaunchToken} from "../mocks/LaunchToken.sol";
-import {SidequestConstants} from "../../src/sidequest/interfaces/SidequestConstants.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {SidequestHolding} from "../../src/sidequest/SidequestHolding.sol";
 import {SidequestEvaluator} from "../../src/sidequest/SidequestEvaluator.sol";
@@ -373,7 +372,7 @@ contract SidequestInvariantsTest is Test {
             if (l.workerBondBurned) burned += l.workerBond;
         }
         assertEq(vault.totalReserved(), open, "reservations equal open bonds");
-        assertEq(factory.balanceOf(SidequestConstants.SLASH_SINK), burned, "SIDE leaves only by slashing");
+        assertEq(factory.balanceOf(vault.slashRecipient()), burned, "SIDE leaves only by slashing");
         assertEq(factory.totalSupply(), SUPPLY, "SIDE has no burn");
     }
 

@@ -75,6 +75,7 @@
     { "name": "DEX Screener", "url": "https://dexscreener.com/monad/{token}" }
   ],
   "sidequest": {
+    "slashRecipient": null,
     "minimumCreatorBond": 1000000000000000000000000,
     "maxMinimumCreatorBond": 100000000000000000000000000,
     "unfilledForfeitBps": 2500

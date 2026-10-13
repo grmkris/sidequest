@@ -78,6 +78,14 @@ function services(
   return { node, bundler, paymaster, log }
 }
 
+/**
+ * The fake estimate's pre-verification gas (0x19000) priced for the limits sent: the call's 10% headroom raises them
+ * over the measured ones (Monad bills limits), then the 10% margin.
+ */
+const MEASURED_LIMITS = 0xf000n + 0x30d40n + 0xb000n + 0xa000n
+const sentPvg = (named: bigint) => (((0x19000n * named + MEASURED_LIMITS - 1n) / MEASURED_LIMITS) * 110n + 99n) / 100n
+const PADDED_PVG = sentPvg(0xf000n + (0x30d40n * 11n) / 10n + 0xb000n + 0xa000n)
+
 /** Services whose final paymaster answer carries these limits on top of the stub's. */
 function raised(limits: Record<string, string>) {
   const s = services()
@@ -118,7 +126,7 @@ describe('building a user operation', () => {
     // The estimate's placeholder must be a well-formed 65-byte ECDSA signature: OpenZeppelin reverts on any other length.
     expect(size(built.op.signature)).toBe(65)
     expect(built.op.callGasLimit).toBe((0x30d40n * 11n) / 10n)
-    expect(built.op.preVerificationGas).toBe((0x19000n * 110n + 99n) / 100n)
+    expect(built.op.preVerificationGas).toBe(PADDED_PVG)
     expect(built.maxCost > 0n && built.maxCost <= aa.maxCostPerOp).toBe(true)
   })
 
@@ -199,7 +207,7 @@ describe('building a user operation', () => {
     }
     const built = await build(s)
     const quote = { paymaster: PAYMASTER, exchangeRate: 27_888n, postOpGas: 0x907en }
-    expect(finalGas).toBe((0x19000n * 11n + 9n) / 10n)
+    expect(finalGas).toBe(PADDED_PVG)
     expect(built.maxCost).toBe(maxTokenCost(built.op, quote))
     const beforeMargin = maxTokenCost({ ...built.op, preVerificationGas: 0x19000n }, quote)
     expect(built.maxCost).toBeGreaterThan(beforeMargin)
@@ -208,6 +216,23 @@ describe('building a user operation', () => {
       code: 'ceiling',
     })
     expect(capped.log).not.toContain('paymaster:pm_getPaymasterData')
+  })
+
+  it('prices pre-verification gas for a call-gas floor on the paid and the sponsored path', async () => {
+    // Live on dev, 13 Oct: a sponsored faucet claim's floor (400k) above its estimate (227k) was sent 276351 where
+    // 292982 was required; the paid path (Pimlico's USDC paymaster on 143) has the same shape.
+    const named = 0xf000n + 1_030_000n + 0xb000n + 0xa000n
+    const paid = await build(services(), { minCallGas: 1_030_000n })
+    expect(paid.op.preVerificationGas).toBe(sentPvg(named))
+    const s = services()
+    const paymaster = s.paymaster
+    let signed = 0n
+    s.paymaster = async (method, params) => {
+      if (method === 'pm_getPaymasterData') signed = quantity(field(params[0], 'preVerificationGas'), 'gas')
+      return paymaster(method, params)
+    }
+    await build(s, { sponsor: 'faucet', minCallGas: 1_030_000n })
+    expect(signed).toBe(sentPvg(named))
   })
 
   it("refuses final paymaster limits that would cost more than the bound, and keeps the bound when they don't", async () => {
@@ -231,7 +256,7 @@ describe('building a user operation', () => {
       return paymaster(method, params)
     }
     const built = await build(s, { sponsor: 'faucet' })
-    expect(finalGas).toBe((0x19000n * 110n + 99n) / 100n)
+    expect(finalGas).toBe(PADDED_PVG)
     expect(built.op.preVerificationGas).toBe(finalGas)
     expect(built.maxCost).toBe(0n)
   })

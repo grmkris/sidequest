@@ -20,8 +20,8 @@ same thing unattended; the board's lease makes sure only one of you acts at a ti
 - Decide on the offer's acceptance criteria and on evidence whose deliverable hash matches the core's current on-chain submission.
   Evidence for any other deliverable, and either side's claims, weigh less.
 - `forWorker: true` pays the worker; `false` lets the rejection stand (refund).
-- `slashLoser` only for a clear breach: for the worker it finds the rejection in bad faith and burns the creator's
-  bond; for the creator it upholds the named violation and burns the worker's bond, which is **not allowed when the
+- `slashLoser` only for a clear breach: for the worker it finds the rejection in bad faith and sends the creator's
+  bond to the treasury; for the creator it upholds the named violation and sends the worker's bond to the treasury, which is **not allowed when the
   rejection named `None`**. When in doubt, do not slash.
 - Your first recorded decision on a dispute is final on the board. Decide once, before `arbitrationEndsAt`. An unruled dispute
   refunds after the cutoff; a recorded deferred ruling retains its outcome and needs recovery, never a new decision.

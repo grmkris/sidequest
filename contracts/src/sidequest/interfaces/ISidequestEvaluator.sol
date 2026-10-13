@@ -198,7 +198,7 @@ interface ISidequestEvaluator {
     // ---------------------------------------------------------------------------------------------
 
     /// @notice The listing's approver accepts the submission: bonds back, the worker paid (`_payWorker`). Refused once
-    ///         the worker has disputed (R114-02). A late submission may be accepted until the missed-delivery burn.
+    ///         the worker has disputed (R114-02). A late submission may be accepted until the missed-delivery slash.
     function accept(uint256 jobId) external;
 
     /// @notice The listing's approver rejects a timely submission within its review window, naming a violation.
@@ -209,9 +209,9 @@ interface ISidequestEvaluator {
     function dispute(uint256 jobId) external;
 
     /// @notice The listing's arbitrator rules within the arbitration window: who gets the reward, and whether the
-    ///         loser broke a slashable obligation (for the worker: a bad-faith rejection burns the creator bond; for the
+    ///         loser broke a slashable obligation (for the worker: a bad-faith rejection slashes the creator bond to the vault's recipient; for the
     ///         creator: the named violation is upheld and the worker bond is penalized, which needs a named violation).
-    ///         Holding burns only before `expiredAt`; at or after expiry it releases even a penalized bond.
+    ///         Holding slashes only before `expiredAt`; at or after expiry it releases even a penalized bond.
     function rule(uint256 jobId, bool forWorker, bool slashLoser, bytes32 reasonHash) external;
 
     /// @notice The same ruling, signed by the listing's arbitrator and relayed by anyone, under the same cutoff.
@@ -237,7 +237,7 @@ interface ISidequestEvaluator {
     function completeAfterSilence(uint256 jobId) external;
 
     /// @notice A rejection nobody disputed within the dispute window becomes final; a named violation records a worker
-    ///         penalty. Resolve before `expiredAt` for a burn; Holding releases the bond at or after expiry.
+    ///         penalty. Resolve before `expiredAt` for a slash; Holding releases the bond at or after expiry.
     function rejectAfterWindow(uint256 jobId) external;
 
     /// @notice The arbitrator did not rule in time: refund, both bonds released, no feedback. Reverts `AlreadyRuled`
@@ -245,7 +245,7 @@ interface ISidequestEvaluator {
     function refundAfterArbitrationTimeout(uint256 jobId) external;
 
     /// @notice A funded job with no timely submission, strictly after the delivery deadline: refund, the worker bond
-    ///         penalized, the creator bond released. Resolve before `expiredAt` for the worker bond to burn; Holding
+    ///         penalized, the creator bond released. Resolve before `expiredAt` for the worker bond to slash to the vault's recipient; Holding
     ///         releases at or after expiry. Reverts `CorePaused` while the core is paused; a deadline inside the
     ///         observed pause (`notePause`) refunds without the penalty.
     function rejectAfterDeliveryDeadline(uint256 jobId) external;
@@ -278,11 +278,11 @@ interface ISidequestEvaluator {
 
     /// @notice Whether a worker penalty finding exists: a penalizing ruling or final rejection, or (with no outcome
     ///         yet) a missed delivery past the deadline or an undisputed named violation past the dispute window.
-    ///         This is not proof of a burn: Holding releases the bond at or after `expiredAt`.
+    ///         This is not proof of a slash: Holding releases the bond at or after `expiredAt`.
     function workerPenaltyDue(uint256 jobId) external view returns (bool);
 
     /// @notice Whether a creator penalty finding exists: a ruling for the worker found the rejection in bad faith.
-    ///         This is not proof of a burn: Holding releases the bond at or after `expiredAt`.
+    ///         This is not proof of a slash: Holding releases the bond at or after `expiredAt`.
     function creatorPenaltyDue(uint256 jobId) external view returns (bool);
 
     // ---------------------------------------------------------------------------------------------

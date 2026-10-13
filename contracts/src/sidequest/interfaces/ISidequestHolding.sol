@@ -24,7 +24,7 @@ import {IFeeSchedule} from "./IFeeSchedule.sol";
 ///         | Rejected/Expired otherwise              | —                      | —              | reward to creator; each top-up refundable to its contributor |
 ///         | Cancelled or expired before activation  | —                      | —              | reward to creator (no fee)      |
 ///
-///         Bonds are reservations in the `IStakeVault`: a bond is slashed (sent to the slash sink) when the evaluator says its penalty
+///         Bonds are reservations in the `IStakeVault`: a bond is slashed (sent to the vault's slash recipient) when the evaluator says its penalty
 ///         is due, and released otherwise. `burnBond` and `returnBonds` are the evaluator's; `settle` handles whatever
 ///         the evaluator did not. A nonzero bond's slash requested at or after the listing's `expiredAt` instead
 ///         releases it, leaves its `*BondBurned` flag false, and emits `BondReleased`. A never-activated listing instead
@@ -81,7 +81,9 @@ interface ISidequestHolding {
         bool rewardSettled;
         bool creatorBondSettled;
         bool workerBondSettled;
+        /// @dev Legacy ABI name: true when the creator bond was sent to the vault's slash recipient.
         bool creatorBondBurned;
+        /// @dev Legacy ABI name: true when the worker bond was sent to the vault's slash recipient.
         bool workerBondBurned;
         /// @dev Set by `activate` (also for a zero worker bond): the worker side exists and must be settled.
         bool workerBondReserved;
@@ -326,7 +328,7 @@ interface ISidequestHolding {
     // ---------------------------------------------------------------------------------------------
 
     /// @notice Slashes one side's bond on a finding the evaluator made final: a ruling, an undisputed violation, a
-    ///         missed delivery. At or after `expiredAt`, a nonzero bond is released instead. A side already settled
+    ///         missed delivery. Slashed SIDE is sent to the vault's slash recipient. At or after `expiredAt`, a nonzero bond is released instead. A side already settled
     ///         is left alone.
     function burnBond(uint256 jobId, Side side) external;
 

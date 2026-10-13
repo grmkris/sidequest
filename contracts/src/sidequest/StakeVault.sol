@@ -10,12 +10,11 @@ import {IStakeVault} from "./interfaces/IStakeVault.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {SidequestClocks} from "./SidequestClocks.sol";
-import {SidequestConstants} from "./interfaces/SidequestConstants.sol";
 
 /// @title StakeVault
 /// @notice Delegated SIDE backing and every Sidequest bond (ADR-0014; the full contract is in `IStakeVault`). A bond is a
 ///         reservation of stake: no token moves when a bond is posted, a slash sends the reserved SIDE to
-///         `SidequestConstants.SLASH_SINK` (SIDE has no `burn`), and a Holding
+///         the owner-configured `slashRecipient` (the treasury at launch), and a Holding
 ///         can only ever release, slash or forfeit what it reserved itself. Forfeiture transfers SIDE to a recipient.
 ///         Holdings are authorized behind an immutable timelock
 ///         longer than the immutable unstake cooldown (production: 21 days > 14 days), and revoked instantly; a revoked Holding still settles its live jobs.
@@ -31,6 +30,7 @@ contract StakeVault is IStakeVault, NoRenounce, ReentrancyGuardTransient {
     uint48 public immutable PROPOSAL_GRACE;
 
     IFactory public immutable factory;
+    address public slashRecipient;
 
     uint256 public totalAssets;
     uint256 public totalReserved;
@@ -44,13 +44,14 @@ contract StakeVault is IStakeVault, NoRenounce, ReentrancyGuardTransient {
     address internal _pendingHolding;
     uint48 internal _pendingEta;
 
-    constructor(IFactory factory_, SidequestClocks.Config memory clocks) Ownable(msg.sender) {
-        if (address(factory_) == address(0)) revert ZeroAddress();
+    constructor(IFactory factory_, address slashRecipient_, SidequestClocks.Config memory clocks) Ownable(msg.sender) {
+        if (address(factory_) == address(0) || slashRecipient_ == address(0)) revert ZeroAddress();
         SidequestClocks.validate(clocks);
         UNSTAKE_DELAY = clocks.unstakeDelay;
         HOLDING_DELAY = clocks.holdingDelay;
         PROPOSAL_GRACE = clocks.proposalGrace;
         factory = factory_;
+        slashRecipient = slashRecipient_;
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -146,7 +147,7 @@ contract StakeVault is IStakeVault, NoRenounce, ReentrancyGuardTransient {
         Pool storage pool = _pools[account];
         pool.assets -= uint128(burned);
         totalAssets -= burned;
-        factory.safeTransfer(SidequestConstants.SLASH_SINK, burned);
+        factory.safeTransfer(slashRecipient, burned);
         emit Slashed(msg.sender, account, burned);
         if (pool.assets == 0) {
             pool.shares = 0;
@@ -171,6 +172,14 @@ contract StakeVault is IStakeVault, NoRenounce, ReentrancyGuardTransient {
             ++pool.generation;
             emit PoolReset(account, pool.generation);
         }
+    }
+
+    function setSlashRecipient(address recipient) external onlyOwner {
+        if (recipient == address(0)) revert ZeroAddress();
+        if (recipient == address(this)) revert InvalidSlashRecipient();
+        address previous = slashRecipient;
+        slashRecipient = recipient;
+        emit SlashRecipientSet(previous, recipient);
     }
 
     function setHoldingDenied(address holding, bool denied) external {

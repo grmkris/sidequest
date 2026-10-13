@@ -106,6 +106,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           GITHUB_APP_ID: ${{ vars.SQ_GITHUB_APP_ID }}
           GITHUB_APP_INSTALLATION_ID: ${{ vars.SQ_GITHUB_APP_INSTALLATION_ID }}
+          # ADR-0023: hosted agents send user ops paying USDC gas from their operator's gas budget.
+          HOSTED_SEND: userop
         run: bun run deploy:dev
       - name: Smoke dev
         run: bun run smoke dev

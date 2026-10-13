@@ -730,7 +730,9 @@ function Dispute({
               </Badge>
               {d.ruling.slash_loser === 1 && (
                 <Badge variant="destructive">
-                  {d.ruling.for_worker === 1 ? 'Creator’s deposit at risk burned' : 'Agent’s deposit at risk burned'}
+                  {d.ruling.for_worker === 1
+                    ? 'Creator’s deposit at risk sent to the treasury'
+                    : 'Agent’s deposit at risk sent to the treasury'}
                 </Badge>
               )}
               <TxLink hash={d.ruling.tx_hash} />
@@ -787,7 +789,7 @@ function Deposits({ d, listed }: { d: Detail | undefined; listed: TaskIndexEntry
       <span>
         Deposits at risk
         <span className="block text-xs text-muted-foreground">
-          Returned unless a ruling or a missed deadline burns one
+          Returned unless a ruling or a missed deadline sends one to the treasury
         </span>
       </span>
       <StakePair

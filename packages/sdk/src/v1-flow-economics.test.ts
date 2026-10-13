@@ -71,15 +71,35 @@ function terminal(owed = false, slashTo: Address = zeroAddress) {
         ]),
   ])
 }
-it('proves exact per-job release, burn and payment from authentic receipts', () => {
+it('proves exact per-job release, slash and payment from authentic receipts', () => {
   verifyJobEconomics([terminal()], x)
   verifyJobEconomics([terminal(true)], { ...x, workerOwed: 70n })
 })
-it('counts a slash sent to the slash sink as the burn of a launcher SIDE without burn()', () => {
+it('accepts a legacy testnet slash sent to the dead address', () => {
   verifyJobEconomics([terminal(false, SLASH_SINK)], x)
   expect(() => verifyJobEconomics([terminal(false, addr(9))], x)).toThrow()
 })
-it('requires the actual Vault effects, supply burn and token transfer alongside protocol statements', () => {
+it('accepts a slash to the configured recipient', () => {
+  const recipient = addr(9)
+  verifyJobEconomics([terminal(false, recipient)], { ...x, slashRecipient: recipient })
+})
+it('accepts legacy zero and dead-address transfers when a recipient is supplied', () => {
+  const withRecipient = { ...x, slashRecipient: addr(9) }
+  verifyJobEconomics([terminal()], withRecipient)
+  verifyJobEconomics([terminal(false, SLASH_SINK)], withRecipient)
+})
+it('refuses an arbitrary recipient even when a different recipient is configured', () => {
+  expect(() => verifyJobEconomics([terminal(false, addr(8))], { ...x, slashRecipient: addr(9) })).toThrow()
+})
+it('refuses an extra transfer to an unapproved recipient alongside a valid slash', () => {
+  const recipient = addr(9)
+  const r = terminal(false, recipient)
+  const extra = receipt([log(erc20Abi, 'Transfer', x.factory, { from: x.vault, to: addr(8), value: 1n })])
+  expect(() =>
+    verifyJobEconomics([{ ...r, logs: [...r.logs, ...extra.logs] }], { ...x, slashRecipient: recipient }),
+  ).toThrow('unapproved recipient')
+})
+it('requires the actual Vault effects and token transfer alongside protocol statements', () => {
   const r = terminal()
   for (let i = 0; i < r.logs.length; i++)
     expect(() => verifyJobEconomics([{ ...r, logs: r.logs.filter((_log, n) => n !== i) }], x)).toThrow()

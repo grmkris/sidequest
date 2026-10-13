@@ -20,6 +20,7 @@ contract MainnetRunbookTest is Test {
         doc = vm.readFile(string.concat(vm.projectRoot(), "/../docs/mainnet-runbook.md"));
         r7 = vm.readFile(string.concat(vm.projectRoot(), "/script/rehearse-launch.sh"));
         kit = vm.readFile(string.concat(vm.projectRoot(), "/script/launch-kit.sh"));
+        kit = string.concat(kit, "\n", vm.readFile(string.concat(vm.projectRoot(), "/script/launch-kit-journal.sh")));
     }
 
     /// The forge steps both documents share, in launch order.
@@ -36,12 +37,26 @@ contract MainnetRunbookTest is Test {
         runbook[2] = KIT_ACCEPT;
         _inOrder(doc, runbook, "runbook");
         _inOrder(r7, _sharedSteps(), "rehearse-launch.sh");
-        // The kit's accept is R7's SafeAccept.s.sol, broadcast with MAINNET_GO from the owner keystore.
+        // The kit journals the same per-target Safe calls R7 broadcasts through SafeAccept.s.sol, then reads owners.
         string[] memory accept = new string[](3);
-        accept[0] = "MAINNET_GO=${MAINNET_GO:-} forge script script/SafeAccept.s.sol";
-        accept[1] = "--keystore \"$KEYS/sidequest-owner\" --password-file \"$PWFILE\"";
+        accept[0] = "queue_tx owner \"$safe\" 0 \"$EXEC\" \"$target\" 0 \"$data\"";
+        accept[1] = "execute_plan";
         accept[2] = "forge script script/SafeAccept.s.sol --sig 'check()'";
         _inOrder(kit, accept, "launch-kit.sh");
+    }
+
+    /// Launch review #5: signed transaction bytes and operation identity are durable before publish, and retries
+    /// reconcile receipts/nonce before replaying the same bytes. Dynamic command inputs are never rebuilt on a retry.
+    function test_launchKitPersistsBeforePublishAndReconcilesBeforeRetry() public view {
+        assertFalse(vm.contains(kit, "cast send --rpc-url"), "unjournaled launch-kit send");
+        assertTrue(vm.contains(kit, "cast mktx --rpc-url \"$RPC\" --chain \"$CHAIN\" --nonce \"$nonce\""));
+        assertTrue(vm.contains(kit, "journal_save \"$file\""), "signed transaction not persisted");
+        assertTrue(vm.contains(kit, "cast publish --rpc-url \"$RPC\" --json \"$raw\""));
+        assertTrue(vm.contains(kit, "cast receipt --async --rpc-url \"$RPC\" --json \"$hash\""));
+        assertTrue(vm.contains(kit, "cast nonce --rpc-url \"$RPC\" --block latest \"$from\""));
+        assertTrue(vm.contains(kit, "saved operation differs"));
+        assertTrue(vm.contains(kit, "sender nonce $nonce is spent"));
+        assertTrue(vm.contains(doc, "KIT_OPERATION"), "runbook does not explain intentional repeated operations");
     }
 
     /// 12 Oct: the Safe owner, creator and exit-test keys sign on Kris's MacBook through the kit. Every password read is a
@@ -61,6 +76,40 @@ contract MainnetRunbookTest is Test {
             assertTrue(vm.contains(kit, needles[i]), string.concat("launch-kit.sh lacks ", needles[i]));
         }
         assertFalse(vm.contains(kit, "--private-key"), "launch-kit.sh passes a raw key");
+    }
+
+    /// LAUNCH-AUDIT-CHAIN-001: every kit plan and send starts by binding its configured network to the selected RPC.
+    function test_launchKitBindsEveryPlanAndSendToConfigChain() public view {
+        assertTrue(vm.contains(kit, "chain_check()"), "launch kit has no RPC chain check");
+        assertTrue(vm.contains(kit, "cast chain-id --rpc-url \"$RPC\""), "launch kit does not query the RPC chain");
+        assertTrue(
+            vm.contains(kit, "safe|token|move|accept|backing|exit|bond|fund|balances) chain_check"),
+            "launch kit does not check before command dispatch"
+        );
+        assertTrue(vm.contains(kit, "go_check() {\n  chain_check"), "send path does not recheck the RPC chain");
+        assertTrue(vm.contains(kit, "config chain $CHAIN ($NETWORK)"), "chain mismatch refusal omits config context");
+    }
+
+    /// LAUNCH-AUDIT-VERIFY-001: rerunning promotion is a live health check, not a stale idempotency shortcut.
+    function test_repeatedPromotionRechecksTheVerifier() public view {
+        string memory promote = vm.readFile(string.concat(vm.projectRoot(), "/script/PromoteSidequest.s.sol"));
+        uint256 branch = vm.indexOf(promote, "if (SidequestOutput.isPromoted");
+        uint256 verify = vm.indexOf(promote, "SidequestVerify.verify(c, d);");
+        uint256 returned = vm.indexOf(promote, "return;");
+        assertGt(branch, 0, "promotion has no already-promoted branch");
+        assertGt(verify, branch, "already-promoted branch does not verify");
+        assertGt(returned, verify, "promotion returns before the repeated verifier");
+    }
+
+    /// LAUNCH-AUDIT-ACCEPT-001: the documented accept plan is read-only on chain 143 and does not need MAINNET_GO;
+    /// the separate send entry point still requires approval.
+    function test_acceptPlanUsesReadOnlyChainGuard() public view {
+        string memory accept = vm.readFile(string.concat(vm.projectRoot(), "/script/SafeAccept.s.sol"));
+        assertTrue(vm.contains(kit, "--sig 'simulate()' --rpc-url \"$RPC\" --sender \"$owner\""));
+        assertTrue(vm.contains(accept, "function simulate()"));
+        assertTrue(vm.contains(accept, "simulate cannot broadcast"));
+        assertTrue(vm.contains(accept, "SidequestRecipe.guardChain(vm, json, true)"), "send lost its approval guard");
+        assertTrue(vm.contains(accept, "SidequestRecipe.guardChain(vm, json, false)"), "check() lost its read-only guard");
     }
 
     function test_runbookSequenceWithGates() public view {
@@ -132,7 +181,7 @@ contract MainnetRunbookTest is Test {
     /// holds whatever that record holds: no block before R2, R2's own block after (replaced here).
     function test_documentedSidequestInputLoads() public {
         (string memory json, uint256 rows) = _documentedSidequest("");
-        assertEq(rows, 10, "runbook: the sidequest table lists the 10 fields load reads");
+        assertEq(rows, 11, "runbook: the sidequest table lists the 11 fields load reads");
 
         string memory real = vm.readFile(string.concat(vm.projectRoot(), "/config/monad-mainnet.json"));
         string memory path_ = string.concat(vm.projectRoot(), "/config/.test-schema.json");
@@ -145,7 +194,8 @@ contract MainnetRunbookTest is Test {
             SidequestRecipe.Config memory c = SidequestRecipe.load(vm, ".test-schema");
             assertEq(c.chainId, 143);
             assertEq(c.safe, address(uint160(0xa000 + 1)));
-            assertEq(address(c.token), address(uint160(0xa000 + 10)), "the existing SIDE, the last row");
+            assertEq(c.slashRecipient, address(uint160(0xa000 + 2)));
+            assertEq(address(c.token), address(uint160(0xa000 + 11)), "the existing SIDE, the last row");
         }
         (string memory short,) = _documentedSidequest("margin");
         vm.writeFile(path_, real);

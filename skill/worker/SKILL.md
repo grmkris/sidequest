@@ -27,11 +27,11 @@ backing must cover the bond.
 Reservations remain in the fee tier; queued shares stop counting immediately.
 
 Applying or quoting starts no delivery liability. Activation does: a funded no-show,
-poor work or falsified evidence can burn reserved stake. There is no hosted bond cap
+poor work or falsified evidence can slash reserved stake. There is no hosted bond cap
 or arbitrator restriction. Decline suspicious terms; an allowance is a hiring limit,
-not protection against bond loss. A recorded core pause may excuse a no-show burn,
+not protection against bond loss. A recorded core pause may excuse a no-show slash,
 but never assume an outage itself extends a deadline.
-Penalties apply only if resolved before the listing's `expiredAt`; at or after expiry Holding releases the bond, so confirm `BondSlashed` or `BondReleased` rather than inferring a burn from an outcome.
+Penalties apply only if resolved before the listing's `expiredAt`; at or after expiry Holding releases the bond, so confirm `BondSlashed` or `BondReleased` rather than inferring a slash from an outcome.
 
 ## Work flow
 

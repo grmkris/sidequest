@@ -28,24 +28,24 @@ Every publication requires a creator bond from active available SIDE backing. It
 
 If nobody activates the job, expiry forfeits the snapshotted percentage of the creator bond to the current treasury, initially 25%, and releases the remainder. A cancel strictly before ten minutes after publication is free; at ten minutes it forfeits. The Safe may set the rate for future jobs from zero to 50%. Existing published terms keep their snapshot. There is no posting fee.
 
-A chosen worker who never activates has the same consequence for the creator. The chain cannot distinguish it from an abandoned listing. Forfeiture transfers SIDE rather than burning it, affects all backing positions pro-rata, and does not count as earned-work fees. Confirm `BondForfeited` and `BondReleased` in job detail.
+A chosen worker who never activates has the same consequence for the creator. The chain cannot distinguish it from an abandoned listing. Forfeiture transfers SIDE to the treasury rather than slashing it, affects all backing positions pro-rata, and does not count as earned-work fees. Confirm `BondForfeited` and `BondReleased` in job detail.
 
-## Reserve, release and burn
+## Reserve, release and slash
 
-Publish reserves the creator bond. Activation reserves the worker bond. A reservation keeps SIDE in the vault; release unlocks it. Slashing burns the reserved SIDE, reduces the account's assets and shares the loss across all positions, including queued shares.
+Publish reserves the creator bond. Activation reserves the worker bond. A reservation keeps SIDE in the vault; release unlocks it. Slashing sends the reserved SIDE to the vault's treasury recipient, reduces the account's assets and shares the loss across all positions, including queued shares.
 
 At publish, the required creator bond requires the job's expiry to be within the vault's unstake period from now. Activation checks the same horizon for a nonzero worker bond. Expiry must include delivery, review, dispute, arbitration and the core's margin. SDK and board pre-checks validate either bond before publishing, and use the actual listing expiry before activation.
 
 The production defaults are fourteen days; the current G1d testnet deployment uses three days. The SDK and board fit omitted windows within that horizon for a bonded hire, respecting the deployed minimums. Explicit windows are preserved and must fit. Shorten the deadline or windows when the offer does not fit. Creator bonds cannot be zero. This follows the standard unbonding approach used by EigenLayer, Cosmos and the Aave Safety Module: every bond reserved before an exit request has expired by its unlock time. Queued shares stay slashable pro-rata until withdrawal.
 
-| Situation                                        | Bond result                                                   |
-| ------------------------------------------------ | ------------------------------------------------------------- |
-| Funded no-show after its delivery deadline       | The worker reservation can burn on permissionless settlement. |
-| Poor work against criteria or falsified evidence | A rejection penalty needs an undisputed window or a ruling.   |
-| Bad-faith rejection                              | A worker-favour ruling can burn the creator bond.             |
-| Silence after timely finalized submission        | Acceptance; no burn for silence.                              |
-| Arbitrator inactivity                            | No burn for inactivity.                                       |
-| Delivery deadline inside a recorded core pause   | No-show burn is excused.                                      |
+| Situation                                        | Bond result                                                                      |
+| ------------------------------------------------ | -------------------------------------------------------------------------------- |
+| Funded no-show after its delivery deadline       | The worker reservation can be sent to the treasury on permissionless settlement. |
+| Poor work against criteria or falsified evidence | A rejection penalty needs an undisputed window or a ruling.                      |
+| Bad-faith rejection                              | A worker-favour ruling can send the creator bond to the treasury.                |
+| Silence after timely finalized submission        | Acceptance; no slash for silence.                                                |
+| Arbitrator inactivity                            | No slash for inactivity.                                                         |
+| Delivery deadline inside a recorded core pause   | No-show slash is excused.                                                        |
 
 The Safe must atomically pair core `pause` with evaluator `notePause` for that recorded exception. An outage alone does not extend a deadline. Penalties apply only when the bond settles before the listing's `expiredAt`; at or after expiry Holding releases activated-job bonds even if the evaluator records a penalty finding; never-activated creator forfeiture is the explicit exception, so confirm `BondSlashed` or `BondReleased`.
 

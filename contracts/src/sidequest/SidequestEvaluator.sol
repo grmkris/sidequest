@@ -220,7 +220,7 @@ contract SidequestEvaluator is ISidequestEvaluator, EIP712, NoRenounce, Reentran
             || (job.status == ERC8183.JobStatus.Submitted && job.submittedAt > t.deliveryDeadline);
         if (!missed) revert NotLate();
         if (block.timestamp <= t.deliveryDeadline) revert WindowOpen();
-        // A deadline that fell inside a core pause still refunds the creator, but burns nothing and records no
+        // A deadline that fell inside a core pause still refunds the creator, but slashes nothing and records no
         // feedback: the worker could not submit (C9 ACL-2).
         bool excused = _excusedByPause(t.deliveryDeadline);
         c.outcome = Outcome.DeliveryMissed;
@@ -364,7 +364,7 @@ contract SidequestEvaluator is ISidequestEvaluator, EIP712, NoRenounce, Reentran
         return job.submittedAt;
     }
 
-    /// @dev M1: checks, then the outcome and the slash are recorded and emitted, then the loser's bond burns and the
+    /// @dev M1: checks, then the outcome and the slash are recorded and emitted, then the loser's bond is slashed to the vault's recipient and the
     ///      rest are released, and only then does the core move the reward.
     function _rule(uint256 jobId, ISidequestHolding.Terms memory t, bool forWorker, bool slashLoser, bytes32 reasonHash)
         private

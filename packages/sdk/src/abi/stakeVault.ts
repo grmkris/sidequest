@@ -10,6 +10,11 @@ export const stakeVaultAbi = [
         "internalType": "contract IFactory"
       },
       {
+        "name": "slashRecipient_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "clocks",
         "type": "tuple",
         "internalType": "struct SidequestClocks.Config",
@@ -676,6 +681,19 @@ export const stakeVaultAbi = [
   },
   {
     "type": "function",
+    "name": "setSlashRecipient",
+    "inputs": [
+      {
+        "name": "recipient",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "slash",
     "inputs": [
       {
@@ -697,6 +715,19 @@ export const stakeVaultAbi = [
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "slashRecipient",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1035,6 +1066,25 @@ export const stakeVaultAbi = [
   },
   {
     "type": "event",
+    "name": "SlashRecipientSet",
+    "inputs": [
+      {
+        "name": "previous",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "recipient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Slashed",
     "inputs": [
       {
@@ -1241,6 +1291,11 @@ export const stakeVaultAbi = [
         "internalType": "uint256"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidSlashRecipient",
+    "inputs": []
   },
   {
     "type": "error",
