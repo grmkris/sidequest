@@ -156,12 +156,12 @@ export default class Api extends Cloudflare.Worker<Api>()(
       DIRECTORY_DATABASE: Database,
       NETWORK: selectedNetwork,
       PUBLIC_ORIGIN: stageProfile()?.origin ?? 'http://localhost:5173',
-      ...(selectedNetwork === 'monad-testnet'
-        ? {
-            RELAY_ADDRESS: stageProfile()?.relay ?? sdk.deployment(selectedNetwork).relay,
-            RELAY_PRIVATE_KEY: Redacted.make(runtimeSecret('RELAY_PRIVATE_KEY') || 'unset'),
-          }
-        : {}),
+      // Mainnet keeps prod-testnet's relay binding names, inert (the zero relay, an unset key): the guarded release
+      // refuses any binding deletion, and the relay is read only on testnet.
+      RELAY_ADDRESS: stageProfile()?.relay ?? sdk.deployment(selectedNetwork).relay,
+      RELAY_PRIVATE_KEY: Redacted.make(
+        (selectedNetwork === 'monad-testnet' ? runtimeSecret('RELAY_PRIVATE_KEY') : '') || 'unset',
+      ),
       TELEGRAM_BOT_USERNAME: stageProfile()?.telegram.botUsername ?? '',
       DEPLOY_STAGE: process.env.SIDEQUEST_STAGE ?? 'local',
       HOSTED_SEND: selectedHostedSend,
@@ -179,9 +179,10 @@ export default class Api extends Cloudflare.Worker<Api>()(
       PRIVY_APP_SECRET: Redacted.make(runtimeSecret('PRIVY_APP_SECRET') || 'unset'),
       PRIVY_SIGNER_KEY: Redacted.make(runtimeSecret('PRIVY_SIGNER_KEY') || 'unset'),
       PIMLICO_API_KEY: Redacted.make(runtimeSecret('PIMLICO_API_KEY') || 'unset'),
-      ...((stageProfile()?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') === 'monad-testnet'
-        ? { TESTNET_PAYMASTER_SIGNER_KEY: Redacted.make(process.env.TESTNET_PAYMASTER_SIGNER_KEY || 'unset') }
-        : {}),
+      // Kept on mainnet as 'unset' for the same reason; chain 143 uses Pimlico's paymaster.
+      TESTNET_PAYMASTER_SIGNER_KEY: Redacted.make(
+        (selectedNetwork === 'monad-testnet' ? process.env.TESTNET_PAYMASTER_SIGNER_KEY : '') || 'unset',
+      ),
       TELEGRAM_BOT_TOKEN: Redacted.make(runtimeSecret('TELEGRAM_BOT_TOKEN') || 'unset'),
       TELEGRAM_WEBHOOK_SECRET: Redacted.make(runtimeSecret('TELEGRAM_WEBHOOK_SECRET') || 'unset'),
       // Retain existing binding names for guarded staging updates; these obsolete lists are ignored.

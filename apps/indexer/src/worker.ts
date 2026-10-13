@@ -64,13 +64,11 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
     env: {
       NETWORK: stageProfile()?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet',
       PUBLIC_ORIGIN: stageProfile()?.origin ?? 'http://localhost:5173',
-      ...((stageProfile()?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') === 'monad-testnet'
-        ? {
-            RELAY_ADDRESS:
-              stageProfile()?.relay ??
-              sdk.deployment((process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') as sdk.Network).relay,
-          }
-        : {}),
+      // Mainnet keeps prod-testnet's binding name with the zero relay: the guarded release refuses binding deletion.
+      RELAY_ADDRESS:
+        stageProfile()?.relay ??
+        sdk.deployment((stageProfile()?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') as sdk.Network)
+          .relay,
       TELEGRAM_BOT_USERNAME: stageProfile()?.telegram.botUsername ?? '',
       HYPERSYNC_URL:
         process.env.HYPERSYNC_URL ??
