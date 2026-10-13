@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto'
 
 const hash = (value: Record<string, unknown>) => createHash('sha256').update(canonical(value)).digest('hex')
 test('policy update journals its target, verifies readback and reconciles a lost PATCH response', async () => {
-  const desired = authorityPolicy('admin')
+  const desired = authorityPolicy('admin', 'monad-testnet')
   const old = structuredClone(desired)
   const condition = old.rules
     .find((rule) => rule.name === 'Allow Delegation')!
@@ -60,6 +60,7 @@ test('policy update journals its target, verifies readback and reconciles a lost
   }
   const input = {
     api,
+    network: 'monad-testnet' as const,
     state,
     adminId: 'admin',
     adminPublicKey: 'admin-public',

@@ -10,6 +10,7 @@
 #      D16 launch gate, which must refuse: the four are only pending;
 #   4. SafeAccept (four execTransactions from an owner), then the D16 gate, which must pass with this Safe's owners and
 #      threshold pinned (LAUNCH-AUDIT-003), and refuse a wrong owner pin and a guard;
+#      AA bytecode is read from the fork; Pimlico readiness is injected, with no provider call;
 #   5. the 2-of-3 due by 20 Oct, in place: two addOwnerWithThreshold calls through execTransaction from the owner; the
 #      gate refuses the 1-of-1 pin and passes the 2-of-3 one (after launch day, so outside the launch budget);
 #   6. two hires paid in SIDE: one delivered, accepted and settled; one never delivered, slashed after its deadline, the
@@ -53,7 +54,7 @@ ZERO=0x0000000000000000000000000000000000000000
 # anvil's public development keys, derived from its well-known mnemonic; never real funds.
 MNEMONIC="test test test test test test test test test test test junk"
 devkey() { cast wallet private-key --mnemonic "$MNEMONIC" --mnemonic-index "$1"; }
-K_DEPLOYER=$(devkey 0); K_OWNER1=$(devkey 1); K_OWNER2=$(devkey 2); K_ARBITRATOR=$(devkey 3); K_RELAY=$(devkey 4)
+K_DEPLOYER=$(devkey 0); K_OWNER1=$(devkey 1); K_OWNER2=$(devkey 2); K_ARBITRATOR=$(devkey 3)
 K_ATTESTER=$(devkey 5); K_CREATOR=$(devkey 6); K_WORKER=$(devkey 7); K_TEAM=$(devkey 8)
 K_KRIS=$(devkey 9); K_OWNER3=$(devkey 10)
 addr() { cast wallet address --private-key "$1"; }
@@ -90,21 +91,40 @@ budget_hashes() {
 }
 budget_run() { mapfile -t hashes < <(jq -r '.receipts[].transactionHash' "$FOUNDRY_BROADCAST/$2.s.sol/$CHAIN/run-latest.json"); budget_hashes "$1" "${hashes[@]}"; }
 
-# D16 launch gate (apps/api/src/prod-config.ts) against the fork, with the scratch config and the shared
-# RELAY_FLOOR_MAINNET (packages/sdk/src/relay.ts). Prints the failure labels; exit 3 when it refuses. Run with bun, as the
-# prod preflight is (the SDK uses TypeScript that node's strip-only mode refuses).
+# D16 launch gate (apps/api/src/prod-config.ts) against the fork, with the scratch config and ARBITER_LAUNCH_MON.
+# The gate reads EntryPoint, paymaster and USDC bytecode on the local fork; this injected probe treats Pimlico as
+# reachable without contacting it. Prints only failure labels; exit 3 when it refuses. Real Pimlico readiness needs a
+# separate coordinator live probe. Run with bun, as the prod preflight is.
 cat >"$GATE_TS" <<EOF
 import { readFileSync } from 'node:fs'
-import { RELAY_FLOOR_MAINNET } from '$REPO/packages/sdk/src/relay.ts'
+import { ARBITER_LAUNCH_MON } from '$REPO/packages/sdk/src/arbitration-gas.ts'
 import { liveLaunchGate } from '$REPO/apps/api/src/prod-config.ts'
 import { rpcReader } from '$REPO/apps/api/src/deploy-preflight.ts'
+import type { LaunchAaProbe } from '$REPO/apps/api/src/launch-gas.ts'
 const config = JSON.parse(readFileSync(process.argv[2], 'utf8'))
+const aa = config.accountAbstraction
+const aaProbe: LaunchAaProbe = {
+  env: { PIMLICO_API_KEY: 'r7-offline-probe' },
+  fetcher: async (_input, init) => {
+    const { method } = await new Request('http://r7.invalid', init).json()
+    switch (method) {
+      case 'eth_chainId':
+        return Response.json({ jsonrpc: '2.0', id: 1, result: '0x' + config.chainId.toString(16) })
+      case 'eth_supportedEntryPoints':
+        return Response.json({ jsonrpc: '2.0', id: 1, result: [aa.entryPoint] })
+      case 'pimlico_getTokenQuotes':
+        return Response.json({ jsonrpc: '2.0', id: 1, result: { quotes: [{ paymaster: aa.paymaster }] } })
+      default:
+        throw new Error('R7 offline AA probe refuses an unexpected method')
+    }
+  },
+}
 // argv[4]: the Safe policy the artifact would pin (deployment.sidequest.safeOwners / safeThreshold), as JSON.
-const failures = await liveLaunchGate(config, rpcReader(process.argv[3]), RELAY_FLOOR_MAINNET, JSON.parse(process.argv[4]))
+const failures = await liveLaunchGate(config, rpcReader(process.argv[3]), ARBITER_LAUNCH_MON, JSON.parse(process.argv[4]), aaProbe)
 console.log(JSON.stringify(failures))
 process.exit(failures.length > 0 ? 3 : 0)
 EOF
-gate() { bun "$GATE_TS" "$CONFIG" "$LOCAL" "${1:-$POLICY}"; }
+gate() { bun --no-env-file "$GATE_TS" "$CONFIG" "$LOCAL" "${1:-$POLICY}"; }
 
 # The fork must be this run's own anvil: refuse a port something else already serves.
 cast chain-id --rpc-url "$LOCAL" >/dev/null 2>&1 && fail "port $PORT already serves an RPC; stop it, or set PORT"
@@ -117,13 +137,16 @@ kill -0 "$ANVIL_PID" 2>/dev/null || fail "the anvil this run started is not runn
 DEPLOYER=$(addr $K_DEPLOYER); OWNER1=$(addr $K_OWNER1); OWNER2=$(addr $K_OWNER2); OWNER3=$(addr $K_OWNER3); KRIS=$(addr $K_KRIS)
 # The Safe policy an artifact would pin for this Safe (deployment.sidequest.safeOwners / safeThreshold), which D16 reads back.
 POLICY="{\"owners\":[\"$OWNER1\"],\"threshold\":1}"
-ARBITRATOR=$(addr $K_ARBITRATOR); RELAY=$(addr $K_RELAY); ATTESTER=$(addr $K_ATTESTER); TEAM=$(addr $K_TEAM)
-for k in $K_DEPLOYER $K_OWNER1 $K_OWNER2 $K_RELAY $K_CREATOR $K_WORKER $K_KRIS; do
+ARBITRATOR=$(addr $K_ARBITRATOR); ATTESTER=$(addr $K_ATTESTER); TEAM=$(addr $K_TEAM)
+for k in $K_DEPLOYER $K_OWNER1 $K_OWNER2 $K_CREATOR $K_WORKER $K_KRIS; do
   cast rpc --rpc-url "$LOCAL" anvil_setBalance "$(addr "$k")" 0x21e19e0c9bab2400000 >/dev/null # 10,000 MON
 done
+# Fund exactly the shared launch reserve; the arbitrator, rather than a relay, is the mainnet MON gas funder.
+ARBITER_BALANCE=$(bun --no-env-file -e "import { ARBITER_LAUNCH_MON } from '$REPO/packages/sdk/src/arbitration-gas.ts'; console.log('0x' + ARBITER_LAUNCH_MON.toString(16))")
+cast rpc --rpc-url "$LOCAL" anvil_setBalance "$ARBITRATOR" "$ARBITER_BALANCE" >/dev/null
 # The dev keys are public, and on Monad (mainnet and testnet) each carries someone's EIP-7702 delegation; the fork
 # inherits it. Clear it, so they behave as the plain EOAs the real launch signs from.
-for k in $K_DEPLOYER $K_OWNER1 $K_OWNER2 $K_OWNER3 $K_ARBITRATOR $K_RELAY $K_ATTESTER $K_CREATOR $K_WORKER $K_TEAM $K_KRIS; do
+for k in $K_DEPLOYER $K_OWNER1 $K_OWNER2 $K_OWNER3 $K_ARBITRATOR $K_ATTESTER $K_CREATOR $K_WORKER $K_TEAM $K_KRIS; do
   cast rpc --rpc-url "$LOCAL" anvil_setCode "$(addr "$k")" 0x >/dev/null
 done
 
@@ -172,9 +195,9 @@ ok "SIDE $SIDE on nad.fun: 1e9 supply, 18 decimals, permit, no burn; dev buy $BO
 
 # The scratch config: mainnet's, with the fork's roles, the Safe and a v1 sidequest block. Mainnet's own sidequest keys
 # (the creator-bond policy) are kept, so R7 deploys the launch values.
-jq --arg safe "$SAFE" --arg admin "$DEPLOYER" --arg relay "$RELAY" --arg attester "$ATTESTER" \
+jq --arg safe "$SAFE" --arg admin "$DEPLOYER" --arg attester "$ATTESTER" \
   --arg arbitrator "$ARBITRATOR" --arg side "$SIDE" '
-  .roles = { admin: $admin, relay: $relay, attester: $attester, arbitrator: $arbitrator }
+  .roles = { admin: $admin, attester: $attester, arbitrator: $arbitrator }
   | .sidequest = (.sidequest // {}) + {
       safe: $safe, slashRecipient: $safe, defaultArbitrator: $arbitrator, margin: 3600,
       schedule: { thresholds: [0, 1000000, 10000000, 50000000], bps: [3000, 1000, 300, 100], treasury: $safe },
@@ -201,8 +224,9 @@ set +e; REFUSED=$(gate); CODE=$?; set -e
 [[ "$(jq length <<<"$REFUSED")" == 4 && "$(jq '[.[] | select(endswith("is not the Safe"))] | length' <<<"$REFUSED")" == 4 ]] \
   || fail "D16 gate refused for other reasons: $REFUSED"
 ok "promoted; D16 gate refuses with the four handovers pending"
+ok "R7 AA probe: EntryPoint, paymaster and USDC bytecode on the local fork; Pimlico readiness injected, no provider call"
 # LAUNCH-AUDIT-004: the config had knownTokens only; the promoted record must give the SDK USDC and SIDE as reward tokens.
-bun -e "import { readFileSync } from 'node:fs'; import { deploymentFromConfig } from '$REPO/packages/sdk/src/deployment.ts'
+bun --no-env-file -e "import { readFileSync } from 'node:fs'; import { deploymentFromConfig } from '$REPO/packages/sdk/src/deployment.ts'
 const c = JSON.parse(readFileSync('$PWD/$CONFIG', 'utf8')); const d = deploymentFromConfig('monad-mainnet', c)
 const r = d.rewardTokens.map((t) => t.toLowerCase())
 process.exit(r.length === 2 && r[0] === c.x402.usdc.toLowerCase() && r[1] === '$SIDE'.toLowerCase() ? 0 : 1)" \
@@ -215,7 +239,7 @@ log /tmp/r7-accept.log env MAINNET_GO=yes forge script script/SafeAccept.s.sol -
 budget_run "4. SafeAccept (4 execTransactions)" SafeAccept
 log /tmp/r7-accept-check.log forge script script/SafeAccept.s.sol --sig "check()" --rpc-url "$LOCAL" || fail "SafeAccept check"
 gate >/tmp/r7-gate.log || fail "D16 gate refused after SafeAccept: $(cat /tmp/r7-gate.log)"
-ok "the Safe owns all four; D16 gate passes (reviewed Safe: canonical 1.4.1, pinned owners/threshold, no module, no guard; custody, core roles, verifier, relay above RELAY_FLOOR_MAINNET)"
+ok "the Safe owns all four; D16 gate passes (reviewed Safe: canonical 1.4.1, pinned owners/threshold, no module, no guard; custody, core roles, verifier, arbitrator at ARBITER_LAUNCH_MON; AA bytecode on the local fork, Pimlico readiness injected)"
 # LAUNCH-AUDIT-003 on the fork: a pinned owner set the Safe does not have, then a guard, each refuse.
 set +e; REFUSED=$(gate "{\"owners\":[\"$OWNER1\",\"$TEAM\"],\"threshold\":1}"); CODE=$?; set -e
 [[ $CODE -eq 3 && "$REFUSED" == '["launch:safe owners differ from the pinned set"]' ]] || fail "a wrong owner pin did not refuse: $REFUSED"

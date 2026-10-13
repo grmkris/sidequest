@@ -38,7 +38,9 @@ test('dev and prod dry profiles own distinct resources/domains on the same testn
 })
 
 test('flipping the prod profile selects mainnet contracts, plain RPC, and the artifact preflight', async () => {
-  const p = validateStageProfile({ ...stageProfile('prod'), network: 'monad-mainnet', chainId: 143 }, 'prod')
+  const { relay: _relay, ...profile } = stageProfile('prod')!
+  const p = validateStageProfile({ ...profile, network: 'monad-mainnet', chainId: 143 }, 'prod')
+  expect(p.relay).toBeUndefined()
   const config: DeploymentConfig = {
     ...structuredClone(testnet),
     network: 'monad-mainnet',

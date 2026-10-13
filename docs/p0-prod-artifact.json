@@ -27,7 +27,6 @@
   "secretSources": {
     "PIMLICO_API_KEY": "PIMLICO_API_KEY",
     "MONAD_RPC_URL": "MONAD_RPC_URL",
-    "RELAY_PRIVATE_KEY": "RELAY_PRIVATE_KEY",
     "ATTESTER_PRIVATE_KEY": "ATTESTER_PRIVATE_KEY",
     "AI_GATEWAY_API_KEY": "AI_GATEWAY_API_KEY",
     "GITHUB_APP_PRIVATE_KEY": "GITHUB_APP_PRIVATE_KEY",
@@ -39,7 +38,6 @@
   },
   "addresses": {
     "admin": null,
-    "relay": null,
     "attester": null,
     "arbitrator": null,
     "identity": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",

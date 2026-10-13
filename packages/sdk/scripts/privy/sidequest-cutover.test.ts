@@ -34,7 +34,7 @@ const quorum = (id: string, public_key: string) => ({
   key_quorum_ids: [],
 })
 function fixture() {
-  const desired = authorityPolicy('admin')
+  const desired = authorityPolicy('admin', 'monad-testnet')
   const legacy = {
     ...structuredClone(desired),
     id: 'legacy-policy',

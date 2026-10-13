@@ -5,8 +5,11 @@
  */
 import { p256AuthorizationSigner } from '../../src/p256.ts'
 import { PrivyApi, PrivyApiError } from './client.ts'
-import { adminEnv, localEnv, required } from './env.ts'
-import { DIRECTORY_RECORD_KINDS, X402_PAYMENT_CAP, authorityPolicy, config } from './policy.ts'
+import { networkAdminEnv, networkEnv, required } from './env.ts'
+import type { Network } from '../../src/deployment.ts'
+import { explicitNetwork } from './network.ts'
+import { deployment } from '../../src/deployment.ts'
+import { DIRECTORY_RECORD_KINDS, X402_PAYMENT_CAP, authorityPolicy } from './policy.ts'
 import { verifyAuthority } from './setup.ts'
 import { canonical, writablePolicy } from './policy-document.ts'
 
@@ -46,30 +49,29 @@ export function agentRulesUpdate(
   return { status: 'add', adding, rules: desired.rules }
 }
 
-export async function updateAgentRules(apply = false) {
-  if (config.chainId !== 10143 || typeof config.x402?.usdc !== 'string')
-    throw new AgentRulesUpdateError('Expected the testnet config with x402.usdc')
-  const env = localEnv()
+export async function updateAgentRules(network: Network, apply = false) {
+  const selected = deployment(network)
+  const env = networkEnv(network)
   const api = new PrivyApi(required(env, 'PRIVY_APP_ID'), required(env, 'PRIVY_APP_SECRET'))
   const policyId = required(env, 'PRIVY_POLICY_ID')
   const adminId = required(env, 'PRIVY_POLICY_ADMIN_ID')
-  const desired = authorityPolicy(adminId)
+  const desired = authorityPolicy(adminId, network)
   const live = await api.checked('GET', `/policies/${policyId}`)
   if (live.id !== policyId) throw new AgentRulesUpdateError('Unexpected policy ID; refusing update')
   const update = agentRulesUpdate(live, desired)
   const summary = {
     policyId,
-    usdc: config.x402.usdc,
+    usdc: selected.x402?.usdc,
     x402CapBaseUnits: X402_PAYMENT_CAP,
-    identityRegistry: config.erc8004.identity,
+    identityRegistry: selected.identity,
     status: update.status,
     ...(update.status === 'add' ? { adding: update.adding } : {}),
   }
   if (!apply || update.status === 'current') return { mode: apply ? 'apply' : 'dry-run', ...summary }
 
-  const sign = await p256AuthorizationSigner(required(adminEnv(), 'PRIVY_POLICY_ADMIN_KEY'))
+  const sign = await p256AuthorizationSigner(required(networkAdminEnv(network), 'PRIVY_POLICY_ADMIN_KEY'))
   await api.checked('PATCH', `/policies/${policyId}`, { rules: update.rules }, sign)
-  const verified = await verifyAuthority()
+  const verified = await verifyAuthority(network)
   if (verified.policyId !== policyId || verified.adminId !== adminId)
     throw new AgentRulesUpdateError('Authority IDs changed during verification; reconcile the original policy')
   return { mode: 'apply', ...summary, status: 'added' }
@@ -77,10 +79,11 @@ export async function updateAgentRules(apply = false) {
 
 if (import.meta.main) {
   try {
-    const args = process.argv.slice(2)
+    const [networkArg, ...args] = process.argv.slice(2)
+    const network = explicitNetwork(networkArg)
     if (args.length > 1 || (args.length === 1 && args[0] !== '--yes'))
-      throw new AgentRulesUpdateError('Use update-agent-rules.ts with no arguments (dry-run) or --yes')
-    console.log(JSON.stringify(await updateAgentRules(args[0] === '--yes')))
+      throw new AgentRulesUpdateError('Use update-agent-rules.ts <network> [--yes]')
+    console.log(JSON.stringify(await updateAgentRules(network, args[0] === '--yes')))
   } catch (error) {
     console.error(
       error instanceof AgentRulesUpdateError || error instanceof PrivyApiError

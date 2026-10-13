@@ -5,7 +5,7 @@ import { X402_PAYMENT_CAP, authorityPolicy, config } from './policy.ts'
 import { AGENT_RULES, agentRulesUpdate } from './update-agent-rules.ts'
 
 type Rules = ReturnType<typeof authorityPolicy>['rules']
-const desired = authorityPolicy('policy-admin')
+const desired = authorityPolicy('policy-admin', 'monad-testnet')
 const rule = (name: string) => desired.rules.find((item) => item.name === name)!
 function live(rules: Rules) {
   return {

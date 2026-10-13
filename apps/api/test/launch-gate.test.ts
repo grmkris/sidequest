@@ -19,15 +19,15 @@ import {
   opensAdmission,
   admissionDrainBinding,
   validateAdmissionMode,
-  relayFloorWei,
   SAFE_GUARD_SLOT,
   SAFE_SINGLETON,
   type ChainConfig,
   type LaunchReader,
   type SafePolicy,
 } from '../src/prod-config.ts'
-import { RELAY_FLOOR_MAINNET } from '@sidequest/sdk'
+import { ARBITER_LAUNCH_MON, ARBITER_ONE_RULING_MON } from '@sidequest/sdk'
 import { parseHostedAdmission } from '@sidequest/board'
+import type { LaunchAaProbe } from '../src/launch-gas.ts'
 
 const abi = parseAbi([
   'function MIN_REVIEW_WINDOW() view returns (uint32)',
@@ -61,13 +61,26 @@ const addresses = {
 }
 const DEFAULT_ADMIN = toHex(0, { size: 32 })
 const ADMIN = keccak256(toHex('ADMIN_ROLE'))
-const FLOOR = RELAY_FLOOR_MAINNET
+const FLOOR = ARBITER_LAUNCH_MON
 const lower = (value: string) => value.toLowerCase()
 const OWNERS = [a(0x0a1), a(0x0a2)]
 /** The artifact's pinned Safe policy (deployment.sidequest.safeOwners / safeThreshold). */
 const POLICY: SafePolicy = { owners: OWNERS, threshold: 1 }
 const SLOT_0 = toHex(0, { size: 32 })
 const word = (address: string) => `0x${'0'.repeat(24)}${address.slice(2).toLowerCase()}` as Hex
+const aaProbe: LaunchAaProbe = {
+  env: { PIMLICO_API_KEY: 'unit-test-key' },
+  fetcher: async (_input, init) => {
+    const body = await new Request('https://fixture.invalid', init).text()
+    const aa = mainnet.accountAbstraction
+    const result = body.includes('eth_supportedEntryPoints')
+      ? [aa.entryPoint]
+      : body.includes('pimlico_getTokenQuotes')
+        ? { quotes: [{ paymaster: aa.paymaster }] }
+        : '0x8f'
+    return Response.json({ jsonrpc: '2.0', id: 1, result })
+  },
+}
 
 /** A promoted mainnet config: the four owned by the Safe and the core's roles with it. */
 function promoted(): ChainConfig {
@@ -123,11 +136,15 @@ function live(config: ChainConfig): LiveState {
         productionLaunchClocks[key],
       ]),
     ),
-    code: { [lower(SAFE)]: '0x6080' },
+    code: Object.fromEntries(
+      [SAFE, mainnet.accountAbstraction.entryPoint, mainnet.accountAbstraction.paymaster, mainnet.x402.usdc].map(
+        (address) => [lower(address), '0x6080' as const],
+      ),
+    ),
     owners,
     roles: { [DEFAULT_ADMIN]: new Set([lower(SAFE)]), [ADMIN]: new Set([lower(SAFE)]) },
     verifiers: new Set([lower(config.roles.attester!)]),
-    balances: { [lower(config.roles.relay!)]: FLOOR + 1n },
+    balances: { [lower(config.roles.arbitrator!)]: FLOOR },
     storage: { [`${lower(SAFE)}:${SLOT_0}`]: word(SAFE_SINGLETON) },
     safe: { version: '1.4.1', owners: [...OWNERS], threshold: 1n, modules: [] },
     failing: new Set(),
@@ -203,11 +220,74 @@ const gate = async (
     reader(state),
     'floor' in options ? options.floor : FLOOR,
     'policy' in options ? options.policy : POLICY,
+    aaProbe,
   )
 }
 
-test('D16: a promoted deployment with the Safe in custody, a verifier attester and a funded relay passes', async () => {
+test('D16: a promoted deployment with the Safe in custody, a verifier attester and a funded arbitrator passes', async () => {
   expect(await gate()).toEqual([])
+})
+
+test('D16: no relay address or balance is needed on mainnet', async () => {
+  const config = promoted()
+  delete config.roles.relay
+  const state = live(config)
+  const chain = reader(state)
+  expect(await liveLaunchGate(config, chain, FLOOR, POLICY, aaProbe)).toEqual([])
+  expect(chain.reads.filter((read) => read.startsWith('balance:'))).toEqual([
+    `balance:${lower(config.roles.arbitrator!)}`,
+  ])
+})
+
+test('D16: Pimlico and the configured paymaster must be ready before admission opens', async () => {
+  expect(
+    await gate((state) => {
+      delete state.code[lower(mainnet.accountAbstraction.paymaster)]
+    }),
+  ).toEqual(['launch:paymaster has no code'])
+  const config = promoted()
+  const state = live(config)
+  expect(
+    await liveLaunchGate(config, reader(state), FLOOR, POLICY, {
+      env: {},
+      fetcher: async () => {
+        throw new Error('missing keys must refuse before RPC')
+      },
+    }),
+  ).toEqual(['launch:AA PIMLICO_API_KEY missing'])
+})
+
+test.each([
+  ['EntryPoint', mainnet.accountAbstraction.entryPoint],
+  ['USDC', mainnet.x402.usdc],
+])('D16: missing or unreadable %s bytecode refuses admission', async (name, address) => {
+  expect(await gate((state) => delete state.code[lower(address)])).toEqual([`launch:${name} has no code`])
+  expect(await gate((state) => state.failing.add(`code:${lower(address)}`))).toEqual([`launch:${name} code unreadable`])
+})
+
+test('D16: missing AA config or a gas token different from USDC refuses admission', async () => {
+  const config = promoted()
+  const state = live(config)
+  delete config.accountAbstraction
+  expect(await liveLaunchGate(config, reader(state), FLOOR, POLICY, aaProbe)).toEqual([
+    'launch:mainnet USDC paymaster missing',
+  ])
+  config.accountAbstraction = { ...mainnet.accountAbstraction, gasToken: a(0xbad) }
+  expect(await liveLaunchGate(config, reader(state), FLOOR, POLICY, aaProbe)).toEqual([
+    'launch:gas token is not configured USDC',
+  ])
+})
+
+test('D16: a Pimlico outage refuses admission without exposing provider details', async () => {
+  const config = promoted()
+  expect(
+    await liveLaunchGate(config, reader(live(config)), FLOOR, POLICY, {
+      env: aaProbe.env,
+      fetcher: async () => {
+        throw new Error('private provider details')
+      },
+    }),
+  ).toEqual(['launch:AA Pimlico unavailable'])
 })
 
 // ---- PROD-GATE-001: the Safe owns all four ----
@@ -225,7 +305,7 @@ test('PROD-GATE-001: a missing Safe, a Safe without code, or an unreadable Safe 
   ).toEqual(['launch:safe unset'])
   expect(
     await gate((state) => {
-      state.code = {}
+      delete state.code[lower(SAFE)]
     }),
   ).toEqual(['launch:safe has no code'])
   expect(
@@ -445,45 +525,43 @@ test('PROD-GATE-003: an attester that is not (or no longer) a verifier refuses; 
   ).toEqual(['launch:attester verifier unreadable'])
 })
 
-// ---- PROD-GATE-004: the relay holds strictly more than RELAY_FLOOR_MAINNET ----
+// ---- PROD-GATE-004: the arbitrator funds three rulings, and Pimlico supplies USDC gas ----
 
 test.each([
   ['zero', 0n],
   ['below the floor', FLOOR - 1n],
-  ['exactly at the floor', FLOOR],
-])('PROD-GATE-004: a relay balance %s refuses', async (_, balance) => {
+  ['only one ruling', ARBITER_ONE_RULING_MON],
+])('PROD-GATE-004: an arbitrator balance %s refuses', async (_, balance) => {
   expect(
     await gate((state, config) => {
-      state.balances[lower(config.roles.relay!)] = balance
+      state.balances[lower(config.roles.arbitrator!)] = balance
     }),
-  ).toEqual(['launch:relay at or below RELAY_FLOOR_MAINNET'])
+  ).toEqual(['launch:arbitrator below ARBITER_LAUNCH_MON'])
 })
 
-test('PROD-GATE-004: an unreadable balance or an undefined floor refuses; the relay is the configured role, not any funded address', async () => {
+test('PROD-GATE-004: an unreadable balance or undefined floor refuses; the arbitrator is the configured role', async () => {
   expect(
     await gate((state, config) => {
-      state.failing.add(`balance:${lower(config.roles.relay!)}`)
+      state.failing.add(`balance:${lower(config.roles.arbitrator!)}`)
     }),
-  ).toEqual(['launch:relay balance unreadable'])
+  ).toEqual(['launch:arbitrator balance unreadable'])
   expect(await gate(() => {}, { floor: undefined })).toEqual([
-    'launch:relay floor undefined (RELAY_FLOOR_MAINNET, @sidequest/sdk)',
+    'launch:arbitrator floor undefined (ARBITER_LAUNCH_MON, @sidequest/sdk)',
   ])
   expect(
     await gate((state, config) => {
       state.balances = { [lower(a(0xf00d))]: parseEther('100') }
-      expect(config.roles.relay).not.toBe(a(0xf00d))
+      expect(config.roles.arbitrator).not.toBe(a(0xf00d))
     }),
-  ).toEqual(['launch:relay at or below RELAY_FLOOR_MAINNET'])
-  expect(relayFloorWei('2')).toBe(FLOOR)
-  expect(relayFloorWei(FLOOR)).toBe(FLOOR)
-  expect(relayFloorWei(undefined)).toBeUndefined()
+  ).toEqual(['launch:arbitrator below ARBITER_LAUNCH_MON'])
+  expect(await gate()).toEqual([])
 })
 
 test('D16: failure labels carry no values beyond role names', async () => {
   const failures = await gate((state, config) => {
     state.code = {}
     state.verifiers.clear()
-    state.balances[lower(config.roles.relay!)] = 0n
+    state.balances[lower(config.roles.arbitrator!)] = 0n
   })
   expect(failures.join(' ')).not.toMatch(/0x[0-9a-fA-F]{8,}/)
 })
@@ -512,15 +590,15 @@ test('D16: an opening deploy is refused before anything else when the gate fails
   const state = live(config)
   state.owners[lower(addresses.vault)] = config.roles.admin!
   const chain = reader(state)
-  await expect(assertLaunchGate(config, '0', chain, FLOOR, POLICY)).rejects.toThrow(
+  await expect(assertLaunchGate(config, '0', chain, POLICY, aaProbe)).rejects.toThrow(
     'production launch gate refused: launch:owner:vault is not the Safe',
   )
   const reads = chain.reads.length
   for (const drain of [undefined, '', '1', 'invalid'])
-    await expect(assertLaunchGate(config, drain, chain, FLOOR, POLICY)).resolves.toBeUndefined()
+    await expect(assertLaunchGate(config, drain, chain, POLICY, aaProbe)).resolves.toBeUndefined()
   expect(chain.reads.length).toBe(reads)
   state.owners[lower(addresses.vault)] = SAFE
-  await expect(assertLaunchGate(config, '0', chain, FLOOR, POLICY)).resolves.toBeUndefined()
+  await expect(assertLaunchGate(config, '0', chain, POLICY, aaProbe)).resolves.toBeUndefined()
 })
 
 // D24: every constructor clock is independently read and fails closed.

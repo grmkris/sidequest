@@ -2,9 +2,32 @@ import { chmodSync, readFileSync, appendFileSync, existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 import { parseEnv } from 'node:util'
+import type { Network } from '../../src/deployment.ts'
 
 export const envPath = resolve('.env.local')
 export const adminEnvPath = resolve(homedir(), '.config/secrets.env')
+
+export function networkEnvPath(network: Network): string {
+  return network === 'monad-mainnet' ? resolve(homedir(), '.config/sidequest/prod.env') : envPath
+}
+
+export function networkEnv(network: Network): Record<string, string> {
+  return definedEnv(readFileSync(networkEnvPath(network), 'utf8'))
+}
+
+export function networkAdminEnvPath(network: Network): string {
+  return network === 'monad-mainnet' ? networkEnvPath(network) : adminEnvPath
+}
+
+export function networkAdminEnv(network: Network): Record<string, string> {
+  return definedEnv(readFileSync(networkAdminEnvPath(network), 'utf8'))
+}
+
+function definedEnv(source: string): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(parseEnv(source)).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  )
+}
 
 /** Read files explicitly: shell credentials may belong to a different Privy app. */
 export function localEnv(): Record<string, string> {

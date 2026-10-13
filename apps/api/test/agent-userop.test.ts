@@ -61,7 +61,7 @@ function fixture() {
     NETWORK: 'monad-testnet',
     Board: { idFromName: (name: string) => ({ toString: () => name }), get },
   }
-  return { sql, req, bindings, operation, txHash, network, get }
+  return { sql, req, bindings, operation, txHash, network, get, context }
 }
 
 it('check_operation reads the hosted desk bundle receipt with no relay key or signing credentials', async () => {
@@ -85,4 +85,23 @@ it('keeps relay-mode operation readback as the default and forbids another agent
     runAgent({ req: f.req, bindings: f.bindings, sql: f.sql, stateId: SPONSOR_OBJECT_NAME }),
   ).rejects.toThrow('another agent')
   expect(f.network).not.toHaveBeenCalled()
+})
+
+it('mainnet hosted readback defaults to user operations with no relay or explicit cutover flag', async () => {
+  const f = fixture()
+  vi.spyOn(sdk, 'context').mockReturnValue({
+    ...f.context,
+    deployment: { ...f.context.deployment, network: 'monad-mainnet', chainId: 143 },
+  })
+  const { HOSTED_SEND: _mode, ...rest } = f.bindings
+  const req: AgentExecuteRequest = { ...f.req, env: { ...f.req.env, network: 'monad-mainnet' } }
+  const reply = await runAgent({
+    req,
+    bindings: { ...rest, NETWORK: 'monad-mainnet' },
+    sql: f.sql,
+    stateId: SPONSOR_OBJECT_NAME,
+  })
+  expect(JSON.parse(reply)).toMatchObject({ ok: true, result: { status: 'confirmed', txHash: f.txHash } })
+  expect(f.network).not.toHaveBeenCalled()
+  expect(f.get).not.toHaveBeenCalled()
 })

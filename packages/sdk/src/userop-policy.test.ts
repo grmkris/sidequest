@@ -43,19 +43,22 @@ describe('the user-operation signing rules (ADR-0023)', () => {
   })
 
   it('keep every rule name under the length Privy accepts', () => {
-    for (const candidate of authorityPolicy('admin').rules) expect(candidate.name.length).toBeLessThan(RULE_NAME_LIMIT)
+    for (const candidate of authorityPolicy('admin', 'monad-testnet').rules)
+      expect(candidate.name.length).toBeLessThan(RULE_NAME_LIMIT)
   })
 
   it('are part of the routine signer policy the cutover applies', () => {
     const names = userOpRules().map((candidate) => candidate.name)
-    const inPolicy = authorityPolicy('admin').rules.filter((candidate) => candidate.method === 'eth_signUserOperation')
+    const inPolicy = authorityPolicy('admin', 'monad-testnet').rules.filter(
+      (candidate) => candidate.method === 'eth_signUserOperation',
+    )
     expect(inPolicy.map((candidate) => candidate.name)).toEqual(names)
   })
 })
 
 describe('comparing policy documents', () => {
   it('ignores rule order, as Privy returns rules in its own order, and refuses duplicate names', () => {
-    const policy = authorityPolicy('admin')
+    const policy = authorityPolicy('admin', 'monad-testnet')
     const shuffled = { ...policy, rules: policy.rules.toReversed() }
     expect(canonical(shuffled)).toBe(canonical(policy))
     const changed = { ...policy, rules: [{ ...policy.rules[0]!, action: 'DENY' }, ...policy.rules.slice(1)] }

@@ -6,6 +6,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { privateKeyToAccount } from 'viem/accounts'
 import { createPublicClient, http } from 'viem'
+import { hostedSendMode } from '../../packages/sdk/src/hosted-send.ts'
 
 export type Stage = 'dev' | 'prod'
 export type Action = 'plan' | 'deploy' | 'drift'
@@ -15,7 +16,7 @@ export interface StageFile {
   readonly network: string
   readonly chainId: number
   readonly origin: string
-  readonly relay: string
+  readonly relay?: string
   readonly resources: Record<string, string>
   readonly cloudflare: { readonly accountId: string; readonly zoneId: string; readonly zoneName: string }
 }
@@ -45,10 +46,11 @@ export interface PlanCounts {
 
 const ROOT = resolve(import.meta.dirname, '../..')
 const REQUIRED_SECRETS = [
-  'RELAY_PRIVATE_KEY',
   'ATTESTER_PRIVATE_KEY',
   'PRIVY_APP_SECRET',
   'PRIVY_SIGNER_KEY',
+  'PRIVY_SIGNER_ID',
+  'PRIVY_POLICY_ID',
   'PIMLICO_API_KEY',
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_WEBHOOK_SECRET',
@@ -87,7 +89,7 @@ const stageFile = (stage: Stage): StageFile => {
     typeof value.network !== 'string' ||
     typeof value.chainId !== 'number' ||
     typeof value.origin !== 'string' ||
-    typeof value.relay !== 'string' ||
+    (value.network === 'monad-testnet' && typeof value.relay !== 'string') ||
     value.resources === undefined ||
     value.cloudflare?.accountId === undefined ||
     value.cloudflare.zoneId === undefined ||
@@ -152,6 +154,8 @@ export const assembleEnv = (
   const localRun = base.CI !== 'true' && base.CI !== '1'
   const settings = new Set<string>([
     ...REQUIRED_SECRETS,
+    'RELAY_PRIVATE_KEY',
+    'HOSTED_SEND',
     'TESTNET_PAYMASTER_SIGNER_KEY',
     'PRIVY_APP_ID',
     'PRIVY_SIGNER_ID',
@@ -184,14 +188,21 @@ export const assembleEnv = (
   if (env.SQ_GITHUB_APP_INSTALLATION_ID !== undefined)
     env.GITHUB_APP_INSTALLATION_ID = env.SQ_GITHUB_APP_INSTALLATION_ID
   if (env.SQ_GITHUB_APP_PRIVATE_KEY !== undefined) env.GITHUB_APP_PRIVATE_KEY = env.SQ_GITHUB_APP_PRIVATE_KEY
-  if (infra.network === 'monad-mainnet') delete env.TESTNET_PAYMASTER_SIGNER_KEY
+  if (infra.network === 'monad-mainnet') {
+    delete env.TESTNET_PAYMASTER_SIGNER_KEY
+    delete env.RELAY_PRIVATE_KEY
+    env.HOSTED_SEND = hostedSendMode('monad-mainnet', env.HOSTED_SEND)
+  }
   return env
 }
 
 export const validateEnv = (env: Record<string, string>, required: readonly string[] = REQUIRED_SECRETS): void => {
   if (Object.keys(env).some((key) => key.startsWith('DISTILLED_DEBUG'))) fail('DISTILLED_DEBUG settings are refused')
+  if (env.SIDEQUEST_NETWORK === 'monad-mainnet') hostedSendMode('monad-mainnet', env.HOSTED_SEND)
   const stageSecrets =
-    env.SIDEQUEST_NETWORK === 'monad-testnet' ? [...required, 'TESTNET_PAYMASTER_SIGNER_KEY'] : required
+    env.SIDEQUEST_NETWORK === 'monad-testnet'
+      ? [...required, 'RELAY_PRIVATE_KEY', 'TESTNET_PAYMASTER_SIGNER_KEY']
+      : required
   const missing = stageSecrets.filter(
     (name) => env[name] === undefined || env[name]?.trim() === '' || env[name]?.trim().toLowerCase() === 'unset',
   )
@@ -213,12 +224,13 @@ export const verifyRpcAndRoles = async (
   infra: StageFile,
   env: Record<string, string>,
   roles: { readonly attester: string },
+  fetcher: typeof fetch = fetch,
 ): Promise<void> => {
   const rpc = env.MONAD_RPC_URL
   if (rpc === undefined) fail('MONAD_RPC_URL is missing')
-  const client = createPublicClient({ transport: http(rpc) })
+  const client = createPublicClient({ transport: http(rpc, { fetchFn: fetcher }) })
   if ((await client.getChainId()) !== infra.chainId) fail('MONAD_RPC_URL chain mismatch')
-  addressMatches(env.RELAY_PRIVATE_KEY, infra.relay, 'RELAY_PRIVATE_KEY')
+  if (infra.network === 'monad-testnet') addressMatches(env.RELAY_PRIVATE_KEY, infra.relay ?? '', 'RELAY_PRIVATE_KEY')
   addressMatches(env.ATTESTER_PRIVATE_KEY, roles.attester, 'ATTESTER_PRIVATE_KEY')
 }
 

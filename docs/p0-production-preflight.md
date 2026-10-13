@@ -16,10 +16,12 @@ The same script has three modes:
   and true before the artifact may open admission.
 - **`--live`.** Additionally runs the D16 launch gate, read-only through the artifact's public RPC:
   - the Safe has code;
-  - `owner()` is the Safe on all six v1 contracts;
+  - `owner()` is the Safe on all four v1 contracts;
   - the core admin roles are held by the Safe and not by the deployer;
   - the attester is a verifier;
-  - the relay holds more than `RELAY_FLOOR_MAINNET`.
+  - the configured arbitrator has the `ARBITER_LAUNCH_MON` MON reserve;
+  - the EntryPoint, Pimlico paymaster and USDC have code, and Pimlico serves chain 143, the configured EntryPoint and
+    the configured USDC paymaster quote.
 - **`--probe <origin>`.** After a deploy, compares `<origin>/release.json` with the artifact: network, `mainnetLive`,
   and `writesOpen` equal to `mainnetLive`. A redirect, a non-OK response, or a body that is not JSON fails.
 
@@ -32,9 +34,10 @@ attester, and Safe ownership of the six v1 contracts. Mainnet requires both prod
 `ALCHEMY_REMOTE_STATE=1`, and an explicit `SIDEQUEST_PROD_ARTIFACT` JSON path. There is no production local-state
 fallback. The artifact checks network/chain 143, provider URL/chain metadata, approved Privy app and origin,
 addresses matching the chain config, no faucet, zero hold gates, USDC, open-token main Holding metadata,
-the single v1 pair, and the plain stage secret source names in `prodSecretSources`. Deploy preflight also checks
-the actual named sources, runtime Privy/HyperSync/RPC mappings, relay/attester public addresses, and read-only
-RPC `eth_chainId`. No secret values are printed.
+the single v1 pair, and the plain stage secret source names in `mainnetProdSecretSources`. Deploy preflight also checks
+the actual named sources, runtime Privy/HyperSync/RPC mappings, the attester public address, and read-only
+RPC `eth_chainId`. Mainnet release assembly defaults hosted agents to `HOSTED_SEND=userop` and refuses relay mode;
+testnet keeps its legacy relay compatibility. No secret values are printed.
 
 Mainnet needs freshly approved role keys in the prod environment; a plain source name is not permission to reuse a
 testnet key. The release runner assembles only the chosen stage environment. The API independently refuses a

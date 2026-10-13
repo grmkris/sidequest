@@ -139,7 +139,7 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "apps/api/src/prod-config.ts": {
-    "anti-slop(no-runtime-typeof)": 12,
+    "anti-slop(no-runtime-typeof)": 10,
     "anti-slop(require-safety-comment-for-type-assertion)": 5,
     "complexity(complexity)": 2,
     "eslint(max-lines-per-function)": 2,
@@ -172,7 +172,7 @@
     "eslint(max-lines)": 1
   },
   "apps/api/src/worker.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 20,
+    "anti-slop(require-safety-comment-for-type-assertion)": 19,
     "complexity(complexity)": 3,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
@@ -354,19 +354,11 @@
   "apps/api/test/x402-workerd.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2
   },
-  "apps/arbiter/src/arbiter.test.ts": {
-    "anti-slop(no-chained-type-assertions)": 2,
-    "anti-slop(require-safety-comment-for-type-assertion)": 11
-  },
   "apps/arbiter/src/arbiter.ts": {
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
     "complexity(complexity)": 1,
     "typescript(no-explicit-any)": 1
-  },
-  "apps/arbiter/src/runtime.test.ts": {
-    "anti-slop(no-chained-type-assertions)": 2,
-    "anti-slop(require-safety-comment-for-type-assertion)": 4
   },
   "apps/docs/scripts/verify-output.mjs": {
     "complexity(complexity)": 1
@@ -1465,7 +1457,7 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "packages/sdk/scripts/privy/setup.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 6,
+    "anti-slop(require-safety-comment-for-type-assertion)": 5,
     "typescript(no-unnecessary-type-assertion)": 1
   },
   "packages/sdk/scripts/privy/sidequest-cutover.ts": {
@@ -1479,7 +1471,6 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 2
   },
   "packages/sdk/scripts/privy/update-agent-rules.ts": {
-    "anti-slop(no-runtime-typeof)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 2,
     "typescript(no-unnecessary-type-assertion)": 1
   },
@@ -1555,7 +1546,7 @@
   },
   "packages/sdk/src/deployment.ts": {
     "anti-slop(no-runtime-typeof)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 30,
+    "anti-slop(require-safety-comment-for-type-assertion)": 29,
     "complexity(complexity)": 2,
     "typescript(no-unnecessary-type-assertion)": 2
   },

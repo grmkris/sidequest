@@ -1,5 +1,6 @@
 import { errorDiagnostics } from '@sidequest/board'
 import type { Deployment, Network } from '@sidequest/sdk'
+import { ARBITER_LAUNCH_MON, ARBITER_ONE_RULING_MON } from '@sidequest/sdk'
 import { type Address, formatEther } from 'viem'
 import type { AsyncSql } from './store.ts'
 import { enqueueWalletNotification, publicOrigin, telegramOwnerWallets } from './telegram.ts'
@@ -11,7 +12,7 @@ import { enqueueWalletNotification, publicOrigin, telegramOwnerWallets } from '.
  */
 export const GAS_ALERTS = {
   paymaster: { warnWei: 5n * 10n ** 17n, criticalWei: 2n * 10n ** 17n },
-  arbitrator: { warnWei: 10n ** 18n, criticalWei: 5n * 10n ** 17n },
+  arbitrator: { warnWei: ARBITER_LAUNCH_MON, criticalWei: ARBITER_ONE_RULING_MON },
   repeatSeconds: 3600,
 } as const
 

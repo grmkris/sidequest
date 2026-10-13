@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import mainnet from '../../../contracts/config/monad-mainnet.json' with { type: 'json' }
 import testnet from '../../../contracts/config/monad-testnet.json' with { type: 'json' }
+import { zeroAddress } from 'viem'
 import {
   type DeploymentConfig,
   NotDeployedError,
@@ -15,6 +16,16 @@ import {
 
 const address = (n: number) => `0x${n.toString(16).padStart(40, '0')}`
 const currentConfig = () => structuredClone(testnet) as DeploymentConfig
+
+it('mainnet loads without a relay role; the legacy relay field is inert', () => {
+  const source = currentConfig()
+  source.network = 'monad-mainnet'
+  source.chainId = 143
+  delete source.roles.relay
+  delete source.deployment.sidequest!.clocks
+  source.accountAbstraction = mainnet.accountAbstraction
+  expect(deploymentFromConfig('monad-mainnet', source).relay).toBe(zeroAddress)
+})
 
 describe('v1 deployment config', () => {
   it('loads only the current main pair and refuses discovery of a retired Holding', () => {

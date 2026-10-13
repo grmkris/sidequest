@@ -54,6 +54,18 @@ describe('role arguments and environment', () => {
       'MODERATOR_PRIVATE_KEY',
     )
     expect(() => roleEnvironment('arbiter', {})).toThrow('V1_ARBITRATOR_PRIVATE_KEY')
+    expect(() => roleEnvironment('arbiter', { NETWORK: 'monad-mainnet' })).toThrow(
+      'SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY',
+    )
+    expect(
+      roleEnvironment('arbiter', {
+        NETWORK: 'monad-mainnet',
+        SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY: 'mainnet-key',
+        ARBITER_MODEL: 'm',
+        ARBITER_MODEL_BASE_URL: 'u',
+        ARBITER_MODEL_API_KEY: 'k',
+      }).privateKey,
+    ).toBe('mainnet-key')
   })
 
   it('runs sign-in and pass sequentially for every client in once mode', async () => {

@@ -1,8 +1,9 @@
-import { decodeFunctionResult, encodeFunctionData, parseAbi, parseEther } from 'viem'
+import { decodeFunctionResult, encodeFunctionData, parseAbi } from 'viem'
 
-import { prodSecretSources } from '@sidequest/board/runtime'
-import { PRODUCTION_CLOCKS, type SidequestClocks } from '@sidequest/sdk'
-export { prodSecretSources, runtimeSecret } from '@sidequest/board/runtime'
+import { mainnetProdSecretSources } from '@sidequest/board/runtime'
+import { PRODUCTION_CLOCKS, type DeploymentConfig, type SidequestClocks } from '@sidequest/sdk'
+import { launchAaFailures, type LaunchAaProbe } from './launch-gas.ts'
+export { mainnetProdSecretSources, runtimeSecret } from '@sidequest/board/runtime'
 
 interface ProdStack {
   // JSON artifacts are validated at runtime below; keep this broad enough for
@@ -61,8 +62,10 @@ export interface ChainConfig {
   erc8004: { identity: string; reputation: string }
   x402: { usdc: string }
   knownTokens: string[]
+  accountAbstraction?: NonNullable<DeploymentConfig['accountAbstraction']>
   /** SidequestRecipe's input; the preflight reads the default arbitrator and clocks from it (LAUNCH-AUDIT-FIX-001). */
   sidequest?: {
+    token?: string
     defaultArbitrator?: string | null
     clocks?: LaunchClocks
     minimumCreatorBond?: number
@@ -84,7 +87,7 @@ export interface ChainConfig {
 }
 
 /** LAUNCH-AUDIT-008: the relay, attester and arbitrator of `contracts/config/monad-mainnet.json` as of 1 Oct, when the
- *  relay and attester keys were exposed and the arbitrator replaced with them. No mainnet role or address may be one. */
+ *  relay and attester keys were exposed and the arbitrator replaced with them. No active mainnet role may be one. */
 export const RETIRED_ROLE_ADDRESSES = [
   '0xac7282b6a519665dcb71563317C71d1F357f9e7e',
   '0x66b72404Ad8ce4C650C4f67F13AAd1Ee82F2963f',
@@ -141,10 +144,15 @@ function validateCompleteProdConfig(config: ChainConfig, artifact: ProdArtifact)
     'Privy app/origin approval',
   )
   check(
-    config.knownTokens.length === 1 && config.knownTokens[0]?.toLowerCase() === config.x402.usdc.toLowerCase(),
+    config.knownTokens.every(address) &&
+      new Set(config.knownTokens.map((token) => token.toLowerCase())).size === config.knownTokens.length &&
+      config.knownTokens.some((token) => token.toLowerCase() === config.x402.usdc.toLowerCase()),
     'known USDC',
   )
   const deployed = config.deployment
+  // A drained USDC-only record predating SIDE remains valid. Once SIDE is selected for promotion, both lists need it.
+  const side = config.sidequest?.token
+  check(side === undefined || config.knownTokens.some((token) => same(token, side)), 'known SIDE')
   check(
     deployed.network === artifact.network && Number.isSafeInteger(deployed.block) && (deployed.block ?? 0) > 0,
     'deployment network/block',
@@ -191,7 +199,13 @@ function validateCompleteProdConfig(config: ChainConfig, artifact: ProdArtifact)
     Array.isArray(list) && list.every(address) ? list.map((token) => token.toLowerCase()) : undefined
   const configRewards = rewards(deployed.rewardTokens)
   const artifactRewards = rewards(artifact.deployment.rewardTokens)
-  check(configRewards !== undefined && configRewards.includes(config.x402.usdc.toLowerCase()), 'rewardTokens:USDC')
+  check(
+    configRewards !== undefined &&
+      new Set(configRewards).size === configRewards.length &&
+      configRewards.includes(config.x402.usdc.toLowerCase()),
+    'rewardTokens:USDC',
+  )
+  check(side === undefined || configRewards?.includes(side.toLowerCase()) === true, 'rewardTokens:SIDE')
   check(
     configRewards === undefined ||
       (artifactRewards !== undefined &&
@@ -210,12 +224,13 @@ function validateCompleteProdConfig(config: ChainConfig, artifact: ProdArtifact)
     evaluator: deployed.main?.evaluator,
   }
   for (const [name, value] of Object.entries(expected)) {
+    if (name === 'relay') continue
     check(address(value) && artifact.addresses[name]?.toLowerCase() === value.toLowerCase(), `address:${name}`)
   }
   for (const [name, value] of Object.entries(config.roles))
-    check(!retired(value), `role:${name} is a retired 1 Oct key`)
+    if (name !== 'relay') check(!retired(value), `role:${name} is a retired 1 Oct key`)
   for (const [name, value] of Object.entries(artifact.addresses))
-    check(!retired(value), `address:${name} is a retired 1 Oct key`)
+    if (name !== 'relay') check(!retired(value), `address:${name} is a retired 1 Oct key`)
   // LAUNCH-AUDIT-FIX-001: the recipe deploys the v1 Holding with sidequest.defaultArbitrator, and promotion checks the
   // Holding's defaultArbitrator() against it; so it must be roles.arbitrator, and never a retired key.
   const defaultArbitrator = config.sidequest?.defaultArbitrator
@@ -226,11 +241,11 @@ function validateCompleteProdConfig(config: ChainConfig, artifact: ProdArtifact)
     'sidequest.defaultArbitrator is not roles.arbitrator',
   )
   check(!retired(defaultArbitrator), 'sidequest.defaultArbitrator is a retired 1 Oct key')
-  for (const [binding, source] of Object.entries(prodSecretSources)) {
+  for (const [binding, source] of Object.entries(mainnetProdSecretSources)) {
     check(artifact.secretSources[binding] === source, `secret source:${binding}`)
   }
   check(
-    Object.keys(artifact.secretSources).length === Object.keys(prodSecretSources).length,
+    Object.keys(artifact.secretSources).length === Object.keys(mainnetProdSecretSources).length,
     'unexpected secret source',
   )
   return failures
@@ -317,12 +332,6 @@ const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
 /** The four Ownable2Step v1 contracts the Safe must own (not merely be pending for) before admission opens. */
 export const launchOwnedContracts = ['vault', 'feeSchedule', 'holding', 'evaluator'] as const
 
-/** A floor given in wei (bigint) or in MON (string/number); undefined stays undefined, which the gate refuses. */
-export function relayFloorWei(floor: bigint | string | number | undefined): bigint | undefined {
-  if (floor === undefined) return undefined
-  return typeof floor === 'bigint' ? floor : parseEther(String(floor))
-}
-
 /** Only an explicit open value opens. Missing, empty and malformed values are drained. */
 export function opensAdmission(drain: string | undefined): boolean {
   return drain === '0' || drain?.toLowerCase() === 'false'
@@ -390,16 +399,17 @@ export function validateReleaseProbe(artifact: Pick<ProdArtifact, 'network' | 'e
  *      reviewed Safe (LAUNCH-AUDIT-003): a proxy of the canonical SafeL2 singleton, VERSION 1.4.1, exactly the
  *      artifact's pinned owners and threshold, no module (getModulesPaginated(0x1, 10) is empty) and no guard. A module
  *      acts without advancing the nonce, which the mining fund's guard (D18) relies on; a guard can block execution;
- *   2. `owner() == safe` on the six v1 contracts;
+ *   2. `owner() == safe` on the four v1 contracts;
  *   3. the core's DEFAULT_ADMIN_ROLE and ADMIN_ROLE are held by the Safe, and by the deployer (`roles.admin`) for neither;
  *   4. `verifiers(roles.attester)` on the v1 Evaluator;
- *   5. the relay (`roles.relay`, whose key preflight derives) holds strictly more than the floor.
+ *   5. the arbitrator holds at least the launch MON reserve, and Pimlico serves the configured USDC paymaster.
  */
 export async function liveLaunchGate(
   config: ChainConfig,
   reader: LaunchReader,
-  relayFloor: bigint | undefined,
+  arbitratorFloor: bigint | undefined,
   policy: SafePolicy | undefined,
+  aaProbe: LaunchAaProbe = { env: process.env, fetcher: fetch },
 ): Promise<string[]> {
   const failures: string[] = []
   const deployed = config.deployment
@@ -538,14 +548,18 @@ export async function liveLaunchGate(
   if (verifier !== undefined && verifier !== true)
     failures.push('launch:attester is not a verifier on the v1 Evaluator')
 
-  if (relayFloor === undefined) failures.push('launch:relay floor undefined (RELAY_FLOOR_MAINNET, @sidequest/sdk)')
-  const relay = config.roles.relay
-  const balance = await read('launch:relay balance', () => {
-    if (!address(relay)) throw new Error('no address')
-    return reader.balance(relay)
+  if (arbitratorFloor === undefined)
+    failures.push('launch:arbitrator floor undefined (ARBITER_LAUNCH_MON, @sidequest/sdk)')
+  const arbitrator = config.roles.arbitrator
+  const balance = await read('launch:arbitrator balance', () => {
+    if (!address(arbitrator)) throw new Error('no address')
+    return reader.balance(arbitrator)
   })
-  if (balance !== undefined && relayFloor !== undefined && !(typeof balance === 'bigint' && balance > relayFloor)) {
-    failures.push('launch:relay at or below RELAY_FLOOR_MAINNET')
-  }
+  if (balance !== undefined && arbitratorFloor !== undefined && balance < arbitratorFloor)
+    failures.push('launch:arbitrator below ARBITER_LAUNCH_MON')
+  // D16's Pimlico readiness is a mainnet admission check. Testnet's separate
+  // deploy preflight retains the legacy relay and testnet paymaster checks.
+  if (config.network === 'monad-mainnet' && config.chainId === 143)
+    failures.push(...(await launchAaFailures(config, reader, aaProbe)))
   return failures
 }

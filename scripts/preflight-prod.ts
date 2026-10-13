@@ -1,9 +1,8 @@
 import { readFileSync } from 'node:fs'
 // By path: scripts/ is not a workspace package, so the bare '@sidequest/sdk' specifier does not resolve here.
-import { RELAY_FLOOR_MAINNET } from '../packages/sdk/src/relay.ts'
+import { ARBITER_LAUNCH_MON } from '../packages/sdk/src/arbitration-gas.ts'
 import {
   liveLaunchGate,
-  relayFloorWei,
   safePolicy,
   validateExploreRelease,
   validateProdConfig,
@@ -71,7 +70,10 @@ if (failures.length > 0) {
     const body = (await chain.json()) as { result?: string }
     gate =
       Number(body.result) === 143
-        ? await liveLaunchGate(mainnet, reader, relayFloorWei(RELAY_FLOOR_MAINNET), safePolicy(artifact))
+        ? await liveLaunchGate(mainnet, reader, ARBITER_LAUNCH_MON, safePolicy(artifact), {
+            env: process.env,
+            fetcher: fetch,
+          })
         : ['launch:rpc is not chain 143']
   } catch {
     gate = ['launch:rpc unreadable']
@@ -81,7 +83,7 @@ if (failures.length > 0) {
     process.exitCode = 1
   } else {
     console.log(
-      'Sidequest v1 production launch gate passed: the reviewed Safe (canonical 1.4.1, pinned owners and threshold, no module, no guard) owns all six, holds both core admin roles (deployer neither), attester verifies, relay above RELAY_FLOOR_MAINNET',
+      'Sidequest v1 production launch gate passed: the reviewed Safe owns v1, holds both core admin roles (deployer neither), attester verifies, Pimlico serves the USDC paymaster and arbitrator has ARBITER_LAUNCH_MON',
     )
   }
 }

@@ -27,6 +27,25 @@ import { recordIndexerRun, type IndexerRunOutcome } from './run-record.ts'
 const secret = (name: string) =>
   Config.Redacted(name).pipe(Effect.map((v) => (Redacted.value(v) === 'unset' ? '' : Redacted.value(v))))
 
+/** The remaining relay monitor is testnet-only; every stage watches its actual gas funders. */
+async function watchStageGas(
+  sql: Parameters<typeof watchRelay>[0],
+  deployment: sdk.Deployment,
+  client: ReturnType<typeof sdk.context>['publicClient'],
+  now: number,
+): Promise<void> {
+  const network = deployment.network
+  if (network === 'monad-testnet')
+    await watchRelay(sql, {
+      network,
+      now,
+      relay: deployment.relay,
+      balance: () => client.getBalance({ address: deployment.relay }),
+    }).catch(reportRelayWatchFailure)
+  for (const watch of gasWatches(deployment, client))
+    await watchGas(sql, { network, now, watch }).catch(reportGasWatchFailure)
+}
+
 /**
  * The chain-facts indexer (spec §5 `apps/indexer`, plan S4): every minute, under the lease in D1, index finalized
  * logs of the core, Holdings and evaluators from HyperSync into D1. The only D1 writer; Explore reads.
@@ -45,9 +64,13 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
     env: {
       NETWORK: stageProfile()?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet',
       PUBLIC_ORIGIN: stageProfile()?.origin ?? 'http://localhost:5173',
-      RELAY_ADDRESS:
-        stageProfile()?.relay ??
-        sdk.deployment((process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') as sdk.Network).relay,
+      ...((stageProfile()?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') === 'monad-testnet'
+        ? {
+            RELAY_ADDRESS:
+              stageProfile()?.relay ??
+              sdk.deployment((process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') as sdk.Network).relay,
+          }
+        : {}),
       TELEGRAM_BOT_USERNAME: stageProfile()?.telegram.botUsername ?? '',
       HYPERSYNC_URL:
         process.env.HYPERSYNC_URL ??
@@ -75,7 +98,9 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
       const phase = <A>(name: string, action: () => Promise<A>) =>
         runRequest(Effect.promise(action).pipe(Effect.withSpan(name)))
       const network = (yield* Config.String('NETWORK')) as sdk.Network
-      sdk.setRelayOverride((yield* Config.String('RELAY_ADDRESS')) as `0x${string}`)
+      const relayAddress = yield* Config.withDefault(Config.String('RELAY_ADDRESS'), '')
+      // SAFETY: the testnet-only binding is the validated stage or SDK relay address.
+      if (relayAddress !== '') sdk.setRelayOverride(relayAddress as `0x${string}`)
       configurePublicSite(yield* Config.String('PUBLIC_ORIGIN'), yield* Config.String('TELEGRAM_BOT_USERNAME'))
       const token = yield* secret('HYPERSYNC_API_TOKEN')
       const rpcUrl = yield* secret('MONAD_RPC_URL')
@@ -125,16 +150,7 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
               queueTelegramNotifications(sql, network, now, { caughtUp }),
             )
             allowSilence = !notifications.stale
-            // Owner alert when the sponsorship relay nears its floor; never fails the indexing run.
-            await watchRelay(sql, {
-              network,
-              now,
-              relay: deployment.relay,
-              balance: () => client.getBalance({ address: deployment.relay }),
-            }).catch(reportRelayWatchFailure)
-            // ADR-0023: owner alerts for the balances that pay gas without a relay (paymaster deposit, arbitrator MON).
-            for (const watch of gasWatches(deployment, client))
-              await watchGas(sql, { network, now, watch }).catch(reportGasWatchFailure)
+            await watchStageGas(sql, deployment, client, now)
           }
           return result
         } finally {

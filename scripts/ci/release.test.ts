@@ -13,10 +13,12 @@ import {
   REQUIRED_SECRETS,
   validateEnv,
   validateFirstDeployCensus,
+  verifyRpcAndRoles,
   type Census,
   type PlanCounts,
   type StageFile,
 } from './release.ts'
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
 const infra: StageFile = {
   stage: 'dev',
@@ -111,6 +113,18 @@ test('refuses unset required values by name', () => {
   expect(() => validateEnv({ RELAY_PRIVATE_KEY: 'unset' }, ['RELAY_PRIVATE_KEY'])).toThrow('RELAY_PRIVATE_KEY')
 })
 
+test('hosted releases on either network require nonempty routine signer and policy IDs', () => {
+  const complete = Object.fromEntries(REQUIRED_SECRETS.map((name) => [name, 'unit-test-value']))
+  for (const network of ['monad-testnet', 'monad-mainnet']) {
+    for (const name of ['PRIVY_SIGNER_ID', 'PRIVY_POLICY_ID']) {
+      for (const value of ['', ' ', 'unset'])
+        expect(() =>
+          validateEnv({ ...complete, SIDEQUEST_NETWORK: network, TESTNET_PAYMASTER_SIGNER_KEY: 'test', [name]: value }),
+        ).toThrow(name)
+    }
+  }
+})
+
 test('AA secrets are stage-scoped and the testnet signer never reaches a mainnet release', () => {
   const secrets = Object.fromEntries(REQUIRED_SECRETS.map((name) => [name, 'unit-test-value']))
   expect(REQUIRED_SECRETS).toContain('PIMLICO_API_KEY')
@@ -134,6 +148,28 @@ test('AA secrets are stage-scoped and the testnet signer never reaches a mainnet
   expect(
     assembleEnv('dev', infra, { TESTNET_PAYMASTER_SIGNER_KEY: 'box-key' }).TESTNET_PAYMASTER_SIGNER_KEY,
   ).toBeUndefined()
+})
+
+test('mainnet release needs no relay setting or key and defaults to USDC user operations', async () => {
+  const { relay: _relay, ...mainnet } = { ...infra, stage: 'prod' as const, network: 'monad-mainnet', chainId: 143 }
+  const values = Object.fromEntries(REQUIRED_SECRETS.map((name) => [name, 'unit-test-value']))
+  const env = assembleEnv('prod', mainnet, { CI: '1' }, { ...values, RELAY_PRIVATE_KEY: 'unused-relay-key' })
+  expect(env.HOSTED_SEND).toBe('userop')
+  expect(env.RELAY_PRIVATE_KEY).toBeUndefined()
+  expect(() => validateEnv(env)).not.toThrow()
+  expect(() => assembleEnv('prod', mainnet, { CI: '1', HOSTED_SEND: 'relay' })).toThrow('HOSTED_SEND=relay')
+  expect(() => validateEnv({ ...env, HOSTED_SEND: 'relay' })).toThrow('HOSTED_SEND=relay')
+  const attesterKey = generatePrivateKey()
+  const attester = privateKeyToAccount(attesterKey).address
+  const fetcher = async () => Response.json({ jsonrpc: '2.0', id: 1, result: `0x${mainnet.chainId.toString(16)}` })
+  return expect(
+    verifyRpcAndRoles(
+      mainnet,
+      { ...env, MONAD_RPC_URL: 'https://fixture.invalid', ATTESTER_PRIVATE_KEY: attesterKey },
+      { attester },
+      fetcher,
+    ),
+  ).resolves.toBeUndefined()
 })
 
 test('plan refusal rules cover destructive and adoption actions', () => {

@@ -33,9 +33,11 @@ The docs site is built by [`apps/docs`](../apps/docs/AGENTS.md) and served by Ex
 
 ## Credentials and authority
 
-Each stage has its own relay, declared by `relay` in its profile. The attester and arbitrator are shared while both stages
-use the single testnet pair `main` (`sidequest-v1`) in [`monad-testnet.json`](../contracts/config/monad-testnet.json).
-One Privy app serves both origins. Its routine-signer policy allows both relays;
+Dev and prod-testnet retain their own relay, declared by `relay` in their profiles. A mainnet profile omits that field:
+hosted agents use USDC-paid user operations and the stage-derived arbitrator pays MON for rulings. The attester and
+arbitrator are shared while both testnet stages use the single testnet pair `main` (`sidequest-v1`) in
+[`monad-testnet.json`](../contracts/config/monad-testnet.json). One Privy app serves both testnet origins. Its
+routine-signer policy allows both testnet relays;
 [`sidequest-cutover.ts`](../packages/sdk/scripts/privy/sidequest-cutover.ts) `update-policy` is the reviewed update path.
 Provider reads, signing or policy writes require their own authorized task and receipts.
 

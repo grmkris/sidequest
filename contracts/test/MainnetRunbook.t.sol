@@ -109,7 +109,9 @@ contract MainnetRunbookTest is Test {
         assertTrue(vm.contains(accept, "function simulate()"));
         assertTrue(vm.contains(accept, "simulate cannot broadcast"));
         assertTrue(vm.contains(accept, "SidequestRecipe.guardChain(vm, json, true)"), "send lost its approval guard");
-        assertTrue(vm.contains(accept, "SidequestRecipe.guardChain(vm, json, false)"), "check() lost its read-only guard");
+        assertTrue(
+            vm.contains(accept, "SidequestRecipe.guardChain(vm, json, false)"), "check() lost its read-only guard"
+        );
     }
 
     function test_runbookSequenceWithGates() public view {
@@ -165,7 +167,7 @@ contract MainnetRunbookTest is Test {
         assertTrue(
             vm.contains(
                 r7,
-                "liveLaunchGate(config, rpcReader(process.argv[3]), RELAY_FLOOR_MAINNET, JSON.parse(process.argv[4]))"
+                "liveLaunchGate(config, rpcReader(process.argv[3]), ARBITER_LAUNCH_MON, JSON.parse(process.argv[4]), aaProbe)"
             ),
             "R7 gate without a Safe policy"
         );
@@ -305,14 +307,47 @@ contract MainnetRunbookTest is Test {
     function test_runbookCarriesBudgetAndFunding() public view {
         string[5] memory needles = [
             "| nad.fun creation with the 5% dev buy |", // SIDE comes from the launcher, with the dev buy
-            "| arbitrator | `roles.arbitrator` (a fresh R2 key) | 0.11 |", // LAUNCH-AUDIT-007: the cancellation reserve
-            "RELAY_FLOOR_MAINNET",
-            "| relay |",
+            "| arbitrator | `roles.arbitrator` (a fresh 143-only key) | at least 1.0308 MON; fund 1.1 MON |",
+            "ARBITER_LAUNCH_MON",
+            "Pimlico chain, EntryPoint and token-quote checks",
             unicode"| 2-of-3 by 20 Oct: addOwnerWithThreshold ×2 |"
         ];
         for (uint256 i; i < needles.length; ++i) {
             assertTrue(vm.contains(doc, needles[i]), string.concat("runbook lacks ", needles[i]));
         }
+        assertFalse(vm.contains(doc, "| relay |"), "mainnet still funds a relay");
+        assertFalse(vm.contains(doc, "RELAY_FLOOR_MAINNET"), "mainnet still gates on a relay floor");
+    }
+
+    /// R7's structural/ownership rehearsal reads AA bytecode only on its local fork. The provider responses are
+    /// injected; the launching coordinator still needs real Pimlico and USDC user-operation receipts.
+    function test_r7ChecksAaOnTheForkAndFundsTheArbitrator() public view {
+        string[7] memory needles = [
+            "import type { LaunchAaProbe }",
+            "env: { PIMLICO_API_KEY: 'r7-offline-probe' }",
+            "case 'eth_chainId':",
+            "case 'eth_supportedEntryPoints':",
+            "case 'pimlico_getTokenQuotes':",
+            'anvil_setBalance "$ARBITRATOR" "$ARBITER_BALANCE"',
+            "Pimlico readiness injected, no provider call"
+        ];
+        for (uint256 i; i < needles.length; ++i) {
+            assertTrue(vm.contains(r7, needles[i]), string.concat("R7 lacks ", needles[i]));
+        }
+        assertTrue(vm.contains(r7, "ARBITER_LAUNCH_MON.toString(16)"), "R7 does not fund the shared reserve");
+        assertTrue(vm.contains(r7, 'gate() { bun --no-env-file "$GATE_TS"'), "R7 loads environment files");
+        assertTrue(vm.contains(r7, ".roles = { admin: $admin, attester: $attester, arbitrator: $arbitrator }"));
+        assertTrue(vm.contains(r7, "AA bytecode on the local fork, Pimlico readiness injected"));
+        assertFalse(vm.contains(r7, "RELAY_FLOOR_MAINNET"), "R7 still gates on a relay");
+        assertFalse(vm.contains(r7, "K_RELAY"), "R7 still funds a relay");
+        assertFalse(vm.contains(r7, "process.env"), "R7 AA probe reads provider secrets");
+        assertTrue(vm.contains(doc, "R7 reads EntryPoint, paymaster and USDC bytecode from the local fork"));
+        assertTrue(vm.contains(doc, "Pimlico readiness is injected; R7 makes no Pimlico call"));
+        _has(
+            string.concat(vm.projectRoot(), "/../scripts/preflight-prod.ts"),
+            "Pimlico serves the USDC paymaster and arbitrator has ARBITER_LAUNCH_MON"
+        );
+        assertTrue(vm.contains(doc, "Pimlico serves the USDC paymaster and arbitrator has ARBITER_LAUNCH_MON"));
     }
 
     function test_runbookHasNoLegacyPath() public view {

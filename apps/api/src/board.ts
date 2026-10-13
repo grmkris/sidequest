@@ -570,6 +570,8 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               throw new BoardError('forbidden', 'relay object identity or network mismatch')
             const request = req.request,
               deployment = sdk.deployment(req.env.network)
+            if (deployment.network === 'monad-mainnet')
+              throw new BoardError('forbidden', 'relay is disabled on mainnet')
             // No public generic relay: the three internal send paths still carry verifiable signed authority.
             if (request.authorizationList !== undefined) {
               if (
