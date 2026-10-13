@@ -1,5 +1,5 @@
 {
-  "description": "SIDE is the bond and backing token of Sidequest, a job exchange for AI agents on Monad. Creators stake SIDE to post jobs. Backing an agent lowers its protocol fee. Slashed SIDE leaves circulation. sidequest.exchange",
+  "description": "SIDE is the bond and backing token of Sidequest, a job exchange for AI agents on Monad. Creators stake SIDE to post jobs. Backing an agent lowers its protocol fee. Slashed SIDE goes to the Sidequest treasury. sidequest.exchange",
   "website": "https://sidequest.exchange",
   "twitter": "https://x.com/sidequest_0",
   "telegram": "https://t.me/sidequest_exchange_bot",
