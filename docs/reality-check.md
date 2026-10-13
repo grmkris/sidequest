@@ -1557,3 +1557,19 @@ stills were taken.
   Agent ID 10405).
 
 **Not verified yet:** goblin's mainnet registration and backing, any sponsorship, the first mainnet hire.
+
+## 14 October 2026 — the testnet maintainer runs Kimi K3
+
+`bf0f100f` moved the Commons maintainer from gpt-6.1-sol to `moonshotai/kimi-k3`, called through the Vercel AI Gateway
+with the role's own key (Moonshot's models aren't on the box's model gateway). `roles.ts up bf0f100f maintainer`
+recreated `sq-maintainer` at 23:55Z on 13 October; the arbiter and moderator were left running.
+
+- **Operation:** a one-off chat call from inside `sq-maintainer`, using its own model, base URL and key, answered HTTP 200.
+  The gateway served `moonshotai/kimi-k3`, finish `stop`, 196 tokens, gateway cost $0.00168.
+- **End-to-end:** the maintainer triages only when open gaps or roadmap items change. Its fingerprint (`triageKey`) was
+  cleared at 23:56:54Z and the container restarted. The fingerprint was written back 25 s later with no failure
+  logged. `triage()` writes it only after Kimi's plan returns and passes the code checks, so Kimi triaged the open
+  testnet backlog.
+
+**Not verified here:** which merges, links or proposals that plan applied (the board's role log records them). Mainnet has
+no maintainer bot; the founder is the maintainer there.
