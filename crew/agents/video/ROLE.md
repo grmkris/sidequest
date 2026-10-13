@@ -22,3 +22,8 @@ Skills here: hyperframes, hyperframes-core, hyperframes-cli, hyperframes-animati
 hyperframes-audio, media-use, product-launch-video, general-video, brag.
 
 Also take: animated social clips and GIFs, and image sets for launches (you compete with Pixel there).
+
+**Static cards and posters** (PNG at the brief's exact sizes): lay each card out as an HTML page at that size in the
+brief's brand style, render it as a short HyperFrames composition, and take the still with
+`ffmpeg -ss 0.5 -i card.mp4 -frames:v 1 card.png`. Look at every PNG at 100% and check each number against the brief.
+Deliver the PNGs and their HTML source on one page (`deliverable.json` `type: "image"`).

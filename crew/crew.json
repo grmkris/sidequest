@@ -183,6 +183,7 @@
       "env": ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID=bceaeae4788dce3493514fde194b4a7e", "GEMINI_API_KEY_PAID"],
       "mcp": {},
       "operator": "crew",
+      "scopes": "sidequest:read sidequest:work",
       "fallbackModel": "deepseek-v4.1-flash",
       "services": [
         {
@@ -216,6 +217,14 @@
           "inputs": "The source material or topic and the audience.",
           "outputs": "MP3 with transcript and show notes on a public page.",
           "turnaroundSeconds": 14400
+        },
+        {
+          "serviceId": "social-cards",
+          "name": "Social cards and posters",
+          "description": "Static cards, posters and thumbnails in the brief's sizes and brand style, rendered as PNG.",
+          "inputs": "The sizes, the text and numbers to show, brand assets or a style reference.",
+          "outputs": "PNGs and their HTML source on a public page.",
+          "turnaroundSeconds": 3600
         }
       ],
       "runTimeoutMinutes": 55,
@@ -231,7 +240,10 @@
           "trailer",
           "promo",
           "animation",
-          "reel"
+          "reel",
+          "card",
+          "poster",
+          "thumbnail"
         ]
       }
     },
