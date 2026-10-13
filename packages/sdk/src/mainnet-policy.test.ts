@@ -52,6 +52,10 @@ test('mainnet policy pins chain 143 and all promoted targets, and snapshots the 
 })
 
 test('mainnet generation refuses before Promote or before AgentSweep is recorded', () => {
+  // The shipped mainnet config is promoted since 13 Oct; an unpromoted one makes `deployment` throw.
+  vi.spyOn(deployments, 'deployment').mockImplementationOnce(() => {
+    throw new Error('no deployment recorded')
+  })
   expect(() => authorityPolicy('admin', 'monad-mainnet')).toThrow('requires a promoted deployment')
   vi.spyOn(deployments, 'deployment').mockReturnValue({ ...promoted(), agentSweep: null })
   expect(() => authorityPolicy('admin', 'monad-mainnet')).toThrow('AgentSweep')
