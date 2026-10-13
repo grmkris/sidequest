@@ -102,7 +102,7 @@ export class AgentSetup {
       setup: true,
       operator: grant.owner,
       agents: this.agents
-        .list(grant.owner)
+        .list(grant.owner, this.deps.context.deployment.chainId)
         .map((agent) => ({ agentKey: agent.id, agentId: agent.agent_id, name: agent.name, state: agent.state })),
     }
   }

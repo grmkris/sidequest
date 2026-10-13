@@ -124,8 +124,13 @@ export class AgentStore {
     return row
   }
 
-  list(operator: string): AgentRow[] {
-    return this.sql.all<AgentRow>('SELECT * FROM agents WHERE operator=? ORDER BY created_at', operator.toLowerCase())
+  /** One chain's agents: prod kept its testnet rows when it moved to mainnet (13 Oct). */
+  list(operator: string, chainId: number): AgentRow[] {
+    return this.sql.all<AgentRow>(
+      'SELECT * FROM agents WHERE operator=? AND chain_id=? ORDER BY created_at',
+      operator.toLowerCase(),
+      chainId,
+    )
   }
 
   create(input: {

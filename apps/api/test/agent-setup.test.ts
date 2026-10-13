@@ -119,7 +119,9 @@ it('refuses caller-supplied ownership, missing Privy proof, changed operation ar
   await expect(f.boot().create(f.grant, { ...args, operationKey: 'another-key' })).rejects.toMatchObject({
     code: 'conflict',
   })
-  expect(f.agents.list(operator).map((agent) => agent.id)).toEqual([created.agentKey])
+  expect(f.agents.list(operator, sdk.deployment('monad-testnet').chainId).map((agent) => agent.id)).toEqual([
+    created.agentKey,
+  ])
   expect(f.onboard).toHaveBeenCalledTimes(1)
 })
 
@@ -158,7 +160,7 @@ it('recovers an interrupted provider call under the same creation identity and s
   const f = await fixture()
   f.onboard.mockRejectedValueOnce(new Error('provider request details'))
   await expect(f.boot().create(f.grant, args)).rejects.toThrow('provider request details')
-  const id = f.agents.list(operator)[0]!.id
+  const id = f.agents.list(operator, sdk.deployment('monad-testnet').chainId)[0]!.id
   expect(f.boot().status(f.grant, { agentKey: id })).toMatchObject({
     state: 'failed',
     message: expect.stringContaining('original operationKey'),

@@ -25,7 +25,7 @@ it('advertises setup and approves an agentless resource-bound grant with setup a
     registryAgentId: null,
   })
   expect(await resolveOAuth(f.sql, c.tokens.access_token, `${origin}/mcp`, 1000)).toBeUndefined()
-  expect(f.agents.list(operator)).toEqual([])
+  expect(f.agents.list(operator, 10143)).toEqual([])
 })
 
 it('consent data offers setup and declines selecting an agent or naming an unknown scope', async () => {

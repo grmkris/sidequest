@@ -93,4 +93,27 @@ describe('agent operation journal', () => {
     ).toEqual([])
     db.close()
   })
+
+  it("lists only the operator's agents on the asked chain, so prod's testnet rows stay off mainnet", () => {
+    const db = new DatabaseSync(':memory:')
+    const store = new AgentStore(fromNodeSqlite(db), () => 1_800_000_000)
+    const operator = '0x1111111111111111111111111111111111111111'
+    for (const [id, chainId] of [
+      ['testnet-agent', 10143],
+      ['mainnet-agent', 143],
+    ] as const)
+      store.create({
+        id,
+        operator,
+        privyUserId: 'did:privy:u',
+        name: id,
+        registry: '0x2222222222222222222222222222222222222222',
+        chainId,
+      })
+    expect(store.list(operator.toUpperCase().replace('0X', '0x'), 143).map((agent) => agent.id)).toEqual([
+      'mainnet-agent',
+    ])
+    expect(store.list(operator, 10143).map((agent) => agent.id)).toEqual(['testnet-agent'])
+    db.close()
+  })
 })

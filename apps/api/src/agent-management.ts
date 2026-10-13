@@ -95,7 +95,10 @@ export async function agentManagement(input: {
     sponsor,
     ...(hostedMode === 'userop' ? { hostedSend: 'userop' } : {}),
   })
-  if (action === 'list') return { agents: agents.list(operator).map((row) => ({ ...row, roles: agentRoles(row) })) }
+  if (action === 'list')
+    return {
+      agents: agents.list(operator, context.deployment.chainId).map((row) => ({ ...row, roles: agentRoles(row) })),
+    }
   if (action === 'approvals') return { approvals: agents.approvals(operator) }
   if (action === 'status') return lifecycle.status(id, operator)
   if (action === 'recovery') {
