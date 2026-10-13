@@ -56,13 +56,17 @@ export function roleEnvironment(
       MODERATOR_MODEL_API_KEY: inputs.CLIPROXY_API_KEY,
       MODERATOR_CURSOR_FILE: '/state/moderator.cursor',
     }
+  // Kimi reads the whole backlog in one pass (crew/MODELS.md). Moonshot's models aren't on the box's model gateway, so
+  // the maintainer calls them through the Vercel AI Gateway, as Jev does.
   return {
     NETWORK: stage.network,
     BOARD_URL: stage.origin,
     MAINTAINER_PRIVATE_KEY: inputs.MAINTAINER_PRIVATE_KEY,
-    MAINTAINER_MODEL: 'gpt-6.1-sol',
-    MAINTAINER_MODEL_BASE_URL: modelBaseUrl,
-    MAINTAINER_MODEL_API_KEY: inputs.CLIPROXY_API_KEY,
+    MAINTAINER_MODEL: 'moonshotai/kimi-k3',
+    MAINTAINER_MODEL_BASE_URL: AI_GATEWAY_URL,
+    MAINTAINER_MODEL_API_KEY: inputs.AI_GATEWAY_API_KEY,
     MAINTAINER_STATE_FILE: '/state/maintainer.json',
   }
 }
+
+const AI_GATEWAY_URL = 'https://ai-gateway.vercel.sh/v1'

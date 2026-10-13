@@ -46,6 +46,24 @@ test('mainnet compose, pinned source and journal paths cannot replace the runnin
     expect(after[field]).not.toBe(before[field])
 })
 
+test('the maintainer runs Kimi through the AI Gateway with its own key, not the model gateway key', () => {
+  const env = roleEnvironment(
+    'maintainer',
+    { ...inputs, AI_GATEWAY_API_KEY: 'gateway-fixture' },
+    dev,
+    'https://model.example',
+    [],
+  )
+  expect(env).toMatchObject({
+    MAINTAINER_MODEL: 'moonshotai/kimi-k3',
+    MAINTAINER_MODEL_BASE_URL: 'https://ai-gateway.vercel.sh/v1',
+    MAINTAINER_MODEL_API_KEY: 'gateway-fixture',
+  })
+  expect(roleEnvironment('moderator', inputs, dev, 'https://model.example', []).MODERATOR_MODEL_API_KEY).toBe(
+    'fixture-model-key',
+  )
+})
+
 test('testnet retains the dev key and observes only testnet boards', () => {
   const env = roleEnvironment('arbiter', inputs, dev, '', [dev.origin])
   expect(env.NETWORK).toBe('monad-testnet')
