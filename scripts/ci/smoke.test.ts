@@ -77,7 +77,7 @@ const transport = (
     }
     const documents: Record<string, object> = {
       '/health': { ok: true, runtime: 'Cloudflare-Workers', network: 'monad-testnet', board: 'public' },
-      '/release.json': { network: 'monad-testnet', mainnetLive: false, writesOpen: true },
+      '/release.json': expectedRelease('monad-testnet'),
       '/.well-known/oauth-protected-resource': { resource: `${origin}/mcp`, authorization_servers: [origin] },
       '/.well-known/oauth-authorization-server': { issuer: origin },
       '/data/jobs': { ok: true, index: { next_block: 1, updated_at: NOW / 1000 - 60 }, jobs: [] },
@@ -106,7 +106,7 @@ test('smoke rejects cards replaced by HTML, invalid catalog and missing public p
 test('smoke refuses an unexpected runtime, closed writes, foreign issuer or missing bearer challenge', async () => {
   for (const [path, override] of [
     ['/health', { ok: true, runtime: 'local', network: 'monad-testnet', board: 'public' }],
-    ['/release.json', { network: 'monad-testnet', mainnetLive: false, writesOpen: false }],
+    ['/release.json', { ...expectedRelease('monad-testnet'), writesOpen: false }],
     ['/.well-known/oauth-authorization-server', { issuer: 'https://foreign.example' }],
     [
       '/.well-known/oauth-protected-resource',

@@ -148,9 +148,9 @@ describe('network meta', () => {
     expect(meta.links).toEqual({ testnet: 'https://dev.sidequest.exchange', x: 'https://x.com/sidequest_0' })
     expect(meta.usdPegged).toEqual([mainnet.x402.usdc])
   })
-  it('pegs the configured test dollar and links mainnet nowhere until the launch commit names it', () => {
+  it('pegs the configured test dollar and links mainnet since the launch commit opened it', () => {
     const meta = networkMeta('monad-testnet')
-    expect(meta.links).toEqual({ x: 'https://x.com/sidequest_0' })
+    expect(meta.links).toEqual({ mainnet: 'https://sidequest.exchange', x: 'https://x.com/sidequest_0' })
     expect(meta.usdPegged.map((a) => a.toLowerCase())).toContain(
       deployment('monad-testnet').rewardTokens[0]!.toLowerCase(),
     )

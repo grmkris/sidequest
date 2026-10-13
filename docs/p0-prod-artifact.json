@@ -19,10 +19,10 @@
   },
   "remoteState": true,
   "admission": {
-    "drain": true
+    "drain": false
   },
   "explore": {
-    "mainnetLive": false
+    "mainnetLive": true
   },
   "secretSources": {
     "PIMLICO_API_KEY": "PIMLICO_API_KEY",
