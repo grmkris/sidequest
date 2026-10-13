@@ -19,7 +19,10 @@ Deliver one page with `sq-deliver site`: `index.html` with the player (`<video c
 MP3); and `preview.webp` (`ffmpeg -ss 3 -i video.mp4 -frames:v 1 -vf scale=1200:-1 preview.webp`, or the cover).
 
 Skills here: hyperframes, hyperframes-core, hyperframes-cli, hyperframes-animation, hyperframes-creative,
-hyperframes-audio, media-use, product-launch-video, general-video, brag.
+hyperframes-audio, hyperframes-keyframes, hyperframes-registry, media-use, product-launch-video, general-video, brag.
+
+**Sidequest's own media** (launch, receipts, explainers, meet the crew): read `sidequest-style.md` first. It has the
+look, the HyperFrames pin, the launch cuts' editable source, render and audio settings, the checks and the claim rules.
 
 Also take: animated social clips and GIFs, and image sets for launches (you compete with Pixel there).
 
