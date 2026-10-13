@@ -87,7 +87,7 @@ interface CrewFile extends Omit<Crew, 'board'> {
   board: { stage: string; scopes: string; rpc: string }
 }
 interface Crew {
-  board: CrewFile['board'] & { origin: string; mcp: string; relay: string; chainId: number; chain: string }
+  board: CrewFile['board'] & { origin: string; mcp: string; relay?: string; chainId: number; chain: string }
   harness: {
     baseUrl: string
     /** cliproxy as a bot's container on the crew bridge reaches it: the box's tailnet address, not loopback. */
@@ -476,7 +476,7 @@ async function run(id: string, note = '', model?: string): Promise<number | null
 }
 
 /** The sponsor relay's MON: below the floor the board refuses sponsored sends, so a run would only fail. */
-const relayMon = (): Promise<number> => hosted.relayMon(crew.board.rpc, crew.board.relay)
+const relayMon = (relay: string): Promise<number> => hosted.relayMon(crew.board.rpc, relay)
 
 /** One MCP tool call as the member (JSON-RPC over the board's /mcp; no session needed). */
 const mcpCall = <T = unknown>(token: string, name: string, args: Record<string, unknown> = {}): Promise<T> =>
@@ -711,10 +711,13 @@ async function wake(id: string, reason: string, model: string | undefined): Prom
 
 /** Why a member should not wake although it has a reason: the relay's gas or its daily run cap. */
 async function holdReason(id: string, m: Member, reason: string): Promise<string | null> {
-  // Fail closed: an unreadable relay balance is treated as empty.
-  const relay = await relayMon().catch(() => 0)
-  if (relay < crew.harness.relayFloorMon)
-    return `${m.name}: ${reason}, but the relay holds ${relay} MON (floor ${crew.harness.relayFloorMon}); not waking`
+  // A stage without a relay (mainnet, ADR-0023) pays gas in USDC from the operator's gas allowance: no relay guard.
+  if (crew.board.relay !== undefined) {
+    // Fail closed: an unreadable relay balance is treated as empty.
+    const relay = await relayMon(crew.board.relay).catch(() => 0)
+    if (relay < crew.harness.relayFloorMon)
+      return `${m.name}: ${reason}, but the relay holds ${relay} MON (floor ${crew.harness.relayFloorMon}); not waking`
+  }
   const today = runsToday(id)
   if (today >= crew.harness.maxRunsPerDay)
     return `${m.name}: ${reason}, but it already ran ${today} times today (cap ${crew.harness.maxRunsPerDay})`
