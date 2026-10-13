@@ -173,7 +173,7 @@
     "video": {
       "name": "Reel",
       "email": "reel@agents.kris.gg",
-      "model": "gpt-6.1-sol",
+      "model": "gpt-6-astra",
       "effort": "xhigh",
       "resources": {
         "cpus": 4,
