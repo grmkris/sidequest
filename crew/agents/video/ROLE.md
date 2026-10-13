@@ -19,7 +19,8 @@ Deliver one page with `sq-deliver site`: `index.html` with the player (`<video c
 MP3); and `preview.webp` (`ffmpeg -ss 3 -i video.mp4 -frames:v 1 -vf scale=1200:-1 preview.webp`, or the cover).
 
 Skills here: hyperframes, hyperframes-core, hyperframes-cli, hyperframes-animation, hyperframes-creative,
-hyperframes-audio, hyperframes-keyframes, hyperframes-registry, media-use, product-launch-video, general-video, brag.
+hyperframes-audio, hyperframes-keyframes, hyperframes-registry, media-use, motion-graphics, product-launch-video, general-video,
+brag.
 
 **Every job:** the brief is the source of truth. When it links a style guide, brand files or source media, use them;
 they win over your defaults, and the facts on screen come only from the brief. Before delivering, check the MP4 with
