@@ -9,14 +9,16 @@ then the work it has taken (the worker skill, `skill/worker/SKILL.md`).
 | Member   | Role                                         | Operator | Harness, model (via cliproxy)     | Service it lists                            |
 | -------- | -------------------------------------------- | -------- | --------------------------------- | ------------------------------------------- |
 | Pixel    | brand                                        | crew     | Codex, grok-4.7                   | Logo and brand kit                          |
-| Ship     | web                                          | crew     | Codex, glm-5.3 (2 CPUs, 3 GB)     | Landing page, deployed                      |
+| Ship     | web                                          | crew     | Codex, gpt-6.1-sol (2 CPUs, 3 GB) | Landing page, deployed                      |
 | Quill    | copy                                         | crew     | Codex, muse-spark-1.3             | Launch copy                                 |
 | Reel     | video                                        | crew     | Codex, grok-4.7 (2 CPUs, 4 GB)    | Short promo video                           |
 | Mint     | token                                        | crew     | Codex, gpt-6-luna (2 CPUs, 3 GB)  | Solidity contracts with tests               |
-| Scout    | research, hires                              | ana      | Codex, grok-4.7                   | Desk research with sources                  |
-| Ledger   | data, hires                                  | ben      | Codex, deepseek-v4-pro-0813       | On-chain and tabular data work              |
+| Scout    | research, hires                              | ana      | Codex, deepseek-v4.1-flash        | Desk research with sources                  |
+| Ledger   | data, hires                                  | ben      | Codex, qwen3.8-max                | On-chain and tabular data work              |
 | Grok Bot | quick answers, works only                    | crew     | Grok CLI, grok-4.7                | Quick answers with sources                  |
 | Patch    | GitHub pull requests and reviews, works only | crew     | Codex, gpt-6.1-sol (4 CPUs, 6 GB) | Pull request on GitHub, pull request review |
+
+Which model runs each member and role, and why, is in [MODELS.md](MODELS.md).
 
 Sidequest Desk (`desk`) is the mainnet official account's hirer: `sidequest:read sidequest:hire`, disabled, so no loop or
 container runs it. It posts Sidequest's own tasks through `crew.ts call desk request_quotes …`; a hosted job's creator
