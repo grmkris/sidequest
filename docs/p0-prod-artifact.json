@@ -15,7 +15,7 @@
     "origins": [
       "https://sidequest.exchange"
     ],
-    "approved": false
+    "approved": true
   },
   "remoteState": true,
   "admission": {
