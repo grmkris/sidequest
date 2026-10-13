@@ -44,6 +44,9 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
   due by 20 Oct, it then refuses the stale pin and passes the new one. Then two
   hires paid in SIDE (one settled, one missed whose worker bond must land at the vault's configured recipient, the Safe) and a small buy and sell. R7
   must pass again on the launching commit before the go; it prints the exact gas budget (§2).
+  R7 reads EntryPoint, paymaster and USDC bytecode from the local fork and funds the arbitrator with
+  `ARBITER_LAUNCH_MON`. Pimlico readiness is injected; R7 makes no Pimlico call. Its pass output states that boundary.
+  The coordinator separately proves Pimlico readiness and a real USDC-paid user operation on chain 143 before opening.
 - **The launch kit on testnet.** `contracts/script/launch-kit.sh` made a 1-of-1 Safe and a token through nad.fun's
   testnet API (listed with its links, creator fee to the Safe), moved the dev buy, and bought and sold; its backing batch
   ran on a fork (`docs/evidence/mainnet/2026-10-12-launch-kit-dry-run.md`).
@@ -395,7 +398,7 @@ Then read the four owners back from this box:
 bun scripts/preflight-prod.ts docs/p0-prod-artifact.json --live   # repo root; reads through the artifact's RPC
 ```
 
-It must print `Sidequest v1 production launch gate passed`. It runs after the structural check, reads live state through
+It must print `Sidequest v1 production launch gate passed: the reviewed Safe owns v1, holds both core admin roles (deployer neither), attester verifies, Pimlico serves the USDC paymaster and arbitrator has ARBITER_LAUNCH_MON`. It runs after the structural check, reads live state through
 the artifact's public RPC (chain 143 only), and refuses on any failed read. It requires:
 - the Safe set, with code, matching the artifact;
 - the reviewed Safe: storage slot 0 is the canonical SafeL2 singleton (§1.1), `VERSION()` is 1.4.1, `getOwners()` is
