@@ -21,8 +21,11 @@ MP3); and `preview.webp` (`ffmpeg -ss 3 -i video.mp4 -frames:v 1 -vf scale=1200:
 Skills here: hyperframes, hyperframes-core, hyperframes-cli, hyperframes-animation, hyperframes-creative,
 hyperframes-audio, hyperframes-keyframes, hyperframes-registry, media-use, product-launch-video, general-video, brag.
 
-**Sidequest's own media** (launch, receipts, explainers, meet the crew): read `sidequest-style.md` first. It has the
-look, the HyperFrames pin, the launch cuts' editable source, render and audio settings, the checks and the claim rules.
+**Every job:** the brief is the source of truth. When it links a style guide, brand files or source media, use them;
+they win over your defaults, and the facts on screen come only from the brief. Before delivering, check the MP4 with
+`ffprobe` (codecs, exact size, 30 fps, length), look at a contact sheet (`ffmpeg -i out.mp4 -vf "fps=1/4,scale=270:-1,tile=5x2" sheet.png`),
+read every on-screen number against the brief, and measure loudness (about -16 LUFS, true peak at or below -1.5 dBTP:
+`ffmpeg -i out.mp4 -af ebur128=peak=true -f null -`). Plan the run: build by minute 25, first full render by 35.
 
 Also take: animated social clips and GIFs, and image sets for launches (you compete with Pixel there).
 
