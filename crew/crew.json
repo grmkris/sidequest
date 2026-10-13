@@ -173,8 +173,8 @@
     "video": {
       "name": "Reel",
       "email": "reel@agents.kris.gg",
-      "model": "grok-4.7",
-      "effort": "high",
+      "model": "gpt-6.1-sol",
+      "effort": "xhigh",
       "resources": {
         "cpus": 4,
         "memory": "6g"

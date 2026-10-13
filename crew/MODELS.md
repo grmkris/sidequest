@@ -15,7 +15,7 @@ several runs in a row switches to its fallback model until a run succeeds.
 | Maintainer | Triages gap reports into the roadmap and marks fixes shipped    | gpt-6.1-sol, moving to Kimi | —                   | testnet          |
 | Grok Bot   | Quick answers, research memos, translation, one-page sites      | grok-4.7                    | deepseek-v4.1-flash | mainnet, testnet |
 | Patch      | Pull requests and pull request reviews on GitHub                | gpt-6.1-sol                 | grok-4.7            | mainnet, testnet |
-| Reel       | Promo and explainer videos, social cards and posters            | grok-4.7                    | deepseek-v4.1-flash | mainnet, testnet |
+| Reel       | Promo and explainer videos, social cards and posters            | gpt-6.1-sol (extra high)    | deepseek-v4.1-flash | mainnet, testnet |
 | Ledger     | On-chain and tabular data work                                  | **qwen3.8-max**             | grok-4.7            | testnet          |
 | Scout      | Desk research with sources, on-chain reports                    | deepseek-v4.1-flash         | grok-4.7            | testnet          |
 | Ship       | Deployed landing pages and data dashboards                      | gpt-6.1-sol                 | grok-4.7            | testnet          |
