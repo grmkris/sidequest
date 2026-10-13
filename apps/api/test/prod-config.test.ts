@@ -127,6 +127,32 @@ test('a consistent synthetic complete artifact passes structural validation only
   expect(validateProdConfig(config, artifact)).toEqual([])
 })
 
+test('launch preflight accepts the runbook USDC+SIDE promotion and the drained USDC-only record', () => {
+  const { config, artifact } = configured()
+  const side = config.deployment.factory!
+  config.sidequest!.token = side
+  config.knownTokens = [USDC, side]
+  config.deployment.rewardTokens = [USDC, side]
+  artifact.deployment.rewardTokens = [USDC.toLowerCase(), side]
+  expect(validateProdConfig(config, artifact)).toEqual([])
+  expect(validateProdConfig(configured().config, configured().artifact)).toEqual([])
+  config.knownTokens = [USDC]
+  expect(validateProdConfig(config, artifact)).toContain('known SIDE')
+  config.knownTokens = [USDC, side]
+  config.deployment.rewardTokens = [USDC]
+  artifact.deployment.rewardTokens = [USDC]
+  expect(validateProdConfig(config, artifact)).toContain('rewardTokens:SIDE')
+})
+
+test.each([[USDC, USDC.toLowerCase()], [USDC, '0x0000000000000000000000000000000000000000'], [USDC, 'SIDE'], []])(
+  'known tokens must be unique nonzero addresses containing USDC: %j',
+  (...tokens) => {
+    const { config, artifact } = configured()
+    config.knownTokens = tokens
+    expect(validateProdConfig(config, artifact)).toContain('known USDC')
+  },
+)
+
 test.each([
   'stage',
   'chain',

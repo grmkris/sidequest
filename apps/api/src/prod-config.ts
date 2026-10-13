@@ -63,6 +63,7 @@ export interface ChainConfig {
   knownTokens: string[]
   /** SidequestRecipe's input; the preflight reads the default arbitrator and clocks from it (LAUNCH-AUDIT-FIX-001). */
   sidequest?: {
+    token?: string
     defaultArbitrator?: string | null
     clocks?: LaunchClocks
     minimumCreatorBond?: number
@@ -141,10 +142,15 @@ function validateCompleteProdConfig(config: ChainConfig, artifact: ProdArtifact)
     'Privy app/origin approval',
   )
   check(
-    config.knownTokens.length === 1 && config.knownTokens[0]?.toLowerCase() === config.x402.usdc.toLowerCase(),
+    config.knownTokens.every(address) &&
+      new Set(config.knownTokens.map((token) => token.toLowerCase())).size === config.knownTokens.length &&
+      config.knownTokens.some((token) => token.toLowerCase() === config.x402.usdc.toLowerCase()),
     'known USDC',
   )
   const deployed = config.deployment
+  // A drained USDC-only record predating SIDE remains valid. Once SIDE is selected for promotion, both lists need it.
+  const side = config.sidequest?.token === undefined ? undefined : deployed.factory
+  check(side === undefined || config.knownTokens.some((token) => same(token, side)), 'known SIDE')
   check(
     deployed.network === artifact.network && Number.isSafeInteger(deployed.block) && (deployed.block ?? 0) > 0,
     'deployment network/block',
@@ -191,7 +197,13 @@ function validateCompleteProdConfig(config: ChainConfig, artifact: ProdArtifact)
     Array.isArray(list) && list.every(address) ? list.map((token) => token.toLowerCase()) : undefined
   const configRewards = rewards(deployed.rewardTokens)
   const artifactRewards = rewards(artifact.deployment.rewardTokens)
-  check(configRewards !== undefined && configRewards.includes(config.x402.usdc.toLowerCase()), 'rewardTokens:USDC')
+  check(
+    configRewards !== undefined &&
+      new Set(configRewards).size === configRewards.length &&
+      configRewards.includes(config.x402.usdc.toLowerCase()),
+    'rewardTokens:USDC',
+  )
+  check(side === undefined || configRewards?.includes(side.toLowerCase()) === true, 'rewardTokens:SIDE')
   check(
     configRewards === undefined ||
       (artifactRewards !== undefined &&
