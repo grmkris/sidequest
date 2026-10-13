@@ -65,6 +65,51 @@ else:
     def test_mainnet_config_refuses_testnet_rpc_before_plan_or_send(self):
         self.assert_wrong_chain('monad-mainnet', 10143, 143)
 
+    def acceptance_fixture(self):
+        record = json.loads((self.root / 'contracts/config/monad-testnet.json').read_text())
+        safe = record['sidequest']['safe']
+        owner = '0x0000000000000000000000000000000000000011'
+        (self.root / 'kit/addresses.json').write_text(json.dumps({'owner': owner, 'testnetOnly': False}))
+        self.stub('cast', f'''import json, os, sys
+from pathlib import Path
+args = sys.argv[1:]
+with Path(os.environ['STUB_CALLS']).open('a') as out:
+    out.write(json.dumps(args) + '\\n')
+if args[0] == 'chain-id': print(os.environ['STUB_CHAIN'])
+elif any('VERSION()' in arg for arg in args): print('"1.4.1"')
+elif any('getOwners()' in arg for arg in args): print('[{owner}]')
+elif any('slashRecipient()' in arg for arg in args): print('{safe}')
+else: raise SystemExit('unexpected cast command')
+''')
+        mainnet = json.loads((self.root / 'contracts/config/monad-mainnet.json').read_text())
+        mainnet['sidequest'] = record['sidequest']
+        mainnet['deployment'] = record['deployment']
+        mainnet['deployment']['sidequest']['slashRecipient'] = safe
+        (self.root / 'contracts/config/monad-mainnet.json').write_text(json.dumps(mainnet))
+        self.forge_calls = self.root / 'forge.jsonl'
+        self.stub('forge', f'''import json, sys
+from pathlib import Path
+args = sys.argv[1:]
+with Path({str(self.forge_calls)!r}).open('a') as out:
+    out.write(json.dumps(args) + '\\n')
+if '--sig' not in args or args[args.index('--sig') + 1] != 'simulate()':
+    raise SystemExit('the plan must select the non-broadcast simulation')
+if '--broadcast' in args: raise SystemExit('simulation broadcast forbidden')
+''')
+
+    def test_accept_plan_selects_simulation_without_mainnet_go(self):
+        self.acceptance_fixture()
+        result = self.run_kit('monad-mainnet', 143, 'accept', 'plan')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.forge_calls.read_text().splitlines()), 1)
+
+    def test_accept_send_still_refuses_without_mainnet_go(self):
+        self.acceptance_fixture()
+        result = self.run_kit('monad-mainnet', 143, 'accept', 'send')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('a mainnet send needs MAINNET_GO=yes', result.stderr)
+        self.assertFalse(self.forge_calls.exists())
+
 
 if __name__ == '__main__':
     unittest.main()

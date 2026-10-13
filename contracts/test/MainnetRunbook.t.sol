@@ -86,6 +86,17 @@ contract MainnetRunbookTest is Test {
         assertGt(returned, verify, "promotion returns before the repeated verifier");
     }
 
+    /// LAUNCH-AUDIT-ACCEPT-001: the documented accept plan is read-only on chain 143 and does not need MAINNET_GO;
+    /// the separate send entry point still requires approval.
+    function test_acceptPlanUsesReadOnlyChainGuard() public view {
+        string memory accept = vm.readFile(string.concat(vm.projectRoot(), "/script/SafeAccept.s.sol"));
+        assertTrue(vm.contains(kit, "--sig 'simulate()' --rpc-url \"$RPC\" --sender \"$owner\""));
+        assertTrue(vm.contains(accept, "function simulate()"));
+        assertTrue(vm.contains(accept, "simulate cannot broadcast"));
+        assertTrue(vm.contains(accept, "SidequestRecipe.guardChain(vm, json, true)"), "send lost its approval guard");
+        assertTrue(vm.contains(accept, "SidequestRecipe.guardChain(vm, json, false)"), "check() lost its read-only guard");
+    }
+
     function test_runbookSequenceWithGates() public view {
         string memory live = "bun scripts/preflight-prod.ts docs/p0-prod-artifact.json --live";
         string[] memory s = new string[](18);

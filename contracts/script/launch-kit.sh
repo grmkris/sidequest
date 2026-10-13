@@ -369,7 +369,7 @@ cmd_accept() {
     || die "the config's promoted Safe ($(cfg .deployment.sidequest.safe)) is not $safe: pull the promotion commit"
   check_slash_recipient
   if [[ "${1:-}" != send ]]; then
-    (cd "$ROOT/contracts" && NETWORK=$NETWORK forge script script/SafeAccept.s.sol --rpc-url "$RPC" --sender "$owner")
+    (cd "$ROOT/contracts" && NETWORK=$NETWORK forge script script/SafeAccept.s.sol --sig 'simulate()' --rpc-url "$RPC" --sender "$owner")
     return 0
   fi
   go_check

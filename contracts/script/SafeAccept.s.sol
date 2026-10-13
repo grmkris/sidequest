@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {Script, console2} from "forge-std/Script.sol";
+import {VmSafe} from "forge-std/Vm.sol";
 import {SidequestRecipe} from "./SidequestRecipe.sol";
 import {SidequestSafeAccept, ISafe} from "./SidequestSafeAccept.sol";
 
@@ -26,6 +27,22 @@ contract SafeAccept is Script {
         SidequestSafeAccept.verify(safe, t);
         console2.log("acceptOwnership sent through the Safe:", accepted);
         console2.log("owner() == safe on all four:", safe);
+    }
+
+    /// @notice Pending acceptances simulated as the owner; no transaction is recorded for broadcast.
+    function simulate() external {
+        require(
+            !vm.isContext(VmSafe.ForgeContext.ScriptBroadcast) && !vm.isContext(VmSafe.ForgeContext.ScriptResume),
+            "simulate cannot broadcast"
+        );
+        string memory json = vm.readFile(SidequestRecipe.path(vm, vm.envString("NETWORK")));
+        SidequestRecipe.guardChain(vm, json, false);
+        (address safe, address[4] memory t) = SidequestSafeAccept.targets(vm, json);
+        vm.startPrank(msg.sender);
+        uint256 accepted = SidequestSafeAccept.accept(ISafe(safe), t, msg.sender);
+        vm.stopPrank();
+        SidequestSafeAccept.verify(safe, t);
+        console2.log("acceptOwnership simulated through the Safe:", accepted);
     }
 
     function check() external view {
