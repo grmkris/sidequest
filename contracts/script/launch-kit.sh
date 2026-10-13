@@ -247,7 +247,7 @@ cmd_token_plan() {
   meta="$ROOT/docs/brand/nadfun-token.json"
   image="$ROOT/docs/brand/$(jq -r .image "$meta")"
   if mainnet; then
-    name=Sidequest symbol=SIDE buy=$(cast to-wei "${KIT_DEV_BUY_MON:-3544}") margin=$(cast to-wei 10)
+    name=Sidequest symbol=SIDE buy=$(cast to-wei "${KIT_DEV_BUY_MON:-7437}") margin=$(cast to-wei 10)
   else
     name=${KIT_TOKEN_NAME:-Sidequest Test} symbol=${KIT_TOKEN_SYMBOL:-SQTEST}
     buy=$(cast to-wei "${KIT_DEV_BUY_MON:-0.05}") margin=$(cast to-wei 0.1)

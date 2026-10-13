@@ -306,7 +306,7 @@ contract MainnetRunbookTest is Test {
 
     function test_runbookCarriesBudgetAndFunding() public view {
         string[5] memory needles = [
-            "| nad.fun creation with the 5% dev buy |", // SIDE comes from the launcher, with the dev buy
+            "| nad.fun creation with the 10% dev buy |", // SIDE comes from the launcher, with the dev buy
             "| arbitrator | `roles.arbitrator` (a fresh 143-only key) | at least 1.0308 MON; fund 1.1 MON |",
             "ARBITER_LAUNCH_MON",
             "Pimlico chain, EntryPoint and token-quote checks",

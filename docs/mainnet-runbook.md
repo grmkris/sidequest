@@ -15,9 +15,10 @@ remote state and resources; both use Monad testnet until the mainnet gate descri
 The full record is myplan note 22 (Decisions); the task list is note 23.
 
 - **SIDE.** SIDE launches on the nad.fun launcher, created by the `sidequest-creator` keystore on Kris's MacBook
-  through nad.fun's upload and salt API and its V2 router (nad.fun lists only tokens made through its API), with a 5% dev
-  buy (50M SIDE) in the creation transaction. The dev buy moves to the Safe and is disclosed: 50% for
-  backing positions the Safe owns, 30% for tasks the Safe funds, 20% in reserve. nad.fun's creator fee goes to the Safe.
+  through nad.fun's upload and salt API and its V2 router (nad.fun lists only tokens made through its API), with a 10% dev
+  buy (100M SIDE, 7,437 MON; Kris, 13 Oct) in the creation transaction. The dev buy moves to the Safe and is disclosed,
+  split as on the docs SIDE page: 20% first-party backing, 15% sponsorship, 15% tasks, 30% staked rewards (not built
+  yet), 20% reserve. nad.fun's creator fee goes to the Safe.
   The protocol mints nothing: the deploy points at the existing token.
 - **No mining at launch.** The mining reserve, distributor and team vesting are gone from the contracts (tag
   `mining-final` keeps the old code). Protocol fees collect in the Safe; their use is decided later.
@@ -39,7 +40,7 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
 
 - **The launch on a fork of 143 (R7).** `RPC=https://rpc.monad.xyz bash contracts/script/rehearse-launch.sh` runs
   §3.1–§3.7 against the live chain's state, with Monad gas pricing and anvil dev keys: SIDE is created through the real
-  nad.fun router with the 5% dev buy and the creator fee paid to the Safe, and must have no `burn`. The launch gate
+  nad.fun router with a dev buy (R7 rehearses about 5%; the launch buys 10%) and the creator fee paid to the Safe, and must have no `burn`. The launch gate
   refuses while the four handovers are pending and passes after `SafeAccept` with the 1-of-1 pin. Rehearsing the 2-of-3
   due by 20 Oct, it then refuses the stale pin and passes the new one. Then two
   hires paid in SIDE (one settled, one missed whose worker bond must land at the vault's configured recipient, the Safe) and a small buy and sell. R7
@@ -122,7 +123,7 @@ vesting and mining) took 26 deploy transactions and 26.3M gas, so the deployer's
 | step | sends | paid by |
 | --- | --- | --- |
 | Safe (`launch-kit.sh safe send`) | 1 | the owner keystore (Mac) |
-| nad.fun creation with the 5% dev buy | 1 | the creator keystore (Mac): about 3,544 MON; the deploy fee is 0 today, and the kit re-reads it |
+| nad.fun creation with the 10% dev buy | 1 | the creator keystore (Mac): 7,437 MON (`KIT_DEV_BUY_MON`); the deploy fee is 0 today, and the kit re-reads it |
 | dev buy to the Safe | 1 | the creator keystore (Mac) |
 | DeploySidequest, fresh core | R7 | deployer |
 | PromoteSidequest | 0 | — |
@@ -204,9 +205,9 @@ DeploySidequest refuses either mistake before it sends anything (LAUNCH-AUDIT-FI
 
 | role | address | send | why |
 | :--- | :--- | :--- | :--- |
-| admin (deployer) | `roles.admin`, the fresh `sidequest-deployer` (never the old `0x6752…ad73`) | 60 MON | deploy (about 2.4 MON at 102 gwei) with room for a retry; the arbitrator and crew top-ups go out from it (§3.8) |
+| admin (deployer) | `roles.admin`, the fresh `sidequest-deployer` (never the old `0x6752…ad73`) | 10 MON | deploy (about 2.4 MON at 102 gwei) with room for a retry; the arbitrator and crew top-ups go out from it (§3.8) |
 | Safe owner (Mac kit) | `launch-kit.sh addresses` | 2 MON | the Safe, SafeAccept and the backing batch |
-| creator (Mac kit) | `launch-kit.sh addresses` | about 3,600 MON | the 5% dev buy (about 3,544 MON) and gas; the kit's margin is refunded |
+| creator (Mac kit) | `launch-kit.sh addresses` | about 7,460 MON | the 10% dev buy (7,437 MON) and gas; the kit's margin is refunded |
 | exit test (Mac kit) | `launch-kit.sh addresses` | about 20 MON | the small buy and sell (§3.12) |
 | attester | `roles.attester` (a fresh R2 key) | no gas funding required | signs evidence; the submitting worker attaches it and pays USDC gas |
 | arbitrator | `roles.arbitrator` (a fresh 143-only key) | at least 1.0308 MON; fund 1.1 MON | sends its own rulings and nonce cancellations, paying MON. Three × (`ARBITER_MON_FLOOR` 0.1 MON + `V1_GAS.evaluator` 1,200,000 × 203 gwei = 0.2436 MON) gives 1.0308 MON of headroom. The gas watch warns below 1.0308 MON and is critical below one ruling plus float (0.3436 MON); top up before the warning becomes critical |
@@ -267,7 +268,7 @@ nad.fun lists only tokens whose metadata and salt come from its API, and the tok
 uploads the Sidequest mark and `docs/brand/nadfun-token.json` (the utility-only description, the website, X and Telegram
 links) to `api.nad.fun` and reads the stored metadata back. It then asks for a V2 salt, checks the predicted address
 (ending 7777) with `cast create2` and that it has no code, re-reads the deploy fee, and simulates `createWithNative`:
-name Sidequest, ticker SIDE, a 5% dev buy in the same transaction (50M SIDE; about 3,544 MON), and the creator-fee
+name Sidequest, ticker SIDE, a 10% dev buy in the same transaction (100M SIDE; 7,437 MON), and the creator-fee
 vault paying the Safe. The salt stays in the kit's state until the send; never post it.
 
 ```
@@ -294,7 +295,7 @@ send` (after `move plan`) and read the Safe's balance back from this box:
 
 ```
 (set -a && . ./.env.local && set +a && T=<SIDE> && S=<safe> && R="$MONAD_MAINNET_RPC_URL" && \
-  cast call --rpc-url "$R" "$T" "balanceOf(address)(uint256)" "$S")   # the whole dev buy, about 50M SIDE
+  cast call --rpc-url "$R" "$T" "balanceOf(address)(uint256)" "$S")   # the whole dev buy, about 100M SIDE
 ```
 
 Then write `sidequest.token` and add SIDE to `knownTokens` in `config/monad-mainnet.json` (PromoteSidequest
