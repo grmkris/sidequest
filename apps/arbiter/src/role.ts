@@ -45,8 +45,10 @@ const required = (env: NodeJS.ProcessEnv, key: string, fallback?: string): strin
 
 export function roleEnvironment(role: Role, env: NodeJS.ProcessEnv): RoleEnvironment {
   if (role === 'arbiter') {
+    const keyName =
+      env.NETWORK === 'monad-mainnet' ? 'SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY' : 'V1_ARBITRATOR_PRIVATE_KEY'
     return {
-      privateKey: required(env, 'V1_ARBITRATOR_PRIVATE_KEY'),
+      privateKey: required(env, keyName),
       model: required(env, 'ARBITER_MODEL'),
       modelBaseUrl: required(env, 'ARBITER_MODEL_BASE_URL'),
       modelApiKey: required(env, 'ARBITER_MODEL_API_KEY'),

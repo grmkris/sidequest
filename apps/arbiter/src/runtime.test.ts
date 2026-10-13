@@ -12,39 +12,54 @@ const v1Only: sdk.Deployment = {
   ...d,
   network: 'monad-mainnet',
   chainId: 143,
+  arbitrator: v1.address,
   stacks: { main: { ...d.stacks.main!, kind: 'sidequest-v1' } },
 }
 const cancellationFixture = (account: typeof v1, chainId: number, balance = 240_000n) => {
   const send = vi.fn(async () => sdk.hashText('cancellation'))
-  const wallet = { account, chain: { id: chainId }, sendTransaction: send } as unknown as sdk.Wallet
-  const reads = {
+  // SAFETY: cancellation uses only this account, chain id and send method; no other wallet action is exercised.
+  const wallet = Object.assign({} as sdk.Wallet, { account, chain: { id: chainId }, sendTransaction: send })
+  // SAFETY: the fixture fills every public-client method the cancellation sender calls.
+  const reads = Object.assign({} as PublicClient, {
     getChainId: async () => chainId,
     estimateGas: async () => 100_000n,
     estimateFeesPerGas: async () => ({ maxFeePerGas: 2n, maxPriorityFeePerGas: 1n }),
     getBalance: vi.fn(async () => balance),
     waitForTransactionReceipt: async () => ({ status: 'success' }),
-  } as unknown as PublicClient
+  })
   return { wallet, reads, send }
 }
 
 describe('arbiter runtime keys', () => {
   it('v1-only mainnet never reads or requires the old legacy secret', () => {
-    expect(arbiterAccounts(v1Only, { V1_ARBITRATOR_PRIVATE_KEY: v1Key }).map((a) => a.address)).toEqual([v1.address])
+    expect(arbiterAccounts(v1Only, { SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY: v1Key }).map((a) => a.address)).toEqual([
+      v1.address,
+    ])
     expect(
-      arbiterAccounts(v1Only, { V1_ARBITRATOR_PRIVATE_KEY: v1Key, ARBITRATOR_PRIVATE_KEY: 'unset' }).map(
-        (a) => a.address,
-      ),
+      arbiterAccounts(v1Only, {
+        SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY: v1Key,
+        ARBITRATOR_PRIVATE_KEY: 'unset',
+        V1_ARBITRATOR_PRIVATE_KEY: oldKey,
+      }).map((a) => a.address),
     ).toEqual([v1.address])
     expect(() => arbiterAccounts(v1Only, { ARBITRATOR_PRIVATE_KEY: oldKey })).toThrow(
-      'V1_ARBITRATOR_PRIVATE_KEY is not set',
+      'SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY is not set',
     )
   })
   it('invalid keys never appear in an error, and duplicate accounts sign in once', () => {
-    expect(() => arbiterAccounts(v1Only, { V1_ARBITRATOR_PRIVATE_KEY: 'private-value' })).toThrow(
-      'V1_ARBITRATOR_PRIVATE_KEY is invalid',
+    expect(() => arbiterAccounts(v1Only, { SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY: 'private-value' })).toThrow(
+      'SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY is invalid',
     )
     const mixed = { ...v1Only }
-    expect(arbiterAccounts(mixed, { ARBITRATOR_PRIVATE_KEY: v1Key, V1_ARBITRATOR_PRIVATE_KEY: v1Key })).toHaveLength(1)
+    expect(
+      arbiterAccounts(mixed, { ARBITRATOR_PRIVATE_KEY: v1Key, SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY: v1Key }),
+    ).toHaveLength(1)
+  })
+  it('mainnet refuses the testnet key and a key that differs from the promoted arbitrator', () => {
+    expect(() => arbiterAccounts(v1Only, { V1_ARBITRATOR_PRIVATE_KEY: v1Key })).toThrow('SIDEQUEST_MAINNET')
+    expect(() => arbiterAccounts(v1Only, { SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY: oldKey })).toThrow(
+      'address mismatch',
+    )
   })
 })
 

@@ -187,10 +187,22 @@ DeploySidequest refuses either mistake before it sends anything (LAUNCH-AUDIT-FI
 | exit test (Mac kit) | `launch-kit.sh addresses` | about 20 MON | the small buy and sell (§3.12) |
 | relay | `roles.relay` (a fresh R2 key) | 3 MON | must stay **above `RELAY_FLOOR_MAINNET` = 2 MON** (`packages/sdk/src/relay.ts`): the launch gate and each sponsored send check it. 3 MON leaves about 1 MON above the floor, about two sponsored hires (0.4–0.5 MON each, [sponsorship.md](sponsorship.md)); decide the launch funding and the 10 MON daily budget before opening writes |
 | attester | `roles.attester` (a fresh R2 key) | 1 MON | attaches evidence |
-| arbitrator | `roles.arbitrator` (a fresh R2 key) | 0.11 | signs rulings, which the relay sends. It also sends `cancelRuling` itself, to burn a recorded ruling's nonce (arbiter `cancel_ruling`). Bounded reserve: 10 cancellations at 51,848 gas (estimated on a Monad-pricing fork) × 203 gwei = 0.105 MON. Refill when below 0.05; no other use |
+| arbitrator | `roles.arbitrator` (a fresh 143-only key) | at least 1.0308 MON; fund 1.1 MON | sends its own rulings and nonce cancellations, paying MON. Three × (`ARBITER_MON_FLOOR` 0.1 MON + `V1_GAS.evaluator` 1,200,000 × 203 gwei = 0.2436 MON) gives 1.0308 MON of headroom. The gas watch warns below 1.0308 MON and is critical below one ruling plus float (0.3436 MON); top up before the warning becomes critical |
 
-The arbiter process (`apps/arbiter`, a separate source from the Worker) requires
-`V1_ARBITRATOR_PRIVATE_KEY` (the fresh v1 key above, which holds the cancellation reserve).
+The mainnet arbiter reads only `SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY`; it must derive `roles.arbitrator` on 143.
+Store that key in the production role environment; do not reuse the dev arbiter key. The coordinator sets `MONAD_RPC_URL`
+to the chain-143 RPC in `~/.config/sidequest/prod.env` and, after the production stage flip, starts the released SHA:
+
+```bash
+SIDEQUEST_STAGE=prod bun --no-env-file crew/bin/roles.ts up <released-sha> arbiter
+```
+
+This starts `sq-arbiter-mainnet` in `sidequest-roles-mainnet`, against only the mainnet stage board, with its own pinned
+worktree and `.crew/roles/mainnet/state` journal volume. It leaves the running testnet `sq-arbiter`, compose project and
+journal alone. Run only one signer process per mainnet key. The daemon checks the RPC chain before a ruling send and
+persists intent and signed bytes before broadcast; after a timeout reconcile the journal's nonce and receipt. Probe a
+disputed mainnet hire and read its ruling receipt and index before opening. `SIDEQUEST_STAGE=dev` keeps the testnet key
+and only boards still on testnet; restarting it after the flip removes prod from its board list.
 
 Space out transfers to one wallet (Monad's reserve-balance rule; see `reality-check.md`).
 

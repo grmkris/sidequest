@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { describe, expect, it } from 'vitest'
-import { deployment } from '@sidequest/sdk'
+import { ARBITER_LAUNCH_MON, ARBITER_MON_FLOOR, ARBITER_LAUNCH_FEE, V1_GAS, deployment } from '@sidequest/sdk'
 import { fromNodeSqlite, stmt } from './index.ts'
 import { GAS_ALERTS, gasLevel, gasWatches, watchGas } from './gas-watch.ts'
 import { migrateTelegram, telegramOwnerWallets } from './telegram.ts'
@@ -17,6 +17,13 @@ describe('the gas watch (ADR-0023)', () => {
     expect(gasLevel('paymaster', GAS_ALERTS.paymaster.warnWei - 1n)).toBe('warning')
     expect(gasLevel('paymaster', GAS_ALERTS.paymaster.criticalWei - 1n)).toBe('critical')
     expect(gasLevel('arbitrator', GAS_ALERTS.arbitrator.criticalWei)).toBe('warning')
+  })
+
+  it('warns before losing three 203-gwei rulings of headroom and goes critical below one ruling plus reserve', () => {
+    expect(ARBITER_LAUNCH_MON).toBe(1_030_800_000_000_000_000n)
+    expect(gasLevel('arbitrator', ARBITER_LAUNCH_MON - 1n)).toBe('warning')
+    expect(gasLevel('arbitrator', ARBITER_MON_FLOOR + V1_GAS.evaluator * ARBITER_LAUNCH_FEE - 1n)).toBe('critical')
+    expect(gasLevel('arbitrator', ARBITER_LAUNCH_MON)).toBe('ok')
   })
 
   it("watches our paymaster's EntryPoint deposit only where the paymaster is ours, and the arbitrator always", async () => {
@@ -39,7 +46,7 @@ describe('the gas watch (ADR-0023)', () => {
         owner!.toLowerCase(),
       ),
     ])
-    const [arbitrator, paymaster] = gasWatches(testnet, reader(10n ** 18n, 10n ** 17n))
+    const [arbitrator, paymaster] = gasWatches(testnet, reader(ARBITER_LAUNCH_MON, 10n ** 17n))
     expect(await watchGas(sql, { network: 'monad-testnet', now: 7200, watch: arbitrator! })).toMatchObject({
       level: 'ok',
       queued: false,

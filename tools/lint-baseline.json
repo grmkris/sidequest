@@ -354,19 +354,11 @@
   "apps/api/test/x402-workerd.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2
   },
-  "apps/arbiter/src/arbiter.test.ts": {
-    "anti-slop(no-chained-type-assertions)": 2,
-    "anti-slop(require-safety-comment-for-type-assertion)": 11
-  },
   "apps/arbiter/src/arbiter.ts": {
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
     "complexity(complexity)": 1,
     "typescript(no-explicit-any)": 1
-  },
-  "apps/arbiter/src/runtime.test.ts": {
-    "anti-slop(no-chained-type-assertions)": 2,
-    "anti-slop(require-safety-comment-for-type-assertion)": 4
   },
   "apps/docs/scripts/verify-output.mjs": {
     "complexity(complexity)": 1

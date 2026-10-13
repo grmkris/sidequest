@@ -1,5 +1,6 @@
 export * from './abi/index.ts'
 export * from './actions.ts'
+export * from './arbitration-gas.ts'
 export * from './staking.ts'
 export * from './staking-ledger.ts'
 export * from './client.ts'

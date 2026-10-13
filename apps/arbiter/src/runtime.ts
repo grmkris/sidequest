@@ -14,9 +14,12 @@ import { rulingJournal, type RulingJournal, type RulingSend } from './ruling-jou
 
 /** The v1 arbitrator uses its dedicated key. */
 export function arbiterAccounts(deployment: sdk.Deployment, env: NodeJS.ProcessEnv): LocalAccount[] {
-  const names = ['V1_ARBITRATOR_PRIVATE_KEY']
-  const accounts = names.map((name) => accountFromPrivateKey(name, env))
-  return accounts.filter((account, index) => accounts.findIndex((other) => other.address === account.address) === index)
+  const name =
+    deployment.network === 'monad-mainnet' ? 'SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY' : 'V1_ARBITRATOR_PRIVATE_KEY'
+  const account = accountFromPrivateKey(name, env)
+  if (deployment.network === 'monad-mainnet' && account.address.toLowerCase() !== deployment.arbitrator.toLowerCase())
+    throw new Error(`${name} address mismatch`)
+  return [account]
 }
 
 /** Read only the selected role key, and never include its value in an error. */
@@ -97,7 +100,7 @@ export function cancellationSender(network: sdk.Network, account: LocalAccount, 
 }
 
 // Keep 0.1 MON after the worst-case fee so the arbitrator can still cancel a stale authorization.
-export const ARBITER_MON_FLOOR = 100_000_000_000_000_000n
+export const ARBITER_MON_FLOOR = sdk.ARBITER_MON_FLOOR
 export interface RulingResult {
   readonly txHash: Hex | null
 }

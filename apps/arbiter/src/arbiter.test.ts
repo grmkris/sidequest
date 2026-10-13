@@ -67,8 +67,10 @@ function fakeBoard(
       calls.push({ tool, args })
       switch (tool) {
         case 'arbiter_lease':
+          // SAFETY: this test double returns the board lease shape consumed by arbitrateOnce.
           return { held: true, holder: args.runner } as any
         case 'list_disputes':
+          // SAFETY: this test double returns the dispute list shape consumed by arbitrateOnce.
           return [
             {
               taskId: 't1',
@@ -78,12 +80,14 @@ function fakeBoard(
             },
           ] as any
         case 'get_dispute_bundle':
+          // SAFETY: this test double returns the bundle shape consumed by arbitrateOnce.
           return {
             bundle: { ...bundle, chainId: disputeChainId, arbitrator: opts.arbitrator ?? bundle.arbitrator },
             bundleHash: '0xbb',
             ...(opts.thread === undefined ? {} : { thread: opts.thread }),
           } as any
         case 'cancel_ruling':
+          // SAFETY: this test double returns the cancellation preparation shape consumed by arbitrateOnce.
           return {
             resolved: false,
             nonce: '4',
@@ -117,10 +121,12 @@ function fakeBoard(
           }
           preparedRuling = { ...td.message, jobId: 42n, deadline: BigInt(bundle.arbitrationEndsAt), nonce: 5n }
           opts.tamper?.(td)
+          // SAFETY: this test double returns the signing payload shape consumed by arbitrateOnce.
           return { sign: { typedData: JSON.stringify(td) } } as any
         }
         case 'submit_ruling':
           signed = args.signature
+          // SAFETY: this test double returns the submission preparation shape consumed by arbitrateOnce.
           return {
             landed: false,
             txHash: null,
@@ -277,6 +283,7 @@ describe('arbitrateOnce', () => {
   })
 
   it('idles without the lease', async () => {
+    // SAFETY: this test double returns the lease shape consumed by arbitrateOnce.
     const board: BoardLike = { call: async () => ({ held: false, holder: 'other' }) as any }
     expect(await arbitrateOnce(deps(board, {}))).toEqual({ lease: false, outcomes: [] })
   })
@@ -363,15 +370,17 @@ describe('arbitrateOnce', () => {
   })
 
   it('v1-only mainnet recorded ruling uses the configured funded account and waits for cancellation', async () => {
+    const key = generatePrivateKey()
+    const signer = privateKeyToAccount(key)
     const mainnetDeployment = {
       ...sdk.deployment('monad-testnet'),
       network: 'monad-mainnet' as const,
       chainId: 143,
+      arbitrator: signer.address,
       stacks: { main: { ...main, kind: 'sidequest-v1' as const } },
     }
     vi.spyOn(sdk, 'deployment').mockReturnValue(mainnetDeployment)
-    const key = generatePrivateKey()
-    const selected = arbiterAccounts(mainnetDeployment, { V1_ARBITRATOR_PRIVATE_KEY: key })[0]!
+    const selected = arbiterAccounts(mainnetDeployment, { SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY: key })[0]!
     const f = fakeBoard({
       chainId: 143,
       arbitrator: selected.address,
@@ -383,8 +392,10 @@ describe('arbitrateOnce', () => {
       expect(f.calls.at(-1)!.tool).toBe('cancel_ruling')
       return sdk.hashText('mainnet-cancel-fixture')
     })
-    const wallet = { account: selected, chain: { id: 143 }, sendTransaction: send } as unknown as sdk.Wallet
-    const reads = {
+    // SAFETY: this fixture implements the wallet methods used by cancellation and ruling sends.
+    const wallet = Object.assign({} as sdk.Wallet, { account: selected, chain: { id: 143 }, sendTransaction: send })
+    // SAFETY: the fixture fills every public-client method the cancellation path exercises.
+    const reads = Object.assign({} as PublicClient, {
       getChainId: async () => 143,
       getBalance: vi.fn(async () => balance),
       estimateGas: async () => 100_000n,
@@ -393,7 +404,7 @@ describe('arbitrateOnce', () => {
         confirmed = true
         return { status: 'success' }
       },
-    } as unknown as PublicClient
+    })
     const walletFactory = vi.spyOn(sdk, 'wallet').mockReturnValue(wallet)
     vi.spyOn(sdk, 'context').mockReturnValue({
       deployment: mainnetDeployment,
