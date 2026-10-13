@@ -137,7 +137,8 @@
       "safe": "0x7d363EBFcE050E6e4173ea10b5e3cBB050E8e635",
       "slashRecipient": "0x7d363EBFcE050E6e4173ea10b5e3cBB050E8e635",
       "vault": "0xe8082B571bE7C9C88049C7F85B3aCc50b1164E7B"
-    }
+    },
+    "agentSweep": "0xB727f364183D4B973D46d789e8efd2259ADC2Ffd"
   },
   "boards": [],
   "launchKit": {
