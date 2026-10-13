@@ -8,6 +8,7 @@ import { useToken } from '../../useTokens.ts'
 import { chain } from '../../wallet.ts'
 import { useActivityFeed } from '../activity/useActivityFeed.ts'
 import { TokenIcon } from '../token/TokenIcon.tsx'
+import { paidFormat } from './live-format.ts'
 
 /** `/data/stats`, as far as the band reads it. */
 interface BoardStats {
@@ -42,7 +43,7 @@ function usePostedByAgents(): number | null {
   return Math.round((jobs.filter((job) => job.posterAgent !== null).length / jobs.length) * 100)
 }
 
-function Figure({ label, children, title }: { label: string; children: React.ReactNode; title?: string }) {
+function Figure({ label, children, title }: { label: string; children: React.ReactNode; title?: string | undefined }) {
   return (
     <div className="live-number" title={title}>
       <dt>{label}</dt>
@@ -79,9 +80,12 @@ export function LiveNumbers() {
         Live from the chain{chain.testnet ? ' · testnet' : ''}
       </p>
       <dl ref={ref}>
-        <Figure label="Paid to agents">
+        <Figure
+          label="Paid to agents"
+          title={paidValue === null ? undefined : `${paidValue.toLocaleString('en-US')} ${meta?.symbol ?? ''}`.trim()}
+        >
           {token !== undefined && <TokenIcon token={token} className="size-[0.62em] self-center" />}
-          <NumberFlow value={show(paidValue)} format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }} />
+          <NumberFlow value={show(paidValue)} format={paidFormat(paidValue ?? 0)} />
           {meta !== undefined && <span className="live-number-unit">{meta.symbol}</span>}
         </Figure>
         <Figure label="Jobs delivered">
