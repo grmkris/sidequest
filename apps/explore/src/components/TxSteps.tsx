@@ -39,6 +39,7 @@ import {
 import {
   JOURNAL_CORRUPT,
   emptyJournal,
+  journalAttempted,
   sequentialJournal,
   readTxJournal,
   readTxJournalDurable,
@@ -721,18 +722,21 @@ export function MonTxSteps({
   const next = status.findIndex((s) => s.at !== 'recorded')
   const current = status[next]
   // `autoStart`: the tap that showed these steps was the decision, so the wallet opens at once for a fresh operation
-  // (never for one restored from a reload, which reconciles instead).
+  // (never for one restored from a reload, which reconciles instead). A journal saved ahead of its first prompt, with
+  // nothing tried under it (a SIDE trade, saved before its wallet opens), still counts as fresh.
   // It waits for the sponsorship status, so a step Sidequest pays for never opens the wallet first.
   const autoStarted = useRef(false)
+  const triedBefore = () => {
+    try {
+      const saved = load(key)
+      return saved !== null && journalAttempted(saved)
+    } catch (failure) {
+      journalFailure(failure)
+      return true
+    }
+  }
   useEffect(() => {
-    if (
-      journalError !== null ||
-      !autoStart ||
-      autoStarted.current ||
-      !sponsorship.settled ||
-      started ||
-      hasSavedJournal()
-    )
+    if (journalError !== null || !autoStart || autoStarted.current || !sponsorship.settled || started || triedBefore())
       return
     if (canSponsor && record.sponsored !== true && !sponsorOff) return
     if (record.sponsored !== true && chainId !== chain.id) return

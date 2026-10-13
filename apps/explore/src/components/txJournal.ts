@@ -29,6 +29,24 @@ export interface JournalStorage {
   removeItem(key: string): void
 }
 export const emptyJournal = (): OpRecord => ({ batch: false, hashes: [], recorded: [], pending: null })
+
+/**
+ * Whether anything was ever tried under this journal: an attempt's nonce, a pending or known send, a recorded or failed
+ * step, a sponsorship or a user operation. A journal saved ahead of its first prompt (a SIDE trade) has none of these.
+ */
+export function journalAttempted(record: OpRecord): boolean {
+  return (
+    record.pending !== null ||
+    record.hashes.some((hash) => hash !== null) ||
+    record.recorded.some(Boolean) ||
+    (record.attempts ?? []).some((nonce) => nonce != null) ||
+    record.sponsored === true ||
+    record.sponsor != null ||
+    record.aa != null ||
+    (record.reverted?.length ?? 0) > 0 ||
+    (record.effectFailures?.length ?? 0) > 0
+  )
+}
 /** Mode changes may never replace an unresolved attempt or successful batch. */
 export function sequentialJournal(record: OpRecord): OpRecord {
   if (

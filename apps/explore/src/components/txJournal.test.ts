@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   emptyJournal,
   initializeTxJournalDurable,
+  journalAttempted,
   readTxJournal,
   readTxJournalDurable,
   txJournalKey,
@@ -190,5 +191,17 @@ describe('durable wallet transaction journal', () => {
       values.set(key, JSON.stringify({ ...record, effectFailures: [failure] }))
       expect(() => readTxJournal(storage, key, true)).toThrow(/corrupt.*unknown/)
     }
+  })
+})
+
+describe('a journal saved before its first prompt', () => {
+  it('counts as untried until anything is attempted under it, so a fresh trade still opens the wallet at once', () => {
+    // A SIDE trade saves its journal before the wallet opens: Buy, then Privy, not Buy, Confirm, then Privy.
+    expect(journalAttempted(emptyJournal())).toBe(false)
+    expect(journalAttempted({ ...emptyJournal(), attempts: [7] })).toBe(true)
+    expect(journalAttempted({ ...emptyJournal(), pending: 0 })).toBe(true)
+    expect(journalAttempted({ ...emptyJournal(), hashes: [`0x${'1'.repeat(64)}`] })).toBe(true)
+    expect(journalAttempted({ ...emptyJournal(), hashes: [null], reverted: [`0x${'2'.repeat(64)}`] })).toBe(true)
+    expect(journalAttempted({ ...emptyJournal(), sponsored: true })).toBe(true)
   })
 })
