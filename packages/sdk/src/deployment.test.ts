@@ -263,3 +263,26 @@ describe('network meta', () => {
     expect(() => networkMetaFromConfig({ ...c, usdPegged: ['USDC'] })).toThrow('token addresses')
   })
 })
+
+describe("the chain's coin in dollars", () => {
+  it('prices MON on mainnet through the native/USDC 500/10 pool, and nothing on testnet', () => {
+    const p = deployment('monad-mainnet').nativePrice!
+    expect(p.key).toEqual({
+      currency0: zeroAddress,
+      currency1: '0x754704Bc059F8C67012fEd69BC8A327a5aafb603',
+      fee: 500,
+      tickSpacing: 10,
+      hooks: zeroAddress,
+    })
+    // The id the PoolManager knows (checked with cast keccak and StateView.getSlot0 on 14 Oct).
+    expect(p.poolId).toBe('0x18a9fc874581f3ba12b7898f80a683c66fd5877fd74b26a85ba9a3a79c549954')
+    expect(p.stateView).toBe(mainnet.liquidity.uniswapV4.stateView)
+    expect(deployment('monad-testnet').nativePrice).toBeNull()
+  })
+
+  it('refuses a pool quoted in a token the network does not peg at a dollar', () => {
+    const c = currentConfig()
+    c.prices = { native: { quote: address(7), fee: 500, tickSpacing: 10 } }
+    expect(() => deploymentFromConfig('monad-testnet', c)).toThrow('usdPegged quote token')
+  })
+})

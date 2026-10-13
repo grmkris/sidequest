@@ -177,6 +177,12 @@ export interface Deployment {
    */
   readonly market: Market | null
   /**
+   * The chain's coin in dollars (config `prices.native`): a Uniswap v4 pool of the native coin against a
+   * dollar-pegged token, read at its mid price through `liquidity.uniswapV4.stateView`. Null where none is configured
+   * (testnet), so nothing is priced there.
+   */
+  readonly nativePrice: NativePrice | null
+  /**
    * SIDE on nad.fun's router (config `nadfun.router` and the deployment's SIDE), which Explore's Buy and Sell use where
    * there is no market of ours: the same calls on testnet and mainnet. Null until both exist.
    */
@@ -196,6 +202,14 @@ export interface PoolKey {
   readonly fee: number
   readonly tickSpacing: number
   readonly hooks: Address
+}
+
+/** A native/pegged Uniswap v4 pool to price the chain's coin by: the native coin is always `currency0`. */
+export interface NativePrice {
+  readonly key: PoolKey
+  readonly poolId: Hex
+  readonly quote: Address
+  readonly stateView: Address
 }
 
 export interface Market {
@@ -233,6 +247,8 @@ interface LiquidityConfig {
 export interface DeploymentConfig {
   network: string
   liquidity?: LiquidityConfig
+  /** `native`: the v4 pool that prices the chain's coin, against a token in `usdPegged`. */
+  prices?: { native?: { quote: string; fee: number; tickSpacing: number } }
   chainId: number
   boards?: string[]
   roles: { admin: string; relay?: string; attester: string; arbitrator: string }
@@ -499,6 +515,7 @@ export function deploymentFromConfig(network: Network, c: DeploymentConfig): Dep
     x402: c.x402 === undefined ? null : { usdc: c.x402.usdc as Address, facilitator: c.x402.facilitator },
     testnetFaucet: d.testnetFaucet === undefined || c.chainId === 143 ? null : (d.testnetFaucet as Address),
     market: marketFromConfig(d.factory as Address, c.liquidity),
+    nativePrice: nativePriceFromConfig(c),
     launcher:
       validAddress(c.nadfun?.router) && validAddress(d.factory) ? { router: c.nadfun.router, side: d.factory } : null,
     aa: aaFromConfig(c),
@@ -553,6 +570,44 @@ function agentSweepFromConfig(c: DeploymentConfig): Address | null {
   return address
 }
 
+/** A v4 pool's id: the hash of its key, as the PoolManager computes it. */
+const poolIdOf = (key: PoolKey): Hex =>
+  keccak256(
+    encodeAbiParameters(parseAbiParameters('address, address, uint24, int24, address'), [
+      key.currency0,
+      key.currency1,
+      key.fee,
+      key.tickSpacing,
+      key.hooks,
+    ]),
+  )
+
+/** Config `prices.native`: refused unless its quote token is pegged and the network names its StateView. */
+function nativePriceFromConfig(c: DeploymentConfig): NativePrice | null {
+  const p = c.prices?.native
+  if (p === undefined) return null
+  const stateView = c.liquidity?.uniswapV4.stateView
+  const pegged = (c.usdPegged ?? []).some((token) => token.toLowerCase() === p.quote.toLowerCase())
+  if (
+    !validAddress(p.quote) ||
+    !pegged ||
+    !validAddress(stateView) ||
+    !Number.isSafeInteger(p.fee) ||
+    !Number.isSafeInteger(p.tickSpacing)
+  )
+    throw new Error(
+      'Network config prices.native needs a usdPegged quote token, a fee, a tickSpacing and liquidity.uniswapV4.stateView',
+    )
+  const key: PoolKey = {
+    currency0: zeroAddress,
+    currency1: p.quote,
+    fee: p.fee,
+    tickSpacing: p.tickSpacing,
+    hooks: zeroAddress,
+  }
+  return { key, poolId: poolIdOf(key), quote: p.quote, stateView }
+}
+
 function marketFromConfig(side: Address, l: LiquidityConfig | undefined): Market | null {
   if (l === undefined || !validAddress(l.quote)) return null
   const v4 = l.uniswapV4
@@ -560,18 +615,9 @@ function marketFromConfig(side: Address, l: LiquidityConfig | undefined): Market
   const quote = l.quote as Address
   const [currency0, currency1] = side.toLowerCase() < quote.toLowerCase() ? [side, quote] : [quote, side]
   const key: PoolKey = { currency0, currency1, fee: l.fee, tickSpacing: l.tickSpacing, hooks: zeroAddress }
-  const poolId = keccak256(
-    encodeAbiParameters(parseAbiParameters('address, address, uint24, int24, address'), [
-      currency0,
-      currency1,
-      l.fee,
-      l.tickSpacing,
-      zeroAddress,
-    ]),
-  )
   return {
     key,
-    poolId,
+    poolId: poolIdOf(key),
     side,
     quote,
     poolManager: v4.poolManager as Address,

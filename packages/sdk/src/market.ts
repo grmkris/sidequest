@@ -15,7 +15,7 @@ import {
 } from 'viem'
 import type { TxRequest } from './board-client.ts'
 import type { Ctx } from './actions.ts'
-import type { Market } from './deployment.ts'
+import type { Market, NativePrice } from './deployment.ts'
 
 const stateViewAbi = parseAbi([
   'function getSlot0(bytes32 poolId) view returns (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee)',
@@ -58,19 +58,33 @@ function direction(m: Market, tokenIn: Address): boolean {
   return t === m.key.currency0.toLowerCase()
 }
 
-/** The pool's mid price: quote tokens per whole SIDE, from slot0 (decimals of both tokens applied). */
-export async function sidePrice(ctx: Ctx, m: Market, quoteDecimals: number): Promise<number> {
+/** A pool's mid price from slot0: raw units of currency1 per raw unit of currency0, or 0 for an unseeded pool. */
+async function raw1Per0(ctx: Ctx, stateView: Address, poolId: Hex): Promise<number> {
   const [sqrtPriceX96] = await ctx.publicClient.readContract({
-    address: m.stateView,
+    address: stateView,
     abi: stateViewAbi,
     functionName: 'getSlot0',
-    args: [m.poolId],
+    args: [poolId],
   })
   if (sqrtPriceX96 === 0n) return 0
   const ratio = Number(sqrtPriceX96) / 2 ** 96
-  const raw1Per0 = ratio * ratio
+  return ratio * ratio
+}
+
+/**
+ * The chain's coin in dollars: the native/pegged pool's mid price (`deployment.nativePrice`), with the native coin's
+ * 18 decimals and the pegged token's `quoteDecimals` applied. 0 for an unseeded pool.
+ */
+export async function nativeUsdPrice(ctx: Ctx, p: NativePrice, quoteDecimals: number): Promise<number> {
+  return (await raw1Per0(ctx, p.stateView, p.poolId)) * 10 ** (18 - quoteDecimals)
+}
+
+/** The pool's mid price: quote tokens per whole SIDE, from slot0 (decimals of both tokens applied). */
+export async function sidePrice(ctx: Ctx, m: Market, quoteDecimals: number): Promise<number> {
+  const mid = await raw1Per0(ctx, m.stateView, m.poolId)
+  if (mid === 0) return 0
   const sideIs0 = m.side.toLowerCase() === m.key.currency0.toLowerCase()
-  const rawQuotePerSide = sideIs0 ? raw1Per0 : 1 / raw1Per0
+  const rawQuotePerSide = sideIs0 ? mid : 1 / mid
   return rawQuotePerSide * 10 ** (18 - quoteDecimals)
 }
 

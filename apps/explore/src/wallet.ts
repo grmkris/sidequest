@@ -110,6 +110,7 @@ function undeployed(): V1Deployment {
     x402: null,
     testnetFaucet: null,
     market: null,
+    nativePrice: null,
     launcher: null,
     aa: null,
     agentSweep: null,

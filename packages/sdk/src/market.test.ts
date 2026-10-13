@@ -14,8 +14,8 @@ import type { Ctx } from './actions.ts'
 import archived from '../../../contracts/config/archive/pre-g1d-monad-testnet.json' with { type: 'json' }
 import archivedG1d from '../../../contracts/config/archive/pre-g1e-monad-testnet.json' with { type: 'json' }
 import archivedG1e from '../../../contracts/config/archive/pre-g1f-monad-testnet.json' with { type: 'json' }
-import { deploymentFromConfig, stack } from './deployment.ts'
-import { minOutFor, permit2Abi, sidePrice, swapTransactions, universalRouterAbi } from './market.ts'
+import { deployment, deploymentFromConfig, stack } from './deployment.ts'
+import { minOutFor, nativeUsdPrice, permit2Abi, sidePrice, swapTransactions, universalRouterAbi } from './market.ts'
 
 const owner: Address = '0x00000000000000000000000000000000000000aa'
 const previous = deploymentFromConfig('monad-testnet', {
@@ -172,5 +172,16 @@ describe.each([
     // The seeded price: 10M SIDE for 1,000 mUSD.
     expect(await sidePrice(ctx({ sqrtPriceX96 }), m, 6)).toBeCloseTo(0.0001, 10)
     expect(await sidePrice(ctx({}), m, 6)).toBe(0)
+  })
+})
+
+describe('MON in dollars', () => {
+  it("reads the native/USDC pool's mid price from slot0", async () => {
+    const d = deployment('monad-mainnet')
+    const publicClient = createPublicClient({ transport: http('http://unit.invalid') })
+    // Mainnet's slot0 on 14 Oct: $0.02455 a MON, as Uniswap's quoter, Coinbase and MetaMask had it.
+    vi.spyOn(publicClient, 'readContract').mockResolvedValue([12412916300583123740804n, -313398, 0, 500])
+    const ctx: Ctx = { deployment: d, stack: stack(d, 'main'), publicClient }
+    expect(await nativeUsdPrice(ctx, d.nativePrice!, 6)).toBeCloseTo(0.024546, 5)
   })
 })

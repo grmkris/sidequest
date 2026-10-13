@@ -74,6 +74,13 @@
     "maxRepairCost": 5,
     "positionOwner": "0x0000000000000000000000000000000000000000"
   },
+  "prices": {
+    "native": {
+      "quote": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+      "fee": 500,
+      "tickSpacing": 10
+    }
+  },
   "nadfun": {
     "app": "https://nad.fun",
     "router": "0x8986C8fD44eb85294A725a7e61AF35E76bA26F91",
