@@ -38,6 +38,8 @@ library SidequestVerify {
 
         // A fresh core charges nothing and its admin roles belong to the Safe alone.
         _require(d.core.platformFeeBP() == 0 && d.core.evaluatorFeeBP() == 0, "core fees");
+        _require(!d.core.paused(), "core.paused");
+        _require(d.core.platformTreasury() == c.safe, "core.platformTreasury");
         _require(d.core.hasRole(d.core.DEFAULT_ADMIN_ROLE(), c.safe), "core admin role: safe");
         _require(d.core.hasRole(d.core.ADMIN_ROLE(), c.safe), "core pause role: safe");
         _require(!d.core.hasRole(d.core.DEFAULT_ADMIN_ROLE(), c.admin), "core admin role: deployer");

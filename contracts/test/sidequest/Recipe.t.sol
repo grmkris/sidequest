@@ -17,6 +17,7 @@ import {IFactory} from "../../src/sidequest/interfaces/IFactory.sol";
 import {SidequestRecipe} from "../../script/SidequestRecipe.sol";
 import {SidequestOutput} from "../../script/SidequestOutput.sol";
 import {SidequestVerify} from "../../script/SidequestVerify.sol";
+import {PromoteSidequest} from "../../script/PromoteSidequest.s.sol";
 import {SidequestHolding} from "../../src/sidequest/SidequestHolding.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {MockIdentity} from "../mocks/MockIdentity.sol";
@@ -887,6 +888,13 @@ contract RecipeTest is Test {
         _accept(d);
         this.verifyExternal(c, d);
 
+        vm.mockCall(address(d.core), abi.encodeWithSignature("paused()"), abi.encode(true));
+        _expectNotLive(c, d, "core.paused");
+        vm.clearMockedCalls();
+        vm.mockCall(address(d.core), abi.encodeWithSignature("platformTreasury()"), abi.encode(stranger));
+        _expectNotLive(c, d, "core.platformTreasury");
+        vm.clearMockedCalls();
+
         SidequestRecipe.Deployed memory bad = driver.deployed(); // a fresh copy, not an alias of d
         bad.holding = SidequestHolding(stranger);
         _expectNotLive(c, bad, "holding code");
@@ -1045,6 +1053,67 @@ contract RecipeTest is Test {
         vm.expectRevert(SidequestOutput.AlreadyDeployed.selector);
         this.isPromotedExternal(vm.readFile(path), d);
         vm.removeFile(path);
+    }
+
+    /// @dev A repeated promotion preserves its record but must refuse a core that became unhealthy since the first.
+    function test_promotion_repeatedRunChecksCurrentCoreState() public {
+        SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
+        string memory network = ".test-promote-health";
+        string memory path = SidequestRecipe.path(vm, network);
+        vm.writeFile(path, vm.readFile(string.concat(vm.projectRoot(), "/config/monad-testnet.json")));
+        vm.writeJson("{}", path, ".deployment");
+        vm.writeJson(vm.toString(c.chainId), path, ".chainId");
+        _writeAddress(path, ".roles.admin", c.admin);
+        _writeAddress(path, ".roles.attester", c.attester);
+        _writeAddress(path, ".erc8004.identity", address(c.identity));
+        _writeAddress(path, ".erc8004.reputation", address(c.reputation));
+        _writeAddress(path, ".sidequest.safe", c.safe);
+        _writeAddress(path, ".sidequest.slashRecipient", c.slashRecipient);
+        _writeAddress(path, ".sidequest.defaultArbitrator", c.defaultArbitrator);
+        _writeAddress(path, ".sidequest.token", address(c.token));
+        vm.writeJson(vm.toString(c.margin), path, ".sidequest.margin");
+        vm.writeJson(vm.toString(c.minimumCreatorBond), path, ".sidequest.minimumCreatorBond");
+        vm.writeJson(vm.toString(c.maxMinimumCreatorBond), path, ".sidequest.maxMinimumCreatorBond");
+        vm.writeJson(vm.toString(c.unfilledForfeitBps), path, ".sidequest.unfilledForfeitBps");
+        vm.writeJson(
+            '{"thresholds":[0,10000,100000,1000000],"bps":[3000,1000,300,100],"treasury":"0x0000000000000000000000000000000000000001"}',
+            path,
+            ".sidequest.schedule"
+        );
+        _writeAddress(path, ".sidequest.schedule.treasury", c.feeTreasury);
+        vm.writeJson(
+            '{"minReviewWindow":3600,"minDisputeWindow":3600,"minArbitrationWindow":43200,"unstakeDelay":1209600,"holdingDelay":1814400,"feeDelay":259200,"proposalGrace":604800}',
+            path,
+            ".sidequest.clocks"
+        );
+        SidequestOutput.write(vm, path, d, safe, 10, 11);
+        string memory candidate = SidequestOutput.candidatePath(vm, network);
+        SidequestOutput.writeCandidate(vm, candidate, c.chainId, d, safe);
+        string memory before = vm.readFile(path);
+        string memory previous = vm.envOr("NETWORK", string(""));
+        vm.setEnv("NETWORK", network);
+        PromoteSidequest promote = new PromoteSidequest();
+        promote.run();
+        assertEq(vm.readFile(path), before, "repeat promotion changed the record");
+
+        vm.prank(safe);
+        d.core.pause();
+        vm.expectRevert(abi.encodeWithSelector(SidequestVerify.NotLive.selector, "core.paused"));
+        promote.run();
+        vm.prank(safe);
+        d.core.unpause();
+        vm.prank(safe);
+        d.core.setPlatformFee(0, stranger);
+        vm.expectRevert(abi.encodeWithSelector(SidequestVerify.NotLive.selector, "core.platformTreasury"));
+        promote.run();
+        assertEq(vm.readFile(path), before, "failed health check changed the record");
+        vm.setEnv("NETWORK", previous);
+        vm.removeFile(candidate);
+        vm.removeFile(path);
+    }
+
+    function _writeAddress(string memory path, string memory key, address value) internal {
+        vm.writeJson(string.concat('"', vm.toString(value), '"'), path, key);
     }
 
     function isPromotedExternal(string memory json, SidequestRecipe.Deployed memory d) external view returns (bool) {

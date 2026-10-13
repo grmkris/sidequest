@@ -75,6 +75,17 @@ contract MainnetRunbookTest is Test {
         assertTrue(vm.contains(kit, "config chain $CHAIN ($NETWORK)"), "chain mismatch refusal omits config context");
     }
 
+    /// LAUNCH-AUDIT-VERIFY-001: rerunning promotion is a live health check, not a stale idempotency shortcut.
+    function test_repeatedPromotionRechecksTheVerifier() public view {
+        string memory promote = vm.readFile(string.concat(vm.projectRoot(), "/script/PromoteSidequest.s.sol"));
+        uint256 branch = vm.indexOf(promote, "if (SidequestOutput.isPromoted");
+        uint256 verify = vm.indexOf(promote, "SidequestVerify.verify(c, d);");
+        uint256 returned = vm.indexOf(promote, "return;");
+        assertGt(branch, 0, "promotion has no already-promoted branch");
+        assertGt(verify, branch, "already-promoted branch does not verify");
+        assertGt(returned, verify, "promotion returns before the repeated verifier");
+    }
+
     function test_runbookSequenceWithGates() public view {
         string memory live = "bun scripts/preflight-prod.ts docs/p0-prod-artifact.json --live";
         string[] memory s = new string[](18);

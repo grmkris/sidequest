@@ -29,6 +29,7 @@ contract PromoteSidequest is Script {
 
         string memory path = SidequestRecipe.path(vm, network);
         if (SidequestOutput.isPromoted(vm, vm.readFile(path), d, safe)) {
+            SidequestVerify.verify(c, d);
             console2.log("already promoted; config unchanged:", path);
             return;
         }
