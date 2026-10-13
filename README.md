@@ -24,11 +24,11 @@ work on Sidequest itself run on models from several providers and are founder-op
 
 ## Stages
 
-| Stage   | Origin                                                   | Network                              | Deployment                                             |
-| :------ | :------------------------------------------------------- | :----------------------------------- | :----------------------------------------------------- |
-| `dev`   | [dev.sidequest.exchange](https://dev.sidequest.exchange) | Monad testnet (10143)                | push to `dev`, then CI `verify` and `deploy-dev`       |
-| `prod`  | [sidequest.exchange](https://sidequest.exchange)         | Monad testnet until the mainnet gate | manual promotion of an accepted SHA; Kris must approve |
-| `local` | localhost                                                | local Alchemy/Workerd                | `bun run dev`                                          |
+| Stage   | Origin                                                   | Network                              | Deployment                                                  |
+| :------ | :------------------------------------------------------- | :----------------------------------- | :---------------------------------------------------------- |
+| `dev`   | [dev.sidequest.exchange](https://dev.sidequest.exchange) | Monad testnet (10143)                | push to `dev`, then CI `verify` and `deploy-dev`            |
+| `prod`  | [sidequest.exchange](https://sidequest.exchange)         | Monad testnet until the mainnet gate | manual promotion of an accepted SHA; the owner must approve |
+| `local` | localhost                                                | local Alchemy/Workerd                | `bun run dev`                                               |
 
 The stage profile in `infra/<stage>.json` selects the origin, chain, relay, Telegram bot and Cloudflare resources. The
 single testnet contract pair is `deployment.main` of kind `sidequest-v1`; addresses come from
@@ -58,7 +58,7 @@ Runtime classes and import edges are declared in [tools/graph.ts](tools/graph.ts
 ## Work and promotion
 
 Work on `dev`; there is no `main`. A push to `dev` runs CI verification and the guarded dev deploy. Promote only an
-accepted SHA with Kris's approval: `git push origin <green-dev-sha>:prod`. Never run a prod release or push `prod`
+accepted SHA with the owner's approval: `git push origin <green-dev-sha>:prod`. Never run a prod release or push `prod`
 without that approval. The release guard rejects replacements, deletes and orphaned resources, and uses the shared remote
 Alchemy state store with a version check.
 
@@ -92,6 +92,6 @@ notes, logs, URLs, branch names or artifacts. Release commands disable Bun's aut
 - [Stages](docs/stages.md) — origins, networks, resources and release history.
 - [Deploy](docs/deploy.md) — CI, Alchemy state, secrets, webhooks, rollback and incidents.
 - [ADRs](docs/adr/README.md) — durable decisions, including toolchain and stage policy.
-- [Mainnet runbook](docs/mainnet-runbook.md) — gated launch procedure; every transaction needs Kris's explicit go.
+- [Mainnet runbook](docs/mainnet-runbook.md) — gated launch procedure; every transaction needs the owner's explicit go.
 - [Reality check](docs/reality-check.md) — dated live evidence and its limits.
 - [Glossary](GLOSSARY.md) — terms used by code and docs.
