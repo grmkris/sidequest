@@ -303,6 +303,32 @@ It verifies the candidate against forge's receipts and live state, then writes t
 and the receipt blocks) into `config/monad-mainnet.json`. It refuses an incomplete or failed broadcast. Running it
 again changes nothing. Commit the config, fill the artifact (§1.3), and run `heavy bun run check`.
 
+### 3.4a Hosted signing on chain 143 (coordinator only)
+
+After PromoteSidequest, deploy and record AgentSweep with the contracts lane's guarded procedure. The mainnet Privy
+policy refuses until the promoted core, Holding, Evaluator, Vault, AgentSweep and AA paymaster are recorded. Configure
+`~/.config/sidequest/prod.env` with the approved mainnet `PRIVY_APP_ID`/`PRIVY_APP_SECRET` and its policy-admin authority.
+Use fresh mainnet signer/policy IDs; do not carry the testnet routine IDs into this setup. The mainnet setup journal is
+separate from testnet (`packages/sdk/scripts/privy/.local/monad-mainnet/`). With Kris's approval, the coordinator runs:
+
+```bash
+bun --no-env-file packages/sdk/scripts/privy/setup.ts monad-mainnet
+bun --no-env-file packages/sdk/scripts/privy/setup.ts monad-mainnet --verify
+```
+
+Setup appends the mainnet authority to the production stage file without replacing existing values, persists every
+creation before POST, and refuses an ambiguous retry. `--verify` performs GET readback of the routine and admin quorums
+and exact policy. An approved add-only update uses
+`bun --no-env-file packages/sdk/scripts/privy/sidequest-cutover.ts monad-mainnet update-policy`, then the same readback.
+Testnet commands now also name `monad-testnet` explicitly. The testnet policy is frozen byte for byte by an offline test.
+
+Record the policy's chain 143 domains, v1 and AgentSweep targets, mainnet USDC approval to the configured Pimlico
+paymaster at the standing cap, and the signer quorum. EntryPoint, paymaster and gas limits are checked by the application;
+Privy cannot condition those operation fields. Install nonempty `PRIVY_SIGNER_ID` and `PRIVY_POLICY_ID`, the matching
+signer key, and `HOSTED_SEND=userop` in the production environment and GitHub environment before deploying. The release
+validator requires both IDs even for drained hosted stages. Create one managed agent and exercise its registration,
+USDC-paid user operation and AgentSweep to its owner before opening hosted traffic; record the receipts in reality-check.
+
 ### 3.5 The launch gate must refuse
 
 ```

@@ -1,0 +1,2885 @@
+{
+  "version": "1.0",
+  "name": "Sidequest v2 Monad testnet routine signer",
+  "chain_type": "ethereum",
+  "owner_id": "snapshot-admin",
+  "rules": [
+    {
+      "name": "Allow Selection",
+      "method": "eth_signTypedData_v4",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "chainId",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "verifyingContract",
+          "operator": "eq",
+          "value": "0x6E35f8faB65b5294094A260C952B5d1efCA6c348"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                }
+              ],
+              "Selection": [
+                {
+                  "name": "jobId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "worker",
+                  "type": "address"
+                },
+                {
+                  "name": "agentId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "termsHash",
+                  "type": "bytes32"
+                },
+                {
+                  "name": "activateBy",
+                  "type": "uint48"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                }
+              ]
+            },
+            "primary_type": "Selection"
+          },
+          "field": "nonce",
+          "operator": "gte",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "name": "Allow SetBudgetAuthorization",
+      "method": "eth_signTypedData_v4",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "chainId",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "verifyingContract",
+          "operator": "eq",
+          "value": "0xE5E912F99551B0520C172DEC7296816Bb103f573"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                }
+              ],
+              "SetBudgetAuthorization": [
+                {
+                  "name": "signer",
+                  "type": "address"
+                },
+                {
+                  "name": "jobId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "token",
+                  "type": "address"
+                },
+                {
+                  "name": "amount",
+                  "type": "uint256"
+                },
+                {
+                  "name": "optParamsHash",
+                  "type": "bytes32"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint72"
+                },
+                {
+                  "name": "deadline",
+                  "type": "uint256"
+                }
+              ]
+            },
+            "primary_type": "SetBudgetAuthorization"
+          },
+          "field": "signer",
+          "operator": "eq",
+          "value": "{{wallet.address}}"
+        }
+      ]
+    },
+    {
+      "name": "Allow SubmitAuthorization",
+      "method": "eth_signTypedData_v4",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "chainId",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "verifyingContract",
+          "operator": "eq",
+          "value": "0xE5E912F99551B0520C172DEC7296816Bb103f573"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                }
+              ],
+              "SubmitAuthorization": [
+                {
+                  "name": "signer",
+                  "type": "address"
+                },
+                {
+                  "name": "jobId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "deliverable",
+                  "type": "bytes32"
+                },
+                {
+                  "name": "optParamsHash",
+                  "type": "bytes32"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint72"
+                },
+                {
+                  "name": "deadline",
+                  "type": "uint256"
+                }
+              ]
+            },
+            "primary_type": "SubmitAuthorization"
+          },
+          "field": "signer",
+          "operator": "eq",
+          "value": "{{wallet.address}}"
+        }
+      ]
+    },
+    {
+      "name": "Allow Delegation",
+      "method": "eth_signTypedData_v4",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "chainId",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "verifyingContract",
+          "operator": "eq",
+          "value": "0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                }
+              ],
+              "Caveat": [
+                {
+                  "name": "enforcer",
+                  "type": "address"
+                },
+                {
+                  "name": "terms",
+                  "type": "bytes"
+                }
+              ],
+              "Delegation": [
+                {
+                  "name": "delegate",
+                  "type": "address"
+                },
+                {
+                  "name": "delegator",
+                  "type": "address"
+                },
+                {
+                  "name": "authority",
+                  "type": "bytes32"
+                },
+                {
+                  "name": "caveats",
+                  "type": "Caveat[]"
+                },
+                {
+                  "name": "salt",
+                  "type": "uint256"
+                }
+              ]
+            },
+            "primary_type": "Delegation"
+          },
+          "field": "delegate",
+          "operator": "in",
+          "value": [
+            "0xC4173dBC98ffd6F5785E8Fba85E9e5bd8b3F5058",
+            "0xa6D3eC73053152221af873789aEd179E506b1F0E"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Allow AgentWalletSet",
+      "method": "eth_signTypedData_v4",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "chainId",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "verifyingContract",
+          "operator": "eq",
+          "value": "0x8004A818BFB912233c491871b3d84c89A494BD9e"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                }
+              ],
+              "AgentWalletSet": [
+                {
+                  "name": "agentId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "newWallet",
+                  "type": "address"
+                },
+                {
+                  "name": "owner",
+                  "type": "address"
+                },
+                {
+                  "name": "deadline",
+                  "type": "uint256"
+                }
+              ]
+            },
+            "primary_type": "AgentWalletSet"
+          },
+          "field": "newWallet",
+          "operator": "eq",
+          "value": "{{wallet.address}}"
+        }
+      ]
+    },
+    {
+      "name": "Allow TransferWithAuthorization",
+      "method": "eth_signTypedData_v4",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "chainId",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "verifyingContract",
+          "operator": "eq",
+          "value": "0x534b2f3A21130d7a60830c2Df862319e593943A3"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                }
+              ],
+              "TransferWithAuthorization": [
+                {
+                  "name": "from",
+                  "type": "address"
+                },
+                {
+                  "name": "to",
+                  "type": "address"
+                },
+                {
+                  "name": "value",
+                  "type": "uint256"
+                },
+                {
+                  "name": "validAfter",
+                  "type": "uint256"
+                },
+                {
+                  "name": "validBefore",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "bytes32"
+                }
+              ]
+            },
+            "primary_type": "TransferWithAuthorization"
+          },
+          "field": "from",
+          "operator": "eq",
+          "value": "{{wallet.address}}"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                }
+              ],
+              "TransferWithAuthorization": [
+                {
+                  "name": "from",
+                  "type": "address"
+                },
+                {
+                  "name": "to",
+                  "type": "address"
+                },
+                {
+                  "name": "value",
+                  "type": "uint256"
+                },
+                {
+                  "name": "validAfter",
+                  "type": "uint256"
+                },
+                {
+                  "name": "validBefore",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "bytes32"
+                }
+              ]
+            },
+            "primary_type": "TransferWithAuthorization"
+          },
+          "field": "value",
+          "operator": "lte",
+          "value": "5000000"
+        }
+      ]
+    },
+    {
+      "name": "Allow Enrollment",
+      "method": "eth_signTypedData_v4",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "chainId",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "verifyingContract",
+          "operator": "eq",
+          "value": "0x0000000000000000000000000000000000000000"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                },
+                {
+                  "name": "salt",
+                  "type": "bytes32"
+                }
+              ],
+              "Enrollment": [
+                {
+                  "name": "version",
+                  "type": "uint256"
+                },
+                {
+                  "name": "identityRegistry",
+                  "type": "address"
+                },
+                {
+                  "name": "audience",
+                  "type": "string"
+                },
+                {
+                  "name": "agentId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "name": "generation",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "issuedAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "expiresAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "payloadHash",
+                  "type": "bytes32"
+                }
+              ]
+            },
+            "primary_type": "Enrollment"
+          },
+          "field": "wallet",
+          "operator": "eq",
+          "value": "{{wallet.address}}"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                },
+                {
+                  "name": "salt",
+                  "type": "bytes32"
+                }
+              ],
+              "Enrollment": [
+                {
+                  "name": "version",
+                  "type": "uint256"
+                },
+                {
+                  "name": "identityRegistry",
+                  "type": "address"
+                },
+                {
+                  "name": "audience",
+                  "type": "string"
+                },
+                {
+                  "name": "agentId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "name": "generation",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "issuedAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "expiresAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "payloadHash",
+                  "type": "bytes32"
+                }
+              ]
+            },
+            "primary_type": "Enrollment"
+          },
+          "field": "identityRegistry",
+          "operator": "eq",
+          "value": "0x8004A818BFB912233c491871b3d84c89A494BD9e"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                },
+                {
+                  "name": "salt",
+                  "type": "bytes32"
+                }
+              ],
+              "Enrollment": [
+                {
+                  "name": "version",
+                  "type": "uint256"
+                },
+                {
+                  "name": "identityRegistry",
+                  "type": "address"
+                },
+                {
+                  "name": "audience",
+                  "type": "string"
+                },
+                {
+                  "name": "agentId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "name": "generation",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "issuedAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "expiresAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "payloadHash",
+                  "type": "bytes32"
+                }
+              ]
+            },
+            "primary_type": "Enrollment"
+          },
+          "field": "version",
+          "operator": "eq",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "name": "Allow ServiceAd",
+      "method": "eth_signTypedData_v4",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "chainId",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "verifyingContract",
+          "operator": "eq",
+          "value": "0x0000000000000000000000000000000000000000"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                },
+                {
+                  "name": "salt",
+                  "type": "bytes32"
+                }
+              ],
+              "ServiceAd": [
+                {
+                  "name": "version",
+                  "type": "uint256"
+                },
+                {
+                  "name": "identityRegistry",
+                  "type": "address"
+                },
+                {
+                  "name": "audience",
+                  "type": "string"
+                },
+                {
+                  "name": "agentId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "name": "generation",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "issuedAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "expiresAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "payloadHash",
+                  "type": "bytes32"
+                }
+              ]
+            },
+            "primary_type": "ServiceAd"
+          },
+          "field": "wallet",
+          "operator": "eq",
+          "value": "{{wallet.address}}"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                },
+                {
+                  "name": "salt",
+                  "type": "bytes32"
+                }
+              ],
+              "ServiceAd": [
+                {
+                  "name": "version",
+                  "type": "uint256"
+                },
+                {
+                  "name": "identityRegistry",
+                  "type": "address"
+                },
+                {
+                  "name": "audience",
+                  "type": "string"
+                },
+                {
+                  "name": "agentId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "name": "generation",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "issuedAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "expiresAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "payloadHash",
+                  "type": "bytes32"
+                }
+              ]
+            },
+            "primary_type": "ServiceAd"
+          },
+          "field": "identityRegistry",
+          "operator": "eq",
+          "value": "0x8004A818BFB912233c491871b3d84c89A494BD9e"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                },
+                {
+                  "name": "salt",
+                  "type": "bytes32"
+                }
+              ],
+              "ServiceAd": [
+                {
+                  "name": "version",
+                  "type": "uint256"
+                },
+                {
+                  "name": "identityRegistry",
+                  "type": "address"
+                },
+                {
+                  "name": "audience",
+                  "type": "string"
+                },
+                {
+                  "name": "agentId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "name": "generation",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "issuedAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "expiresAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "payloadHash",
+                  "type": "bytes32"
+                }
+              ]
+            },
+            "primary_type": "ServiceAd"
+          },
+          "field": "version",
+          "operator": "eq",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "name": "Allow RevokeAd",
+      "method": "eth_signTypedData_v4",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "chainId",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_typed_data_domain",
+          "field": "verifyingContract",
+          "operator": "eq",
+          "value": "0x0000000000000000000000000000000000000000"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                },
+                {
+                  "name": "salt",
+                  "type": "bytes32"
+                }
+              ],
+              "RevokeAd": [
+                {
+                  "name": "version",
+                  "type": "uint256"
+                },
+                {
+                  "name": "identityRegistry",
+                  "type": "address"
+                },
+                {
+                  "name": "audience",
+                  "type": "string"
+                },
+                {
+                  "name": "agentId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "name": "generation",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "issuedAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "expiresAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "payloadHash",
+                  "type": "bytes32"
+                }
+              ]
+            },
+            "primary_type": "RevokeAd"
+          },
+          "field": "wallet",
+          "operator": "eq",
+          "value": "{{wallet.address}}"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                },
+                {
+                  "name": "salt",
+                  "type": "bytes32"
+                }
+              ],
+              "RevokeAd": [
+                {
+                  "name": "version",
+                  "type": "uint256"
+                },
+                {
+                  "name": "identityRegistry",
+                  "type": "address"
+                },
+                {
+                  "name": "audience",
+                  "type": "string"
+                },
+                {
+                  "name": "agentId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "name": "generation",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "issuedAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "expiresAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "payloadHash",
+                  "type": "bytes32"
+                }
+              ]
+            },
+            "primary_type": "RevokeAd"
+          },
+          "field": "identityRegistry",
+          "operator": "eq",
+          "value": "0x8004A818BFB912233c491871b3d84c89A494BD9e"
+        },
+        {
+          "field_source": "ethereum_typed_data_message",
+          "typed_data": {
+            "types": {
+              "EIP712Domain": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "version",
+                  "type": "string"
+                },
+                {
+                  "name": "chainId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "verifyingContract",
+                  "type": "address"
+                },
+                {
+                  "name": "salt",
+                  "type": "bytes32"
+                }
+              ],
+              "RevokeAd": [
+                {
+                  "name": "version",
+                  "type": "uint256"
+                },
+                {
+                  "name": "identityRegistry",
+                  "type": "address"
+                },
+                {
+                  "name": "audience",
+                  "type": "string"
+                },
+                {
+                  "name": "agentId",
+                  "type": "uint256"
+                },
+                {
+                  "name": "wallet",
+                  "type": "address"
+                },
+                {
+                  "name": "generation",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "issuedAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "expiresAt",
+                  "type": "uint256"
+                },
+                {
+                  "name": "payloadHash",
+                  "type": "bytes32"
+                }
+              ]
+            },
+            "primary_type": "RevokeAd"
+          },
+          "field": "version",
+          "operator": "eq",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "name": "userOp Holding.activate",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x6E35f8faB65b5294094A260C952B5d1efCA6c348"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "activate",
+              "inputs": [
+                {
+                  "name": "sel",
+                  "type": "tuple",
+                  "internalType": "struct ISidequestHolding.Selection",
+                  "components": [
+                    {
+                      "name": "jobId",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "worker",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "agentId",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "termsHash",
+                      "type": "bytes32",
+                      "internalType": "bytes32"
+                    },
+                    {
+                      "name": "activateBy",
+                      "type": "uint48",
+                      "internalType": "uint48"
+                    },
+                    {
+                      "name": "nonce",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    }
+                  ]
+                },
+                {
+                  "name": "creatorSig",
+                  "type": "bytes",
+                  "internalType": "bytes"
+                },
+                {
+                  "name": "budgetAuth",
+                  "type": "tuple",
+                  "internalType": "struct ERC8183WithAuthorization.Authorization",
+                  "components": [
+                    {
+                      "name": "signer",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "nonce",
+                      "type": "uint72",
+                      "internalType": "uint72"
+                    },
+                    {
+                      "name": "deadline",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "sig",
+                      "type": "bytes",
+                      "internalType": "bytes"
+                    }
+                  ]
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "activate"
+        }
+      ]
+    },
+    {
+      "name": "userOp Holding.cancel",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x6E35f8faB65b5294094A260C952B5d1efCA6c348"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "cancel",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "cancel"
+        }
+      ]
+    },
+    {
+      "name": "userOp Holding.cancelSelection",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x6E35f8faB65b5294094A260C952B5d1efCA6c348"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "cancelSelection",
+              "inputs": [
+                {
+                  "name": "nonce",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "cancelSelection"
+        }
+      ]
+    },
+    {
+      "name": "userOp Holding.claimTopUpRefund",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x6E35f8faB65b5294094A260C952B5d1efCA6c348"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "claimTopUpRefund",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "contributor",
+                  "type": "address",
+                  "internalType": "address"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "claimTopUpRefund"
+        }
+      ]
+    },
+    {
+      "name": "userOp Holding.settle",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x6E35f8faB65b5294094A260C952B5d1efCA6c348"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "settle",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "settle"
+        }
+      ]
+    },
+    {
+      "name": "userOp Holding.withdraw",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x6E35f8faB65b5294094A260C952B5d1efCA6c348"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "withdraw",
+              "inputs": [
+                {
+                  "name": "token",
+                  "type": "address",
+                  "internalType": "contract IERC20"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "withdraw"
+        }
+      ]
+    },
+    {
+      "name": "userOp Holding.publish",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x6E35f8faB65b5294094A260C952B5d1efCA6c348"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "publish",
+              "inputs": [
+                {
+                  "name": "p",
+                  "type": "tuple",
+                  "internalType": "struct ISidequestHolding.PublishParams",
+                  "components": [
+                    {
+                      "name": "approver",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "arbitrator",
+                      "type": "address",
+                      "internalType": "address"
+                    },
+                    {
+                      "name": "manifestHash",
+                      "type": "bytes32",
+                      "internalType": "bytes32"
+                    },
+                    {
+                      "name": "policyHash",
+                      "type": "bytes32",
+                      "internalType": "bytes32"
+                    },
+                    {
+                      "name": "token",
+                      "type": "address",
+                      "internalType": "contract IERC20"
+                    },
+                    {
+                      "name": "reward",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "creatorBond",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "workerBond",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "deliveryDeadline",
+                      "type": "uint48",
+                      "internalType": "uint48"
+                    },
+                    {
+                      "name": "expiredAt",
+                      "type": "uint48",
+                      "internalType": "uint48"
+                    },
+                    {
+                      "name": "reviewWindow",
+                      "type": "uint32",
+                      "internalType": "uint32"
+                    },
+                    {
+                      "name": "disputeWindow",
+                      "type": "uint32",
+                      "internalType": "uint32"
+                    },
+                    {
+                      "name": "arbitrationWindow",
+                      "type": "uint32",
+                      "internalType": "uint32"
+                    }
+                  ]
+                }
+              ],
+              "outputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "publish"
+        }
+      ]
+    },
+    {
+      "name": "userOp Evaluator.accept",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xD8041Ed6FEAbF9e31F1bAA99A95eb09E618c9d75"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "accept",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "accept"
+        }
+      ]
+    },
+    {
+      "name": "userOp Evaluator.reject",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xD8041Ed6FEAbF9e31F1bAA99A95eb09E618c9d75"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "reject",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "violation",
+                  "type": "uint8",
+                  "internalType": "enum ISidequestEvaluator.Violation"
+                },
+                {
+                  "name": "reasonHash",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "reject"
+        }
+      ]
+    },
+    {
+      "name": "userOp Evaluator.dispute",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xD8041Ed6FEAbF9e31F1bAA99A95eb09E618c9d75"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "dispute",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "dispute"
+        }
+      ]
+    },
+    {
+      "name": "userOp Evaluator.completeAfterSilence",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xD8041Ed6FEAbF9e31F1bAA99A95eb09E618c9d75"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "completeAfterSilence",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "completeAfterSilence"
+        }
+      ]
+    },
+    {
+      "name": "userOp Evaluator.rejectAfterDeliveryDeadline",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xD8041Ed6FEAbF9e31F1bAA99A95eb09E618c9d75"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "rejectAfterDeliveryDeadline",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "rejectAfterDeliveryDeadline"
+        }
+      ]
+    },
+    {
+      "name": "userOp Evaluator.rejectAfterWindow",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xD8041Ed6FEAbF9e31F1bAA99A95eb09E618c9d75"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "rejectAfterWindow",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "rejectAfterWindow"
+        }
+      ]
+    },
+    {
+      "name": "userOp Evaluator.refundAfterArbitrationTimeout",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xD8041Ed6FEAbF9e31F1bAA99A95eb09E618c9d75"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "refundAfterArbitrationTimeout",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "refundAfterArbitrationTimeout"
+        }
+      ]
+    },
+    {
+      "name": "userOp Evaluator.retryDeferred",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xD8041Ed6FEAbF9e31F1bAA99A95eb09E618c9d75"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "retryDeferred",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "retryDeferred"
+        }
+      ]
+    },
+    {
+      "name": "userOp Evaluator.attachEvidence",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xD8041Ed6FEAbF9e31F1bAA99A95eb09E618c9d75"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "attachEvidence",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "a",
+                  "type": "tuple",
+                  "internalType": "struct ISidequestEvaluator.EvidenceAttestation",
+                  "components": [
+                    {
+                      "name": "jobId",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    },
+                    {
+                      "name": "submissionHash",
+                      "type": "bytes32",
+                      "internalType": "bytes32"
+                    },
+                    {
+                      "name": "policyHash",
+                      "type": "bytes32",
+                      "internalType": "bytes32"
+                    },
+                    {
+                      "name": "repo",
+                      "type": "bytes32",
+                      "internalType": "bytes32"
+                    },
+                    {
+                      "name": "headSha",
+                      "type": "bytes32",
+                      "internalType": "bytes32"
+                    },
+                    {
+                      "name": "testedSha",
+                      "type": "bytes32",
+                      "internalType": "bytes32"
+                    },
+                    {
+                      "name": "checkRunsHash",
+                      "type": "bytes32",
+                      "internalType": "bytes32"
+                    },
+                    {
+                      "name": "conclusion",
+                      "type": "uint8",
+                      "internalType": "uint8"
+                    },
+                    {
+                      "name": "validUntil",
+                      "type": "uint256",
+                      "internalType": "uint256"
+                    }
+                  ]
+                },
+                {
+                  "name": "verifier",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "sig",
+                  "type": "bytes",
+                  "internalType": "bytes"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "attachEvidence"
+        }
+      ]
+    },
+    {
+      "name": "userOp Vault.cancelUndelegate",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x795243DF7f2e84b6EaCF69811F20B4d36980c366"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "cancelUndelegate",
+              "inputs": [
+                {
+                  "name": "account",
+                  "type": "address",
+                  "internalType": "address"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "cancelUndelegate"
+        }
+      ]
+    },
+    {
+      "name": "userOp Vault.withdraw",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x795243DF7f2e84b6EaCF69811F20B4d36980c366"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "withdraw",
+              "inputs": [
+                {
+                  "name": "account",
+                  "type": "address",
+                  "internalType": "address"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "withdraw"
+        }
+      ]
+    },
+    {
+      "name": "userOp Vault.requestUndelegate",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x795243DF7f2e84b6EaCF69811F20B4d36980c366"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "requestUndelegate",
+              "inputs": [
+                {
+                  "name": "account",
+                  "type": "address",
+                  "internalType": "address"
+                },
+                {
+                  "name": "shares",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "requestUndelegate"
+        }
+      ]
+    },
+    {
+      "name": "userOp Core.submit",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xE5E912F99551B0520C172DEC7296816Bb103f573"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "submit",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "deliverable",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "optParams",
+                  "type": "bytes",
+                  "internalType": "bytes"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "submit"
+        }
+      ]
+    },
+    {
+      "name": "userOp Core.submitClaim",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xE5E912F99551B0520C172DEC7296816Bb103f573"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "submitClaim",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "cumulativeAmount",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                },
+                {
+                  "name": "deliverable",
+                  "type": "bytes32",
+                  "internalType": "bytes32"
+                },
+                {
+                  "name": "optParams",
+                  "type": "bytes",
+                  "internalType": "bytes"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "submitClaim"
+        }
+      ]
+    },
+    {
+      "name": "userOp Core.claimRefund",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xE5E912F99551B0520C172DEC7296816Bb103f573"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "claimRefund",
+              "inputs": [
+                {
+                  "name": "jobId",
+                  "type": "uint256",
+                  "internalType": "uint256"
+                }
+              ],
+              "outputs": [],
+              "stateMutability": "nonpayable"
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "claimRefund"
+        }
+      ]
+    },
+    {
+      "name": "userOp DelegationManager.redeemDelegations",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "name": "redeemDelegations",
+              "type": "function",
+              "stateMutability": "nonpayable",
+              "inputs": [
+                {
+                  "type": "bytes[]",
+                  "name": "permissionContexts"
+                },
+                {
+                  "type": "bytes32[]",
+                  "name": "modes"
+                },
+                {
+                  "type": "bytes[]",
+                  "name": "executionCallDatas"
+                }
+              ],
+              "outputs": []
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "redeemDelegations"
+        }
+      ]
+    },
+    {
+      "name": "userOp DelegationManager.disableDelegation",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0xdb9B1e94B5b69Df7e401DDbedE43491141047dB3"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "name": "disableDelegation",
+              "type": "function",
+              "stateMutability": "nonpayable",
+              "inputs": [
+                {
+                  "type": "tuple",
+                  "name": "delegation",
+                  "components": [
+                    {
+                      "type": "address",
+                      "name": "delegate"
+                    },
+                    {
+                      "type": "address",
+                      "name": "delegator"
+                    },
+                    {
+                      "type": "bytes32",
+                      "name": "authority"
+                    },
+                    {
+                      "type": "tuple[]",
+                      "name": "caveats",
+                      "components": [
+                        {
+                          "type": "address",
+                          "name": "enforcer"
+                        },
+                        {
+                          "type": "bytes",
+                          "name": "terms"
+                        },
+                        {
+                          "type": "bytes",
+                          "name": "args"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "uint256",
+                      "name": "salt"
+                    },
+                    {
+                      "type": "bytes",
+                      "name": "signature"
+                    }
+                  ]
+                }
+              ],
+              "outputs": []
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "disableDelegation"
+        }
+      ]
+    },
+    {
+      "name": "userOp AgentSweep.sweep",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x328Ab88D957D753e97956f424Bb3DFcFF74C2106"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "name": "sweep",
+              "type": "function",
+              "stateMutability": "nonpayable",
+              "inputs": [
+                {
+                  "type": "address",
+                  "name": "token"
+                },
+                {
+                  "type": "uint256",
+                  "name": "agentId"
+                },
+                {
+                  "type": "uint256",
+                  "name": "amount"
+                }
+              ],
+              "outputs": []
+            }
+          ],
+          "field": "function_name",
+          "operator": "eq",
+          "value": "sweep"
+        }
+      ]
+    },
+    {
+      "name": "userOp approve to the Holding",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "approve",
+              "stateMutability": "nonpayable",
+              "inputs": [
+                {
+                  "name": "spender",
+                  "type": "address"
+                },
+                {
+                  "name": "amount",
+                  "type": "uint256"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "bool"
+                }
+              ]
+            }
+          ],
+          "field": "approve.spender",
+          "operator": "eq",
+          "value": "0x6E35f8faB65b5294094A260C952B5d1efCA6c348"
+        }
+      ]
+    },
+    {
+      "name": "userOp gas token approve to the paymaster",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "to",
+          "operator": "eq",
+          "value": "0x534b2f3A21130d7a60830c2Df862319e593943A3"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "approve",
+              "stateMutability": "nonpayable",
+              "inputs": [
+                {
+                  "name": "spender",
+                  "type": "address"
+                },
+                {
+                  "name": "amount",
+                  "type": "uint256"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "bool"
+                }
+              ]
+            }
+          ],
+          "field": "approve.spender",
+          "operator": "eq",
+          "value": "0x998Df34AA25Ab2C4d907B783C5D9a76DD62a38C9"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "approve",
+              "stateMutability": "nonpayable",
+              "inputs": [
+                {
+                  "name": "spender",
+                  "type": "address"
+                },
+                {
+                  "name": "amount",
+                  "type": "uint256"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "bool"
+                }
+              ]
+            }
+          ],
+          "field": "approve.amount",
+          "operator": "lte",
+          "value": "0xf4240"
+        }
+      ]
+    },
+    {
+      "name": "userOp approve to AgentSweep",
+      "method": "eth_signUserOperation",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_transaction",
+          "field": "chain_id",
+          "operator": "eq",
+          "value": "10143"
+        },
+        {
+          "field_source": "ethereum_transaction",
+          "field": "value",
+          "operator": "lte",
+          "value": "0x0"
+        },
+        {
+          "field_source": "ethereum_calldata",
+          "abi": [
+            {
+              "type": "function",
+              "name": "approve",
+              "stateMutability": "nonpayable",
+              "inputs": [
+                {
+                  "name": "spender",
+                  "type": "address"
+                },
+                {
+                  "name": "amount",
+                  "type": "uint256"
+                }
+              ],
+              "outputs": [
+                {
+                  "type": "bool"
+                }
+              ]
+            }
+          ],
+          "field": "approve.spender",
+          "operator": "eq",
+          "value": "0x328Ab88D957D753e97956f424Bb3DFcFF74C2106"
+        }
+      ]
+    },
+    {
+      "name": "Allow DeleGator upgrade",
+      "method": "eth_sign7702Authorization",
+      "action": "ALLOW",
+      "conditions": [
+        {
+          "field_source": "ethereum_7702_authorization",
+          "field": "contract",
+          "operator": "eq",
+          "value": "0x63c0c19a282a1B52b07dD5a65b58948A07DAE32B"
+        }
+      ]
+    },
+    {
+      "name": "Deny export",
+      "method": "exportPrivateKey",
+      "action": "DENY",
+      "conditions": []
+    }
+  ]
+}

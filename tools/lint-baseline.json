@@ -1465,7 +1465,7 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "packages/sdk/scripts/privy/setup.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 6,
+    "anti-slop(require-safety-comment-for-type-assertion)": 5,
     "typescript(no-unnecessary-type-assertion)": 1
   },
   "packages/sdk/scripts/privy/sidequest-cutover.ts": {
@@ -1479,7 +1479,6 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 2
   },
   "packages/sdk/scripts/privy/update-agent-rules.ts": {
-    "anti-slop(no-runtime-typeof)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 2,
     "typescript(no-unnecessary-type-assertion)": 1
   },

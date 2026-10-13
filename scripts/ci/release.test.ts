@@ -111,6 +111,18 @@ test('refuses unset required values by name', () => {
   expect(() => validateEnv({ RELAY_PRIVATE_KEY: 'unset' }, ['RELAY_PRIVATE_KEY'])).toThrow('RELAY_PRIVATE_KEY')
 })
 
+test('hosted releases on either network require nonempty routine signer and policy IDs', () => {
+  const complete = Object.fromEntries(REQUIRED_SECRETS.map((name) => [name, 'unit-test-value']))
+  for (const network of ['monad-testnet', 'monad-mainnet']) {
+    for (const name of ['PRIVY_SIGNER_ID', 'PRIVY_POLICY_ID']) {
+      for (const value of ['', ' ', 'unset'])
+        expect(() =>
+          validateEnv({ ...complete, SIDEQUEST_NETWORK: network, TESTNET_PAYMASTER_SIGNER_KEY: 'test', [name]: value }),
+        ).toThrow(name)
+    }
+  }
+})
+
 test('AA secrets are stage-scoped and the testnet signer never reaches a mainnet release', () => {
   const secrets = Object.fromEntries(REQUIRED_SECRETS.map((name) => [name, 'unit-test-value']))
   expect(REQUIRED_SECRETS).toContain('PIMLICO_API_KEY')

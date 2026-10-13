@@ -15,6 +15,9 @@ import { generateAuthorizationKey, p256AuthorizationSigner } from '../../src/p25
 import { PrivyApi } from './client.ts'
 import { adminEnv, localEnv, required } from './env.ts'
 import { authorityPolicy, config } from './policy.ts'
+import type { Network } from '../../src/deployment.ts'
+import { explicitNetwork } from './network.ts'
+import { setup, verifyAuthority, updateAuthority } from './setup.ts'
 import { sidequestPolicyPlan } from './cutover-policy.ts'
 import { canonical, writablePolicy } from './policy-document.ts'
 
@@ -222,6 +225,7 @@ export async function updateRoutinePolicy(input: {
   state: CutoverState
   adminId: string
   adminPublicKey: string
+  network: Network
   sign: (payload: string) => Promise<string>
   persist: (state: CutoverState) => void
 }) {
@@ -242,7 +246,7 @@ export async function updateRoutinePolicy(input: {
     state.routine.id,
     state.routinePublicKey,
   )
-  const desired = authorityPolicy(adminId)
+  const desired = authorityPolicy(adminId, input.network)
   const live = await api.checked('GET', `/policies/${state.policy.id}`)
   if (live.id !== state.policy.id) throw new SidequestCutoverError('Routine policy readback ID differs')
   const oldHash = fingerprint(canonical(writablePolicy(live)))
@@ -262,7 +266,7 @@ export async function updateRoutinePolicy(input: {
   return { name: desired.name, appId: state.appId, adminId, signerId: state.routine.id, policyId: state.policy.id }
 }
 
-async function runPolicyUpdate() {
+async function runPolicyUpdate(network: Network) {
   const env = process.env as Record<string, string>
   const appId = required(env, 'PRIVY_APP_ID'),
     adminId = required(env, 'PRIVY_POLICY_ADMIN_ID')
@@ -281,6 +285,7 @@ async function runPolicyUpdate() {
       api: new PrivyApi(appId, required(env, 'PRIVY_APP_SECRET')),
       state,
       adminId,
+      network,
       adminPublicKey: publicKey(adminKey),
       sign: await p256AuthorizationSigner(adminKey),
       persist: saveCutoverState,
@@ -291,8 +296,17 @@ async function runPolicyUpdate() {
   }
 }
 
-export async function runCutover(mode: 'prepare' | 'apply' | 'verify' | 'update-policy') {
-  if (mode === 'update-policy') return runPolicyUpdate()
+export async function runCutover(mode: 'prepare' | 'apply' | 'verify' | 'update-policy', network: Network) {
+  if (network === 'monad-mainnet') {
+    if (mode === 'verify') return verifyAuthority(network)
+    if (mode === 'update-policy') return updateAuthority(network)
+    if (mode !== 'apply' || process.env.SIDEQUEST_PRIVY_APPLY !== '1')
+      throw new SidequestCutoverError(
+        'Use setup.ts monad-mainnet to prepare new authority; apply requires SIDEQUEST_PRIVY_APPLY=1',
+      )
+    return setup(network)
+  }
+  if (mode === 'update-policy') return runPolicyUpdate(network)
   if (mode === 'verify' && process.env.PRIVY_POLICY_ID !== undefined && process.env.PRIVY_APP_SECRET !== undefined) {
     const state = JSON.parse(readFileSync(statePath, 'utf8')) as CutoverState
     const env = process.env as Record<string, string>
@@ -300,12 +314,12 @@ export async function runCutover(mode: 'prepare' | 'apply' | 'verify' | 'update-
       state.appId !== required(env, 'PRIVY_APP_ID') ||
       state.policy?.id !== required(env, 'PRIVY_POLICY_ID') ||
       state.routine?.id !== required(env, 'PRIVY_SIGNER_ID') ||
-      fingerprint(canonical(authorityPolicy(state.adminId))) !== state.desiredPolicySha256
+      fingerprint(canonical(authorityPolicy(state.adminId, network))) !== state.desiredPolicySha256
     )
       throw new SidequestCutoverError('Stage routine authority differs from journal')
     const api = new PrivyApi(state.appId, required(env, 'PRIVY_APP_SECRET'))
     const live = await api.checked('GET', `/policies/${state.policy.id}`)
-    if (canonical(writablePolicy(live)) !== canonical(authorityPolicy(state.adminId)))
+    if (canonical(writablePolicy(live)) !== canonical(authorityPolicy(state.adminId, network)))
       throw new SidequestCutoverError('Routine policy readback differs')
     assertQuorum(await api.checked('GET', `/key_quorums/${state.routine.id}`), state.routine.id, state.routinePublicKey)
     return {
@@ -338,11 +352,15 @@ export async function runCutover(mode: 'prepare' | 'apply' | 'verify' | 'update-
       'utf8',
     ),
   )
-  const plan = sidequestPolicyPlan(await api.checked('GET', `/policies/${legacyPolicyId}`), authorityPolicy(adminId), {
-    holding: archived.deployment.main.holding,
-    core: archived.deployment.core,
-    relay: archived.roles.relay,
-  })
+  const plan = sidequestPolicyPlan(
+    await api.checked('GET', `/policies/${legacyPolicyId}`),
+    authorityPolicy(adminId, network),
+    {
+      holding: archived.deployment.main.holding,
+      core: archived.deployment.core,
+      relay: archived.roles.relay,
+    },
+  )
   if (plan.legacyPolicyId !== legacyPolicyId) throw new SidequestCutoverError('Unexpected legacy policy readback ID')
   assertQuorum(await api.checked('GET', `/key_quorums/${adminId}`), adminId, adminPublicKey)
   assertQuorum(await api.checked('GET', `/key_quorums/${legacySignerId}`), legacySignerId, legacySignerPublicKey)
@@ -413,10 +431,13 @@ export async function runCutover(mode: 'prepare' | 'apply' | 'verify' | 'update-
 }
 if (import.meta.main) {
   try {
-    const mode = process.argv[2]
-    if (process.argv.length !== 3 || !['prepare', 'apply', 'verify', 'update-policy'].includes(mode ?? ''))
-      throw new SidequestCutoverError('Use prepare, apply, verify or update-policy')
-    console.log(JSON.stringify(await runCutover(mode as 'prepare' | 'apply' | 'verify' | 'update-policy'), null, 2))
+    const network = explicitNetwork(process.argv[2])
+    const mode = process.argv[3]
+    if (process.argv.length !== 4 || !['prepare', 'apply', 'verify', 'update-policy'].includes(mode ?? ''))
+      throw new SidequestCutoverError('Use <network> prepare|apply|verify|update-policy')
+    console.log(
+      JSON.stringify(await runCutover(mode as 'prepare' | 'apply' | 'verify' | 'update-policy', network), null, 2),
+    )
   } catch (error) {
     console.error(
       error instanceof SidequestCutoverError

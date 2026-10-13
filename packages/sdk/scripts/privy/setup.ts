@@ -10,13 +10,16 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { PrivyApi, PrivyApiError } from './client.ts'
-import { adminEnv, adminEnvPath, appendEnv, envPath, localEnv, required } from './env.ts'
-import { generateAuthorizationKey } from '../../src/p256.ts'
+import { networkAdminEnv, networkAdminEnvPath, appendEnv, networkEnvPath, networkEnv, required } from './env.ts'
+import type { Network } from '../../src/deployment.ts'
+import { explicitNetwork } from './network.ts'
+import { generateAuthorizationKey, p256AuthorizationSigner } from '../../src/p256.ts'
 import { authorityPolicy } from './policy.ts'
-import { formatPrivyAuthorizationPayload } from '../../src/privy.ts'
+import { canonical, writablePolicy } from './policy-document.ts'
 
-const stateDirectory = new URL('./.local/', import.meta.url)
-const statePath = new URL('setup.json', stateDirectory)
+function stateDirectoryFor(network: Network): URL {
+  return new URL(network === 'monad-mainnet' ? './.local/monad-mainnet/' : './.local/', import.meta.url)
+}
 
 interface Creation {
   key: string
@@ -25,7 +28,9 @@ interface Creation {
   rejected?: boolean
 }
 
-function saveState(state: Record<string, Creation>): void {
+function saveState(state: Record<string, Creation>, network: Network): void {
+  const stateDirectory = stateDirectoryFor(network)
+  const statePath = new URL('setup.json', stateDirectory)
   const temporary = new URL('setup.json.tmp', stateDirectory)
   writeFileSync(temporary, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 })
   renameSync(temporary, statePath)
@@ -54,26 +59,68 @@ async function verifyQuorum(api: PrivyApi, id: string, publicKey: string, name: 
   }
 }
 
-function canonicalPolicy(body: Record<string, unknown>): string {
-  return formatPrivyAuthorizationPayload({ method: 'POST', url: '', headers: {}, body })
+/** Add only missing exact rules. A changed or additional live rule is drift, never an automatic widening. */
+export function authorityRulesUpdate(
+  live: Record<string, unknown>,
+  desired: ReturnType<typeof authorityPolicy>,
+): boolean {
+  const before = writablePolicy(live)
+  if (canonical(before) === canonical(desired)) return false
+  const { rules: liveRules, ...liveHeader } = before
+  const { rules: desiredRules, ...desiredHeader } = desired
+  if (canonical(liveHeader) !== canonical(desiredHeader) || !Array.isArray(liveRules))
+    throw new Error('Policy authority drift; refusing update')
+  const available = new Set(desiredRules.map((rule) => canonical({ rules: [rule] })))
+  if (liveRules.some((rule) => !available.has(canonical({ rules: [rule] }))))
+    throw new Error('Policy rule drift; refusing update')
+  return true
 }
 
-async function verifyPolicy(api: PrivyApi, id: string, adminId: string): Promise<void> {
-  const desired = authorityPolicy(adminId)
+export async function updateAuthority(network: Network): Promise<{ policyId: string; status: string }> {
+  const env = networkEnv(network)
+  const api = new PrivyApi(required(env, 'PRIVY_APP_ID'), required(env, 'PRIVY_APP_SECRET'))
+  const policyId = required(env, 'PRIVY_POLICY_ID')
+  const adminId = required(env, 'PRIVY_POLICY_ADMIN_ID')
+  const desired = authorityPolicy(adminId, network)
+  const stateDirectory = stateDirectoryFor(network)
+  mkdirSync(stateDirectory, { recursive: true, mode: 0o700 })
+  const lock = new URL('setup.lock', stateDirectory)
+  const descriptor = openSync(lock, 'wx', 0o600)
+  try {
+    const live = await api.checked('GET', `/policies/${policyId}`)
+    if (live.id !== policyId) throw new Error('Policy ID differs; refusing update')
+    const adding = authorityRulesUpdate(live, desired)
+    if (adding) {
+      writeFileSync(
+        new URL('update.json', stateDirectory),
+        `${JSON.stringify({ network, policyId, desired: canonical(desired) })}\n`,
+        { mode: 0o600 },
+      )
+      const sign = await p256AuthorizationSigner(required(networkAdminEnv(network), 'PRIVY_POLICY_ADMIN_KEY'))
+      await api.checked('PATCH', `/policies/${policyId}`, { rules: desired.rules }, sign)
+    }
+    await verifyAuthority(network)
+    return { policyId, status: adding ? 'added' : 'current' }
+  } finally {
+    closeSync(descriptor)
+    unlinkSync(lock)
+  }
+}
+
+async function verifyPolicy(api: PrivyApi, id: string, adminId: string, network: Network): Promise<void> {
+  const desired = authorityPolicy(adminId, network)
   const policy = await api.checked('GET', `/policies/${id}`)
-  const rules = (policy.rules as Record<string, unknown>[]).map(({ id: _id, ...rule }) => rule)
-  if (
-    policy.owner_id !== adminId ||
-    policy.chain_type !== desired.chain_type ||
-    canonicalPolicy({ rules }) !== canonicalPolicy({ rules: desired.rules })
-  ) {
+  if (policy.id !== id || canonical(writablePolicy(policy)) !== canonical(desired)) {
     throw new Error('Policy drift; no automatic widening')
   }
 }
 
 /** Verification performs only GETs and never creates a key, quorum, policy or local setup state. */
-export async function verifyAuthority(): Promise<{ signerId: string; adminId: string; policyId: string }> {
-  const env = localEnv()
+export async function verifyAuthority(
+  network: Network,
+): Promise<{ signerId: string; adminId: string; policyId: string }> {
+  authorityPolicy('preflight', network)
+  const env = networkEnv(network)
   const api = new PrivyApi(required(env, 'PRIVY_APP_ID'), required(env, 'PRIVY_APP_SECRET'))
   const signerId = required(env, 'PRIVY_SIGNER_ID')
   const adminId = required(env, 'PRIVY_POLICY_ADMIN_ID')
@@ -82,19 +129,24 @@ export async function verifyAuthority(): Promise<{ signerId: string; adminId: st
   await verifyQuorum(
     api,
     adminId,
-    publicAuthorizationKey(required(adminEnv(), 'PRIVY_POLICY_ADMIN_KEY')),
+    publicAuthorizationKey(required(networkAdminEnv(network), 'PRIVY_POLICY_ADMIN_KEY')),
     'policy-admin',
   )
-  await verifyPolicy(api, policyId, adminId)
+  await verifyPolicy(api, policyId, adminId, network)
   return { signerId, adminId, policyId }
 }
 
-export async function setup(): Promise<{ signerId: string; adminId: string; policyId: string }> {
+export async function setup(network: Network): Promise<{ signerId: string; adminId: string; policyId: string }> {
+  authorityPolicy('preflight', network)
+  const stateDirectory = stateDirectoryFor(network)
+  const statePath = new URL('setup.json', stateDirectory)
+  const envPath = networkEnvPath(network)
+  const adminEnvPath = networkAdminEnvPath(network)
   mkdirSync(stateDirectory, { recursive: true, mode: 0o700 })
   const lock = new URL('setup.lock', stateDirectory)
   const descriptor = openSync(lock, 'wx', 0o600)
   try {
-    const env = localEnv()
+    const env = networkEnv(network)
     const api = new PrivyApi(required(env, 'PRIVY_APP_ID'), required(env, 'PRIVY_APP_SECRET'))
     const state: Record<string, Creation> = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : {}
 
@@ -116,15 +168,15 @@ export async function setup(): Promise<{ signerId: string; adminId: string; poli
         // Quorum creation has no documented idempotency contract. Refuse an ambiguous replay.
         if (state[name]) throw new Error(`Unresolved ${name} quorum creation; reconcile in Privy before retrying`)
         state[name] = { key: crypto.randomUUID(), startedAt: new Date().toISOString() }
-        saveState(state)
+        saveState(state, network)
         const result = await api.checked('POST', '/key_quorums', {
-          display_name: `Sidequest v2 ${name} Monad testnet`,
+          display_name: `Sidequest v2 ${name} ${network}`,
           public_keys: [publicKey],
           authorization_threshold: 1,
         })
         id = required(result as Record<string, string>, 'id')
         state[name]!.id = id
-        saveState(state)
+        saveState(state, network)
       }
       await verifyQuorum(api, id, publicKey, name)
       appendEnv(envPath, idName, id)
@@ -132,14 +184,14 @@ export async function setup(): Promise<{ signerId: string; adminId: string; poli
     }
 
     const signerId = await keyQuorum('routine', 'PRIVY_SIGNER_KEY', envPath, env)
-    const adminId = await keyQuorum('policy-admin', 'PRIVY_POLICY_ADMIN_KEY', adminEnvPath, adminEnv())
-    const desired = authorityPolicy(adminId)
+    const adminId = await keyQuorum('policy-admin', 'PRIVY_POLICY_ADMIN_KEY', adminEnvPath, networkAdminEnv(network))
+    const desired = authorityPolicy(adminId, network)
     let policyId = env.PRIVY_POLICY_ID ?? state.policy?.id
     if (!policyId) {
       if (state.policy && !state.policy.rejected)
         throw new Error('Unresolved policy creation; reconcile the original request before retrying')
       state.policy = { key: crypto.randomUUID(), startedAt: new Date().toISOString() }
-      saveState(state)
+      saveState(state, network)
       let result: Record<string, unknown>
       try {
         result = await api.checked('POST', '/policies', desired, undefined, state.policy.key)
@@ -147,15 +199,15 @@ export async function setup(): Promise<{ signerId: string; adminId: string; poli
         // A confirmed validation rejection created nothing; network failures remain ambiguous.
         if (error instanceof PrivyApiError && error.status === 400) {
           state.policy.rejected = true
-          saveState(state)
+          saveState(state, network)
         }
         throw error
       }
       policyId = required(result as Record<string, string>, 'id')
       state.policy.id = policyId
-      saveState(state)
+      saveState(state, network)
     }
-    await verifyPolicy(api, policyId, adminId)
+    await verifyPolicy(api, policyId, adminId, network)
     appendEnv(envPath, 'PRIVY_POLICY_ID', policyId)
     return { signerId, adminId, policyId }
   } finally {
@@ -166,9 +218,11 @@ export async function setup(): Promise<{ signerId: string; adminId: string; poli
 
 if (import.meta.main) {
   try {
-    if (process.argv.slice(2).some((argument) => argument !== '--verify'))
-      throw new Error('Use setup.ts with no arguments or --verify')
-    console.log(JSON.stringify(await (process.argv.includes('--verify') ? verifyAuthority() : setup())))
+    const [networkArg, ...flags] = process.argv.slice(2)
+    const network = explicitNetwork(networkArg)
+    if (flags.length > 1 || flags.some((argument) => argument !== '--verify'))
+      throw new Error('Use setup.ts <network> [--verify]')
+    console.log(JSON.stringify(await (flags.includes('--verify') ? verifyAuthority(network) : setup(network))))
   } catch (error) {
     console.error(error instanceof Error ? error.message : 'Privy setup failed; response suppressed')
     process.exitCode = 1
