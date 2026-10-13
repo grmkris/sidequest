@@ -26,6 +26,7 @@ class FakeFixture {
   refused = false
   fee = 1_000_000_000n
   sequence = 0n
+  balance = 0n
   delegated = true
   reverted = false
   quietReceipt = false
@@ -35,6 +36,7 @@ class FakeFixture {
   answer = async (method: string) => {
     this.log.push(method)
     if (method === 'eth_getCode') return this.code()
+    if (method === 'eth_getBalance') return toHex(this.balance)
     if (method === 'eth_blockNumber') return '0x10'
     if (method === 'eth_getLogs') {
       if (this.quietLogs) throw new Error('quiet logs')
@@ -333,4 +335,112 @@ it('persists spent proof when logs fail and never rebuilds across reload and non
   expect(f.signed).toHaveLength(1)
   expect(f.log.filter((method) => method === 'eth_estimateUserOperationGas')).toHaveLength(1)
   expect(f.log.filter((method) => method === 'eth_sendUserOperation')).toHaveLength(1)
+})
+
+const MON = 10n ** 18n
+const sends = (f: FakeFixture) => f.log.filter((method) => method === 'eth_sendUserOperation')
+const paymasterAsked = (f: FakeFixture) =>
+  f.log.filter((method) => method.startsWith('pm_') || method === 'pimlico_getTokenQuotes')
+async function upgrade(): Promise<sdk.SignedAuthorization> {
+  const signed = await key.signAuthorization({
+    chainId: base.chainId,
+    contractAddress: base.delegation.delegator,
+    nonce: 0,
+  })
+  return { ...signed, yParity: signed.yParity ?? 0 }
+}
+
+describe('MON-paid user operations', () => {
+  it('upgrades and batches a MON-only wallet in one operation, asking no paymaster and persisting the lane', async () => {
+    const f = fixture()
+    f.balance = 20n * MON
+    f.delegated = false
+    const authorization = await upgrade()
+    const controller = new BrowserUserOp({ ...f.deps, payment: 'native', authorize: async () => authorization })
+    await controller.load()
+    expect(f.record()?.aa?.payment).toBe('native')
+    expect(controller.payment).toBe('native')
+    await controller.prepare()
+    const built = f.view()!.built!
+    expect(built.op.paymaster).toBeUndefined()
+    expect(built.authorization).toEqual(authorization)
+    expect(sdk.decodeExecuteCalldata(built.op.callData)).toHaveLength(1)
+    expect(built.maxCost).toBe(sdk.maxNativeCost(built.op))
+    expect(f.signed).toEqual([])
+    await controller.send()
+    expect(f.signed[0]).toContain('MON gas')
+    expect(f.signed[0]).not.toContain('USDC')
+    expect(paymasterAsked(f)).toEqual([])
+    expect(f.record()?.aa?.payment).toBe('native')
+    expect(f.record()?.aa?.built?.op.eip7702Auth?.address).toBe(base.delegation.delegator)
+    expect(f.record()?.recorded).toEqual([true])
+    expect(f.log.indexOf('eth_sendUserOperation')).toBeLessThan(f.log.indexOf('report'))
+  })
+
+  it('keeps the MON lane across a refusal and a reload, and never resends in the pending window', async () => {
+    const f = fixture()
+    f.balance = 20n * MON
+    const controller = new BrowserUserOp({ ...f.deps, payment: 'native' })
+    await controller.load()
+    const actionId = f.record()!.aa!.actionId
+    await controller.prepare()
+    f.refused = true
+    await expect(controller.send()).rejects.toThrow('Gas prices moved before it went out')
+    expect(f.record()?.aa).toEqual({ actionId, payment: 'native', outcome: 'refused', block: '0x10' })
+    f.refused = false
+    // A reload opened for USDC rebuilds the saved action on its own lane, on the same nonce.
+    const restored = new BrowserUserOp({ ...f.deps, payment: 'token' })
+    await restored.load()
+    await restored.prepare()
+    expect(f.view()?.built?.op.paymaster).toBeUndefined()
+    f.loseSend(true)
+    await expect(restored.send()).rejects.toMatchObject({ code: 'uncertain' })
+    expect(f.record()?.aa?.payment).toBe('native')
+    const again = new BrowserUserOp(f.deps)
+    await again.load()
+    await again.send()
+    expect(sends(f)).toHaveLength(2)
+    expect(f.signed).toHaveLength(2)
+    expect(BigInt(f.record()!.aa!.built!.op.nonce)).toBe(sdk.laneNonce(sdk.nonceKey(actionId)))
+    expect(paymasterAsked(f)).toEqual([])
+  })
+
+  it("refuses before signing above the MON ceiling or past Monad's reserve", async () => {
+    const short = fixture()
+    short.balance = 10n * MON
+    const reserve = new BrowserUserOp({ ...short.deps, payment: 'native' })
+    await reserve.load()
+    await expect(reserve.prepare()).rejects.toMatchObject({ code: 'ceiling' })
+    const dear = fixture()
+    dear.balance = 1_000n * MON
+    dear.fee = 10n ** 13n
+    const ceiling = new BrowserUserOp({ ...dear.deps, payment: 'native' })
+    await ceiling.load()
+    await expect(ceiling.prepare()).rejects.toMatchObject({ code: 'ceiling' })
+    expect(short.signed.concat(dear.signed)).toEqual([])
+    expect(sends(short).concat(sends(dear))).toEqual([])
+  })
+
+  it('refuses a saved operation whose lane and paymaster disagree', async () => {
+    const f = fixture()
+    f.balance = 20n * MON
+    const controller = new BrowserUserOp({ ...f.deps, payment: 'native' })
+    await controller.load()
+    await controller.prepare()
+    f.loseSend(true)
+    await expect(controller.send()).rejects.toMatchObject({ code: 'uncertain' })
+    const { payment: _payment, ...asUsdc } = f.stored!.aa!
+    f.stored = { ...f.stored!, aa: asUsdc }
+    await expect(new BrowserUserOp(f.deps).load()).rejects.toThrow('differs from the reviewed')
+    const paid = fixture()
+    const usdc = new BrowserUserOp(paid.deps)
+    await usdc.load()
+    await usdc.prepare()
+    paid.loseSend(true)
+    await expect(usdc.send()).rejects.toMatchObject({ code: 'uncertain' })
+    paid.stored = { ...paid.stored!, aa: { ...paid.stored!.aa!, payment: 'native' } }
+    await expect(new BrowserUserOp(paid.deps).load()).rejects.toThrow('differs from the reviewed')
+    expect(sends(f)).toHaveLength(1)
+    expect(sends(paid)).toHaveLength(1)
+  })
 })

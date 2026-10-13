@@ -5,7 +5,7 @@ import { useConnection, useSwitchChain } from 'wagmi'
 import { getTransactionReceipt } from 'wagmi/actions'
 import { browserAaRpc, browserPaymentMode } from '../aa-request.ts'
 import { BrowserUserOp, type UserOpDependencies, type UserOpView } from '../aa-controller.ts'
-import { maxCostCopy, paymentRefusal } from '../aa-mode.ts'
+import { atomicRefusal, ceilingRefusal, paymentRefusal, paymentRoute, userOpCostCopy } from '../aa-mode.ts'
 import { boardApi } from '../api.ts'
 import { batchGasLimit } from '../gas.ts'
 import { sidequest } from '../sidequest.ts'
@@ -98,11 +98,18 @@ function SelectedPayment({
   pending: boolean
   error: Error | null
 }) {
-  if (savedAa || (!legacy && mode === 'userop'))
-    return <UserOpSteps key={`${txJournalKey(props.taskId, props.txs)}:${address}`} {...props} />
-  if (!legacy && props.requireAtomic && mode === 'mon-sequential')
-    return <p role="alert">This action needs one atomic batch. Add USDC and use your Sidequest wallet.</p>
-  if (legacy || mode === 'mon-batch' || mode === 'mon-sequential')
+  const route = paymentRoute({ savedAa, legacy, mode, requireAtomic: props.requireAtomic === true })
+  // A saved operation keeps the lane in its record; `payment` only opens a new one.
+  if (route === 'userop' || route === 'userop-native')
+    return (
+      <UserOpSteps
+        key={`${txJournalKey(props.taskId, props.txs)}:${address}`}
+        {...props}
+        payment={route === 'userop-native' ? 'native' : 'token'}
+      />
+    )
+  if (route === 'atomic-refused') return <p role="alert">{atomicRefusal(deployment.aa)}</p>
+  if (route === 'mon')
     return <MonTxSteps {...props} allowBatch={props.allowBatch !== false && (legacy || mode === 'mon-batch')} />
   if (pending) return <p className="text-sm text-muted-foreground">Reading USDC and MON for gas…</p>
   return <PaymentUnavailable error={error} mode={mode ?? 'unfunded'} />
@@ -123,7 +130,10 @@ function PaymentUnavailable({ error, mode }: { error: Error | null; mode: import
   )
 }
 
-function useWalletForOp(props: TxStepsProps) {
+/** A user operation's props: the lane a new action opens in (`native` pays gas in MON, with no paymaster). */
+type OpProps = TxStepsProps & { payment?: 'token' | 'native' }
+
+function useWalletForOp(props: OpProps) {
   const { address, chainId } = useConnection()
   const authorize = useDelegatorAuthorization(address)
   const sign = useSignTypedDataWithPrompt()
@@ -160,6 +170,7 @@ function opDependencies(
     sender: address,
     txs: props.txs,
     sponsor: props.sponsor,
+    payment: props.payment,
     minCallGas: batchGasLimit(props.txs, sidequest),
     read: () =>
       props.durableJournal
@@ -187,7 +198,7 @@ function opDependencies(
   }
 }
 
-function useUserOp(props: TxStepsProps) {
+function useUserOp(props: OpProps) {
   const wallet = useWalletForOp(props)
   const current = useRef(wallet)
   current.current = wallet
@@ -207,7 +218,7 @@ function useUserOp(props: TxStepsProps) {
     } catch (failure) {
       setError(
         failure instanceof sdk.AaError && failure.code === 'ceiling'
-          ? 'Gas exceeds the per-action USDC limit. Nothing was signed or sent.'
+          ? ceilingRefusal(controller.payment === 'native', deployment.aa)
           : friendlyError(failure),
       )
     } finally {
@@ -235,7 +246,7 @@ function useUserOp(props: TxStepsProps) {
   return { view, busy, error, run, submit, wallet }
 }
 
-function UserOpSteps(props: TxStepsProps) {
+function UserOpSteps(props: OpProps) {
   const { view, busy, error, run, submit, wallet } = useUserOp(props)
   const { mutateAsync: switchChain } = useSwitchChain()
   if (!writesOpen) return <LaunchNotice />
@@ -265,9 +276,7 @@ function UserOpSteps(props: TxStepsProps) {
       </ol>
       {view.built !== null && (
         <p className="text-sm text-muted-foreground">
-          {props.sponsor === 'faucet'
-            ? 'No MON needed. Faucet gas is covered on testnet.'
-            : maxCostCopy(view.built.maxCost)}
+          {props.sponsor === 'faucet' ? 'No MON needed. Faucet gas is covered on testnet.' : userOpCostCopy(view.built)}
         </p>
       )}
       {view.record?.aa?.receipt !== undefined && <TxLink hash={view.record.aa.receipt.txHash} />}

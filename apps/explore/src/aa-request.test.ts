@@ -1,7 +1,8 @@
-import { type Address, encodeFunctionData, erc20Abi } from 'viem'
+import * as sdk from '@sidequest/sdk'
+import { type Address, encodeAbiParameters, encodeFunctionData, erc20Abi, toHex } from 'viem'
 import { describe, expect, it } from 'vitest'
 import type { WalletStep } from './components/txOperation.ts'
-import { browserAaRpc, carriedGasToken, userOpCalls } from './aa-request.ts'
+import { browserAaRpc, browserPaymentMode, carriedGasToken, userOpCalls } from './aa-request.ts'
 
 const steps: WalletStep[] = [
   {
@@ -33,6 +34,24 @@ describe('browser AA request building', () => {
       'https://dev.sidequest.exchange/aa/rpc',
       'https://dev.sidequest.exchange/aa/rpc',
     ])
+  })
+
+  it('reads a MON-only, not yet upgraded Privy wallet as the MON-paid lane once it holds the reserve and ceiling', async () => {
+    const deployment = sdk.deployment('monad-testnet')
+    const floor = sdk.nativeLaneFloor(deployment.aa!)!
+    const mode = async (balance: bigint) => {
+      const node: sdk.JsonRpc = async (method) => {
+        if (method === 'eth_getCode') return '0x'
+        if (method === 'eth_getBalance') return toHex(balance)
+        return encodeAbiParameters([{ type: 'uint256' }], [0n]) // no USDC
+      }
+      const rpc = { node, bundler: node, paymaster: node }
+      return browserPaymentMode(rpc, deployment, deployment.admin, [{ ...steps[0]!, chainId: 10143 }], {
+        canAuthorize: true,
+      })
+    }
+    expect(await mode(floor)).toBe('userop-native')
+    expect(await mode(floor - 1n)).toBe('mon-sequential')
   })
 })
 

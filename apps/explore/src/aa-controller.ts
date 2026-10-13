@@ -1,11 +1,18 @@
 import * as sdk from '@sidequest/sdk'
 import { type Address, type Hex, type TypedDataDefinition, encodeFunctionData, isHex } from 'viem'
 import { Schema } from 'effect'
-import { restoreBuilt, storeBuilt } from './aa-journal.ts'
-import { maxCostCopy } from './aa-mode.ts'
+import { type AaJournal, restoreBuilt, storeBuilt } from './aa-journal.ts'
+import { userOpCostCopy } from './aa-mode.ts'
 import { reconcileUserOp, userOpCalls, type BrowserAaRpc } from './aa-request.ts'
 import { emptyJournal, type OpRecord } from './components/txJournal.ts'
 import type { WalletStep } from './components/txOperation.ts'
+
+const NATIVE = { payment: 'native' } as const
+/** A saved action's gas lane: MON-paid when it says so, USDC (or sponsored) otherwise. */
+const lane = (saved: Pick<AaJournal, 'payment'>): 'token' | 'native' =>
+  saved.payment === 'native' ? 'native' : 'token'
+/** The lane field to carry into the action's next record. */
+const paymentOf = (saved: Pick<AaJournal, 'payment'>) => (saved.payment === 'native' ? NATIVE : {})
 
 export interface UserOpView {
   readonly record: OpRecord | null
@@ -20,6 +27,11 @@ export interface UserOpDependencies {
   readonly sender: Address
   readonly txs: readonly WalletStep[]
   readonly sponsor?: 'faucet' | undefined
+  /**
+   * The gas lane of a new action: `native` pays in MON with no paymaster. Saved with the action, so its retries and a
+   * reload keep the lane it was reviewed in; an action saved without one is USDC-paid.
+   */
+  readonly payment?: 'token' | 'native' | undefined
   readonly minCallGas?: bigint | undefined
   readonly read: () => Promise<OpRecord | null>
   readonly write: (next: OpRecord) => Promise<void>
@@ -47,9 +59,20 @@ export class BrowserUserOp {
     await this.deps.write(record)
     this.#update({ record })
   }
+  /** The saved action's gas lane: what its record says, else what this mount was opened for. */
+  get payment(): 'token' | 'native' {
+    const saved = this.#view.record?.aa
+    if (saved != null) return lane(saved)
+    return this.deps.payment === 'native' ? 'native' : 'token'
+  }
   async #retryable(record: OpRecord, outcome: 'refused' | 'dropped') {
     const aa = record.aa!
-    const retry = { actionId: aa.actionId, outcome, ...(aa.block === undefined ? {} : { block: aa.block }) }
+    const retry = {
+      actionId: aa.actionId,
+      ...paymentOf(aa),
+      outcome,
+      ...(aa.block === undefined ? {} : { block: aa.block }),
+    }
     await this.#write({ ...record, aa: retry })
     this.#update({ built: null, pending: false })
   }
@@ -59,7 +82,7 @@ export class BrowserUserOp {
     if (saved.aa == null) {
       if (saved.pending !== null || saved.hashes.some((hash) => hash !== null) || saved.sponsor != null)
         throw new Error('Reconcile the previous wallet transaction first.')
-      saved.aa = { actionId: crypto.randomUUID() }
+      saved.aa = { actionId: crypto.randomUUID(), ...(this.deps.payment === 'native' ? NATIVE : {}) }
     }
     await this.#write(saved)
     await this.reconcile()
@@ -90,7 +113,7 @@ export class BrowserUserOp {
     const aa = record.aa!
     if (aa.built === undefined) return 'unbuilt'
     const built = restoreBuilt(aa)
-    this.#validate(built)
+    this.#validate(built, lane(aa))
     this.#update({ built, ready: true })
     if (aa.receipt !== undefined) {
       this.#update({ pending: true })
@@ -114,29 +137,47 @@ export class BrowserUserOp {
     }
     return outcome.at
   }
-  #validate(built: sdk.BuiltUserOp) {
-    const { deployment, sender, txs } = this.deps
+  #validate(built: sdk.BuiltUserOp, payment: 'token' | 'native') {
+    const { deployment, sender } = this.deps
     const aa = deployment.aa
-    const expected = userOpCalls(txs, deployment.chainId)
-    const actual = sdk.decodeExecuteCalldata(built.op.callData)
-    if (aa === null || actual === null)
-      throw new Error('The saved operation has no readable gas configuration or calls.')
-    const approval = aa.paymaster === null ? [] : [sdk.approveCall(aa.gasToken, aa.paymaster, aa.standingApproval)]
-    const sameCalls =
-      actual.length === expected.length || (this.deps.sponsor === undefined && actual.length === expected.length + 1)
-    const allowed = expected.concat(actual.length === expected.length ? [] : approval)
+    if (aa === null) throw new Error('The saved operation has no readable gas configuration or calls.')
     if (
       built.op.sender.toLowerCase() !== sender.toLowerCase() ||
       built.chainId !== deployment.chainId ||
       built.entryPoint.toLowerCase() !== aa.entryPoint.toLowerCase() ||
-      !this.#paymasterAllowed(built) ||
-      built.maxCost > aa.maxCostPerOp ||
-      !sameCalls ||
-      sdk.executeCalldata(allowed).toLowerCase() !== built.op.callData.toLowerCase()
+      !(payment === 'native' ? this.#nativeAllowed(built, aa) : this.#tokenAllowed(built, aa)) ||
+      !this.#callsAllowed(built, aa, payment)
     )
       throw new Error(
         'The saved operation differs from the reviewed wallet, network, calls or gas limit. Reconcile before continuing.',
       )
+  }
+  /** The reviewed calls, and only on the USDC lane the standing paymaster approval after them. */
+  #callsAllowed(built: sdk.BuiltUserOp, aa: sdk.AccountAbstraction, payment: 'token' | 'native'): boolean {
+    const expected = userOpCalls(this.deps.txs, this.deps.deployment.chainId)
+    const actual = sdk.decodeExecuteCalldata(built.op.callData)
+    if (actual === null) throw new Error('The saved operation has no readable gas configuration or calls.')
+    const approval =
+      payment === 'token' && this.deps.sponsor === undefined && aa.paymaster !== null
+        ? [sdk.approveCall(aa.gasToken, aa.paymaster, aa.standingApproval)]
+        : []
+    const allowed = expected.concat(actual.length === expected.length ? [] : approval)
+    return (
+      (actual.length === expected.length || actual.length === expected.length + approval.length) &&
+      sdk.executeCalldata(allowed).toLowerCase() === built.op.callData.toLowerCase()
+    )
+  }
+  /** A MON-paid operation: no paymaster, no sponsorship, within the network's wei ceiling. */
+  #nativeAllowed(built: sdk.BuiltUserOp, aa: sdk.AccountAbstraction): boolean {
+    return (
+      this.deps.sponsor === undefined &&
+      built.op.paymaster === undefined &&
+      aa.maxNativeCostPerOp !== null &&
+      built.maxCost <= aa.maxNativeCostPerOp
+    )
+  }
+  #tokenAllowed(built: sdk.BuiltUserOp, aa: sdk.AccountAbstraction): boolean {
+    return built.op.paymaster !== undefined && built.maxCost <= aa.maxCostPerOp && this.#paymasterAllowed(built)
   }
   #paymasterAllowed(built: sdk.BuiltUserOp): boolean {
     if (this.deps.sponsor !== 'faucet')
@@ -166,12 +207,18 @@ export class BrowserUserOp {
       record = await this.#record()
     }
     const { deployment, rpc, sender } = this.deps
-    if (deployment.aa === null) throw new Error('USDC gas is unavailable on this network.')
+    const payment = lane(record.aa!)
+    if (deployment.aa === null)
+      throw new Error(`${payment === 'native' ? 'MON' : 'USDC'} gas is unavailable on this network.`)
     const code = Schema.decodeUnknownSync(Schema.String)(await rpc.node('eth_getCode', [sender, 'latest']))
     const delegated = code.toLowerCase() === `0xef0100${deployment.delegation.delegator.slice(2).toLowerCase()}`
     const authorization = delegated ? undefined : await this.deps.authorize()
     if (!delegated && authorization === undefined)
-      throw new Error('This wallet cannot authorize USDC gas. Fund MON to send it from your wallet.')
+      throw new Error(
+        payment === 'native'
+          ? 'This wallet cannot authorize its one-time upgrade, so it cannot pay this gas in MON. Nothing was sent.'
+          : 'This wallet cannot authorize USDC gas. Fund MON to send it from your wallet.',
+      )
     if (
       authorization !== undefined &&
       (authorization.chainId !== deployment.chainId ||
@@ -188,9 +235,10 @@ export class BrowserUserOp {
       authorization,
       sponsor: this.deps.sponsor,
       minCallGas: this.deps.minCallGas,
+      payment,
     })
     await this.deps.guard()
-    this.#validate(built)
+    this.#validate(built, payment)
     this.#update({ built })
   }
   #now() {
@@ -200,8 +248,7 @@ export class BrowserUserOp {
     if (record.aa!.built !== undefined) return restoreBuilt(record.aa!)
     const built = this.#view.built
     if (built === null) throw new Error('Review the gas cost first.')
-    const gas =
-      this.deps.sponsor === 'faucet' ? 'Testnet faucet gas is covered; no MON needed' : maxCostCopy(built.maxCost)
+    const gas = this.deps.sponsor === 'faucet' ? 'Testnet faucet gas is covered; no MON needed' : userOpCostCopy(built)
     const description = `${this.deps.txs.map((tx) => tx.description).join('; ')}. ${gas}.`
     const signature = await this.deps.sign(
       sdk.delegatorTypedData(built.op, built.chainId, built.entryPoint),
@@ -217,7 +264,7 @@ export class BrowserUserOp {
       record = await this.#record()
     }
     const built = await this.#signed(record)
-    this.#validate(built)
+    this.#validate(built, lane(record.aa!))
     await this.deps.guard()
     const block =
       record.aa!.block ??
@@ -228,7 +275,13 @@ export class BrowserUserOp {
       ...record,
       batch: true,
       from: built.op.sender,
-      aa: { actionId: record.aa!.actionId, built: storeBuilt(built), submittedAt: this.#now(), block },
+      aa: {
+        actionId: record.aa!.actionId,
+        ...paymentOf(record.aa!),
+        built: storeBuilt(built),
+        submittedAt: this.#now(),
+        block,
+      },
     }
     await this.#write(next)
     this.#update({ built, pending: true })

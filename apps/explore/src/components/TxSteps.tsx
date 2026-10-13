@@ -16,7 +16,8 @@ import { batchGasLimit, gasLimit } from '../gas.ts'
 import { sidequest } from '../sidequest.ts'
 import { friendlyError } from '../txErrors.ts'
 import { useLiveSponsorship } from '../sponsor.ts'
-import { chain, wagmiConfig, writesOpen } from '../wallet.ts'
+import { atomicRefusal } from '../aa-mode.ts'
+import { chain, deployment, wagmiConfig, writesOpen } from '../wallet.ts'
 import { LaunchNotice } from './LaunchGate.tsx'
 import { usePrivyBatch } from './Privy.tsx'
 import {
@@ -91,7 +92,10 @@ const LABEL: Record<Status['at'], string> = {
   failed: 'Failed · retry below',
 }
 
-/** Browser actions select USDC user operations or MON transactions, preserving the original action journal. */
+/**
+ * Browser actions select user operations (gas in USDC, or in MON with no paymaster) or MON transactions, preserving the
+ * original action journal.
+ */
 export { BrowserTxSteps as TxSteps } from './BrowserTxSteps.tsx'
 
 export type TxStepsProps = {
@@ -537,9 +541,8 @@ export function MonTxSteps({
     if (!writesOpen || journalError !== null) return
     // Another tab may have broadcast while this mounted instance still showed idle.
     const authoritative = (await loadDurable(requireJournal)) ?? record
-    if (authoritative.aa != null) throw new Error('A USDC operation is saved for this action. Reload to reconcile it.')
-    if (requireAtomic && batch === null)
-      throw new Error('This action needs one atomic batch. Add USDC and use your Sidequest wallet.')
+    if (authoritative.aa != null) throw new Error('A user operation is saved for this action. Reload to reconcile it.')
+    if (requireAtomic && batch === null) throw new Error(atomicRefusal(deployment.aa))
     syncRecord(authoritative)
     // A relay retry asks about the same saved operation before following its hash. Its nonce may have been
     // consumed by a replacement, in which case receipt-only polling would never discover the safe fallback.

@@ -39,6 +39,13 @@ describe('user-operation journal', () => {
     expect(restoreBuilt(parsed)).toEqual(built)
   })
 
+  it('keeps a MON-paid lane and refuses any other payment value', () => {
+    const saved = { actionId, payment: 'native', built: storeBuilt(built), submittedAt: 123_000, block: '0x10' }
+    expect(decodeAaJournal(JSON.parse(JSON.stringify(saved))).payment).toBe('native')
+    expect(decodeAaJournal({ actionId }).payment).toBeUndefined()
+    expect(() => decodeAaJournal({ actionId, payment: 'usdc' })).toThrow()
+  })
+
   it('keeps the action lane and hash across reloads in the existing durable journal', () => {
     const values = new Map<string, string>()
     const storage = {

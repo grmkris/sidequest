@@ -41,6 +41,8 @@ const StoredBuilt = Schema.Struct({
 })
 const AaRecord = Schema.Struct({
   actionId: Schema.String.pipe(Schema.check(Schema.makeFilter((value) => value.length > 0))),
+  /** The action's gas lane, chosen when it was first saved: MON-paid (no paymaster), or USDC when absent. */
+  payment: Schema.optionalKey(Schema.Literals(['native'])),
   built: Schema.optionalKey(StoredBuilt),
   submittedAt: Schema.optionalKey(Natural),
   block: Schema.optionalKey(Quantity),
