@@ -121,6 +121,13 @@ export type TxStepsProps = {
   onSafeToRestartChange?: (safe: boolean) => void
   /** A step failed and nothing is in flight: what it says, so a caller can start over instead of sending it again. */
   onFailure?: (error: string) => void
+  /**
+   * `inline`: one status line for a single transaction shown inside its caller's own card (a SIDE trade), without the
+   * numbered step list. A failure nothing is in flight for is left to `onFailure`, with no Try again of its own.
+   */
+  presentation?: 'steps' | 'inline'
+  /** What each state says, where the caller can say it better than the generic step labels. */
+  labels?: Partial<Record<Status['at'], string>>
   reportToBoard?: boolean
   autoStart?: boolean
   retainRecord?: boolean
@@ -151,6 +158,8 @@ export function MonTxSteps({
   onBusyChange,
   onSafeToRestartChange,
   onFailure,
+  presentation = 'steps',
+  labels,
   reportToBoard = true,
   autoStart = false,
   retainRecord = false,
@@ -797,6 +806,17 @@ export function MonTxSteps({
   }
 
   const rows = txs
+  const inline = presentation === 'inline'
+  /** What a step's state says: the relay's, a batch's, a chain check's, or the caller's or generic label. */
+  const stepLabel = (s: Status): string => {
+    if (record.sponsored === true && SPONSORED_LABEL[s.at] !== undefined) return SPONSORED_LABEL[s.at]!
+    if (record.batch && s.at === 'idle') return `Waiting · ${txs.length} steps as one transaction`
+    if (s.at === 'uncertain' && s.checking === true)
+      return record.sponsored === true ? 'Checking with Sidequest…' : 'Checking the chain…'
+    return labels?.[s.at] ?? LABEL[s.at]
+  }
+  // Inline, a failure the caller starts over from (`onFailure`) shows neither its alert nor a Try again here.
+  const handedBack = inline && current?.at === 'failed' && safeToRestart
 
   return (
     <div className="grid gap-3">
@@ -879,7 +899,8 @@ export function MonTxSteps({
           )}
         </div>
       )}
-      <ItemGroup>
+      {inline && <InlineStep s={current ?? status.at(-1) ?? { at: 'idle' }} label={stepLabel} />}
+      <ItemGroup className={cn(inline && 'hidden')}>
         {rows.map((tx, i) => {
           const s = status[record.batch || record.sponsored === true ? 0 : i] ?? { at: 'idle' }
           return (
@@ -896,15 +917,7 @@ export function MonTxSteps({
                 </span>
                 {
                   <span className="flex flex-wrap items-center gap-x-2 text-ui text-muted-foreground">
-                    {record.sponsored === true && SPONSORED_LABEL[s.at] !== undefined
-                      ? SPONSORED_LABEL[s.at]
-                      : record.batch && s.at === 'idle'
-                        ? `Waiting · ${txs.length} steps as one transaction`
-                        : s.at === 'uncertain' && s.checking === true
-                          ? record.sponsored === true
-                            ? 'Checking with Sidequest…'
-                            : 'Checking the chain…'
-                          : LABEL[s.at]}
+                    {stepLabel(s)}
                     {'hash' in s && s.hash !== undefined && <TxLink hash={s.hash} />}
                   </span>
                 }
@@ -913,7 +926,7 @@ export function MonTxSteps({
           )
         })}
       </ItemGroup>
-      {current?.at === 'failed' && (
+      {current?.at === 'failed' && !handedBack && (
         <Alert variant="destructive">
           <AlertDescription>{current.error}</AlertDescription>
         </Alert>
@@ -923,7 +936,7 @@ export function MonTxSteps({
           <AlertDescription>{current.reportError}</AlertDescription>
         </Alert>
       )}
-      {!allDone && current !== undefined && current.at !== 'uncertain' && (
+      {!allDone && current !== undefined && current.at !== 'uncertain' && !handedBack && !(inline && busy) && (
         <Button
           size="lg"
           busy={busy}
@@ -970,6 +983,17 @@ export function MonTxSteps({
         </Button>
       )}
     </div>
+  )
+}
+
+/** One line for a single transaction inside its caller's card: what is happening now, and its transaction. */
+function InlineStep({ s, label }: { s: Status; label: (s: Status) => string }) {
+  return (
+    <output className="flex min-h-11 items-center gap-3 rounded-xl bg-muted/60 px-4 py-2.5 text-sm">
+      <StepIcon n={1} s={s} />
+      <span className="min-w-0 flex-1 text-pretty">{label(s)}</span>
+      {'hash' in s && s.hash !== undefined && <TxLink hash={s.hash} />}
+    </output>
   )
 }
 

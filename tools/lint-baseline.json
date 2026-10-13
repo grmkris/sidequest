@@ -530,7 +530,7 @@
   },
   "apps/explore/src/components/TxSteps.tsx": {
     "anti-slop(require-safety-comment-for-type-assertion)": 5,
-    "complexity(complexity)": 4,
+    "complexity(complexity)": 3,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "jsx-a11y(prefer-tag-over-role)": 3,

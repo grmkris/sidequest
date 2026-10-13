@@ -269,11 +269,13 @@ function UserOpSteps(props: OpProps) {
       : 'Confirm in your wallet'
   return (
     <div className="grid gap-3">
-      <ol className="grid gap-2">
-        {props.txs.map((tx, index) => (
-          <li key={`${index}:${tx.to}:${tx.data}`}>{tx.description}</li>
-        ))}
-      </ol>
+      {props.presentation !== 'inline' && (
+        <ol className="grid gap-2">
+          {props.txs.map((tx, index) => (
+            <li key={`${index}:${tx.to}:${tx.data}`}>{tx.description}</li>
+          ))}
+        </ol>
+      )}
       {view.built !== null && (
         <p className="text-sm text-muted-foreground">
           {props.sponsor === 'faucet' ? 'No MON needed. Faucet gas is covered on testnet.' : userOpCostCopy(view.built)}

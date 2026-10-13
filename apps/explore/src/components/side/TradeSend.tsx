@@ -211,17 +211,23 @@ export function SavedTrade({
   onFailure: (reason: string) => void
 }) {
   const [safe, setSafe] = useState(false)
+  const buy = trade.trade === 'buy'
   const out = formatAmount(BigInt(trade.out), 18)
+  const paid = buy ? formatAmount(BigInt(trade.txs[0]?.value ?? '0'), 18) : null
   return (
     <div className="grid gap-3">
-      {!fresh && (
-        <p className="text-ui text-pretty text-muted-foreground">
-          {trade.trade === 'buy'
-            ? `Your earlier buy of about ${out} SIDE`
-            : `Your earlier sale for about ${out} ${MON}`}{' '}
-          hasn’t settled yet. You can trade again once it does.
+      <div className="grid gap-0.5">
+        <p className="text-base font-semibold text-pretty tabular-nums">
+          {buy ? `Buying about ${out} SIDE` : `Selling SIDE for about ${out} ${MON}`}
         </p>
-      )}
+        <p className="text-ui text-pretty text-muted-foreground tabular-nums">
+          {fresh
+            ? paid === null
+              ? 'Through nad.fun, from your wallet.'
+              : `For ${paid} ${MON}, through nad.fun.`
+            : 'Started earlier and not settled yet. You can trade again once it settles.'}
+        </p>
+      </div>
       <TxSteps
         key={trade.id}
         taskId={sideTradeTaskId(trade.id)}
@@ -240,6 +246,15 @@ export function SavedTrade({
         onSafeToRestartChange={setSafe}
         onFailure={onFailure}
         onDone={onDone}
+        presentation="inline"
+        labels={{
+          idle: 'Not sent yet',
+          signing: 'Confirm in your wallet…',
+          sent: buy ? 'Buying on nad.fun…' : 'Selling on nad.fun…',
+          confirmed: 'Confirmed',
+          recorded: 'Confirmed',
+          failed: 'Didn’t go through',
+        }}
       />
       {safe && (
         <Button variant="link" className="justify-self-start" onClick={onDiscard}>
