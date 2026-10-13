@@ -4,6 +4,7 @@
   "roles": {
     "admin": "0xe5B7054e177e833D63f8d0548ffa9ecfC4289A71",
     "relay": "0xC4173dBC98ffd6F5785E8Fba85E9e5bd8b3F5058",
+    "retiredRelays": ["0xa6D3eC73053152221af873789aEd179E506b1F0E"],
     "attester": "0x4fDeda60bF7A9fDa470E4a171f1210CF5542a8FB",
     "arbitrator": "0x96eE4e1660744A4dE92D9E22476C501063524716"
   },

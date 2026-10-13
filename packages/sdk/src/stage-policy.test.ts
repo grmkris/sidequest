@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest'
-import { authorityPolicy, RELAY_ADDRESSES } from '../scripts/privy/policy.ts'
+import { authorityPolicy, config, RELAY_ADDRESSES } from '../scripts/privy/policy.ts'
 import { stageProfile } from '../../../infra/stage.ts'
-test('routine Privy policy permits exactly the two stage relays', () => {
+test('routine testnet Privy policy permits dev relay and the retired prod-testnet relay', () => {
   const delegationRule = authorityPolicy('admin', 'monad-testnet').rules.find(
     (candidate) => candidate.name === 'Allow Delegation',
   )!
@@ -9,5 +9,7 @@ test('routine Privy policy permits exactly the two stage relays', () => {
     operator: 'in',
     value: [...RELAY_ADDRESSES],
   })
-  expect(RELAY_ADDRESSES).toEqual([stageProfile('dev')!.relay, stageProfile('prod')!.relay])
+  // Prod moved to mainnet on 13 Oct and has no relay; the live testnet policy still names its old one.
+  expect(stageProfile('prod')!.relay).toBeUndefined()
+  expect(RELAY_ADDRESSES).toEqual([stageProfile('dev')!.relay, ...config.roles.retiredRelays])
 })

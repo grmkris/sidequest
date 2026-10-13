@@ -21,18 +21,20 @@ test('Commons is enabled by validated dev roles and absent in prod', () => {
     expect(() => validateStageProfile({ ...stageProfile('dev'), roles }, 'dev')).toThrow()
 })
 
-test('dev and prod dry profiles own distinct resources/domains on the same testnet deployment', () => {
+test('dev (testnet) and prod (mainnet since 13 Oct) profiles own distinct resources and domains', () => {
   for (const stage of ['dev', 'prod'] as const) {
     const p = stageProfile(stage)!
-    expect(p.network).toBe('monad-testnet')
-    expect(p.chainId).toBe(10143)
+    expect(p.network).toBe(stage === 'dev' ? 'monad-testnet' : 'monad-mainnet')
+    expect(p.chainId).toBe(stage === 'dev' ? 10143 : 143)
     expect(p.resources.Api).toBe(`sidequest-api-${stage}`)
     expect(p.resources.Database).toBe(`sidequest-${stage}-db`)
     expect(new URL(p.origin).hostname).toBe(stage === 'dev' ? 'dev.sidequest.exchange' : 'sidequest.exchange')
-    expect(deploymentFromConfig(p.network, testnet as unknown as DeploymentConfig).stacks.main?.holding).toBe(
-      testnet.deployment.main.holding,
-    )
   }
+  const dev = stageProfile('dev')!
+  expect(deploymentFromConfig(dev.network, testnet as unknown as DeploymentConfig).stacks.main?.holding).toBe(
+    testnet.deployment.main.holding,
+  )
+  expect(stageProfile('prod')!.relay).toBeUndefined()
   expect(stageProfile('local')).toBeUndefined()
   expect(() => stageProfile('staging')).toThrow('Unknown')
 })
@@ -93,7 +95,13 @@ test('live gate requires the matching stage, remote state, migrations, and compl
 test('testnet prod checks chain, stage signer keys and all four owners without mainnet clocks', async () => {
   const relayKey = `0x${'1'.repeat(64)}` as const,
     attesterKey = `0x${'2'.repeat(64)}` as const
-  const p = { ...stageProfile('prod')!, relay: privateKeyToAccount(relayKey).address }
+  // Prod runs mainnet since 13 Oct; this is the testnet-prod path (prod on testnet, as before the launch).
+  const p = {
+    ...stageProfile('prod')!,
+    network: 'monad-testnet' as const,
+    chainId: 10143,
+    relay: privateKeyToAccount(relayKey).address,
+  }
   const config = { ...testnet, roles: { ...testnet.roles, attester: privateKeyToAccount(attesterKey).address } }
   const signerKey = `0x${'3'.repeat(64)}` as const
   const env = {

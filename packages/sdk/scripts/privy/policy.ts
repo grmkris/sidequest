@@ -3,7 +3,6 @@ import { type Abi, type AbiFunction, erc20Abi, isAddress, parseAbi, toHex, zeroA
 import { coreAbi, sidequestEvaluatorAbi, sidequestHoldingAbi, stakeVaultAbi } from '../../src/abi/index.ts'
 import { DELEGATION_TYPES, delegationManagerAbi } from '../../src/delegation/index.ts'
 import { directoryDomainFields, directoryDomainName, directoryRecordFields } from '../../src/directory.ts'
-import { stageProfile } from '../../../../infra/stage.ts'
 import { selectionTypes, setBudgetTypes, submitTypes } from '../../src/typed-data.ts'
 import { deployment, type Deployment, type Network } from '../../src/deployment.ts'
 
@@ -121,10 +120,8 @@ export const transferWithAuthorizationTypes = {
 
 /** The most one x402 payment may move, in USDC base units (testnet and mainnet use the same cap). */
 export const X402_PAYMENT_CAP = '5000000'
-export const RELAY_ADDRESSES = [stageProfile('dev'), stageProfile('prod')]
-  .filter((profile) => profile?.network === 'monad-testnet')
-  .map((profile) => profile?.relay)
-  .filter((relay): relay is `0x${string}` => relay !== undefined)
+/** The relays the live testnet policy names: dev's, then prod-testnet's, retired when prod moved to mainnet (13 Oct). */
+export const RELAY_ADDRESSES: readonly `0x${string}`[] = [config.roles.relay, ...(config.roles.retiredRelays ?? [])]
 export const DIRECTORY_RECORD_KINDS = ['Enrollment', 'ServiceAd', 'RevokeAd'] as const
 
 function signingShapesFor(selected: PolicyConfig): readonly SigningShape[] {

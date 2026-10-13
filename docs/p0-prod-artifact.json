@@ -3,7 +3,7 @@
   "network": "monad-mainnet",
   "chainId": 143,
   "rpc": {
-    "url": "https://rpc.monad.xyz",
+    "url": "https://monad-mainnet.g.alchemy.com",
     "chainId": 143
   },
   "hyperSync": {

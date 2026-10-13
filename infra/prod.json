@@ -1,10 +1,9 @@
 {
   "product": "Sidequest",
   "stage": "prod",
-  "network": "monad-testnet",
-  "chainId": 10143,
+  "network": "monad-mainnet",
+  "chainId": 143,
   "origin": "https://sidequest.exchange",
-  "relay": "0xa6D3eC73053152221af873789aEd179E506b1F0E",
   "telegram": {
     "botUsername": "sidequest_exchange_bot"
   },
