@@ -128,8 +128,7 @@ secret_read() {
 }
 PWDIR=
 PWFILE=
-trap '[[ -z "$PWDIR" ]] || rm -rf "$PWDIR"' EXIT
-# One Keychain prompt per `send`: the password goes to a private temp file (foundry reads only regular files),
+# A Keychain prompt for each newly signed transaction: the password goes to a private temp file (foundry reads only regular files),
 # removed on exit.
 unlock() {
   PWDIR=$(mktemp -d "${TMPDIR:-/tmp}/sqkit.XXXXXX")
@@ -143,22 +142,9 @@ go_check() {
   [[ "${MAINNET_GO:-}" == yes ]] || die "a mainnet send needs MAINNET_GO=yes, given only after Kris's go on the launch desk"
   [[ "$(jq -r .testnetOnly "$KIT_HOME/addresses.json")" != true ]] || die "these keystores were made by an agent for a testnet dry run"
 }
-# Estimate, then send from a kit keystore with a 25% gas margin (Monad charges the gas limit). Sets LAST_HASH.
+# Each send persists its operation and signed bytes before publishing; resumes reconcile the original transaction.
 LAST_HASH=
-send_tx() {
-  local name=$1 to=$2 value=$3 from est out status
-  shift 3
-  go_check
-  from=$(addr "$name")
-  est=$(cast estimate --rpc-url "$RPC" --from "$from" --value "$value" "$to" "$@") || die "the estimate reverted: not sent"
-  out=$(cast send --rpc-url "$RPC" --keystore "$KEYS/sidequest-$name" --password-file "$PWFILE" --value "$value" \
-    --gas-limit "$(calc "$est * 125 / 100")" --json "$to" "$@") || die "the send failed"
-  LAST_HASH=$(jq -r .transactionHash <<<"$out")
-  status=$(jq -r .status <<<"$out")
-  [[ "$status" == 0x1 || "$status" == 1 ]] || die "transaction $LAST_HASH reverted"
-  say "sent $LAST_HASH"
-  link tx "$LAST_HASH"
-}
+. "$ROOT/contracts/script/launch-kit-journal.sh"
 
 cmd_setup() {
   local agent=false json='{}' name pw out a
@@ -236,8 +222,9 @@ cmd_safe() {
   say "Creates a Safe v1.4.1 at $PREDICTED: one owner, $OWNER (the owner keystore), threshold 1, no module, no guard."
   [[ "${1:-}" == send ]] || return 0
   go_check
-  unlock owner
-  send_tx owner "$FACTORY" 0 'createProxyWithNonce(address,bytes,uint256)' "$(cfg .launchKit.safe.singletonL2)" "$SETUP" "$NONCE"
+  queue_tx owner "$FACTORY" 0 'createProxyWithNonce(address,bytes,uint256)' "$(cfg .launchKit.safe.singletonL2)" "$SETUP" "$NONCE"
+  PLAN_RESULT=$(jq -n --arg s "$PREDICTED" --arg o "$OWNER" '{file:"safe.json", record:{safe:$s, owner:$o}}')
+  execute_plan
   [[ "$(cast call --rpc-url "$RPC" "$PREDICTED" 'getThreshold()(uint256)')" == 1 ]] || die "Safe threshold is not 1"
   [[ "$(cast call --rpc-url "$RPC" "$PREDICTED" 'getModulesPaginated(address,uint256)(address[],address)' \
     0x0000000000000000000000000000000000000001 10 | head -1)" == "[]" ]] || die "the new Safe has a module"
@@ -319,8 +306,9 @@ cmd_token_send() {
   p="$STATE/token-plan.json"
   [[ "$(code_at "$(jq -r .predicted "$p")")" == 0x ]] || die "the predicted address already has code"
   token_simulate
-  unlock creator
-  send_tx creator "$(nadfun router)" "$VALUE" "$CREATE" "$PARAMS"
+  queue_tx creator "$(nadfun router)" "$VALUE" "$CREATE" "$PARAMS"
+  PLAN_RESULT=$(jq '{file:"token.json", record:(. + {token:.predicted})}' "$p")
+  execute_plan
   token=$(jq -r .predicted "$p")
   [[ "$(code_at "$token")" != 0x ]] || die "no code at $token after the send"
   [[ "$(cast call --rpc-url "$RPC" "$token" 'decimals()(uint8)')" == 18 ]] || die "decimals is not 18"
@@ -353,8 +341,8 @@ cmd_move() {
   say "Moves $(cast from-wei "$amount") SIDE from the creator $creator to the Safe $safe."
   [[ "${1:-}" == send ]] || return 0
   go_check
-  unlock creator
-  send_tx creator "$token" 0 'transfer(address,uint256)' "$safe" "$amount"
+  queue_tx creator "$token" 0 'transfer(address,uint256)' "$safe" "$amount"
+  execute_plan
   say "The Safe now holds $(cast from-wei "$(side_balance "$token" "$safe")") SIDE."
 }
 
@@ -373,9 +361,18 @@ cmd_accept() {
     return 0
   fi
   go_check
-  unlock owner
-  (cd "$ROOT/contracts" && NETWORK=$NETWORK MAINNET_GO=${MAINNET_GO:-} forge script script/SafeAccept.s.sol \
-    --rpc-url "$RPC" --keystore "$KEYS/sidequest-owner" --password-file "$PWFILE" --sender "$owner" --broadcast --slow)
+  local target current pending data sig key
+  sig=$(owner_signature "$owner")
+  data=$(cast calldata 'acceptOwnership()')
+  for key in .deployment.sidequest.vault .deployment.sidequest.feeSchedule .deployment.main.holding .deployment.main.evaluator; do
+    target=$(cfg "$key")
+    current=$(cast call --rpc-url "$RPC" "$target" 'owner()(address)')
+    [[ "$(lower "$current")" != "$(lower "$safe")" ]] || continue
+    pending=$(cast call --rpc-url "$RPC" "$target" 'pendingOwner()(address)')
+    [[ "$(lower "$pending")" == "$(lower "$safe")" ]] || die "$target is not pending to the Safe"
+    queue_tx owner "$safe" 0 "$EXEC" "$target" 0 "$data" 0 0 0 0 $ZERO $ZERO "$sig"
+  done
+  execute_plan
   (cd "$ROOT/contracts" && NETWORK=$NETWORK forge script script/SafeAccept.s.sol --sig 'check()' --rpc-url "$RPC")
 }
 
@@ -420,8 +417,8 @@ cmd_backing() {
   [[ "$mode" == send ]] || return 0
   go_check
   before=$(side_balance "$token" "$safe")
-  unlock owner
-  send_tx owner "$safe" 0 "$EXEC" "$multisend" 0 "$data" 1 0 0 0 $ZERO $ZERO "$sig"
+  queue_tx owner "$safe" 0 "$EXEC" "$multisend" 0 "$data" 1 0 0 0 $ZERO $ZERO "$sig"
+  execute_plan
   say "The Safe's free SIDE went from $(cast from-wei "$before") to $(cast from-wei "$(side_balance "$token" "$safe")")."
   for ((i = 0; i < rows; i++)); do
     account=$(jq -r ".[$i].account" "$file")
@@ -447,8 +444,8 @@ cmd_exit() {
       say "The exit-test wallet $who buys about $(cast from-wei "$quote") SIDE for $(cast from-wei "$amount") MON (at least $(cast from-wei "$min"))."
       [[ "$mode" == send ]] || return 0
       go_check
-      unlock exit-test
-      send_tx exit-test "$router" "$amount" 'buyWithNative((uint256,address,address,uint256))' "($min,$token,$who,$deadline)"
+      queue_tx exit-test "$router" "$amount" 'buyWithNative((uint256,address,address,uint256))' "($min,$token,$who,$deadline)"
+      execute_plan
       ;;
     sell)
       [[ -n "$amount" && "$amount" != all ]] && amount=$(cast to-wei "$amount") || amount=$(side_balance "$token" "$who")
@@ -458,9 +455,9 @@ cmd_exit() {
       say "The exit-test wallet $who sells $(cast from-wei "$amount") SIDE for about $(cast from-wei "$quote") MON (at least $(cast from-wei "$min")): approve, then sellToNative."
       [[ "$mode" == send ]] || return 0
       go_check
-      unlock exit-test
-      send_tx exit-test "$token" 0 'approve(address,uint256)' "$router" "$amount"
-      send_tx exit-test "$router" 0 'sellToNative((uint256,uint256,address,address,uint256))' "($amount,$min,$token,$who,$deadline)"
+      queue_tx exit-test "$token" 0 'approve(address,uint256)' "$router" "$amount"
+      queue_tx exit-test "$router" 0 'sellToNative((uint256,uint256,address,address,uint256))' "($amount,$min,$token,$who,$deadline)"
+      execute_plan
       ;;
     *) die "usage: exit buy|sell plan|send <amount>" ;;
   esac
@@ -494,8 +491,8 @@ cmd_bond() {
   say "Announce the change in Commons before sending."
   [[ "$mode" == send ]] || return 0
   go_check
-  unlock owner
-  send_tx owner "$safe" 0 "$EXEC" "$holding" 0 "$data" 0 0 0 0 $ZERO $ZERO "$sig"
+  queue_tx owner "$safe" 0 "$EXEC" "$holding" 0 "$data" 0 0 0 0 $ZERO $ZERO "$sig"
+  execute_plan
   say "minimumCreatorBond is now $(cast from-wei "$(num "$(cast call --rpc-url "$RPC" "$holding" 'minimumCreatorBond()(uint256)')")") SIDE."
 }
 
@@ -516,14 +513,21 @@ cmd_fund() {
   say "The Safe $safe sends $side SIDE to $to."
   [[ "$mode" == send ]] || return 0
   go_check
-  unlock owner
-  send_tx owner "$safe" 0 "$EXEC" "$token" 0 "$data" 0 0 0 0 $ZERO $ZERO "$sig"
+  queue_tx owner "$safe" 0 "$EXEC" "$token" 0 "$data" 0 0 0 0 $ZERO $ZERO "$sig"
+  execute_plan
   say "$to now holds $(cast from-wei "$(side_balance "$token" "$to")") SIDE; the Safe holds $(cast from-wei "$(side_balance "$token" "$safe")")."
 }
 
 # Guard every plan before simulations/uploads, independently of the selected network's approval guard.
 case "${1:-}" in
   safe|token|move|accept|backing|exit|bond|fund|balances) chain_check ;;
+esac
+
+case "${1:-}:${2:-}:${3:-}" in
+  safe:send:*|token:send:*|move:send:*|accept:send:*|backing:send:*|bond:send:*|fund:send:*|exit:*:send)
+    go_check
+    journal_begin "$@"
+    ;;
 esac
 
 case "${1:-}" in

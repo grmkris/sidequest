@@ -146,7 +146,19 @@ Each password is a login-Keychain item that trusts no application, so every read
 click **Allow**, never **Always Allow**. Back up each password into the Passwords app (`copy-password <name>`) and the
 keystores to an encrypted place (`backup <dir>`). A Claude Code session on the Mac runs every kit step twice:
 - `plan` reads, uploads and simulates, and signs nothing;
-- `send` re-checks, takes one Keychain prompt, sends, and reads the result back.
+- `send` re-checks, prompts Keychain for each newly signed transaction, sends, and reads the result back.
+
+Every plan and send requires the RPC's chain ID to match the selected config. Economic kit sends save an immutable
+operation plan and each signed `cast mktx` transaction (hash, sender, nonce and exact bytes) under
+`$KIT_HOME/<network>/operations/` before `cast publish`. After an interruption, rerun the original command with the same
+arguments and backing file: the kit reads the original receipt and sender nonce, adopts a landed transaction, or
+republishes the same bytes if the nonce remains unspent. A spent nonce without the original receipt stops the kit;
+reconcile the hash and replacement before proceeding. Never delete or edit a journal to retry. An unchanged command
+also reconciles after completion; for a deliberately new identical payment, use a fresh `KIT_OPERATION=<label>` after
+the prior operation completes or its original transaction has a verified revert receipt. The original reverted operation
+always stops; a fresh label never bypasses an unresolved nonce or pending transaction. Keep the kit home, journals and plan files in the encrypted backup; saved transaction
+bytes are private and are never printed. Recovered sends confirm receipts; repeat the step's live custody/balance
+readbacks before continuing the launch.
 
 A mainnet `send` needs `MAINNET_GO=yes`, given only after Kris's go, and refuses keystores an agent made for a testnet
 dry run. The steps and their outputs pass through the myplan launch desk note (L0); Claude on this box checks each one
@@ -324,8 +336,9 @@ problem; stop. The one exception is `launch:relay at or below RELAY_FLOOR_MAINNE
 ### 3.6 The Safe accepts the four [tx]
 
 The Safe still has no module and no guard (§3.1). Pull the promotion commit on the Mac; the kit refuses unless the
-config's promoted Safe is its own. It runs `SafeAccept.s.sol` (one `execTransaction` per contract, the owner's
-pre-validated signature) from the owner keystore, with `MAINNET_GO`:
+config's promoted Safe is its own. The plan runs `SafeAccept.s.sol`'s non-broadcasting simulation without `MAINNET_GO`.
+The send journals the same one `execTransaction` per contract and owner pre-validated signature, signs from the owner
+keystore with `MAINNET_GO`, publishes the saved bytes, and uses `SafeAccept.s.sol` to verify the four owners:
 
 ```
 NETWORK=monad-mainnet contracts/script/launch-kit.sh accept plan

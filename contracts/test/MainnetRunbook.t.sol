@@ -20,6 +20,7 @@ contract MainnetRunbookTest is Test {
         doc = vm.readFile(string.concat(vm.projectRoot(), "/../docs/mainnet-runbook.md"));
         r7 = vm.readFile(string.concat(vm.projectRoot(), "/script/rehearse-launch.sh"));
         kit = vm.readFile(string.concat(vm.projectRoot(), "/script/launch-kit.sh"));
+        kit = string.concat(kit, "\n", vm.readFile(string.concat(vm.projectRoot(), "/script/launch-kit-journal.sh")));
     }
 
     /// The forge steps both documents share, in launch order.
@@ -36,12 +37,26 @@ contract MainnetRunbookTest is Test {
         runbook[2] = KIT_ACCEPT;
         _inOrder(doc, runbook, "runbook");
         _inOrder(r7, _sharedSteps(), "rehearse-launch.sh");
-        // The kit's accept is R7's SafeAccept.s.sol, broadcast with MAINNET_GO from the owner keystore.
+        // The kit journals the same per-target Safe calls R7 broadcasts through SafeAccept.s.sol, then reads owners.
         string[] memory accept = new string[](3);
-        accept[0] = "MAINNET_GO=${MAINNET_GO:-} forge script script/SafeAccept.s.sol";
-        accept[1] = "--keystore \"$KEYS/sidequest-owner\" --password-file \"$PWFILE\"";
+        accept[0] = "queue_tx owner \"$safe\" 0 \"$EXEC\" \"$target\" 0 \"$data\"";
+        accept[1] = "execute_plan";
         accept[2] = "forge script script/SafeAccept.s.sol --sig 'check()'";
         _inOrder(kit, accept, "launch-kit.sh");
+    }
+
+    /// Launch review #5: signed transaction bytes and operation identity are durable before publish, and retries
+    /// reconcile receipts/nonce before replaying the same bytes. Dynamic command inputs are never rebuilt on a retry.
+    function test_launchKitPersistsBeforePublishAndReconcilesBeforeRetry() public view {
+        assertFalse(vm.contains(kit, "cast send --rpc-url"), "unjournaled launch-kit send");
+        assertTrue(vm.contains(kit, "cast mktx --rpc-url \"$RPC\" --chain \"$CHAIN\" --nonce \"$nonce\""));
+        assertTrue(vm.contains(kit, "journal_save \"$file\""), "signed transaction not persisted");
+        assertTrue(vm.contains(kit, "cast publish --rpc-url \"$RPC\" --json \"$raw\""));
+        assertTrue(vm.contains(kit, "cast receipt --async --rpc-url \"$RPC\" --json \"$hash\""));
+        assertTrue(vm.contains(kit, "cast nonce --rpc-url \"$RPC\" --block latest \"$from\""));
+        assertTrue(vm.contains(kit, "saved operation differs"));
+        assertTrue(vm.contains(kit, "sender nonce $nonce is spent"));
+        assertTrue(vm.contains(doc, "KIT_OPERATION"), "runbook does not explain intentional repeated operations");
     }
 
     /// 12 Oct: the Safe owner, creator and exit-test keys sign on Kris's MacBook through the kit. Every password read is a
