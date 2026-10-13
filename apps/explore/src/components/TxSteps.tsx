@@ -118,6 +118,8 @@ export type TxStepsProps = {
   canSend?: boolean
   onBusyChange?: (busy: boolean) => void
   onSafeToRestartChange?: (safe: boolean) => void
+  /** A step failed and nothing is in flight: what it says, so a caller can start over instead of sending it again. */
+  onFailure?: (error: string) => void
   reportToBoard?: boolean
   autoStart?: boolean
   retainRecord?: boolean
@@ -147,6 +149,7 @@ export function MonTxSteps({
   canSend = true,
   onBusyChange,
   onSafeToRestartChange,
+  onFailure,
   reportToBoard = true,
   autoStart = false,
   retainRecord = false,
@@ -755,6 +758,10 @@ export function MonTxSteps({
   useEffect(() => {
     onSafeToRestartChange?.(safeToRestart)
   }, [safeToRestart, onSafeToRestartChange])
+  const failedWith = current?.at === 'failed' && safeToRestart ? current.error : null
+  useEffect(() => {
+    if (failedWith !== null) onFailure?.(failedWith)
+  }, [failedWith])
 
   // Mainnet before launch (D16): whatever page handed these over, nothing is sent or signed.
   if (!writesOpen) return <LaunchNotice />

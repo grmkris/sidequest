@@ -57,20 +57,38 @@ export function sideShort(needed: bigint | undefined, held: bigint | undefined):
 export type Edited = 'pay' | 'get'
 
 /**
+ * How far below the quote a trade may fill, in basis points. nad.fun's curve moves with every trade, and on a busy
+ * launch night 1% reverted a buy that took a minute to confirm, so the card starts at 3%.
+ */
+export const SLIPPAGES = [100, 300, 500] as const
+export type Slippage = (typeof SLIPPAGES)[number]
+export const DEFAULT_SLIPPAGE: Slippage = 300
+
+/** A slippage as the card shows it: "3%". */
+export const slippageText = (bps: number) => `${bps / 100}%`
+
+/**
  * What a two-way trade sends. Typed on "You pay": that amount goes in, and the quote (getAmountOut) is what comes back.
- * Typed on "You get": the quote (getAmountIn) goes in, and the typed amount is what comes back. The floor is always 1%
- * under what comes back. Null until both the amount and its quote are known.
+ * Typed on "You get": the quote (getAmountIn) goes in, and the typed amount is what comes back. The floor is the chosen
+ * slippage under what comes back. Null until both the amount and its quote are known.
  */
 export function tradeAmounts(input: {
   edited: Edited
   typed: bigint | null
   quoted: bigint | undefined
+  slippageBps: number
 }): { amountIn: bigint; expectedOut: bigint; minOut: bigint } | null {
   if (input.typed === null || input.quoted === undefined || input.quoted === 0n) return null
   const amountIn = input.edited === 'pay' ? input.typed : input.quoted
   const expectedOut = input.edited === 'pay' ? input.quoted : input.typed
-  return { amountIn, expectedOut, minOut: minOutFor(expectedOut) }
+  return { amountIn, expectedOut, minOut: minOutFor(expectedOut, input.slippageBps) }
 }
+
+/**
+ * Whether a trade still clears its floor at the router's price now: `now` is what `amountIn` returns at this moment. A
+ * trade that would not is refused before the wallet opens, so a stale quote costs no gas.
+ */
+export const quoteHolds = (amounts: { minOut: bigint }, now: bigint) => now >= amounts.minOut
 
 const UNIT = 10n ** 18n
 

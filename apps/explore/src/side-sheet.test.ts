@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { fillText, sideRequest, sideShort, sideTrade, tradeAmounts, wholeUp, withoutSide } from './side-sheet.ts'
+import {
+  DEFAULT_SLIPPAGE,
+  fillText,
+  quoteHolds,
+  sideRequest,
+  sideShort,
+  sideTrade,
+  slippageText,
+  tradeAmounts,
+  wholeUp,
+  withoutSide,
+} from './side-sheet.ts'
 
 const side = (n: bigint) => n * 10n ** 18n
 
@@ -38,25 +49,37 @@ describe('the SIDE sheet', () => {
     expect(sideShort(10n, undefined)).toBeNull()
   })
 
-  it('sends the typed amount in, or the quote in when the amount out was typed, always with a 1% floor', () => {
-    expect(tradeAmounts({ edited: 'pay', typed: 2_000n, quoted: 30_000n })).toEqual({
+  it('sends the typed amount in, or the quote in when the amount out was typed, with the chosen floor', () => {
+    expect(tradeAmounts({ edited: 'pay', typed: 2_000n, quoted: 30_000n, slippageBps: 100 })).toEqual({
       amountIn: 2_000n,
       expectedOut: 30_000n,
       minOut: 29_700n,
     })
-    expect(tradeAmounts({ edited: 'get', typed: 500_000n, quoted: 33_700n })).toEqual({
+    expect(tradeAmounts({ edited: 'get', typed: 500_000n, quoted: 33_700n, slippageBps: 100 })).toEqual({
       amountIn: 33_700n,
       expectedOut: 500_000n,
       minOut: 495_000n,
     })
-    expect(tradeAmounts({ edited: 'pay', typed: null, quoted: 1n })).toBeNull()
-    expect(tradeAmounts({ edited: 'get', typed: 5n, quoted: undefined })).toBeNull()
-    expect(tradeAmounts({ edited: 'get', typed: 5n, quoted: 0n })).toBeNull()
+    expect(tradeAmounts({ edited: 'pay', typed: null, quoted: 1n, slippageBps: 100 })).toBeNull()
+    expect(tradeAmounts({ edited: 'get', typed: 5n, quoted: undefined, slippageBps: 100 })).toBeNull()
+    expect(tradeAmounts({ edited: 'get', typed: 5n, quoted: 0n, slippageBps: 100 })).toBeNull()
+  })
+
+  it('starts at 3% and refuses, before the wallet opens, a quote the price has since moved past', () => {
+    expect(slippageText(DEFAULT_SLIPPAGE)).toBe('3%')
+    // 13 Oct, mainnet: 2.5M SIDE quoted at 206.22 MON; by the send the same MON bought ~2.5% less, under a 1% floor.
+    const typed = side(2_500_000n)
+    const tight = tradeAmounts({ edited: 'get', typed, quoted: side(206n), slippageBps: 100 })!
+    const roomy = tradeAmounts({ edited: 'get', typed, quoted: side(206n), slippageBps: DEFAULT_SLIPPAGE })!
+    expect(roomy.minOut).toBe(side(2_425_000n))
+    const now = side(2_437_500n)
+    expect(quoteHolds(tight, now)).toBe(false)
+    expect(quoteHolds(roomy, now)).toBe(true)
   })
 
   it('sells the SIDE that a typed amount of MON takes, keeping the floor on the MON', () => {
     // Typed "You get 0.5 MON" on a sale: getAmountIn quotes the SIDE that goes in.
-    expect(tradeAmounts({ edited: 'get', typed: 5n * 10n ** 17n, quoted: side(7_400n) })).toEqual({
+    expect(tradeAmounts({ edited: 'get', typed: 5n * 10n ** 17n, quoted: side(7_400n), slippageBps: 100 })).toEqual({
       amountIn: side(7_400n),
       expectedOut: 5n * 10n ** 17n,
       minOut: 495n * 10n ** 15n,

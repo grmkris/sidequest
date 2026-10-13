@@ -1,11 +1,18 @@
 import * as sdk from '@sidequest/sdk'
 import { describe, expect, it } from 'vitest'
-import { emptyJournal, readTxJournalDurable, txJournalKey, writeTxJournalDurable } from './components/txJournal.ts'
+import {
+  type OpRecord,
+  emptyJournal,
+  readTxJournalDurable,
+  txJournalKey,
+  writeTxJournalDurable,
+} from './components/txJournal.ts'
 import {
   type SideTradeIntent,
   clearSideTrade,
   loadSideTrade,
   saveSideTrade,
+  sideTradeEnded,
   sideTradeKey,
   sideTradeTaskId,
   sideTradeUnstarted,
@@ -136,5 +143,63 @@ describe('a SIDE trade from the sheet survives a reload', () => {
     s.local.clear()
     s.durable.set(key, JSON.stringify({ ...buy, txs: [] }))
     await expect(loadSideTrade(s.storage, key, s.checkpoint)).rejects.toThrow('unreadable')
+  })
+})
+
+/** A saved trade whose send journal reads `record`. */
+async function journal(s: ReturnType<typeof store>, trade: SideTradeIntent, record: Partial<OpRecord>) {
+  await saveSideTrade(s.storage, key, trade, s.checkpoint)
+  await writeTxJournalDurable(s.storage, journalOf(trade), { ...emptyJournal(), ...record }, s.checkpoint)
+}
+
+describe('a SIDE trade that did not happen is over, and quoted afresh', () => {
+  it('ends a buy whose receipt reverted, naming the reverted transaction', async () => {
+    // 13 Oct, mainnet: the router refused a 2.5M buy on its 1% floor; the step was cleared and its receipt kept.
+    const s = store()
+    await journal(s, buy, { hashes: [null], recorded: [false], attempts: [3], reverted: [hash], from: owner })
+    expect(await sideTradeEnded(s.storage, buy, s.checkpoint)).toEqual({ tried: true, reverted: hash })
+  })
+
+  it('keeps a trade whose hash is not yet reconciled, or whose send is uncertain', async () => {
+    const s = store()
+    // The state that stuck the sheet: a mined hash, never recorded, reconciled before anything is decided.
+    await journal(s, buy, { hashes: [hash], recorded: [false], attempts: [3], from: owner })
+    expect(await sideTradeEnded(s.storage, buy, s.checkpoint)).toBeNull()
+    await writeTxJournalDurable(
+      s.storage,
+      journalOf(buy),
+      { ...emptyJournal(), pending: 0, snapshot: { nonce: 3, block: '100' }, attempts: [3], from: owner },
+      s.checkpoint,
+    )
+    expect(await sideTradeEnded(s.storage, buy, s.checkpoint)).toBeNull()
+  })
+
+  it('ends a trade refused in the wallet, and one saved but never offered to it', async () => {
+    const refused = store()
+    await journal(refused, buy, { hashes: [null], recorded: [], attempts: [3], from: owner })
+    expect(await sideTradeEnded(refused.storage, buy, refused.checkpoint)).toEqual({ tried: true, reverted: null })
+    const unsent = store()
+    await saveSideTrade(unsent.storage, key, buy, unsent.checkpoint)
+    expect(await sideTradeEnded(unsent.storage, buy, unsent.checkpoint)).toEqual({ tried: false, reverted: null })
+  })
+
+  it('finishes a sale whose approval landed, and ends one whose sale then reverted', async () => {
+    const s = store()
+    await journal(s, sell, { hashes: [hash, null], recorded: [true], attempts: [3], from: owner })
+    expect(await sideTradeEnded(s.storage, sell, s.checkpoint)).toBeNull()
+    const other = `0x${'33'.repeat(32)}` as const
+    await writeTxJournalDurable(
+      s.storage,
+      journalOf(sell),
+      { ...emptyJournal(), hashes: [hash, null], recorded: [true, false], attempts: [3, 4], reverted: [other] },
+      s.checkpoint,
+    )
+    expect(await sideTradeEnded(s.storage, sell, s.checkpoint)).toEqual({ tried: true, reverted: other })
+  })
+
+  it('leaves a finished trade to its done screen', async () => {
+    const s = store()
+    await journal(s, buy, { hashes: [hash], recorded: [true], attempts: [3], from: owner })
+    expect(await sideTradeEnded(s.storage, buy, s.checkpoint)).toBeNull()
   })
 })

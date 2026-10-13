@@ -108,6 +108,44 @@ export async function sideTradeUnstarted(
   )
 }
 
+/** A trade that ended without its effect: `tried` once the wallet was asked, `reverted` the last reverted receipt. */
+export interface SideTradeEnd {
+  tried: boolean
+  reverted: `0x${string}` | null
+}
+
+/**
+ * Whether a saved trade is over without having happened: nothing pending, no hash still unconfirmed, no sponsorship, no
+ * built user operation, and not every step confirmed. Such a trade is cleared and quoted afresh, never sent again with
+ * its old floor and deadline. Null while anything may be in flight, for a finished trade, and for a half-done one.
+ */
+export async function sideTradeEnded(
+  storage: JournalStorage,
+  trade: SideTradeIntent,
+  checkpoint: VaultIntentCheckpoint = browserVaultIntentCheckpoint,
+): Promise<SideTradeEnd | null> {
+  const key = txJournalKey(sideTradeTaskId(trade.id), trade.txs)
+  const journal = await readTxJournalDurable(storage, key, true, checkpoint)
+  if (journal === null) return null
+  const confirmed = (i: number) => journal.recorded[i] === true
+  const steps = journal.batch ? 1 : trade.txs.length
+  const quiet =
+    journal.pending === null &&
+    journal.hashes.every((hash, i) => hash === null || confirmed(i)) &&
+    journal.sponsor == null &&
+    (journal.aa == null || journal.aa.built === undefined)
+  const indexes = Array.from({ length: steps }, (_, i) => i)
+  if (!quiet || indexes.every(confirmed)) return null
+  const reverted = journal.reverted?.at(-1) ?? null
+  const tried =
+    reverted !== null ||
+    (journal.effectFailures?.length ?? 0) > 0 ||
+    (journal.attempts ?? []).some((nonce, i) => nonce != null && !confirmed(i))
+  // A sale whose approval landed and whose sale was never asked for is half done, not over: it is finished instead.
+  if (!tried && indexes.some(confirmed)) return null
+  return { tried, reverted }
+}
+
 const text = (pattern: RegExp) => Schema.String.check(Schema.isPattern(pattern))
 const Decimal = text(/^\d+$/)
 const AddressText = text(/^0x[0-9a-fA-F]{40}$/)

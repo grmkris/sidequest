@@ -13,7 +13,18 @@ import { useBalance, useReadContract } from 'wagmi'
 import { useBondPolicy } from '../../bond-policy.ts'
 import { formatAmount } from '../../format.ts'
 import { publicKey } from '../../queries.ts'
-import { type Edited, type SideTrade, fillText, sideTrade, tradeAmounts, wholeUp } from '../../side-sheet.ts'
+import {
+  DEFAULT_SLIPPAGE,
+  type Edited,
+  SLIPPAGES,
+  type SideTrade,
+  type Slippage,
+  fillText,
+  sideTrade,
+  slippageText,
+  tradeAmounts,
+  wholeUp,
+} from '../../side-sheet.ts'
 import { stakeContext } from '../../stake-context.ts'
 import { chain, deployed, deployment, getSideLink, isMainnet, privyAppId, writesOpen } from '../../wallet.ts'
 import { GasWarning, SWAP_GAS } from '../GasWarning.tsx'
@@ -21,7 +32,7 @@ import { AddressRow, Segmented } from '../kit.tsx'
 import { AmountField } from '../money/AmountField.tsx'
 import { usePrivyAuthenticated } from '../Privy.tsx'
 import { TestnetFaucet } from '../TestnetFaucet.tsx'
-import { SavedTrade, useTradeSend } from './TradeSend.tsx'
+import { SavedTrade, TradeEndedNotice, useTradeSend } from './TradeSend.tsx'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
 import { useAuth } from '../Wallet.tsx'
@@ -123,20 +134,22 @@ function cantBuy(reserve: boolean): string {
 }
 
 /**
- * The card's form state: Buy or Sell, which side was typed, and the router's quote for the other side, with what the
- * trade would send. A shortfall pre-fills "You get" on Buy.
+ * The card's form state: Buy or Sell, which side was typed, the slippage, and the router's quote for the other side,
+ * with what the trade would send. The quote follows the curve every 10 s. A shortfall pre-fills "You get" on Buy.
  */
 function useTradeForm(l: sdk.Launcher | null, need: bigint | null) {
   const ctx = stakeContext()
   const [trade, setTrade] = useState<Trade>('buy')
   const [edited, setEdited] = useState<Edited>(need === null ? 'pay' : 'get')
   const [text, setText] = useState(need === null ? '' : fillText(wholeUp(need)))
+  const [slippage, setSlippage] = useState<Slippage>(DEFAULT_SLIPPAGE)
   const typed = useAmount(text)
   const quote = useQuery({
     queryKey: publicKey('launcher-quote', l?.router, trade, edited, typed?.toString()),
     queryFn: () =>
       edited === 'pay' ? sdk.launcherQuote(ctx, l!, trade, typed!) : sdk.launcherQuoteIn(ctx, l!, trade, typed!),
     enabled: deployed && l !== null && typed !== null,
+    refetchInterval: 10_000,
     retry: false,
   })
   const computed = quote.data === undefined ? '' : formatAmount(quote.data, 18)
@@ -145,8 +158,11 @@ function useTradeForm(l: sdk.Launcher | null, need: bigint | null) {
     edited,
     typed,
     quote,
-    amounts: tradeAmounts({ edited, typed, quoted: quote.data }),
-    quoting: typed !== null && quote.isFetching,
+    slippage,
+    setSlippage,
+    amounts: tradeAmounts({ edited, typed, quoted: quote.data, slippageBps: slippage }),
+    // A new amount is quoting; the 10 s refresh of one already quoted updates in place.
+    quoting: typed !== null && quote.isFetching && !quote.isRefetching,
     payText: edited === 'pay' ? text : computed,
     getText: edited === 'get' ? text : computed,
     type: (side: Edited, next: string) => {
@@ -242,6 +258,7 @@ export function TradeCard({
           form.clear()
         }}
         onDiscard={sending.discard}
+        onFailure={sending.failed}
       />
     )
   return <TradeForm l={l} address={address} form={form} sending={sending} onSignIn={onSignIn} />
@@ -272,7 +289,7 @@ function formView(state: SideTrade, form: ReturnType<typeof useTradeForm>, walle
     ready: state === 'trade' && amounts !== null && !short && !form.quoting,
     floor:
       amounts === null
-        ? 'Through nad.fun’s router, at most 1% below the quote.'
+        ? `Through nad.fun’s router, at most ${slippageText(form.slippage)} below the quote.`
         : `At least ${formatAmount(amounts.minOut, 18)} ${out}, through nad.fun’s router.`,
   }
 }
@@ -295,8 +312,13 @@ function TradeForm({
   const wallet = useWallet(l, address)
   const { trade, amounts } = form
   const view = formView(state, form, wallet)
+  // Back from a trade that didn't happen: price the same amount again now, not from the quote it was sent on.
+  useEffect(() => {
+    if (sending.ended !== null && form.typed !== null) void form.quote.refetch()
+  }, [sending.ended])
   return (
     <div className="grid gap-3">
+      {sending.ended !== null && <TradeEndedNotice ended={sending.ended} />}
       <Segmented
         label="Buy or sell SIDE"
         value={trade}
@@ -314,7 +336,7 @@ function TradeForm({
         <PayField form={form} side={l?.side ?? null} open={view.open} max={view.max} short={view.short} />
         <GetField form={form} side={l?.side ?? null} open={view.open} />
       </div>
-      <p className="text-ui text-pretty text-muted-foreground tabular-nums">{view.floor}</p>
+      <FloorRow floor={view.floor} slippage={form.slippage} onSlippage={form.setSlippage} />
       {view.noGas && address !== undefined ? (
         <div className="grid gap-2">
           <GasWarning
@@ -334,7 +356,8 @@ function TradeForm({
           busy={sending.preparing}
           onSignIn={onSignIn}
           onSend={() => {
-            if (amounts !== null) void sending.send(trade, amounts)
+            // A refused stale quote leaves the form: price it again at once rather than at the next refresh.
+            if (amounts !== null) void sending.send(trade, amounts).then(() => form.quote.refetch())
           }}
         />
       )}
@@ -344,6 +367,34 @@ function TradeForm({
         </Alert>
       )}
       {state === 'trade' && address !== undefined && <TestnetFaucet address={address} compact />}
+    </div>
+  )
+}
+
+/** The least the trade returns, beside how far under the quote it may fill. */
+function FloorRow({
+  floor,
+  slippage,
+  onSlippage,
+}: {
+  floor: string
+  slippage: Slippage
+  onSlippage: (next: Slippage) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <p className="min-w-0 flex-1 basis-48 text-ui text-pretty text-muted-foreground tabular-nums">{floor}</p>
+      <div className="flex items-center gap-2">
+        <span aria-hidden className="text-ui text-muted-foreground">
+          Slippage
+        </span>
+        <Segmented
+          label="Slippage"
+          value={String(slippage)}
+          options={SLIPPAGES.map((bps) => [String(bps), slippageText(bps)] as const)}
+          onChange={(next) => onSlippage(SLIPPAGES.find((bps) => String(bps) === next) ?? DEFAULT_SLIPPAGE)}
+        />
+      </div>
     </div>
   )
 }
