@@ -1,8 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { encodeFunctionData, toHex } from 'viem'
-import { type Json, executeCalldata, testnetFaucetAbi, toBundlerJson } from '@sidequest/sdk'
+import * as Schema from 'effect/Schema'
+import { encodeAbiParameters, encodeFunctionData, toHex } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import {
+  type Json,
+  buildUserOp,
+  delegatorTypedData,
+  executeCalldata,
+  nonceKey,
+  sendUserOp,
+  testnetFaucetAbi,
+  toBundlerJson,
+} from '@sidequest/sdk'
 import { AA_BODY_LIMIT, aaRpc, aaRpcRoute } from '../src/aa-proxy.ts'
-import { answering, mainnet, operation, sender, testnet, work } from './aa-fixtures.ts'
+import { answering, mainnet, operation, sender, signerKey, testnet, work } from './aa-fixtures.ts'
 
 const key = 'unit-pimlico-key'
 const bindings = { NETWORK: 'monad-mainnet', MONAD_RPC_URL: 'https://node.example/rpc', PIMLICO_API_KEY: key }
@@ -120,6 +131,84 @@ describe('AA provider adapters', () => {
       ]),
     ).rejects.toMatchObject({ code: 'refused' })
     expect(up.calls).toHaveLength(0)
+  })
+
+  it('forwards a MON-paid operation without paymaster fields on 143 and 10143, and refuses another EntryPoint', async () => {
+    const { paymaster: _p, paymasterVerificationGasLimit: _v, paymasterPostOpGasLimit: _o, ...self } = operation([work])
+    const selfPaid = toBundlerJson(self)
+    for (const [network, chainId] of [
+      ['monad-mainnet', 143],
+      ['monad-testnet', 10143],
+    ] as const) {
+      const entryPoint = network === 'monad-mainnet' ? mainnet.aa.entryPoint : testnet.aa!.entryPoint
+      const up = answering(`0x${'ab'.repeat(32)}`)
+      const env = { ...bindings, NETWORK: network }
+      const override = { [sender]: { balance: toHex(10n ** 24n) } }
+      for (const body of [
+        rpcBody('eth_estimateUserOperationGas', [selfPaid, entryPoint, override]),
+        rpcBody('eth_sendUserOperation', [selfPaid, entryPoint]),
+      ])
+        expect(await (await aaRpcRoute(request(body), env, {}, up.fetcher)).json()).toHaveProperty('result')
+      expect(up.calls.map((call) => call.method)).toEqual(['eth_estimateUserOperationGas', 'eth_sendUserOperation'])
+      expect(up.calls.every((call) => call.url.includes(`/v2/${chainId}/rpc?apikey=`))).toBe(true)
+      expect(up.calls[0]!.params).toEqual([selfPaid, entryPoint, override])
+      expect(up.calls[1]!.params).toEqual([selfPaid, entryPoint])
+      await expect(aaRpc(env, up.fetcher).bundler('eth_sendUserOperation', [selfPaid, work.to])).rejects.toMatchObject({
+        code: 'refused',
+        message: 'EntryPoint mismatch',
+      })
+      expect(up.calls).toHaveLength(2)
+    }
+  })
+
+  it("builds and sends the SDK's MON-paid operation through the proxy without one paymaster or sponsorship call", async () => {
+    const account = privateKeyToAccount(signerKey)
+    const nodeUrl = bindings.MONAD_RPC_URL
+    const calls: { url: string; method: string }[] = []
+    let sent: Json = null
+    const fetcher: typeof fetch = Object.assign(
+      async (input: string | URL | Request, init?: RequestInit) => {
+        // SAFETY: both adapters under test write a JSON-RPC body; this double reads only its method and params.
+        const body = JSON.parse(Schema.decodeUnknownSync(Schema.String)(init?.body)) as {
+          method: string
+          params: readonly Json[]
+        }
+        const url = Schema.decodeUnknownSync(Schema.String)(input)
+        calls.push({ url, method: body.method })
+        const result = (): Json => {
+          if (body.method === 'eth_getBalance') return toHex(20n * 10n ** 18n)
+          if (body.method === 'eth_call') return encodeAbiParameters([{ type: 'uint256' }], [0n])
+          if (body.method === 'pimlico_getUserOperationGasPrice')
+            return { fast: { maxFeePerGas: toHex(120n * 10n ** 9n), maxPriorityFeePerGas: toHex(10n ** 9n) } }
+          if (body.method === 'eth_estimateUserOperationGas')
+            return { callGasLimit: '0x30d40', verificationGasLimit: '0x1d4c0', preVerificationGas: '0x19000' }
+          if (body.method === 'eth_sendUserOperation') return sent
+          throw new Error(`unexpected ${body.method}`)
+        }
+        return Response.json({ jsonrpc: '2.0', id: 1, result: result() })
+      },
+      { preconnect: () => undefined },
+    )
+    const rpc = aaRpc({ ...bindings, NETWORK: 'monad-testnet' }, fetcher)
+    const built = await buildUserOp({
+      aa: testnet.aa!,
+      chainId: testnet.chainId,
+      ...rpc,
+      sender: account.address,
+      calls: () => [work],
+      nonceKey: nonceKey('mon-paid'),
+      payment: 'native',
+    })
+    sent = built.userOpHash
+    const signature = await account.signTypedData(delegatorTypedData(built.op, built.chainId, built.entryPoint))
+    expect(await sendUserOp(rpc.bundler, built, signature)).toBe(built.userOpHash)
+    expect(built.op.paymaster).toBeUndefined()
+    expect(calls.filter((call) => call.url !== nodeUrl).map((call) => call.method)).toEqual([
+      'pimlico_getUserOperationGasPrice',
+      'eth_estimateUserOperationGas',
+      'eth_sendUserOperation',
+    ])
+    expect(calls.some((call) => /^pm_|sponsor|getTokenQuotes/.test(call.method))).toBe(false)
   })
 
   it('returns unavailable when a required provider secret or testnet paymaster configuration is absent', async () => {

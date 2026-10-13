@@ -214,6 +214,8 @@ export function aaRpc(bindings: AaBindings, fetcher: typeof fetch = fetch): AaRp
     key === undefined || key === '' || key === 'unset' ? undefined : pimlicoUrl(d.chainId, key),
     fetcher,
   )
+  // Bundler methods check only the EntryPoint: a MON-paid operation (no paymaster fields) is forwarded as is, and no
+  // paymaster or sponsorship method is ever called for it.
   const bundler: JsonRpc = async (method, params) => {
     if (!METHODS.has(method) || PM_METHODS.has(method)) throw new AaError('refused', 'unsupported bundler method')
     if (method === 'eth_estimateUserOperationGas' || method === 'eth_sendUserOperation') checkedEntry(params, d, false)
