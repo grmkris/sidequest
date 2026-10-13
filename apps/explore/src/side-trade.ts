@@ -7,7 +7,9 @@
 import { Schema } from 'effect'
 import {
   type JournalStorage,
+  type OpRecord,
   initializeTxJournalDurable,
+  readTxJournal,
   readTxJournalDurable,
   txJournalKey,
 } from './components/txJournal.ts'
@@ -88,24 +90,61 @@ export async function clearSideTrade(
 }
 
 /**
+ * The trade's send journal, both copies: the durable checkpoint `saveSideTrade` commits first, and the localStorage
+ * copy TxSteps keeps afterwards (the trade's steps run without `durableJournal`, so every send after the first
+ * checkpoint lands only there). A check that read the checkpoint alone saw an empty journal after any send.
+ */
+async function tradeJournals(
+  storage: JournalStorage,
+  trade: SideTradeIntent,
+  checkpoint: VaultIntentCheckpoint,
+): Promise<OpRecord[]> {
+  const key = txJournalKey(sideTradeTaskId(trade.id), trade.txs)
+  const durable = await readTxJournalDurable(storage, key, true, checkpoint)
+  return [durable, readTxJournal(storage, key)].filter((journal) => journal !== null)
+}
+
+/** Where one copy of a trade's journal stands. */
+function progress(journal: OpRecord, steps: number) {
+  const confirmed = (i: number) => journal.recorded[i] === true
+  const indexes = Array.from({ length: steps }, (_, i) => i)
+  const reverted = journal.reverted?.at(-1) ?? null
+  return {
+    // Nothing went to the wallet or the bundler that is still unaccounted for: no pending send, no unconfirmed hash,
+    // no sponsorship and no built user operation (the user-op path keeps its state in the same record, `aa`).
+    quiet:
+      journal.pending === null &&
+      journal.hashes.every((hash, i) => hash === null || confirmed(i)) &&
+      journal.sponsor == null &&
+      (journal.aa == null || journal.aa.built === undefined),
+    unsent: journal.hashes.every((hash) => hash === null),
+    finished: indexes.every(confirmed),
+    started: indexes.some(confirmed),
+    tried:
+      reverted !== null ||
+      (journal.effectFailures?.length ?? 0) > 0 ||
+      (journal.attempts ?? []).some((nonce, i) => nonce != null && !confirmed(i)),
+    reverted,
+  }
+}
+
+const progressOf = async (storage: JournalStorage, trade: SideTradeIntent, checkpoint: VaultIntentCheckpoint) =>
+  (await tradeJournals(storage, trade, checkpoint)).map((journal) =>
+    progress(journal, journal.batch ? 1 : trade.txs.length),
+  )
+
+/**
  * Whether a trade's journal shows nothing went to the wallet or the bundler: no MON send pending or hashed, no
- * sponsorship, and no built user operation (the user-op path keeps its state in the same record, `aa`). Only then may
- * it be discarded; this mirrors TxSteps' own safe-to-restart rule for both paths.
+ * sponsorship, and no built user operation, in either copy. Only then may it be discarded; this mirrors TxSteps' own
+ * safe-to-restart rule for both paths.
  */
 export async function sideTradeUnstarted(
   storage: JournalStorage,
   trade: SideTradeIntent,
   checkpoint: VaultIntentCheckpoint = browserVaultIntentCheckpoint,
 ): Promise<boolean> {
-  const key = txJournalKey(sideTradeTaskId(trade.id), trade.txs)
-  const journal = await readTxJournalDurable(storage, key, true, checkpoint)
-  return (
-    journal !== null &&
-    journal.pending === null &&
-    journal.hashes.every((hash) => hash === null) &&
-    journal.sponsor == null &&
-    (journal.aa == null || journal.aa.built === undefined)
-  )
+  const all = await progressOf(storage, trade, checkpoint)
+  return all.length > 0 && all.every((copy) => copy.quiet && copy.unsent)
 }
 
 /** A trade that ended without its effect: `tried` once the wallet was asked, `reverted` the last reverted receipt. */
@@ -115,35 +154,21 @@ export interface SideTradeEnd {
 }
 
 /**
- * Whether a saved trade is over without having happened: nothing pending, no hash still unconfirmed, no sponsorship, no
- * built user operation, and not every step confirmed. Such a trade is cleared and quoted afresh, never sent again with
- * its old floor and deadline. Null while anything may be in flight, for a finished trade, and for a half-done one.
+ * Whether a saved trade is over without having happened: quiet in both copies of its journal, and not every step
+ * confirmed. Such a trade is cleared and quoted afresh, never sent again with its old floor and deadline. Null while
+ * anything may be in flight, for a finished trade, and for a half-done one (a sale whose approval landed and whose
+ * sale was never asked for, which is finished instead).
  */
 export async function sideTradeEnded(
   storage: JournalStorage,
   trade: SideTradeIntent,
   checkpoint: VaultIntentCheckpoint = browserVaultIntentCheckpoint,
 ): Promise<SideTradeEnd | null> {
-  const key = txJournalKey(sideTradeTaskId(trade.id), trade.txs)
-  const journal = await readTxJournalDurable(storage, key, true, checkpoint)
-  if (journal === null) return null
-  const confirmed = (i: number) => journal.recorded[i] === true
-  const steps = journal.batch ? 1 : trade.txs.length
-  const quiet =
-    journal.pending === null &&
-    journal.hashes.every((hash, i) => hash === null || confirmed(i)) &&
-    journal.sponsor == null &&
-    (journal.aa == null || journal.aa.built === undefined)
-  const indexes = Array.from({ length: steps }, (_, i) => i)
-  if (!quiet || indexes.every(confirmed)) return null
-  const reverted = journal.reverted?.at(-1) ?? null
-  const tried =
-    reverted !== null ||
-    (journal.effectFailures?.length ?? 0) > 0 ||
-    (journal.attempts ?? []).some((nonce, i) => nonce != null && !confirmed(i))
-  // A sale whose approval landed and whose sale was never asked for is half done, not over: it is finished instead.
-  if (!tried && indexes.some(confirmed)) return null
-  return { tried, reverted }
+  const all = await progressOf(storage, trade, checkpoint)
+  if (all.length === 0 || all.some((copy) => !copy.quiet || copy.finished)) return null
+  const tried = all.some((copy) => copy.tried)
+  if (!tried && all.some((copy) => copy.started)) return null
+  return { tried, reverted: all.findLast((copy) => copy.reverted !== null)?.reverted ?? null }
 }
 
 const text = (pattern: RegExp) => Schema.String.check(Schema.isPattern(pattern))

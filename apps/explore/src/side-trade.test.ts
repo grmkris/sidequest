@@ -5,6 +5,7 @@ import {
   emptyJournal,
   readTxJournalDurable,
   txJournalKey,
+  writeTxJournal,
   writeTxJournalDurable,
 } from './components/txJournal.ts'
 import {
@@ -195,6 +196,21 @@ describe('a SIDE trade that did not happen is over, and quoted afresh', () => {
       s.checkpoint,
     )
     expect(await sideTradeEnded(s.storage, sell, s.checkpoint)).toEqual({ tried: true, reverted: other })
+  })
+
+  it('reads the copy TxSteps writes: a stale checkpoint never hides a send, a revert or a finish', async () => {
+    // The trade's steps run without `durableJournal`: after saveSideTrade's empty checkpoint, sends land only locally.
+    const s = store()
+    await saveSideTrade(s.storage, key, buy, s.checkpoint)
+    const local = (record: Partial<OpRecord>) =>
+      writeTxJournal(s.storage, journalOf(buy), { ...emptyJournal(), ...record })
+    local({ hashes: [hash], recorded: [false], attempts: [3], from: owner })
+    expect(await sideTradeEnded(s.storage, buy, s.checkpoint)).toBeNull()
+    expect(await sideTradeUnstarted(s.storage, buy, s.checkpoint)).toBe(false)
+    local({ hashes: [null], recorded: [false], attempts: [3], reverted: [hash], from: owner })
+    expect(await sideTradeEnded(s.storage, buy, s.checkpoint)).toEqual({ tried: true, reverted: hash })
+    local({ hashes: [hash], recorded: [true], attempts: [3], from: owner })
+    expect(await sideTradeEnded(s.storage, buy, s.checkpoint)).toBeNull()
   })
 
   it('leaves a finished trade to its done screen', async () => {
