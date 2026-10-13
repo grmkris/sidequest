@@ -49,8 +49,11 @@ export interface TaskView {
 
 export const personas: Persona[] = personaFile.personas
 const TAGS: readonly string[] = sdk.JOB_TAGS
+// A hire-only member (Sidequest Desk) lists no services, so it is not offered as a worker.
 const listings = Object.values(crewJson.members)
-  .map((m) => `${m.name}: ${m.services.map((s) => s.name).join(', ')}`)
+  .flatMap((m) =>
+    'services' in m && m.services.length > 0 ? [`${m.name}: ${m.services.map((s) => s.name).join(', ')}`] : [],
+  )
   .join('\n')
 
 export function chooseKind(persona: Persona): Kind {
