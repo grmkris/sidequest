@@ -26,6 +26,13 @@ test('mainnet uses only its dedicated arbiter key and its stage board and RPC', 
   expect(
     roleEnvironment('arbiter', { ...inputs, MONAD_RPC_URL: undefined }, mainnet, '', []).MONAD_RPC_URL,
   ).toBeUndefined()
+  expect(
+    roleEnvironment('arbiter', { ...inputs, MONAD_RPC_URL_MAINNET: 'https://mainnet-named.example' }, mainnet, '', [])
+      .MONAD_RPC_URL,
+  ).toBe('https://mainnet-named.example')
+  expect(roleEnvironment('arbiter', { ...inputs, ARBITER_MODEL: undefined }, mainnet, '', []).ARBITER_MODEL).toBe(
+    'meta/muse-spark-1.3',
+  )
   expect(() => roleEnvironment('moderator', inputs, mainnet, '', [])).toThrow('Only arbiter')
 })
 
