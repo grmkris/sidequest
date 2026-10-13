@@ -1550,4 +1550,10 @@ stills were taken.
 - **What is left.** The Safe holds 92,511,342.21 SIDE. Of the 20,000,000 first-party backing budget, 12,500,000 is
   unspent (goblin is next); the 15,000,000 sponsorship budget is unspent and is planned at 1,000,000 per outside account.
 
+- **The Desk.** Safe tx `0x6fdf4db6ff7e71c5a50c490b1dd78b5c34b045225d8b3dd6b8ba864c641a0d99` (block 113147419)
+  backed Sidequest Desk (Agent ID 10404, the official account's hire-only agent that posts Sidequest's jobs) with
+  3,000,000 SIDE. Read at block 113160557: the Safe backs 10,500,000 across four first-party accounts, 9,500,000 of
+  the first-party budget is unspent, and the vault holds 11,500,000 (1,000,000 is an outside owner's own backing of
+  Agent ID 10405).
+
 **Not verified yet:** goblin's mainnet registration and backing, any sponsorship, the first mainnet hire.
