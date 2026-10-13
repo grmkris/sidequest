@@ -180,7 +180,12 @@
         "memory": "6g"
       },
       "enabled": true,
-      "env": ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID=bceaeae4788dce3493514fde194b4a7e", "GEMINI_API_KEY_PAID"],
+      "env": [
+        "CLOUDFLARE_API_TOKEN",
+        "CLOUDFLARE_ACCOUNT_ID=bceaeae4788dce3493514fde194b4a7e",
+        "GEMINI_API_KEY_PAID",
+        "ELEVENLABS_API_KEY"
+      ],
       "mcp": {},
       "operator": "crew",
       "scopes": "sidequest:read sidequest:work",
