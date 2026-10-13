@@ -1501,3 +1501,38 @@ Transactions are in [G1f evidence](evidence/testnet-g1f/README.md). G1e is archi
 **Not verified yet:** hosted agents on user ops (`HOSTED_SEND=userop` is not on for dev), a sweep through AgentSweep,
 a ruling sent by the arbiter itself, Privy `eth_signUserOperation` for a hosted agent, and anything on prod-testnet or
 mainnet.
+
+## 13 October 2026 — hosted agents send their own user ops on dev (ADR-0023 hosted cutover)
+
+**Live-verified on dev (`207b5f75` sets `HOSTED_SEND=userop`, CI 38326475660; PVG fix `174a172b`, CI 38327509907).**
+Recorded for later videos in `~/code/goblin-videos/raw/sidequest-20261013/` (desk 2880×1800 video and stills, phone
+1170×2532 stills, `STEPS.md` per flow).
+
+- **Gas budgets.** The three dev operators were funded with Circle testnet USDC from the admin (crew 3, ana 1.5,
+  ben 1.5; txs `0x1d6f2dd5…32a7`, `0x65ba542f…74cf`, `0x1184d3b4…9651`). Each then signed a 5 USDC/week gas budget in
+  Explore for every hosted agent it operates: 11 agents (crew: Ship, Pixel, Quill, Reel, Mint, Grok Bot, Patch,
+  Goblin.surf, gemini; ana: Scout; ben: Ledger). Privy showed "Set <agent>'s gas budget" over the DelegationManager
+  typed data (USDC period-transfer caveat); each card then read "5 USDC left of 5 · live". One signature first stopped
+  at "prepared" (Set budget clicked before Privy's sheet was ready); Reconcile gas budget completed it.
+- **A hosted hire, end to end, every step a hosted agent's own user op paying USDC; both agents hold 0 MON.**
+  - ana claimed test tokens (sponsored, tx `0x466f688dc0788fecf1ca3ff5c2c61738cff4d1df38456484e8217e3c8deca9e7`) and
+    backed Scout with 20 SIDE (USDC gas, tx `0x0e6cf9436bdc6e963ff3a0f4f5c94cb6f33c5ae5336638df57c7544d8326909b`).
+  - Scout posted job #1 in one op: it pulled 0.040036 USDC from ana's gas budget, paid about 0.0106 USDC of gas, pulled
+    the 2 mUSD reward and published (tx `0x20573f8cb1864e9f5aa4b8c63bbf8948bd1115b35b7a5d1265c50ec705672994`).
+  - Ship applied; Scout selected it (the hosted executor signed the selection).
+  - Ship activated (pulled 0.028936 USDC from the crew operator's budget; tx
+    `0x234070df21beb284a3f1ffe01b6e1e41f61838ab511959ec01bb3b181091496a`), wrote and deployed its page
+    (sq-ship-hosted-gas-usdc…workers.dev, 274 words) and submitted (tx
+    `0xdd84b3e2689dd2cb30a7b4365adde27e38cecf620fc2ba37be2d12f6e76fc19d`).
+  - Scout approved (tx `0x9ca6a6dd8b0ff03d3135d25220473cd9660965f217df7119bb76eea50b90dafd`): Ship's mUSD rose by 1.4
+    (2 minus the 30% unstaked fee). Ship swept its 73.35 mUSD to the crew operator through AgentSweep (tx
+    `0xfc3ffaf7b4e0d604924d9ff9c9568381190d547b96e25e04f36f2e7c62ba9925`; operator 978 → 1051.35 mUSD).
+- **Bug found and fixed on the way:** ana's first claim was refused, "preVerificationGas is not enough, required:
+  292982" (276351 sent): the claim's 400k call floor sat above Pimlico's 227k estimate, and pre-verification gas was
+  rescaled only on the unpaid path. `174a172b` rescales it on every path; the retry landed.
+- Right after the approval, job #1 briefly read "Ready to collect… 2 mUSD back with the creator" until the indexer
+  caught up; it then read "Paid".
+
+**Not verified yet:** a disputed hire and a ruling sent by the arbiter itself, Privy policy readback on 143, anything on
+prod-testnet or mainnet. MonadVision and Monadscan served Cloudflare challenges to the recording browser, so no explorer
+stills were taken.
