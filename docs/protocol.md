@@ -78,7 +78,7 @@ Source, unit tests and local Monad fork rehearsals establish implemented behavio
   non-reentrancy and bounded pushes isolate hostile rewards; refused payouts become `owed` without trapping bonds.
   Only stacks marked `openTokens` accept unknown tokens through the board.
 - There is no work mining at launch ([ADR-0022](adr/0022-no-mining-at-launch.md)). Job fees go to the treasury.
-- The owner Safe controls v1 fees (three-day notice), Holding admission (fifteen-day notice, instant revoke),
+- The owner Safe controls v1 fees (three-day notice), Holding admission (twenty-one-day notice, instant revoke),
   capped creator-bond floors and unfilled rates for future listings, verifier/arbitrator configuration. The core admin can still pause, upgrade and withdraw
   escrow while paused. Disclose those powers; do not describe the protocol as trustless.
 - Never put secrets in notes, commits, branch names, logs or artifacts.

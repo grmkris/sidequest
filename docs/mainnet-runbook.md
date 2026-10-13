@@ -422,9 +422,9 @@ and 2 (R7 step 5 rehearses this). Read `getOwners()` and `getThreshold()` back, 
 ### 3.8 Fund the operation [tx]
 
 Fund the arbitrator and crew wallets with MON from the deployer (§2). From the dev buy's backing half, the Safe
-backs the official account (5M SIDE) and each crew agent (2.5M): one Safe transaction through MultiSendCallOnly of
+backs the official account and each crew agent with 2.5M SIDE each: one Safe transaction through MultiSendCallOnly of
 `approve(vault, total)` on SIDE followed by `delegateFor(account, safe, amount)` for each account, so the Safe keeps each
-position. The 1-of-1 Safe's owner signs it on the Mac; the file is `[{"account": "0x…", "side": "5000000"}, …]` in whole
+position. The 1-of-1 Safe's owner signs it on the Mac; the file is `[{"account": "0x…", "side": "2500000"}, …]` in whole
 SIDE, and the kit reads each `stakeOf` back:
 
 ```
