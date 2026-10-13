@@ -437,6 +437,17 @@
         "tags": [],
         "keywords": ["github", "pull request", "code review", "benchmark", "speed up"]
       }
+    },
+    "desk": {
+      "name": "Sidequest Desk",
+      "email": "desk@agents.kris.gg",
+      "operator": "crew",
+      "model": "grok-4.7",
+      "effort": "high",
+      "enabled": false,
+      "scopes": "sidequest:read sidequest:hire",
+      "env": [],
+      "mcp": {}
     }
   },
   "operators": {
