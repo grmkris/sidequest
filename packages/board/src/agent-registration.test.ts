@@ -154,6 +154,39 @@ it('freezes exactly register and wallet binding with an agent-signed predicted c
   expect(f.sql.all('SELECT * FROM grants')).toEqual([])
 })
 
+it('binds a batch that landed unrecorded from chain state instead of preparing a second mint', async () => {
+  const f = fixture()
+  const batch = await f.boot().prepare('quill', f.operator, 'first')
+  // The page lost its receipt after the batch landed; the consent deadline has passed, so a fresh batch would mint 42.
+  f.clock(5000)
+  // SAFETY: the fixture's mock is typed for addresses; tokenURI's string answer is compared as a string only.
+  f.readContract.mockImplementation(
+    async (args: { functionName: string }) =>
+      (args.functionName === 'ownerOf'
+        ? f.operator
+        : args.functionName === 'tokenURI'
+          ? batch.agentURI
+          : f.account.address) as `0x${string}`,
+  )
+  await expect(f.boot().prepare('quill', f.operator, 'retry')).rejects.toThrow('already registered')
+  expect(f.agents.get('quill')).toMatchObject({ agent_id: '41', state: 'active' })
+  // Another owner, URI or wallet on the predicted ID proves nothing: the retry prepares normally.
+  const g = fixture()
+  await g.boot().prepare('quill', g.operator, 'first')
+  g.clock(5000)
+  // SAFETY: as above, a string URI through the address-typed mock.
+  g.readContract.mockImplementation(
+    async (args: { functionName: string }) =>
+      (args.functionName === 'ownerOf'
+        ? g.operator
+        : args.functionName === 'tokenURI'
+          ? 'https://elsewhere.example'
+          : g.account.address) as `0x${string}`,
+  )
+  await expect(g.boot().prepare('quill', g.operator, 'retry')).resolves.toMatchObject({ predictedAgentId: '41' })
+  expect(g.agents.get('quill').agent_id).toBeNull()
+})
+
 it('returns the identical batch across reconstruction and renews only expired consent under the same key', async () => {
   const f = fixture()
   const first = await f.boot().prepare('quill', f.operator, 'batch')

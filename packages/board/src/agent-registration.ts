@@ -78,6 +78,8 @@ export class AgentRegistration {
     const agent = this.agents.owned(id, operator)
     if (agent.state !== 'grants-live' || agent.agent_id !== null || agent.address === null)
       throw new BoardError('conflict', 'Prepare the agent wallet and its own routine grants before registration')
+    if (await this.#recordLanded(id, operator, agent.address))
+      throw new BoardError('conflict', 'This agent was already registered by an earlier batch; reload to continue')
     const operation = this.agents.begin(id, operationKey, 'public', 'agent_registration_batch', {})
     const { attempt, saved } = this.#latest(operation.id)
     const plan = saved ?? (await this.#predict(id, operator, operation.id, attempt))
@@ -105,6 +107,47 @@ export class AgentRegistration {
         { to: agent.registry, data: sdk.setAgentWalletCalldata(consent, signature), value: '0' },
       ],
     })
+  }
+
+  /**
+   * A batch that landed but was never recorded (its page lost the receipt) is bound from chain state instead of being
+   * prepared again: past its consent deadline a fresh batch would mint this agent a second ID. Only this agent's wallet
+   * can sign the binding consent, so the predicted ID's owner, wallet and profile URI together prove the batch was ours.
+   */
+  async #recordLanded(id: string, operator: Address, wallet: Address): Promise<boolean> {
+    const agent = this.agents.get(id)
+    const batches = this.deps.sql.all<{ operation_id: Hex; name: string; value_json: string }>(
+      `SELECT s.operation_id,s.name,s.value_json FROM agent_operation_steps s JOIN agent_operations o ON o.id=s.operation_id
+       WHERE o.agent_id=? AND o.tool='agent_registration_batch' AND s.name LIKE 'registration-batch:%'`,
+      id,
+    )
+    const client = this.deps.context.publicClient
+    for (const row of batches) {
+      // SAFETY: these steps are exclusively the batches prepared below.
+      const batch = JSON.parse(row.value_json) as RegistrationBatch
+      const agentId = BigInt(batch.predictedAgentId)
+      const [owner, uri, bound] = await Promise.all([
+        client
+          .readContract({ address: agent.registry, abi: sdk.identityAbi, functionName: 'ownerOf', args: [agentId] })
+          .catch(() => undefined),
+        client
+          .readContract({ address: agent.registry, abi: sdk.identityAbi, functionName: 'tokenURI', args: [agentId] })
+          .catch(() => undefined),
+        sdk.agentWallet(this.deps.context, agentId).catch(() => undefined),
+      ])
+      if (
+        owner?.toLowerCase() !== operator.toLowerCase() ||
+        uri !== batch.agentURI ||
+        bound?.toLowerCase() !== wallet.toLowerCase()
+      )
+        continue
+      this.agents.freezeStep(row.operation_id, `registration-recovered:${row.name.split(':')[1]}`, agentId.toString())
+      this.agents.bindRegistry(id, agentId.toString())
+      this.agents.advance(id, 'registered')
+      this.agents.advance(id, 'active')
+      return true
+    }
+    return false
   }
 
   #latest(operationId: Hex): { attempt: number; saved?: RegistrationPlan } {
