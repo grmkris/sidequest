@@ -161,20 +161,37 @@ it('builds work directly and replaces an earnings transfer with approval and own
     ]),
   ).rejects.toThrow('operator')
 })
-it('requires a live gas budget and prepends a pull covering twice the build bound', async () => {
+/** The amount a float pull at the head of a batch moves to the agent. */
+const pulled = (batch: readonly sdk.Call[]) =>
+  decodeFunctionData({ abi: erc20Abi, data: decodeGrantBatch(batch[0]!.data)[0]!.execution.callData }).args
+it('requires a live gas budget and tops the float up to twice the per-operation ceiling', async () => {
   const f = fixture()
   await expect(requireGasBudget(f.scope)).rejects.toMatchObject({ reason: 'gas-budget-required' })
   f.grant('gas-allowance')
   f.setAvailable(5_000_000n)
   await requireGasBudget(f.scope)
   const calls = (await buildAgentBatch(f.scope, [f.settle])).calls
-  const batch = await withGasFloat(f.scope, calls, 10n)
-  const pull = decodeGrantBatch(batch[0]!.data)[0]!
-  expect(decodeFunctionData({ abi: erc20Abi, data: pull.execution.callData }).args).toEqual([agent, 20n])
-  f.setBalance(20n)
+  // Testnet's ceiling is 100,000 base units (0.1 USDC), so the float target is 0.2 USDC.
+  expect(pulled(await withGasFloat(f.scope, calls, 10n))).toEqual([agent, 200_000n])
+  f.setBalance(200_000n)
   expect(await withGasFloat(f.scope, calls, 10n)).toEqual(calls)
   f.disable()
   await expect(requireGasBudget(f.scope)).rejects.toMatchObject({ reason: 'gas-budget-required' })
+})
+it('pulls when the bound says the balance suffices but the float is below target (mainnet job #3, 14 Oct)', async () => {
+  const f = fixture()
+  f.grant('gas-allowance')
+  f.setAvailable(5_000_000n)
+  const calls = (await buildAgentBatch(f.scope, [f.settle])).calls
+  // Reel held 0.014342 USDC; the bound said 0.007, the paymaster charged 0.034 and failed in postOp.
+  f.setBalance(14_342n)
+  expect(pulled(await withGasFloat(f.scope, calls, 7_000n))).toEqual([agent, 200_000n - 14_342n])
+  // A budget below the full top-up still pulls what is left when that covers twice the bound.
+  f.setAvailable(50_000n)
+  expect(pulled(await withGasFloat(f.scope, calls, 7_000n))).toEqual([agent, 50_000n])
+  // No budget left, and the bound says the balance covers the operation: it goes out without a pull.
+  f.setAvailable(0n)
+  expect(await withGasFloat(f.scope, calls, 7_000n)).toEqual(calls)
 })
 it('refuses an exhausted float and foreign contracts or chain/value', async () => {
   const f = fixture()

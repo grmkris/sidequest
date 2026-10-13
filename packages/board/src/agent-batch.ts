@@ -202,7 +202,12 @@ export async function requireGasBudget(scope: AgentBatchScope): Promise<void> {
   throw gasBudgetRequired()
 }
 
-/** Called by buildUserOp for both its estimate ceiling and its final bound. */
+/**
+ * Called by buildUserOp for both its estimate ceiling and its final bound. The float is topped up to twice the
+ * per-operation ceiling, not twice this operation's bound: on mainnet the paymaster charged a submit 0.034 USDC while
+ * its bound said 0.007, so a float sized from the bound skipped the pull and the charge failed in postOp
+ * (`TransferFromFailed`, 14 Oct). Below the full top-up, a smaller pull still serves when it covers twice the bound.
+ */
 export async function withGasFloat(
   scope: AgentBatchScope,
   calls: readonly sdk.Call[],
@@ -215,14 +220,19 @@ export async function withGasFloat(
     functionName: 'balanceOf',
     args: [scope.agent.address],
   })
-  if (balance >= 2n * aa.maxCostPerOp || balance >= 2n * maxCost) return calls
-  const amount = 2n * maxCost - balance
+  const floor = 2n * (maxCost > aa.maxCostPerOp ? maxCost : aa.maxCostPerOp)
+  if (balance >= floor) return calls
+  const want = floor - balance
+  const need = 2n * maxCost > balance ? 2n * maxCost - balance : 0n
   for (const row of liveOperatorGrants(scope)) {
     const spec = scope.grants.spec(row.delegation_hash)
     if (spec.kind !== 'gas-allowance' || spec.start > scope.now || !same(spec.token, aa.gasToken)) continue
-    if ((await allowanceAvailable(scope.context, scope.grants, row)) >= amount)
-      return [redemption(scope, row, aa.gasToken, amount), ...calls]
+    const available = await allowanceAvailable(scope.context, scope.grants, row)
+    const amount = available < want ? available : want
+    if (amount > 0n && amount >= need) return [redemption(scope, row, aa.gasToken, amount), ...calls]
   }
+  // No budget left for a top-up, and the bound says the balance covers this operation: send it as before.
+  if (need === 0n) return calls
   throw new AgentFailure(
     'conflict',
     'Add to the gas budget: its available USDC does not cover this operation',
