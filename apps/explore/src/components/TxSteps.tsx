@@ -218,6 +218,8 @@ export function MonTxSteps({
   // Why the steps went from the wallet after Sidequest was going to pay; once set, the relay is not offered again.
   const [notice, setNotice] = useState<{ text: string; hash?: Hex } | null>(null)
   const [sponsorOff, setSponsorOff] = useState(false)
+  // Another tab holds this step's lock: say so instead of a check that seems to spin forever.
+  const [waiting, setWaiting] = useState(false)
   const sending = useRef(false)
   const checking = useRef(false)
   const done = useRef(false)
@@ -487,10 +489,27 @@ export function MonTxSteps({
     }
   }
 
+  /** The step's lock, saying so while something else (another tab, most often) still holds it. */
+  const stepLock = async <T,>(work: () => Promise<T>): Promise<T> => {
+    try {
+      return await withWalletStepLock(
+        navigator.locks,
+        key,
+        () => {
+          setWaiting(false)
+          return work()
+        },
+        () => setWaiting(true),
+      )
+    } finally {
+      setWaiting(false)
+    }
+  }
+
   /** Reloads and manual receipt checks share the send lock, including every journal write they can produce. */
   const reconcileSaved = async (i: number) => {
     try {
-      await withWalletStepLock(navigator.locks, key, async () => {
+      await stepLock(async () => {
         const latest = (await loadDurable(requireJournal)) ?? record
         syncRecord(latest)
         const hash = latest.hashes[i]
@@ -684,7 +703,7 @@ export function MonTxSteps({
 
   const run = async (i: number) => {
     try {
-      await withWalletStepLock(navigator.locks, key, () =>
+      await stepLock(() =>
         address === undefined
           ? runLocked(i)
           : withWalletAccountLock(navigator.locks, chain.id, address, () => runLocked(i)),
@@ -774,6 +793,12 @@ export function MonTxSteps({
         <Alert variant="destructive">
           <AlertDescription>{journalError}</AlertDescription>
         </Alert>
+      )}
+      {waiting && (
+        <output className="block rounded-xl bg-warning/14 px-4 py-3 text-sm leading-snug text-warning-text">
+          Another Sidequest tab is still working on this step. Close the other Sidequest tabs; this one carries on by
+          itself once the step is free.
+        </output>
       )}
       {record.pending !== null && current?.at === 'uncertain' && (
         <div role="status" className="grid gap-2 rounded-xl bg-warning/14 px-4 py-3 text-sm text-warning-text">

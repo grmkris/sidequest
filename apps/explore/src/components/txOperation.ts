@@ -23,17 +23,37 @@ export interface StepLocks {
   request<T>(name: string, callback: () => Promise<T>): Promise<T>
 }
 
-/** The lock spans journal reread, wallet confirmation and hash persistence. No unsafe fallback. */
+/** How long a step may wait on its lock before the page says that something else holds it. */
+export const LOCK_WAIT_NOTICE_MS = 2000
+
+/**
+ * The lock spans journal reread, wallet confirmation and hash persistence. No unsafe fallback. Another tab can hold it
+ * for minutes (an open wallet prompt, or a hidden tab's throttled timers), so `onWait` runs once the wait gets long.
+ */
 export async function withWalletStepLock<T>(
   locks: StepLocks | undefined,
   key: string,
   operation: () => Promise<T>,
+  onWait?: () => void,
 ): Promise<T> {
   if (locks === undefined)
     throw new Error(
       'This browser cannot safely coordinate wallet operations across tabs. Use a browser with Web Locks.',
     )
-  return locks.request(`sidequest.wallet-step:${key}`, operation)
+  if (onWait === undefined) return locks.request(`sidequest.wallet-step:${key}`, operation)
+  let held = false
+  const timer = setTimeout(() => {
+    if (!held) onWait()
+  }, LOCK_WAIT_NOTICE_MS)
+  try {
+    return await locks.request(`sidequest.wallet-step:${key}`, () => {
+      held = true
+      clearTimeout(timer)
+      return operation()
+    })
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 /** Different operations must not capture the same account nonce while another tab is confirming a send. */

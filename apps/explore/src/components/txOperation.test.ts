@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
+  LOCK_WAIT_NOTICE_MS,
   guardedSnapshot,
   reconcileSend,
   retryAction,
@@ -88,6 +89,47 @@ describe('wallet step retry reconciliation', () => {
     expect(journal).toBe('sent')
     await expect(withWalletStepLock(undefined, 'same-operation', staleTab)).rejects.toThrow(/Web Locks/)
     expect(prompts).toBe(1)
+  })
+  it('says so once another tab has held the step for a while, and stays quiet when the lock is free', async () => {
+    vi.useFakeTimers()
+    try {
+      let release!: () => void
+      const other = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      let held: Promise<void> = Promise.resolve()
+      const locks: StepLocks = {
+        request: async (_name, fn) => {
+          await held
+          return fn()
+        },
+      }
+      const waits: string[] = []
+      expect(
+        await withWalletStepLock(
+          locks,
+          'free',
+          async () => 'ran',
+          () => waits.push('free'),
+        ),
+      ).toBe('ran')
+      // An older tab still has the step: a wallet prompt left open, or a hidden tab's throttled receipt wait.
+      held = other
+      const blocked = withWalletStepLock(
+        locks,
+        'held',
+        async () => 'ran',
+        () => waits.push('held'),
+      )
+      await vi.advanceTimersByTimeAsync(LOCK_WAIT_NOTICE_MS)
+      expect(waits).toEqual(['held'])
+      release()
+      expect(await blocked).toBe('ran')
+      await vi.advanceTimersByTimeAsync(LOCK_WAIT_NOTICE_MS)
+      expect(waits).toEqual(['held'])
+    } finally {
+      vi.useRealTimers()
+    }
   })
   it('refuses unsent approval steps after expiry, including expiry during chain reads', async () => {
     let now = 99
