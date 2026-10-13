@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { decodeExecuteCalldata } from '../batch.ts'
 import type { AccountAbstraction } from '../deployment.ts'
 import { buildUserOp, sendUserOp, userOpReceipt } from './build.ts'
-import { maxTokenCost } from './fees.ts'
+import { keepsReserve, maxNativeCost, maxTokenCost, missingAccountFunds, nativeLaneFloor } from './fees.ts'
 import { AaError, type Json, field, quantity, type JsonRpc } from './rpc.ts'
 import { delegatorTypedData, nonceKey } from './userop.ts'
 
@@ -18,6 +18,8 @@ const aa: AccountAbstraction = {
   gasToken: USDC,
   standingApproval: 1_000_000n,
   maxCostPerOp: 100_000n,
+  maxNativeCostPerOp: 4n * 10n ** 18n,
+  nativeReserve: 10n * 10n ** 18n,
 }
 const word = (n: bigint) => encodeAbiParameters([{ type: 'uint256' }], [n])
 const WORK_TARGET: Address = '0x00000000000000000000000000000000000000bb'
@@ -33,12 +35,17 @@ function services(
     rate?: bigint
     /** Extra fields every paymaster answer carries (a stub's limits, a sponsor's own gas). */
     answer?: Record<string, string>
+    /** The sender's MON balance and its EntryPoint deposit (wei), for a MON-paid operation. */
+    balance?: bigint
+    deposit?: bigint
   } = {},
 ) {
   const log: string[] = []
   const node: JsonRpc = async (method, params) => {
     log.push(`node:${method}`)
+    if (method === 'eth_getBalance') return toHex(over.balance ?? 0n)
     if (JSON.stringify(params[0]).includes('0x35567e1a')) return word(over.sequence ?? 0n) // getNonce
+    if (JSON.stringify(params[0]).includes('0x70a08231')) return word(over.deposit ?? 0n) // EntryPoint balanceOf
     return word(over.allowance ?? 0n) // allowance
   }
   const bundler: JsonRpc = async (method) => {
@@ -300,6 +307,98 @@ describe('building a user operation', () => {
   })
 })
 
+/** The fake estimate priced for a MON-paid operation: measured unpaid, so only verification and call gas count. */
+const NATIVE_MEASURED = 0xf000n + 0x30d40n
+const nativePvg = (call: bigint) =>
+  (((0x19000n * (0xf000n + call) + NATIVE_MEASURED - 1n) / NATIVE_MEASURED) * 110n + 99n) / 100n
+const FAST_FEE = 130n * 10n ** 9n
+const MON = 10n ** 18n
+const native = (s: ReturnType<typeof services>, extra: Partial<Parameters<typeof buildUserOp>[0]> = {}) =>
+  build(s, { payment: 'native', ...extra })
+
+describe('building a MON-paid user operation', () => {
+  it('estimates it unpaid, bounds it in wei and asks no paymaster anything', async () => {
+    const s = services({ balance: 20n * MON })
+    const bundler = s.bundler
+    let estimated: readonly Json[] = []
+    s.bundler = async (method, params) => {
+      if (method === 'eth_estimateUserOperationGas') estimated = params
+      return bundler(method, params)
+    }
+    const seen: bigint[] = []
+    const built = await native(s, {
+      aa: { ...aa, paymaster: null },
+      calls: (maxCost) => (seen.push(maxCost), [work]),
+    })
+    expect(s.log).toEqual([
+      'node:eth_call',
+      'bundler:pimlico_getUserOperationGasPrice',
+      'bundler:eth_estimateUserOperationGas',
+      'node:eth_getBalance',
+      'node:eth_call',
+    ])
+    expect(field(estimated[0], 'paymaster')).toBeUndefined()
+    expect(field(field(estimated[2], key.address), 'balance')).toBe(toHex(10n ** 24n))
+    expect(built.op.paymaster).toBeUndefined()
+    expect(built.op.paymasterVerificationGasLimit).toBeUndefined()
+    expect(built.op.paymasterPostOpGasLimit).toBeUndefined()
+    const call = (0x30d40n * 11n) / 10n
+    expect(built.op.callGasLimit).toBe(call)
+    expect(built.op.preVerificationGas).toBe(nativePvg(call))
+    // Monad bills the limit: the bound is the EntryPoint's whole prefund, every limit at the max fee.
+    expect(built.maxCost).toBe((0xf000n + call + nativePvg(call)) * FAST_FEE)
+    expect(built.maxCost).toBe(maxNativeCost(built.op))
+    expect(seen).toEqual([aa.maxNativeCostPerOp, built.maxCost])
+    expect(decodeExecuteCalldata(built.op.callData)!.map((c) => c.to)).toEqual([WORK_TARGET])
+  })
+
+  it('prices pre-verification gas for a call-gas floor, as the token path does', async () => {
+    const built = await native(services({ balance: 20n * MON }), { minCallGas: 1_030_000n })
+    expect(built.op.callGasLimit).toBe(1_030_000n)
+    expect(built.op.preVerificationGas).toBe(nativePvg(1_030_000n))
+  })
+
+  it("refuses above the wei ceiling and wherever paying would break Monad's reserve rule", async () => {
+    const cost = (await native(services({ balance: 20n * MON }))).maxCost
+    const reserve = aa.nativeReserve
+    const capped = services({ balance: 20n * MON })
+    await expect(native(capped, { aa: { ...aa, maxNativeCostPerOp: cost - 1n } })).rejects.toMatchObject({
+      code: 'ceiling',
+    })
+    expect(capped.log).not.toContain('node:eth_getBalance')
+    expect((await native(services({ balance: reserve + cost }))).maxCost).toBe(cost)
+    await expect(native(services({ balance: reserve + cost - 1n }))).rejects.toMatchObject({ code: 'ceiling' })
+    // An earlier operation's leftover deposit pays first: the account sends only the rest.
+    expect((await native(services({ balance: reserve + 1n, deposit: cost - 1n }))).maxCost).toBe(cost)
+    // Below the reserve the account may send nothing at all; only a covering deposit lets it go.
+    await expect(native(services({ balance: MON }))).rejects.toMatchObject({ code: 'ceiling' })
+    expect((await native(services({ balance: MON, deposit: cost }))).maxCost).toBe(cost)
+    // Without a reserve the balance must still cover the prefund.
+    const free = { ...aa, nativeReserve: 0n }
+    await expect(native(services({ balance: cost - 1n }), { aa: free })).rejects.toMatchObject({ code: 'ceiling' })
+    expect((await native(services({ balance: cost }), { aa: free })).maxCost).toBe(cost)
+  })
+
+  it('refuses where it is not configured, for a sponsored claim and on a landed lane', async () => {
+    const rich = { balance: 20n * MON }
+    await expect(native(services(rich), { aa: { ...aa, maxNativeCostPerOp: null } })).rejects.toMatchObject({
+      code: 'unavailable',
+    })
+    await expect(native(services(rich), { sponsor: 'faucet' })).rejects.toMatchObject({ code: 'refused' })
+    await expect(native(services({ ...rich, sequence: 1n }))).rejects.toMatchObject({ code: 'landed' })
+  })
+
+  it('reads the reserve rule and the lane floor the way Monad applies them', () => {
+    expect(missingAccountFunds(10n, 3n)).toBe(7n)
+    expect(missingAccountFunds(10n, 30n)).toBe(0n)
+    expect(keepsReserve(5n, 0n, 10n)).toBe(true)
+    expect(keepsReserve(15n, 5n, 10n)).toBe(true)
+    expect(keepsReserve(15n, 6n, 10n)).toBe(false)
+    expect(nativeLaneFloor(aa)).toBe(14n * MON)
+    expect(nativeLaneFloor({ ...aa, maxNativeCostPerOp: null })).toBeNull()
+  })
+})
+
 const silent: JsonRpc = async () => {
   throw new AaError('unavailable', 'no answer')
 }
@@ -319,6 +418,22 @@ describe('sending a user operation', () => {
     await expect(sendUserOp(ok, built, stranger)).rejects.toMatchObject({ code: 'bad-signature' })
     await expect(sendUserOp(silent, built, signature)).rejects.toMatchObject({ code: 'uncertain' })
     await expect(sendUserOp(refused, built, signature)).rejects.toMatchObject({ code: 'refused' })
+  })
+
+  it('sends a MON-paid first operation with its 7702 authorization and no paymaster fields', async () => {
+    const signed = await key.signAuthorization({ chainId: 10143, contractAddress: WORK_TARGET, nonce: 0 })
+    const authorization = { ...signed, yParity: signed.yParity ?? 0 }
+    const built = await build(services({ balance: 20n * 10n ** 18n }), { payment: 'native', authorization })
+    const signature = await key.signTypedData(delegatorTypedData(built.op, 10143, aa.entryPoint))
+    let sent: readonly Json[] = []
+    const bundler: JsonRpc = async (_method, params) => {
+      sent = params
+      return built.userOpHash
+    }
+    expect(await sendUserOp(bundler, built, signature)).toBe(built.userOpHash)
+    expect(field(sent[0], 'paymaster')).toBeUndefined()
+    expect(field(sent[0], 'paymasterData')).toBeUndefined()
+    expect(field(field(sent[0], 'eip7702Auth'), 'address')).toBe(WORK_TARGET)
   })
 
   it('reads a receipt, or null while the operation is not mined', async () => {

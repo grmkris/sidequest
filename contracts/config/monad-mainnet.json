@@ -30,7 +30,9 @@
     "paymasterKind": "pimlico-erc20",
     "gasToken": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
     "standingApproval": "1000000",
-    "maxCostPerOp": "100000"
+    "maxCostPerOp": "100000",
+    "maxNativeCostPerOp": "4000000000000000000",
+    "nativeReserve": "10000000000000000000"
   },
   "x402": {
     "usdc": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",

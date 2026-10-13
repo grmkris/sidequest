@@ -1,8 +1,11 @@
 /**
  * Builds, sends and reads back one user operation (ADR-0023). Building reads the operation's nonce lane, prices the
  * gas, estimates it, bounds what the paymaster may take against the network's ceiling and fetches the paymaster's
- * data; the result is everything but the signature. Sending checks that the signature recovers to the sender over the
- * DeleGator's digest before the bundler sees it. The same code serves the Worker (hosted agents) and the browser.
+ * data; the result is everything but the signature. A MON-paid operation (`payment: 'native'`) has no paymaster: the
+ * DeleGator pays the EntryPoint's prefund from its own balance in `validateUserOp`, so it is bounded in wei and checked
+ * against the account's balance and Monad's reserve instead. Sending checks that the signature recovers to the sender
+ * over the DeleGator's digest before the bundler sees it. The same code serves the Worker (hosted agents) and the
+ * browser.
  */
 import {
   type Address,
@@ -18,7 +21,7 @@ import {
 } from 'viem'
 import { type Call, type SignedAuthorization, executeCalldata } from '../batch.ts'
 import type { AccountAbstraction } from '../deployment.ts'
-import { type TokenQuote, maxTokenCost } from './fees.ts'
+import { type TokenQuote, keepsReserve, maxNativeCost, maxTokenCost, missingAccountFunds } from './fees.ts'
 import { AaError, type Json, type JsonRpc, field, hexField, quantity } from './rpc.ts'
 import { type UserOperation, approveCall, delegatorDigest, laneNonce, toBundlerJson, userOpHash } from './userop.ts'
 
@@ -29,7 +32,10 @@ import { type UserOperation, approveCall, delegatorDigest, laneNonce, toBundlerJ
 export const ESTIMATE_SIGNATURE: Hex =
   '0xbbab8d71ce002d90139cb92579e2311de0983756e4d23be16652859b201bdecc407ee1174363f8dcfc69492d377c15c81d5c1560faf03ed23b1a24f8f044cf091c'
 
-const entryPointAbi = parseAbi(['function getNonce(address sender, uint192 key) view returns (uint256)'])
+const entryPointAbi = parseAbi([
+  'function getNonce(address sender, uint192 key) view returns (uint256)',
+  'function balanceOf(address account) view returns (uint256)',
+])
 const SEQUENCE = (1n << 64n) - 1n
 
 export interface BuildInput {
@@ -38,12 +44,16 @@ export interface BuildInput {
   /** The chain's node: the nonce lane and the paymaster allowance are read there. */
   readonly node: JsonRpc
   readonly bundler: JsonRpc
-  /** The ERC-7677 paymaster service (Pimlico on mainnet, our Worker on testnet); it also answers token quotes. */
+  /**
+   * The ERC-7677 paymaster service (Pimlico on mainnet, our Worker on testnet); it also answers token quotes. A
+   * MON-paid operation never calls it.
+   */
   readonly paymaster: JsonRpc
   readonly sender: Address
   /**
-   * The batch, before any paymaster approval, for the most the gas may cost in the gas token: first the ceiling (for
-   * the estimate), then the bound itself, so a gas pull can take just enough. Fixed calls ignore it.
+   * The batch, before any paymaster approval, for the most the gas may cost in the gas token (in wei when MON-paid):
+   * first the ceiling (for the estimate), then the bound itself, so a gas pull can take just enough. Fixed calls ignore
+   * it.
    */
   readonly calls: (maxCost: bigint) => readonly Call[] | Promise<readonly Call[]>
   /** The operation's lane (`nonceKey(operationId)`): every attempt of one operation shares its nonce. */
@@ -57,6 +67,11 @@ export interface BuildInput {
    * `TransferGasTooLow` below a fixed reserve, which an estimate does not see (Explore's `gas.ts` floors).
    */
   readonly minCallGas?: bigint | undefined
+  /**
+   * Who pays the gas. `token` (the default): the paymaster, in the gas token. `native`: the account itself, in MON, with
+   * no paymaster; bounded by `aa.maxNativeCostPerOp` and refused where paying would break Monad's reserve rule.
+   */
+  readonly payment?: 'token' | 'native' | undefined
 }
 
 /** An operation ready to sign, the most its gas may cost and the hash it will go by. */
@@ -65,7 +80,7 @@ export interface BuiltUserOp {
   readonly authorization?: SignedAuthorization | undefined
   readonly entryPoint: Address
   readonly chainId: number
-  /** Gas token base units; 0 when sponsored. */
+  /** Gas token base units; 0 when sponsored; wei when MON-paid (the operation has no paymaster). */
   readonly maxCost: bigint
   readonly userOpHash: Hex
 }
@@ -226,21 +241,30 @@ function batcher(input: BuildInput, paymaster: Address, approve: boolean) {
 const unpaidEstimate = (input: BuildInput, paymaster: Address | null): boolean =>
   input.aa.paymasterKind === 'sidequest-testnet' && paymaster !== null && input.sponsor === undefined
 
-/** A native balance the sender holds during an unpaid estimate, so the EntryPoint's prefund check passes. */
+/**
+ * A native balance the sender holds during an unpaid estimate, so the EntryPoint's prefund check passes: a bundler
+ * simulates with inflated limits whose prefund a real balance need not cover. A MON-paid operation's real balance is
+ * checked against its bound afterwards (`affordable`).
+ */
 const PREFUND_OVERRIDE = 10n ** 24n
 
-/** The bundler's estimate request, unpaid where `unpaidEstimate` says so. */
-function estimateParams(input: BuildInput, op: UserOperation, unpaid: boolean): Json[] {
-  if (!unpaid) return [toBundlerJson(op, input.authorization), input.aa.entryPoint]
+/** The operation without any paymaster field. */
+function bare(op: UserOperation): UserOperation {
   const {
     paymaster: _p,
     paymasterData: _d,
     paymasterVerificationGasLimit: _v,
     paymasterPostOpGasLimit: _o,
-    ...bare
+    ...rest
   } = op
+  return rest
+}
+
+/** The bundler's estimate request, unpaid where `unpaidEstimate` says so (and always when MON-paid). */
+function estimateParams(input: BuildInput, op: UserOperation, unpaid: boolean): Json[] {
+  if (!unpaid) return [toBundlerJson(op, input.authorization), input.aa.entryPoint]
   return [
-    toBundlerJson(bare, input.authorization),
+    toBundlerJson(bare(op), input.authorization),
     input.aa.entryPoint,
     { [input.sender]: { balance: toHex(PREFUND_OVERRIDE) } },
   ]
@@ -297,6 +321,12 @@ function keptBound(op: UserOperation, tokenQuote: TokenQuote, maxCost: bigint): 
     throw new AaError('mismatch', 'the paymaster raised its gas limits after the cost was bounded')
 }
 
+/** Refuses a lane an operation already landed on: every attempt of one operation shares its nonce. */
+async function freeLane(input: BuildInput): Promise<void> {
+  if ((await laneSequence(input.node, input.aa.entryPoint, input.sender, input.nonceKey)) !== 0n)
+    throw new AaError('landed', 'an operation already landed on this lane: reconcile it instead of building another')
+}
+
 /** Checks the lane is free and the paymaster is configured; returns the paymaster. */
 async function preflight(input: BuildInput): Promise<Address | null> {
   const paymaster = input.aa.paymaster
@@ -304,13 +334,75 @@ async function preflight(input: BuildInput): Promise<Address | null> {
     throw new AaError('refused', 'faucet sponsorship is testnet only')
   if (paymaster === null && input.sponsor === undefined)
     throw new AaError('no-paymaster', 'no paymaster is configured on this network yet')
-  if ((await laneSequence(input.node, input.aa.entryPoint, input.sender, input.nonceKey)) !== 0n)
-    throw new AaError('landed', 'an operation already landed on this lane: reconcile it instead of building another')
+  await freeLane(input)
   return paymaster
 }
 
-/** Reads the lane, prices and estimates the gas, bounds its cost and fetches the paymaster's data. */
+/** The account's MON deposit at the EntryPoint: what is left of earlier MON-paid prefunds. */
+async function entryPointDeposit(node: JsonRpc, entryPoint: Address, account: Address): Promise<bigint> {
+  const data = encodeFunctionData({ abi: entryPointAbi, functionName: 'balanceOf', args: [account] })
+  const result = await readCall(node, entryPoint, data)
+  return decodeFunctionResult({ abi: entryPointAbi, functionName: 'balanceOf', data: result })
+}
+
+/**
+ * Refuses a MON-paid operation its account cannot pay: the account sends the EntryPoint what its deposit there does not
+ * cover, and on Monad a bundler's transaction that takes a delegated account below its reserve reverts whole.
+ */
+async function affordable(input: BuildInput, maxCost: bigint): Promise<void> {
+  const [balance, deposit] = await Promise.all([
+    input.node('eth_getBalance', [input.sender, 'latest']).then((answer) => quantity(answer, 'balance')),
+    entryPointDeposit(input.node, input.aa.entryPoint, input.sender),
+  ])
+  const missing = missingAccountFunds(maxCost, deposit)
+  if (!keepsReserve(balance, missing, input.aa.nativeReserve))
+    throw new AaError(
+      'ceiling',
+      `the account holds ${balance} wei; paying up to ${missing} wei of gas must leave the ${input.aa.nativeReserve} wei reserve`,
+    )
+}
+
+/**
+ * A MON-paid operation: no paymaster call at all. Estimated unpaid like our testnet paymaster's ops, priced for the
+ * limits it sends, bounded in wei against the network's ceiling and against what the account can pay.
+ */
+async function buildNativeUserOp(input: BuildInput): Promise<BuiltUserOp> {
+  const { aa, chainId } = input
+  const ceiling = aa.maxNativeCostPerOp
+  if (input.sponsor !== undefined) throw new AaError('refused', 'a sponsored operation is not MON-paid')
+  if (ceiling === null) throw new AaError('unavailable', 'MON-paid user operations are not configured on this network')
+  await freeLane(input)
+  const batch = async (maxCost: bigint): Promise<Hex> => executeCalldata(await input.calls(maxCost))
+  let op = await draft(input, await batch(ceiling))
+  const gas = await input.bundler('eth_estimateUserOperationGas', estimateParams(input, op, true))
+  op = bare(withEstimate(op, gas, input.minCallGas ?? 0n))
+  op = scaledPreVerification(op, measuredLimits(gas, true))
+  op = withPreVerificationMargin(op)
+  const maxCost = maxNativeCost(op)
+  if (maxCost > ceiling)
+    throw new AaError('ceiling', `the gas could cost up to ${maxCost} wei, above the ${ceiling} wei ceiling`)
+  await affordable(input, maxCost)
+  op = { ...op, callData: await batch(maxCost) }
+  return {
+    op,
+    authorization: input.authorization,
+    entryPoint: aa.entryPoint,
+    chainId,
+    maxCost,
+    userOpHash: userOpHash(op, chainId, aa.entryPoint),
+  }
+}
+
+/**
+ * Reads the lane, prices and estimates the gas and bounds its cost; fetches the paymaster's data unless the account
+ * pays in MON.
+ */
 export async function buildUserOp(input: BuildInput): Promise<BuiltUserOp> {
+  return input.payment === 'native' ? buildNativeUserOp(input) : buildTokenUserOp(input)
+}
+
+/** A paymaster-paid operation: in the gas token, or sponsored (a testnet faucet claim). */
+async function buildTokenUserOp(input: BuildInput): Promise<BuiltUserOp> {
   const { aa, chainId } = input
   const paymaster = await preflight(input)
   const sponsored = input.sponsor !== undefined

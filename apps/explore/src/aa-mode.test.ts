@@ -9,6 +9,8 @@ const aa: AccountAbstraction = {
   gasToken: '0x3333333333333333333333333333333333333333',
   standingApproval: 1_000_000n,
   maxCostPerOp: 250_000n,
+  maxNativeCostPerOp: null,
+  nativeReserve: 0n,
 }
 
 describe('browser payment mode', () => {

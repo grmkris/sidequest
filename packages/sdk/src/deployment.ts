@@ -119,6 +119,16 @@ export interface AccountAbstraction {
   readonly standingApproval: bigint
   /** The most one operation's gas may cost; above it nothing is signed. */
   readonly maxCostPerOp: bigint
+  /**
+   * The most one MON-paid operation's gas may cost, in wei: an operation with no paymaster, whose account pays the
+   * EntryPoint's prefund from its own balance. Null where that lane is not configured.
+   */
+  readonly maxNativeCostPerOp: bigint | null
+  /**
+   * Monad's reserve balance, in wei (0 where the chain has none): a delegated account paying a bundler's transaction
+   * may not end it below this, or below its starting balance if that was lower, so the transaction reverts.
+   */
+  readonly nativeReserve: bigint
 }
 
 export interface Deployment {
@@ -237,6 +247,10 @@ export interface DeploymentConfig {
     gasToken: string
     standingApproval: string
     maxCostPerOp: string
+    /** Wei; absent turns the MON-paid lane off. */
+    maxNativeCostPerOp?: string
+    /** Wei; absent means no reserve. */
+    nativeReserve?: string
   }
   /** See `NetworkMeta`. */
   links?: { testnet?: string; mainnet?: string; x?: string }
@@ -520,7 +534,16 @@ export function aaFromConfig(c: Pick<DeploymentConfig, 'chainId' | 'accountAbstr
     gasToken: a.gasToken,
     standingApproval,
     maxCostPerOp,
+    maxNativeCostPerOp: optionalWei(a.maxNativeCostPerOp),
+    nativeReserve: optionalWei(a.nativeReserve) ?? 0n,
   }
+}
+
+/** An optional MON amount of config `accountAbstraction`: null when absent, refused unless positive wei. */
+function optionalWei(value: string | undefined): bigint | null {
+  if (value === undefined) return null
+  if (!UNITS.test(value)) throw new Error('Network config accountAbstraction native amounts must be positive wei')
+  return BigInt(value)
 }
 
 function agentSweepFromConfig(c: DeploymentConfig): Address | null {

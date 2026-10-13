@@ -12,6 +12,14 @@ describe('AA configuration before protocol deployment', () => {
     expect(config.aa.maxCostPerOp).toBeLessThanOrEqual(config.aa.standingApproval)
   })
 
+  it("bounds MON-paid operations on both networks under Monad's 10 MON reserve", () => {
+    for (const network of ['monad-mainnet', 'monad-testnet'] as const) {
+      const { aa } = aaConfig(network)
+      expect(aa.maxNativeCostPerOp).toBe(4n * 10n ** 18n)
+      expect(aa.nativeReserve).toBe(10n * 10n ** 18n)
+    }
+  })
+
   it('agrees with the deployed testnet parser and keeps network gas tokens separate', () => {
     const config = aaConfig('monad-testnet')
     expect(config.aa).toEqual(deployment('monad-testnet').aa)

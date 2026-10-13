@@ -118,7 +118,21 @@ describe('account abstraction config', () => {
       gasToken: testnet.x402.usdc,
       standingApproval: 1_000_000n,
       maxCostPerOp: 100_000n,
+      maxNativeCostPerOp: 4n * 10n ** 18n,
+      nativeReserve: 10n * 10n ** 18n,
     })
+  })
+
+  it('reads the MON-paid ceiling and the reserve, and turns the lane off where the ceiling is absent', () => {
+    const c = currentConfig()
+    delete c.accountAbstraction!.maxNativeCostPerOp
+    delete c.accountAbstraction!.nativeReserve
+    expect(deploymentFromConfig('monad-testnet', c).aa).toMatchObject({ maxNativeCostPerOp: null, nativeReserve: 0n })
+    for (const bad of [{ maxNativeCostPerOp: '0' }, { maxNativeCostPerOp: '4e18' }, { nativeReserve: '-1' }]) {
+      const d = currentConfig()
+      d.accountAbstraction = { ...d.accountAbstraction!, ...bad }
+      expect(() => deploymentFromConfig('monad-testnet', d)).toThrow('native amounts must be positive wei')
+    }
   })
 
   it('refuses a malformed block and the testnet paymaster on mainnet', () => {
