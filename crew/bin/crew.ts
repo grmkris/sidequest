@@ -196,7 +196,7 @@ async function login(id: string, landed?: string) {
       `Open this while signed in to ${crew.board.origin}, pick ${m.name}'s agent and approve. The browser then`,
     )
     console.log(
-      `lands on a page that does not load (${hosted.REDIRECT}?code=…); pass that whole address within 2 minutes:\n`,
+      `lands on ${hosted.REDIRECT}?code=… (a page that does not load); pass that whole address within 2 minutes:\n`,
     )
     console.log(`${url}\n`)
     console.log(`  bun crew/bin/crew.ts login ${id} '<that address>'`)

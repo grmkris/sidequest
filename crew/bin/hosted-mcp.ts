@@ -9,8 +9,14 @@ import { createHash, randomBytes } from 'node:crypto'
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 
-/** Where the operator's browser lands after consent: nothing listens there, so its address is pasted back. */
-export const REDIRECT = 'http://127.0.0.1:8765/callback'
+/**
+ * Where the operator's browser lands after consent: nothing listens there, so its address is pasted back. An operator
+ * browser shared with this machine's agent can land on an HTTPS page instead (`CREW_OAUTH_REDIRECT`), whose address the
+ * agent reads from the tab; the code in it is useless without this machine's PKCE verifier.
+ */
+export const REDIRECT = process.env.CREW_OAUTH_REDIRECT || 'http://127.0.0.1:8765/callback'
+/** The redirect a client registered before the choice was stored. */
+const LOOPBACK = 'http://127.0.0.1:8765/callback'
 
 const TokenFile = Schema.Struct({
   access_token: Schema.String,
@@ -20,7 +26,7 @@ const TokenFile = Schema.Struct({
   scope: Schema.String,
 })
 export type Token = typeof TokenFile.Type
-const ClientFile = Schema.Struct({ clientId: Schema.String })
+const ClientFile = Schema.Struct({ clientId: Schema.String, redirect: Schema.optionalKey(Schema.String) })
 const LoginFile = Schema.Struct({ verifier: Schema.String, state: Schema.String })
 /** What /oauth/token answers: a token (its agent as a number or a string), or an error. */
 const TokenReply = Schema.Struct({
@@ -105,7 +111,8 @@ export async function beginLogin(
   { clientName, scopes }: { clientName: string; scopes: string },
 ): Promise<string> {
   let client = readClient(files.client)
-  if (client === undefined) {
+  // A client registered for another redirect cannot use this one, so it is registered again.
+  if (client === undefined || (client.redirect ?? LOOPBACK) !== REDIRECT) {
     const res = await fetch(`${board.origin}/oauth/register`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -113,7 +120,7 @@ export async function beginLogin(
     })
     const reg = Schema.decodeUnknownSync(Registration)(await res.json())
     if (reg.client_id === undefined) throw new Error(`register: ${reg.error_description ?? res.status}`)
-    client = { clientId: reg.client_id }
+    client = { clientId: reg.client_id, redirect: REDIRECT }
     secretFile(files.client, client)
   }
   const verifier = randomBytes(32).toString('base64url')
@@ -144,7 +151,7 @@ export async function finishLogin(board: Board, files: ConnectionFiles, landed: 
   const t = await oauthForm(board, '/oauth/token', {
     grant_type: 'authorization_code',
     code: url.searchParams.get('code') ?? '',
-    redirect_uri: REDIRECT,
+    redirect_uri: client.redirect ?? LOOPBACK,
     client_id: client.clientId,
     code_verifier: pending.verifier,
     resource: board.mcp,
