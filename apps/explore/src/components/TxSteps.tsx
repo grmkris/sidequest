@@ -10,7 +10,8 @@ import { useEffect, useRef, useState } from 'react'
 import type { Hex, TransactionReceipt } from 'viem'
 import { useAccount, useSwitchChain } from 'wagmi'
 import { stepsPrompt, useSendTransactionWithPrompt } from '../wallet-prompt.ts'
-import { getBlock, getBlockNumber, getTransaction, getTransactionCount, waitForTransactionReceipt } from 'wagmi/actions'
+import { waitForTransactionReceipt } from 'viem/actions'
+import { getBlock, getBlockNumber, getPublicClient, getTransaction, getTransactionCount } from 'wagmi/actions'
 import { type TxRequest, boardApi } from '../api.ts'
 import { batchGasLimit, gasLimit } from '../gas.ts'
 import { sidequest } from '../sidequest.ts'
@@ -54,6 +55,16 @@ const chainReads = (address: Hex): ChainReads => ({
   blockNumber: () => getBlockNumber(wagmiConfig, { chainId: chain.id, cacheTime: 0 }),
   block: (blockNumber) => getBlock(wagmiConfig, { blockNumber, includeTransactions: true, chainId: chain.id }),
 })
+
+/**
+ * A mined transaction's receipt, reverted or not. wagmi's own wait throws on a revert, so a reverted step would keep its
+ * hash as an unexplained error and offer neither a fresh send nor a discard. `timeout: 0` waits as long as wagmi did.
+ */
+async function receiptOf(hash: Hex, timeout = 0) {
+  const client = getPublicClient(wagmiConfig, { chainId: chain.id })
+  if (client === undefined) throw new Error(`No ${chain.name} client is configured to read this receipt.`)
+  return waitForTransactionReceipt(client, { hash, timeout })
+}
 
 /** Waits between chain checks after an ambiguous wallet error: a broadcast step is mined within seconds on Monad. */
 const RECHECK_MS = [1000, 2000, 3000, 4000, 5000]
@@ -280,7 +291,7 @@ export function MonTxSteps({
     }
     try {
       if (verifyReceipt) await verifyTransaction(i, hash, r)
-      const receipt = await waitForTransactionReceipt(wagmiConfig, { hash, chainId: chain.id })
+      const receipt = await receiptOf(hash)
       if (receiptGuard !== undefined && receipt.transactionHash.toLowerCase() !== hash.toLowerCase())
         throw new Error('The effect receipt names a different transaction. Reconcile before continuing.')
       if (receipt.status !== 'success') {
@@ -366,11 +377,7 @@ export function MonTxSteps({
    */
   const settleSponsored = async (hash: Hex, r: OpRecord) => {
     try {
-      const receipt = await waitForTransactionReceipt(wagmiConfig, {
-        hash,
-        chainId: chain.id,
-        timeout: 60_000,
-      })
+      const receipt = await receiptOf(hash, 60_000)
       if (receipt.status !== 'success') {
         await toWallet(
           'Sidequest sent these steps and the transaction reverted, so nothing changed. You can send them from your wallet; you pay the gas.',
