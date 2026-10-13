@@ -41,6 +41,8 @@ export function PrivyRoot({ children }: { children: ReactNode }) {
     <PrivyProvider
       appId={privyAppId}
       config={{
+        // Social sign-in only (Kris, 13 Oct): no external wallet login; everyone gets the Privy embedded wallet.
+        loginMethods: ['email', 'twitter'],
         // Create the operator wallet at login; the server creates each agent wallet.
         embeddedWallets: { ethereum: { createOnLogin: 'all-users' } },
         defaultChain: privyChain,
