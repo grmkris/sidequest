@@ -1608,9 +1608,6 @@
   "packages/sdk/src/registry.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
-  "packages/sdk/src/relay-override.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1
-  },
   "packages/sdk/src/sidequest-fixture.test.ts": {
     "anti-slop(no-module-mocking)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 2
