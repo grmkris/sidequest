@@ -30,7 +30,9 @@ function promoted() {
 afterEach(() => vi.restoreAllMocks())
 
 test('the testnet generator stays byte-identical to the policy frozen before the network change', () => {
-  const before = readFileSync(new URL('../scripts/privy/fixtures/testnet-policy.json', import.meta.url), 'utf8')
+  const fixture = readFileSync(new URL('../scripts/privy/fixtures/testnet-policy.json', import.meta.url), 'utf8')
+  // Freeze the bytes sent to Privy, independent of the repository formatter's JSON whitespace.
+  const before = `${JSON.stringify(JSON.parse(fixture), null, 2)}\n`
   expect(`${JSON.stringify(authorityPolicy('snapshot-admin', 'monad-testnet'), null, 2)}\n`).toBe(before)
 })
 

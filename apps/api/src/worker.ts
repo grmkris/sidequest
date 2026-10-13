@@ -97,6 +97,9 @@ const secret = (name: string) =>
 const BOARD_ROUTE = /^\/b\/([a-z0-9-]{3,32})(\/.*)?$/
 const now = () => Math.floor(Date.now() / 1000)
 const BOARD_CACHE_SECONDS = 30
+// SAFETY: the stage profile validates its network; the local fallback is the SDK's two-network selection.
+const selectedNetwork = stageProfile()?.network ?? ((process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') as sdk.Network)
+const selectedHostedSend = sdk.hostedSendMode(selectedNetwork, process.env.HOSTED_SEND)
 
 // Per-isolate caches: token symbols never change, a board's config rarely, and the schema is created once.
 const tokenCache = new Map<string, TenantToken>()
@@ -151,20 +154,22 @@ export default class Api extends Cloudflare.Worker<Api>()(
     // Values come from the deploying shell (.env.local); secrets are bound as secret_text, never plain text.
     env: {
       DIRECTORY_DATABASE: Database,
-      NETWORK: stageProfile()?.network ?? process.env.SIDEQUEST_NETWORK ?? 'monad-testnet',
+      NETWORK: selectedNetwork,
       PUBLIC_ORIGIN: stageProfile()?.origin ?? 'http://localhost:5173',
-      RELAY_ADDRESS:
-        stageProfile()?.relay ??
-        sdk.deployment((process.env.SIDEQUEST_NETWORK ?? 'monad-testnet') as sdk.Network).relay,
+      ...(selectedNetwork === 'monad-testnet'
+        ? {
+            RELAY_ADDRESS: stageProfile()?.relay ?? sdk.deployment(selectedNetwork).relay,
+            RELAY_PRIVATE_KEY: Redacted.make(runtimeSecret('RELAY_PRIVATE_KEY') || 'unset'),
+          }
+        : {}),
       TELEGRAM_BOT_USERNAME: stageProfile()?.telegram.botUsername ?? '',
       DEPLOY_STAGE: process.env.SIDEQUEST_STAGE ?? 'local',
-      HOSTED_SEND: process.env.HOSTED_SEND === 'userop' ? 'userop' : 'relay',
+      HOSTED_SEND: selectedHostedSend,
       MONAD_RPC_URL: Redacted.make(rpcUrlForNetwork() || 'unset'),
       SCREENING_BASE_URL: process.env.ARBITER_MODEL_BASE_URL || 'https://ai-gateway.vercel.sh/v1',
       SCREENING_MODEL: process.env.SCREENING_MODEL || 'anthropic/claude-haiku-4.5',
       AI_GATEWAY_API_KEY: Redacted.make(runtimeSecret('AI_GATEWAY_API_KEY') || 'unset'),
       ATTESTER_PRIVATE_KEY: Redacted.make(runtimeSecret('ATTESTER_PRIVATE_KEY') || 'unset'),
-      RELAY_PRIVATE_KEY: Redacted.make(runtimeSecret('RELAY_PRIVATE_KEY') || 'unset'),
       GITHUB_APP_ID: process.env.GITHUB_APP_ID || '',
       GITHUB_APP_INSTALLATION_ID: process.env.GITHUB_APP_INSTALLATION_ID || '',
       GITHUB_APP_PRIVATE_KEY: Redacted.make(runtimeSecret('GITHUB_APP_PRIVATE_KEY') || 'unset'),
@@ -206,7 +211,9 @@ export default class Api extends Cloudflare.Worker<Api>()(
         const request = yield* HttpServerRequest.HttpServerRequest
         const url = new URL(request.originalUrl)
         const network = (yield* Config.String('NETWORK')) as sdk.Network
-        sdk.setRelayOverride((yield* Config.String('RELAY_ADDRESS')) as Address)
+        const relayAddress = yield* Config.withDefault(Config.String('RELAY_ADDRESS'), '')
+        // SAFETY: the testnet-only binding is the validated stage or SDK relay address.
+        if (relayAddress !== '') sdk.setRelayOverride(relayAddress as Address)
         configurePublicSite(yield* Config.String('PUBLIC_ORIGIN'), yield* Config.String('TELEGRAM_BOT_USERNAME'))
         const stage = yield* Config.String('DEPLOY_STAGE')
         const telegramSecret = yield* secret('TELEGRAM_WEBHOOK_SECRET')
@@ -230,7 +237,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
           const response = yield* Effect.promise(() => aaRpcRoute(webRequest, runtimeEnv, cors))
           return HttpServerResponse.fromWeb(response)
         }
-        const relayKey = yield* secret('RELAY_PRIVATE_KEY')
+        const relayKey = network === 'monad-testnet' ? yield* secret('RELAY_PRIVATE_KEY') : ''
         if (url.pathname === '/x402/demo' && request.method === 'GET') {
           if (network !== 'monad-testnet') return HttpServerResponse.text('not found', { status: 404 })
           const reply = yield* Effect.promise(() =>

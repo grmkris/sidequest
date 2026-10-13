@@ -28,8 +28,8 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
 - **Safe.** One owner, the `sidequest-owner` keystore on Kris's MacBook, and threshold 1 at launch. It becomes 2-of-3
   by 20 October 2026, in place (§3.7); the docs disclose both.
 - **Keys.** Every mainnet wallet is fresh. The Safe owner, the SIDE creator and the exit-test wallet are Foundry
-  keystores on Kris's MacBook, signed through `contracts/script/launch-kit.sh` (§2). The deployer, relay, attester and
-  arbitrator are fresh keys on this box, for 143 only.
+  keystores on Kris's MacBook, signed through `contracts/script/launch-kit.sh` (§2). The deployer, attester and
+  arbitrator are fresh keys on this box, for 143 only; there is no mainnet relay key.
 - **Disclosure.** Explore's footer and sidebar say the contracts are unaudited; the docs state the Safe's powers.
 
 ## 0. What is already proven, without a mainnet transaction
@@ -171,22 +171,21 @@ pwcheck() {
 }
 ```
 
-The keystore is `~/.foundry/keystores/sidequest-deployer`. Delete any other copy of the raw key. The relay and attester
-keys are not used here; they live in the production secret sources.
+The keystore is `~/.foundry/keystores/sidequest-deployer`. Delete any other copy of the raw key. The attester and
+arbitrator keys are daemon/Worker inputs, stored in the dedicated production environment.
 
-**Fresh keys (R2) first.** The relay and attester keys were exposed on 1 Oct, and the arbitrator key is replaced with them. Generate new relay, attester and arbitrator keys for mainnet, put only their addresses into `roles` in `config/monad-mainnet.json` and the artifact, and store the keys in the dedicated production secret sources. Never fund or configure `0xac72…9e7e`, `0x66b7…963f` or `0xc657…d632` on mainnet: the structural preflight refuses
-any of them as a role or artifact address (`RETIRED_ROLE_ADDRESSES`, `apps/api/src/prod-config.ts`), and as
+**Fresh keys (R2) first.** The old relay and attester keys were exposed on 1 Oct, and the arbitrator key was replaced with them. Generate a fresh attester and a fresh 143-only arbitrator for mainnet, put their addresses into `roles` in `config/monad-mainnet.json` and the artifact, and store the keys in the dedicated production secret sources. Mainnet has no relay. Never fund or configure `0xac72…9e7e`, `0x66b7…963f` or `0xc657F023F938BB89de590Ed96f79B775c7dDd632` on mainnet: the structural preflight refuses
+any of them as an active role or artifact address (`RETIRED_ROLE_ADDRESSES`, `apps/api/src/prod-config.ts`), and as
 `sidequest.defaultArbitrator`. It also requires `sidequest.defaultArbitrator` to be `roles.arbitrator`, and on chain 143
 DeploySidequest refuses either mistake before it sends anything (LAUNCH-AUDIT-FIX-001).
 
 | role | address | send | why |
 | :--- | :--- | :--- | :--- |
-| admin (deployer) | `roles.admin`, the fresh `sidequest-deployer` (never the old `0x6752…ad73`) | 60 MON | deploy (about 2.4 MON at 102 gwei) with room for a retry; the relay, arbiter and crew top-ups go out from it (§3.8) |
+| admin (deployer) | `roles.admin`, the fresh `sidequest-deployer` (never the old `0x6752…ad73`) | 60 MON | deploy (about 2.4 MON at 102 gwei) with room for a retry; the arbitrator and crew top-ups go out from it (§3.8) |
 | Safe owner (Mac kit) | `launch-kit.sh addresses` | 2 MON | the Safe, SafeAccept and the backing batch |
 | creator (Mac kit) | `launch-kit.sh addresses` | about 3,600 MON | the 5% dev buy (about 3,544 MON) and gas; the kit's margin is refunded |
 | exit test (Mac kit) | `launch-kit.sh addresses` | about 20 MON | the small buy and sell (§3.12) |
-| relay | `roles.relay` (a fresh R2 key) | 3 MON | must stay **above `RELAY_FLOOR_MAINNET` = 2 MON** (`packages/sdk/src/relay.ts`): the launch gate and each sponsored send check it. 3 MON leaves about 1 MON above the floor, about two sponsored hires (0.4–0.5 MON each, [sponsorship.md](sponsorship.md)); decide the launch funding and the 10 MON daily budget before opening writes |
-| attester | `roles.attester` (a fresh R2 key) | 1 MON | attaches evidence |
+| attester | `roles.attester` (a fresh R2 key) | no gas funding required | signs evidence; the submitting worker attaches it and pays USDC gas |
 | arbitrator | `roles.arbitrator` (a fresh 143-only key) | at least 1.0308 MON; fund 1.1 MON | sends its own rulings and nonce cancellations, paying MON. Three × (`ARBITER_MON_FLOOR` 0.1 MON + `V1_GAS.evaluator` 1,200,000 × 203 gwei = 0.2436 MON) gives 1.0308 MON of headroom. The gas watch warns below 1.0308 MON and is critical below one ruling plus float (0.3436 MON); top up before the warning becomes critical |
 
 The mainnet arbiter reads only `SIDEQUEST_MAINNET_ARBITRATOR_PRIVATE_KEY`; it must derive `roles.arbitrator` on 143.
@@ -349,7 +348,7 @@ bun scripts/preflight-prod.ts docs/p0-prod-artifact.json --live   # repo root; r
 
 Expected: `production launch gate refused`, listing exactly the four `launch:owner:<name> is not the Safe` (vault,
 feeSchedule, holding, evaluator). At this point the handovers are only pending. Anything else in the list is a real
-problem; stop. The one exception is `launch:relay at or below RELAY_FLOOR_MAINNET`: fund the relay (§2) and run it again.
+problem; stop. The gate checks the arbitrator's MON reserve and Pimlico's chain-143 EntryPoint, paymaster and USDC quote; resolve those before opening.
 
 ### 3.6 The Safe accepts the four [tx]
 
@@ -384,7 +383,8 @@ the artifact's public RPC (chain 143 only), and refuses on any failed read. It r
 - `owner() == Safe` on all four;
 - the core's `DEFAULT_ADMIN_ROLE` and `ADMIN_ROLE` held by the Safe, and by the deployer for neither;
 - the attester a verifier on the Evaluator;
-- the relay above `RELAY_FLOOR_MAINNET`.
+- the arbitrator at or above `ARBITER_LAUNCH_MON` (1.0308 MON), and the configured EntryPoint, Pimlico paymaster and USDC ready through
+  the Pimlico chain, EntryPoint and token-quote checks.
 
 At launch the artifact pins `safeOwners` to the one owner and `safeThreshold` to 1; nothing changes the threshold on
 launch day. Every opening deploy reruns the gate.
@@ -396,7 +396,7 @@ and 2 (R7 step 5 rehearses this). Read `getOwners()` and `getThreshold()` back, 
 
 ### 3.8 Fund the operation [tx]
 
-Fund the relay, arbiter and crew wallets with MON from the deployer (§2). From the dev buy's backing half, the Safe
+Fund the arbitrator and crew wallets with MON from the deployer (§2). From the dev buy's backing half, the Safe
 backs the official account (5M SIDE) and each crew agent (2.5M): one Safe transaction through MultiSendCallOnly of
 `approve(vault, total)` on SIDE followed by `delegateFor(account, safe, amount)` for each account, so the Safe keeps each
 position. The 1-of-1 Safe's owner signs it on the Mac; the file is `[{"account": "0x…", "side": "5000000"}, …]` in whole
@@ -413,11 +413,14 @@ the vault holds a claimable balance for SIDE, the Safe calls `claim(SIDE)` on it
 
 ### 3.9 A drained production deploy (no chain transaction)
 
-First the prod stage moves to chain 143, in one commit on `dev`: `infra/prod.json` gets `network` `monad-mainnet`,
-`chainId` 143 and the fresh mainnet `relay`. Its secret sources take the mainnet values, in both
+First the prod stage moves to chain 143, in one commit on `dev`: `infra/prod.json` gets `network` `monad-mainnet` and
+`chainId` 143 and drops the legacy `relay` field. The contracts coordinator also removes `roles.relay` from the mainnet
+config; the mainnet artifact has no relay address or secret source. Its secret sources take the mainnet values, in both
 `~/.config/sidequest/prod.env` and the GitHub `prod` environment:
 - `MONAD_RPC_URL`: the dedicated mainnet RPC, never the public endpoint;
-- `RELAY_PRIVATE_KEY` and `ATTESTER_PRIVATE_KEY`: the fresh keys of §2.
+- `ATTESTER_PRIVATE_KEY`: the fresh attester key of §2;
+- `PIMLICO_API_KEY`, `PRIVY_SIGNER_ID`, `PRIVY_POLICY_ID`, and the matching Privy signer key;
+- `HOSTED_SEND=userop` (the release refuses `HOSTED_SEND=relay` on mainnet).
 
 Until this commit, prod-testnet keeps its testnet values.
 
@@ -432,7 +435,7 @@ SIDEQUEST_PROD_ARTIFACT=docs/p0-prod-artifact.json PROD_ADMISSION_DRAIN=1 bun ru
   that differs from `prod.env`. A CI deploy takes them, and `HYPERSYNC_URL`, from the GitHub `prod` environment's
   variables. Smoke expects `/release.json` to match `MAINNET_LIVE`, so a drained deploy smokes green with writes closed.
 - `assertDeployConfig` runs before any resource: structure, provider and Privy mapping, dedicated secret sources,
-  the signing keys against the configured relay and attester, and the RPC's chain id. It also checks Explore's pinned
+  the attester signing key, Pimlico/USDC readiness, and the RPC's chain id. It also checks Explore's pinned
   `explore.mainnetLive`, which must equal `MAINNET_LIVE` in `packages/sdk/src/release.ts` and be false while drained.
 - A drained deploy skips the D16 gate, so an emergency redeploy is never blocked by it.
 - **Blocker:** remote state needs verified, account-scoped **Secrets Store: Edit** permission on the Cloudflare token,
@@ -495,7 +498,6 @@ sharing come back later as a new design with its own funding source and review.
   does not undo D1 schema or DO class migrations or namespace state. Preserve storage, domains and aliases; rebuild
   chain-derived rows only under a separately reviewed recovery procedure.
 - **A leaked key.** Every role key is separate.
-  - Relay: a new key in `roles.relay`, the artifact and the secret source, funded above the floor, then redeploy.
   - Attester: the Safe calls `setVerifier(new, true)` and `setVerifier(old, false)` on the Evaluator; update
     `roles.attester`, the artifact and the secret source, then redeploy.
   - Arbitrator: arbitrators are per offer, so new offers name a new one.

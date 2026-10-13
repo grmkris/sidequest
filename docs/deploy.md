@@ -32,9 +32,11 @@ For an approved prod operation, the corresponding commands are `bun run plan pro
 `bun run drift prod` and `bun run smoke prod`. The release runner requires `SIDEQUEST_ALLOW_PROD=1` for prod;
 a variable is a technical gate, not Kris's authorization.
 
-Before deploy, the runner validates required settings, profile/account identity, RPC chain, relay/attester addresses and
-remote state version. Planning uses a read-only state service. The plan refuses any replacement, deletion or orphan and
-any create outside a proved first deploy. It refuses adoption except the explicit one-time dev `--adopt-move` path.
+Before deploy, the runner validates required settings, profile/account identity, RPC chain, the testnet relay and attester
+addresses when applicable, and remote state version. Mainnet instead validates the attester, Pimlico/USDC AA readiness,
+and the arbitrator MON reserve through the opening launch gate. Planning uses a read-only state service. The plan refuses
+any replacement, deletion or orphan and any create outside a proved first deploy. It refuses adoption except the explicit
+one-time dev `--adopt-move` path.
 Do not bypass a refused plan with direct Alchemy commands or delete state to make it look like a first deploy.
 
 ## Shared remote state
@@ -60,6 +62,12 @@ prod-testnet). Release assembly removes it on a mainnet profile, and the API bin
 match the deployed testnet paymaster's immutable signer; the coordinator verifies that before enabling charged ops.
 Missing or invalid AA secrets return an unavailable-service error; they do not crash unrelated Worker routes.
 
+Mainnet requires no `RELAY_PRIVATE_KEY` or profile `relay`; the runner removes the unused key from its environment and
+Workers omit relay bindings. `HOSTED_SEND` defaults to `userop` on mainnet and refuses an explicit `relay`. Testnet keeps
+its relay default until its separate cutover. All hosted stages require nonempty `PRIVY_SIGNER_ID` and `PRIVY_POLICY_ID`.
+After mainnet promotion, create and read back the chain-143 routine policy with the explicit-network commands in the
+[mainnet runbook](mainnet-runbook.md#34a-hosted-signing-on-chain-143-coordinator-only).
+
 Bun automatically loads checkout env files. The runner scrubs inherited stage/config values, assembles the selected
 stage environment, and starts inspection with `bun --no-env-file`. CLI deploy/drift use the tracked regular empty file
 `scripts/ci/empty.env` and `BUN_OPTIONS=--no-env-file`. Do not replace this with `/dev/null`: the CLI rejected that
@@ -67,8 +75,9 @@ non-regular file on 7 October. Never print either env file or secret values whil
 
 ## Telegram webhooks and keys
 
-Each stage has its own relay and bot: dev `@sidequest_excange_dev_bot`, prod `@sidequest_exchange_bot`. The attester and
-arbitrator are shared on testnet. One Privy app's routine policy permits both relays; use the reviewed
+Testnet stages retain a relay and bot: dev `@sidequest_excange_dev_bot`, prod `@sidequest_exchange_bot`. Mainnet has no
+relay; hosted agents use USDC-paid user operations and the arbitrator pays MON for rulings. The attester and arbitrator
+are shared on testnet. One Privy app's routine policy permits both testnet relays; use the reviewed
 [`sidequest-cutover.ts`](../packages/sdk/scripts/privy/sidequest-cutover.ts) `update-policy` path for an authorized change.
 
 The API accepts Telegram at `<stage origin>/telegram/webhook` and requires `X-Telegram-Bot-Api-Secret-Token` matching

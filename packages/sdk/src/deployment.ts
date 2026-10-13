@@ -149,6 +149,7 @@ export interface Deployment {
   readonly admin: Address
   readonly arbitrator: Address
   readonly attester: Address
+  /** Legacy testnet compatibility field; zero on mainnet, which has no relay (ADR-0023). Removed in P8. */
   readonly relay: Address
   /**
    * x402 on this chain: the EIP-3009 USDC and Monad's facilitator, where a worker pays paid APIs and tools from its
@@ -224,7 +225,7 @@ export interface DeploymentConfig {
   liquidity?: LiquidityConfig
   chainId: number
   boards?: string[]
-  roles: { admin: string; relay: string; attester: string; arbitrator: string }
+  roles: { admin: string; relay?: string; attester: string; arbitrator: string }
   erc8004: { identity: string; reputation: string }
   delegation: { manager: string; delegator: string; enforcers: Record<keyof DelegationEnforcers, string> }
   x402?: { usdc: string; facilitator: string }
@@ -317,7 +318,7 @@ export function setRelayOverride(relay: Address | undefined): void {
  */
 export function deployment(network: Network): Deployment {
   const result = deploymentFromConfig(network, files[network])
-  return relayOverride === undefined ? result : { ...result, relay: relayOverride }
+  return network === 'monad-mainnet' || relayOverride === undefined ? result : { ...result, relay: relayOverride }
 }
 
 /**
@@ -479,7 +480,8 @@ export function deploymentFromConfig(network: Network, c: DeploymentConfig): Dep
     admin: c.roles.admin as Address,
     arbitrator: c.roles.arbitrator as Address,
     attester: c.roles.attester as Address,
-    relay: c.roles.relay as Address,
+    // SAFETY: mainnet has no relay; the zero sentinel preserves the legacy field until P8 removes it.
+    relay: network === 'monad-mainnet' ? zeroAddress : (c.roles.relay as Address),
     x402: c.x402 === undefined ? null : { usdc: c.x402.usdc as Address, facilitator: c.x402.facilitator },
     testnetFaucet: d.testnetFaucet === undefined || c.chainId === 143 ? null : (d.testnetFaucet as Address),
     market: marketFromConfig(d.factory as Address, c.liquidity),

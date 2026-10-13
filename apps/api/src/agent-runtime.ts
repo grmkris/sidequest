@@ -363,7 +363,11 @@ export async function runAgent(runtime: {
     return await answered({ network: req.env.network, bindings, agent, tool: req.tool, key }, result)
   } catch (error) {
     // A floor refusal sent nothing; alert the owners now instead of waiting for the indexer's next balance check.
-    if ((error as { reason?: unknown }).reason === 'floor' && bindings.Database !== undefined) {
+    if (
+      req.env.network === 'monad-testnet' &&
+      (error as { reason?: unknown }).reason === 'floor' &&
+      bindings.Database !== undefined
+    ) {
       await watchRelay(fromD1(bindings.Database as never), {
         network: req.env.network,
         now: Math.floor(Date.now() / 1000),

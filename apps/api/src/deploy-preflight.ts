@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { RELAY_FLOOR_MAINNET } from '@sidequest/sdk'
+import { ARBITER_LAUNCH_MON } from '@sidequest/sdk'
 import { privateKeyToAccount } from 'viem/accounts'
 import mainnet from '../../../contracts/config/monad-mainnet.json' with { type: 'json' }
 import testnet from '../../../contracts/config/monad-testnet.json' with { type: 'json' }
@@ -10,8 +10,7 @@ import { MAINNET_LIVE } from '@sidequest/sdk'
 import {
   liveLaunchGate,
   opensAdmission,
-  prodSecretSources,
-  relayFloorWei,
+  mainnetProdSecretSources,
   safePolicy,
   validateAdmissionMode,
   validateExploreRelease,
@@ -22,6 +21,8 @@ import {
   type ProdArtifact,
   type SafePolicy,
 } from './prod-config.ts'
+import type { LaunchAaProbe } from './launch-gas.ts'
+import { hostedSendMode } from '@sidequest/sdk'
 
 /** JSON-RPC reads only (eth_getCode, eth_call, eth_getBalance, eth_getStorageAt at latest). Any transport, HTTP or RPC
  *  error throws. */
@@ -81,11 +82,11 @@ export async function assertLaunchGate(
   config: ChainConfig,
   drain: string | undefined,
   reader: LaunchReader,
-  relayFloor: bigint | undefined,
   policy: SafePolicy | undefined,
+  aaProbe?: LaunchAaProbe,
 ): Promise<void> {
   if (!opensAdmission(drain)) return
-  const failures = await liveLaunchGate(config, reader, relayFloor, policy)
+  const failures = await liveLaunchGate(config, reader, ARBITER_LAUNCH_MON, policy, aaProbe)
   if (failures.length > 0) throw new Error(`production launch gate refused: ${failures.join(', ')}`)
 }
 
@@ -97,6 +98,7 @@ export async function assertDeployConfig(stage: string, profile = stageProfile(s
     await assertTestnetProdConfig(profile!, testnet)
     return
   }
+  hostedSendMode('monad-mainnet', process.env.HOSTED_SEND)
   const path = process.env.SIDEQUEST_PROD_ARTIFACT
   if (path === undefined || !path.endsWith('.json'))
     throw new Error('production needs an explicit reviewed JSON artifact')
@@ -120,15 +122,12 @@ export async function assertDeployConfig(stage: string, profile = stageProfile(s
   if (process.env.ALCHEMY_REMOTE_STATE !== '1') throw new Error('production requires remote state')
   if (process.env.PRIVY_APP_ID !== artifact.privy.appId || process.env.HYPERSYNC_URL !== artifact.hyperSync.url)
     throw new Error('production provider/Privy runtime mapping mismatch')
-  for (const [binding, source] of Object.entries(prodSecretSources)) {
+  for (const [binding, source] of Object.entries(mainnetProdSecretSources)) {
     const value = process.env[source]
     if (value === undefined || value === '' || value === 'unset')
       throw new Error(`production secret source missing: ${binding}`)
   }
-  for (const [source, role] of [
-    ['RELAY_PRIVATE_KEY', 'relay'],
-    ['ATTESTER_PRIVATE_KEY', 'attester'],
-  ] as const) {
+  for (const [source, role] of [['ATTESTER_PRIVATE_KEY', 'attester']] as const) {
     let matches = false
     try {
       matches =
@@ -152,13 +151,10 @@ export async function assertDeployConfig(stage: string, profile = stageProfile(s
     fetcher: fetch,
     reader: rpcReader(rpc),
   })
-  await assertLaunchGate(
-    mainnet,
-    process.env.PROD_ADMISSION_DRAIN,
-    rpcReader(rpc),
-    relayFloorWei(RELAY_FLOOR_MAINNET),
-    safePolicy(artifact),
-  )
+  await assertLaunchGate(mainnet, process.env.PROD_ADMISSION_DRAIN, rpcReader(rpc), safePolicy(artifact), {
+    env: process.env,
+    fetcher: fetch,
+  })
 }
 
 /** Testnet prod deliberately keeps writes open, but proves its stage relay and the v1 ownership boundary. */
@@ -181,7 +177,7 @@ export async function assertTestnetProdConfig(
   }
   if (chainId !== 10143) throw new Error('testnet production RPC chain mismatch')
   for (const [source, expected, label] of [
-    ['RELAY_PRIVATE_KEY', profile.relay, 'relay'],
+    ['RELAY_PRIVATE_KEY', profile.relay ?? '', 'relay'],
     ['ATTESTER_PRIVATE_KEY', config.roles.attester, 'attester'],
   ] as const) {
     try {

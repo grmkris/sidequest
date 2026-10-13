@@ -306,10 +306,7 @@
           },
           "field": "delegate",
           "operator": "in",
-          "value": [
-            "0xC4173dBC98ffd6F5785E8Fba85E9e5bd8b3F5058",
-            "0xa6D3eC73053152221af873789aEd179E506b1F0E"
-          ]
+          "value": ["0xC4173dBC98ffd6F5785E8Fba85E9e5bd8b3F5058", "0xa6D3eC73053152221af873789aEd179E506b1F0E"]
         }
       ]
     },

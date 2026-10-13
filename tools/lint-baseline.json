@@ -139,7 +139,7 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "apps/api/src/prod-config.ts": {
-    "anti-slop(no-runtime-typeof)": 12,
+    "anti-slop(no-runtime-typeof)": 10,
     "anti-slop(require-safety-comment-for-type-assertion)": 5,
     "complexity(complexity)": 2,
     "eslint(max-lines-per-function)": 2,
@@ -172,7 +172,7 @@
     "eslint(max-lines)": 1
   },
   "apps/api/src/worker.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 20,
+    "anti-slop(require-safety-comment-for-type-assertion)": 19,
     "complexity(complexity)": 3,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
@@ -1546,7 +1546,7 @@
   },
   "packages/sdk/src/deployment.ts": {
     "anti-slop(no-runtime-typeof)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 30,
+    "anti-slop(require-safety-comment-for-type-assertion)": 29,
     "complexity(complexity)": 2,
     "typescript(no-unnecessary-type-assertion)": 2
   },

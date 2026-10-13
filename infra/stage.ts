@@ -12,7 +12,8 @@ export interface StageProfile {
   network: 'monad-testnet' | 'monad-mainnet'
   chainId: number
   origin: string
-  relay: `0x${string}`
+  /** Legacy testnet relay; absent on mainnet (ADR-0023). */
+  relay?: `0x${string}`
   telegram: { botUsername: string }
   cloudflare: { accountId?: string; zoneId: string; zoneName: string }
   resources: Record<'Api' | 'Indexer' | 'Explore' | 'Database' | 'Manifests', string>
@@ -32,7 +33,10 @@ export function validateStageProfile(profile: unknown, stage: 'dev' | 'prod'): S
     value.chainId !== (value.network === 'monad-mainnet' ? 143 : 10143)
   )
     throw new Error('Stage network/chain mismatch')
-  if (new URL(value.origin).origin !== value.origin || !/^0x[0-9a-fA-F]{40}$/.test(value.relay))
+  if (
+    new URL(value.origin).origin !== value.origin ||
+    (value.network === 'monad-testnet' && !/^0x[0-9a-fA-F]{40}$/.test(value.relay ?? ''))
+  )
     throw new Error('Invalid stage origin/relay')
   if (value.roles !== undefined) Schema.decodeUnknownSync(StageRoles)(value.roles)
   for (const name of ['Api', 'Indexer', 'Explore', 'Database', 'Manifests'] as const) {

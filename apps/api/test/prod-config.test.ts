@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import mainnet from '../../../contracts/config/monad-mainnet.json' with { type: 'json' }
 import proposed from '../../../docs/p0-prod-artifact.json' with { type: 'json' }
 import {
-  prodSecretSources,
+  mainnetProdSecretSources,
   RETIRED_ROLE_ADDRESSES,
   validateProdConfig,
   type ChainConfig,
@@ -67,7 +67,7 @@ const configured = () => {
     remoteState: true,
     admission: { drain: true },
     explore: { mainnetLive: false },
-    secretSources: { ...prodSecretSources },
+    secretSources: { ...mainnetProdSecretSources },
     addresses: {
       ...config.roles,
       identity: config.erc8004.identity,
@@ -113,7 +113,7 @@ test('LAUNCH-AUDIT-FIX-002: a synthetic pre-R2 record (retired keys, unpinned Sa
     [
       'sidequest:safeOwners/safeThreshold',
       'sidequest.defaultArbitrator is a retired 1 Oct key',
-      ...['relay', 'attester', 'arbitrator'].flatMap((name) => [
+      ...['attester', 'arbitrator'].flatMap((name) => [
         `role:${name} is a retired 1 Oct key`,
         `address:${name} is a retired 1 Oct key`,
       ]),
@@ -179,7 +179,7 @@ test.each([
   if (kind === 'RPC') artifact.rpc.url = 'https://testnet-rpc.monad.xyz'
   if (kind === 'HyperSync') artifact.hyperSync.url = 'https://monad-testnet.hypersync.xyz'
   if (kind === 'Privy') artifact.privy.origins = ['https://dev.sidequest.exchange']
-  if (kind === 'secret') artifact.secretSources.RELAY_PRIVATE_KEY = 'SIDEQUEST_PROD_RELAY_PRIVATE_KEY'
+  if (kind === 'secret') artifact.secretSources.ATTESTER_PRIVATE_KEY = 'SIDEQUEST_PROD_ATTESTER_PRIVATE_KEY'
   if (kind === 'address') artifact.addresses.core = '0x0000000000000000000000000000000000000000'
   if (kind === 'openTokens') config.deployment.main!.openTokens = false
   if (kind === 'legacy')
@@ -335,7 +335,7 @@ test('LAUNCH-AUDIT-004: the promoted reward list must hold USDC, and the artifac
   expect(validateProdConfig(c.config, c.artifact)).toEqual([])
 })
 
-test('LAUNCH-AUDIT-008: the denylist is three distinct addresses (the 1 Oct relay, attester and arbitrator); none may be a mainnet role', () => {
+test('LAUNCH-AUDIT-008: retired addresses cannot occupy active roles; the unused relay is ignored', () => {
   expect(RETIRED_ROLE_ADDRESSES).toHaveLength(3)
   expect(RETIRED_ROLE_ADDRESSES.every((a) => /^0x[0-9a-fA-F]{40}$/.test(a))).toBe(true)
   expect(new Set(RETIRED_ROLE_ADDRESSES.map((a) => a.toLowerCase())).size).toBe(3)
@@ -346,11 +346,15 @@ test('LAUNCH-AUDIT-008: the denylist is three distinct addresses (the 1 Oct rela
       c.artifact.addresses[role] = old
       // Mainnet is v1-only, so its role arbitrator is also the Holding default; testnet retains a separate legacy role.
       if (role === 'arbitrator') c.config.sidequest!.defaultArbitrator = old
-      expect(validateProdConfig(c.config, c.artifact)).toEqual([
-        `role:${role} is a retired 1 Oct key`,
-        `address:${role} is a retired 1 Oct key`,
-        ...(role === 'arbitrator' ? ['sidequest.defaultArbitrator is a retired 1 Oct key'] : []),
-      ])
+      expect(validateProdConfig(c.config, c.artifact)).toEqual(
+        role === 'relay'
+          ? []
+          : [
+              `role:${role} is a retired 1 Oct key`,
+              `address:${role} is a retired 1 Oct key`,
+              ...(role === 'arbitrator' ? ['sidequest.defaultArbitrator is a retired 1 Oct key'] : []),
+            ],
+      )
     }
   }
   const c = configured()
@@ -359,6 +363,14 @@ test('LAUNCH-AUDIT-008: the denylist is three distinct addresses (the 1 Oct rela
     expect.arrayContaining(['address:holding is a retired 1 Oct key']),
   )
   expect(validateProdConfig(configured().config, configured().artifact)).toEqual([])
+})
+
+test('mainnet artifact validates without any relay role, address or secret source', () => {
+  const { config, artifact } = configured()
+  delete config.roles.relay
+  delete artifact.addresses.relay
+  expect(artifact.secretSources.RELAY_PRIVATE_KEY).toBeUndefined()
+  expect(validateProdConfig(config, artifact)).toEqual([])
 })
 
 test('LAUNCH-AUDIT-FIX-001: mainnet sidequest.defaultArbitrator matches its v1 role and is not retired', () => {

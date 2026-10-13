@@ -121,7 +121,10 @@ export const transferWithAuthorizationTypes = {
 
 /** The most one x402 payment may move, in USDC base units (testnet and mainnet use the same cap). */
 export const X402_PAYMENT_CAP = '5000000'
-export const RELAY_ADDRESSES = [stageProfile('dev')!.relay, stageProfile('prod')!.relay] as const
+export const RELAY_ADDRESSES = [stageProfile('dev'), stageProfile('prod')]
+  .filter((profile) => profile?.network === 'monad-testnet')
+  .map((profile) => profile?.relay)
+  .filter((relay): relay is `0x${string}` => relay !== undefined)
 export const DIRECTORY_RECORD_KINDS = ['Enrollment', 'ServiceAd', 'RevokeAd'] as const
 
 function signingShapesFor(selected: PolicyConfig): readonly SigningShape[] {

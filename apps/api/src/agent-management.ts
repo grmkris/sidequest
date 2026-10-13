@@ -84,12 +84,16 @@ export async function agentManagement(input: {
       : {}),
     fail: (code, message) => new BoardError(code, message),
   })
+  const hostedMode = sdk.hostedSendMode(
+    context.deployment.network,
+    Schema.decodeUnknownSync(Schema.UndefinedOr(Schema.String))(bindings.HOSTED_SEND),
+  )
   const lifecycle = new AgentLifecycle({
     sql,
     context,
     now,
     sponsor,
-    ...(bindings.HOSTED_SEND === 'userop' ? { hostedSend: 'userop' } : {}),
+    ...(hostedMode === 'userop' ? { hostedSend: 'userop' } : {}),
   })
   if (action === 'list') return { agents: agents.list(operator).map((row) => ({ ...row, roles: agentRoles(row) })) }
   if (action === 'approvals') return { approvals: agents.approvals(operator) }

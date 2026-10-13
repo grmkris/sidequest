@@ -1,6 +1,6 @@
-/** Construct the hosted desk only at the explicit cutover flag. */
+/** Mainnet always uses the hosted desk; testnet selects it through the cutover flag. */
 import { AgentSigning, UserOpDesk, UserOpStore, type Sql } from '@sidequest/board'
-import type { Ctx } from '@sidequest/sdk'
+import { hostedSendMode, type Ctx } from '@sidequest/sdk'
 import * as Schema from 'effect/Schema'
 import { aaRpc } from './aa-proxy.ts'
 
@@ -17,7 +17,8 @@ export function hostedUserOpDesk(input: {
   readonly signing: AgentSigning
   readonly now: () => number
 }): UserOpDesk | undefined {
-  if (input.bindings.HOSTED_SEND !== 'userop') return undefined
+  const mode = Schema.decodeUnknownSync(Schema.UndefinedOr(Schema.String))(input.bindings.HOSTED_SEND)
+  if (hostedSendMode(input.context.deployment.network, mode) !== 'userop') return undefined
   const bindings = Schema.decodeUnknownSync(RpcBindings)(input.bindings)
   return new UserOpDesk({
     context: input.context,
