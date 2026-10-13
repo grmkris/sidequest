@@ -53,6 +53,7 @@ type Status = TxStatus
 
 const chainReads = (address: Hex): ChainReads => ({
   nonce: (blockTag) => getTransactionCount(wagmiConfig, { address, blockTag, chainId: chain.id }),
+  nonceAt: (blockNumber) => getTransactionCount(wagmiConfig, { address, blockNumber, chainId: chain.id }),
   blockNumber: () => getBlockNumber(wagmiConfig, { chainId: chain.id, cacheTime: 0 }),
   block: (blockNumber) => getBlock(wagmiConfig, { blockNumber, includeTransactions: true, chainId: chain.id }),
 })
@@ -79,11 +80,16 @@ const SPONSORED = {
 
 const UNCERTAIN = {
   checking: 'Your wallet returned an error without a transaction hash. Checking the chain for this step…',
+  // Privy's embedded wallet broadcasts, waits for the receipt, and on a revert throws this alone, without the hash.
+  failedInWallet: 'Your wallet says the transaction failed. Finding it on the chain to see what happened…',
   pending:
     'Your account has a transaction waiting to be mined. Check again in a moment, or paste its hash from your wallet activity; do not send this step again yet.',
   unknown:
     'The chain could not confirm whether this step went out. Check again, or paste its hash from your wallet activity; do not send it again yet.',
 }
+
+/** Privy's own words for a transaction it broadcast and saw revert: it was sent, whatever else is unknown. */
+const failedInWallet = (error: unknown) => error instanceof Error && error.message === 'Transaction failed'
 
 const load = (key: string, required = false) => readTxJournal(localStorage, key, required)
 const save = (key: string, record: OpRecord | null) => writeTxJournal(localStorage, key, record)
@@ -454,7 +460,7 @@ export function MonTxSteps({
    * out. Mined: follow it like any sent step. Provably not sent: a real retry. Otherwise it stays uncertain, with a
    * check again and the hash from wallet activity as the ways out; it is never sent twice on a guess.
    */
-  const reconcile = async (i: number, r: OpRecord) => {
+  const reconcile = async (i: number, r: OpRecord, checkingText = UNCERTAIN.checking) => {
     if (checking.current) return
     const snapshot = r.snapshot
     const from = r.from
@@ -463,7 +469,7 @@ export function MonTxSteps({
       return
     }
     checking.current = true
-    set(i, { at: 'uncertain', checking: true, error: UNCERTAIN.checking })
+    set(i, { at: 'uncertain', checking: true, error: checkingText })
     const call = r.batch
       ? { to: from, data: sdk.batchCalldata(txs.map((t) => ({ ...t, value: '0' as const }))) }
       : { to: txs[i]!.to, data: txs[i]!.data, value: BigInt(txs[i]!.value) }
@@ -677,7 +683,7 @@ export function MonTxSteps({
         await commit({ ...withPending, pending: null, snapshot: null })
         set(i, { at: 'failed', error: friendlyError(e) })
       } else {
-        await reconcile(i, withPending)
+        await reconcile(i, withPending, failedInWallet(e) ? UNCERTAIN.failedInWallet : UNCERTAIN.checking)
       }
       return
     }

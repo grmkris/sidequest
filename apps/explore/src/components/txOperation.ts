@@ -127,6 +127,8 @@ export async function guardedSnapshot(
 /** The chain reads a reconciliation needs; the transactions of a block as far as matching a call goes. */
 export interface ChainReads {
   nonce(blockTag: 'latest' | 'pending'): Promise<number>
+  /** The account's nonce after a past block: lets `reconcileSend` find the block its send landed in by bisection. */
+  nonceAt?(block: bigint): Promise<number>
   blockNumber(): Promise<bigint>
   block(number: bigint): Promise<{
     transactions: ReadonlyArray<{
@@ -152,11 +154,32 @@ export type Reconciled = { at: 'found'; hash: Hex } | { at: 'not-sent' } | { at:
 
 const same = (a: string | null, b: string) => a !== null && a.toLowerCase() === b.toLowerCase()
 
+/** Blocks read before the one where the nonce moved: an RPC may report a block's state a few blocks late (Monad). */
+const NONCE_LAG = 3n
+
+/**
+ * The first block after `start` whose nonce is past `nonce`, by bisection over `nonceAt`: about 10 reads for a
+ * thousand blocks, where reading them one by one took minutes on a public RPC (13 Oct, a buy confirmed a minute late).
+ */
+async function firstBlockPast(reads: ChainReads, nonce: number, start: bigint, head: bigint): Promise<bigint> {
+  let lo = start
+  let hi = head
+  while (lo < hi) {
+    const mid = (lo + hi) / 2n
+    const at = await reads.nonceAt?.(mid)
+    if (at === undefined) return start
+    if (at > nonce) hi = mid
+    else lo = mid + 1n
+  }
+  return lo
+}
+
 /**
  * Settles an ambiguous send against the chain. When the account's mined nonce has not moved past the snapshot and
- * nothing is pending, nothing went out. When it has moved, the blocks since the snapshot are read until every one of
- * the account's new transactions is seen; the one carrying this exact call is the step. At most `maxBlocks` blocks are
- * read, after which the answer is `unknown` rather than a guess.
+ * nothing is pending, nothing went out. When it has moved, the blocks from where it moved (found by bisection when the
+ * reads allow it, else from the snapshot) are read until every one of the account's new transactions is seen; the one
+ * carrying this exact call is the step. At most `maxBlocks` blocks are read, after which the answer is `unknown` rather
+ * than a guess.
  */
 export async function reconcileSend(
   reads: ChainReads,
@@ -176,7 +199,15 @@ export async function reconcileSend(
   const sent = mined - snapshot.nonce
   if (sent > 0) {
     let seen = 0
-    const start = BigInt(snapshot.block)
+    let start = BigInt(snapshot.block)
+    try {
+      if (reads.nonceAt !== undefined && head > start) {
+        const moved = await firstBlockPast(reads, snapshot.nonce, start, head)
+        start = moved - NONCE_LAG > start ? moved - NONCE_LAG : start
+      }
+    } catch {
+      return { at: 'unknown' }
+    }
     const last = head < start + BigInt(maxBlocks) - 1n ? head : start + BigInt(maxBlocks) - 1n
     try {
       for (let n = start; n <= last && seen < sent; n++) {

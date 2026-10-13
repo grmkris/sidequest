@@ -277,6 +277,24 @@ describe('ambiguous send reconciliation', () => {
     expect(await reconcileSend(c, snapshot, owner, call)).toEqual({ at: 'not-sent' })
     expect(reads.blocks).toBe(2)
   })
+  it('finds a send confirmed long after the snapshot by bisecting the nonce, reading a handful of blocks', async () => {
+    // 13 Oct: the buy was confirmed a minute after its snapshot, hundreds of Monad blocks later.
+    const landed = 100 + 900
+    const { chain: c, reads } = chain({ mined: 6, head: 1_200, blocks: { [landed]: [tx(5, call.data)] } })
+    let nonceReads = 0
+    const bisected = {
+      ...c,
+      nonceAt: async (block: bigint) => {
+        nonceReads++
+        return block >= BigInt(landed) ? 6 : 5
+      },
+    }
+    expect(await reconcileSend(bisected, snapshot, owner, call)).toEqual({ at: 'found', hash: tx(5, '0x').hash })
+    expect(nonceReads).toBeLessThanOrEqual(11)
+    expect(reads.blocks).toBeLessThanOrEqual(4)
+    // Without the bisection read, the same send is past the block limit and stays unknown.
+    expect(await reconcileSend(c, snapshot, owner, call)).toEqual({ at: 'unknown' })
+  })
   it('does not guess when the chain cannot answer or the blocks run past the limit', async () => {
     expect(await reconcileSend(chain({ mined: 5, down: true }).chain, snapshot, owner, call)).toEqual({ at: 'unknown' })
     expect(await reconcileSend(chain({ mined: 6, head: 400 }).chain, snapshot, owner, call, 50)).toEqual({
