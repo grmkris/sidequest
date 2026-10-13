@@ -6,6 +6,7 @@ import * as Config from 'effect/Config'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Redacted from 'effect/Redacted'
+import * as HttpServerRequest from 'effect/http/HttpServerRequest'
 import * as HttpServerResponse from 'effect/http/HttpServerResponse'
 import { Database } from '@sidequest/indexer/database'
 import { rpcUrlForNetwork } from '@sidequest/indexer/network'
@@ -23,6 +24,9 @@ import { gasWatches, reportGasWatchFailure, watchGas } from '@sidequest/indexer/
 import { feedFromChain, pruneFeed, reportFeedFailure } from '@sidequest/indexer/feed'
 import { deliverWebhooks, reportWebhookFailure } from '@sidequest/indexer/webhooks'
 import { recordIndexerRun, type IndexerRunOutcome } from './run-record.ts'
+
+/** A poked run waits until the checkpoint is older than one cron period and a little. */
+const STALE_SECONDS = 50
 
 const secret = (name: string) =>
   Config.Redacted(name).pipe(Effect.map((v) => (Redacted.value(v) === 'unset' ? '' : Redacted.value(v))))
@@ -169,19 +173,36 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
       })
     })
 
-    yield* Cloudflare.Workers.cron('* * * * *', () =>
-      run.pipe(
-        Effect.withSpan('indexer.run'),
-        Effect.flatMap((r) => record({ ok: true, result: r })),
-        Effect.catchCause((c) => record({ ok: false, cause: c }).pipe(Effect.ignore)),
-      ),
+    const recordedRun = run.pipe(
+      Effect.withSpan('indexer.run'),
+      Effect.flatMap((r) => record({ ok: true, result: r }).pipe(Effect.as(true))),
+      Effect.catchCause((c) => record({ ok: false, cause: c }).pipe(Effect.ignore, Effect.as(false))),
     )
+    yield* Cloudflare.Workers.cron('* * * * *', () => recordedRun)
 
     return {
       fetch: Effect.gen(function* () {
+        const request = yield* HttpServerRequest.HttpServerRequest
         const raw = yield* db.raw
+        const sql = fromD1(raw as never)
+        // While Cloudflare's cron activation fails (incident of 13 Oct), an outside poke runs the same pass. It runs
+        // only when this chain's checkpoint is stale, and the ingest lease keeps it from overlapping a cron run.
+        if (request.method === 'POST' && new URL(request.originalUrl, 'http://indexer').pathname === '/run') {
+          // SAFETY: NETWORK is bound at deploy from the stage profile's network, always one of the SDK's networks.
+          const chainId = sdk.deployment((yield* Config.String('NETWORK')) as sdk.Network).chainId
+          const stale = yield* Effect.promise(async () => {
+            await migrate(sql)
+            const [row] = await sql.all<{ updated_at: number }>(
+              'SELECT updated_at FROM checkpoint WHERE chain_id=?',
+              chainId,
+            )
+            return row === undefined || Math.floor(Date.now() / 1000) - row.updated_at > STALE_SECONDS
+          })
+          if (!stale) return HttpServerResponse.jsonUnsafe({ ok: true, ran: false })
+          const ok = yield* recordedRun
+          return HttpServerResponse.jsonUnsafe({ ok, ran: true }, { status: ok ? 200 : 503 })
+        }
         const rows = yield* Effect.promise(async () => {
-          const sql = fromD1(raw as never)
           await migrate(sql)
           return {
             checkpoint: await sql.all(
@@ -192,7 +213,7 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
           }
         })
         return HttpServerResponse.jsonUnsafe({ ok: true, ...rows })
-      }),
+      }).pipe(Effect.orDie),
     }
   }).pipe(
     Effect.provide(
