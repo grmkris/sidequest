@@ -8,7 +8,7 @@ import * as sdk from '@sidequest/sdk'
 import { useQuery } from '@tanstack/react-query'
 import { Check } from 'lucide-react'
 import { type ReactNode, useEffect, useState } from 'react'
-import { erc20Abi, parseUnits } from 'viem'
+import { erc20Abi, parseEther, parseUnits } from 'viem'
 import { useBalance, useReadContract } from 'wagmi'
 import { useBondPolicy } from '../../bond-policy.ts'
 import { formatAmount } from '../../format.ts'
@@ -16,12 +16,12 @@ import { publicKey } from '../../queries.ts'
 import {
   DEFAULT_SLIPPAGE,
   type Edited,
-  SLIPPAGES,
+  IMPACT_HIGH,
   type SideTrade,
   type Slippage,
   fillText,
+  priceImpact,
   sideTrade,
-  slippageText,
   tradeAmounts,
   wholeUp,
 } from '../../side-sheet.ts'
@@ -30,8 +30,10 @@ import { chain, deployed, deployment, getSideLink, isMainnet, privyAppId, writes
 import { GasWarning, SWAP_GAS } from '../GasWarning.tsx'
 import { AddressRow, Segmented } from '../kit.tsx'
 import { AmountField } from '../money/AmountField.tsx'
+import { approxUsd, useMonPrice, usdValue } from '../../usd.ts'
 import { usePrivyAuthenticated } from '../Privy.tsx'
 import { TestnetFaucet } from '../TestnetFaucet.tsx'
+import { TradeDetails } from './TradeDetails.tsx'
 import { SavedTrade, TradeEndedNotice, useTradeSend } from './TradeSend.tsx'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
@@ -99,16 +101,25 @@ function useWallet(l: sdk.Launcher | null, address: `0x${string}` | undefined) {
 }
 
 /** What the card's one button says: what it would do, or what stands in the way. */
-function ctaLabel(state: SideTrade, trade: Trade, amounts: ReturnType<typeof tradeAmounts>): string {
+function ctaLabel(
+  state: SideTrade,
+  trade: Trade,
+  amounts: ReturnType<typeof tradeAmounts>,
+  impact: number | null,
+): string {
   if (state === 'closed') return 'Trading opens at launch'
   if (state === 'unavailable') return 'Not available on this network'
   if (state === 'sign-in') return `Sign in to ${trade}`
   if (state === 'connecting') return 'Connecting your wallet…'
   if (amounts === null) return trade === 'buy' ? 'Buy SIDE' : 'Sell SIDE'
+  const anyway = impact !== null && impact >= IMPACT_HIGH ? ' anyway' : ''
   return trade === 'buy'
-    ? `Buy ${formatAmount(amounts.expectedOut, 18)} SIDE`
-    : `Sell ${formatAmount(amounts.amountIn, 18)} SIDE`
+    ? `Buy ${formatAmount(amounts.expectedOut, 18)} SIDE${anyway}`
+    : `Sell ${formatAmount(amounts.amountIn, 18)} SIDE${anyway}`
 }
+
+/** A small trade to measure price impact against: 0.1 MON in on a buy, 1,000 SIDE in on a sale. */
+const REF_IN = { buy: parseEther('0.1'), sell: parseEther('1000') } as const
 
 /** Why the amount paid is too much: Monad's reserve in an upgraded wallet, gas, or more SIDE than the wallet holds. */
 function shortHint(trade: Trade, cap: { max: bigint; reserve: boolean } | undefined): string {
@@ -152,6 +163,14 @@ function useTradeForm(l: sdk.Launcher | null, need: bigint | null) {
     refetchInterval: 10_000,
     retry: false,
   })
+  const ref = useQuery({
+    queryKey: publicKey('launcher-ref', l?.router, trade),
+    queryFn: () => sdk.launcherQuote(ctx, l!, trade, REF_IN[trade]),
+    enabled: deployed && l !== null && typed !== null,
+    refetchInterval: 10_000,
+    retry: false,
+  })
+  const amounts = tradeAmounts({ edited, typed, quoted: quote.data, slippageBps: slippage })
   const computed = quote.data === undefined ? '' : formatAmount(quote.data, 18)
   return {
     trade,
@@ -160,7 +179,8 @@ function useTradeForm(l: sdk.Launcher | null, need: bigint | null) {
     quote,
     slippage,
     setSlippage,
-    amounts: tradeAmounts({ edited, typed, quoted: quote.data, slippageBps: slippage }),
+    amounts,
+    impact: priceImpact(amounts, ref.data === undefined ? undefined : { refIn: REF_IN[trade], refOut: ref.data }),
     // A new amount is quoting; the 10 s refresh of one already quoted updates in place.
     quoting: typed !== null && quote.isFetching && !quote.isRefetching,
     payText: edited === 'pay' ? text : computed,
@@ -273,24 +293,27 @@ function gasReady(trade: Trade, wallet: ReturnType<typeof useWallet>): boolean {
 }
 
 /** What the form shows, from the trade state, the form and the wallet: kept out of the component to keep it plain. */
-function formView(state: SideTrade, form: ReturnType<typeof useTradeForm>, wallet: ReturnType<typeof useWallet>) {
+function formView(
+  state: SideTrade,
+  form: ReturnType<typeof useTradeForm>,
+  wallet: ReturnType<typeof useWallet>,
+  monPrice: number | undefined,
+) {
   const { trade, amounts } = form
   const max = trade === 'buy' ? wallet.cap?.max : wallet.side
   // A buy with no MON to spend says so before anything is typed, not only once an amount is too much.
   const short =
     (amounts !== null && max !== undefined && amounts.amountIn > max) ||
     (trade === 'buy' && state === 'trade' && max === 0n)
-  const out = trade === 'buy' ? 'SIDE' : MON
+  // The MON side of the trade in dollars, where MON has a price (mainnet).
+  const usd = usdValue(trade === 'buy' ? amounts?.amountIn : amounts?.expectedOut, 18, monPrice)
   return {
+    usd: usd === undefined ? undefined : approxUsd(usd),
     open: state !== 'closed' && state !== 'unavailable',
     max: state === 'trade' ? max : undefined,
     short: short ? shortHint(trade, wallet.cap) : null,
     noGas: state === 'trade' && !gasReady(trade, wallet),
     ready: state === 'trade' && amounts !== null && !short && !form.quoting,
-    floor:
-      amounts === null
-        ? `Through nad.fun’s router, at most ${slippageText(form.slippage)} below the quote.`
-        : `At least ${formatAmount(amounts.minOut, 18)} ${out}, through nad.fun’s router.`,
   }
 }
 
@@ -311,7 +334,7 @@ function TradeForm({
   const state = sideTrade({ writesOpen, launcher: l !== null, address, authenticated: usePrivyAuthenticated() })
   const wallet = useWallet(l, address)
   const { trade, amounts } = form
-  const view = formView(state, form, wallet)
+  const view = formView(state, form, wallet, useMonPrice())
   // Back from a trade that didn't happen: price the same amount again now, not from the quote it was sent on.
   useEffect(() => {
     if (sending.ended !== null && form.typed !== null) void form.quote.refetch()
@@ -332,11 +355,14 @@ function TradeForm({
         }}
         className="w-full"
       />
-      <div className="grid gap-1.5 rounded-xl bg-muted/60 p-1.5">
-        <PayField form={form} side={l?.side ?? null} open={view.open} max={view.max} short={view.short} />
-        <GetField form={form} side={l?.side ?? null} open={view.open} />
-      </div>
-      <FloorRow floor={view.floor} slippage={form.slippage} onSlippage={form.setSlippage} />
+      <TradeFields form={form} side={l?.side ?? null} view={view} />
+      <TradeDetails
+        trade={trade}
+        amounts={amounts}
+        impact={form.impact}
+        slippage={form.slippage}
+        onSlippage={form.setSlippage}
+      />
       {view.noGas && address !== undefined ? (
         <div className="grid gap-2">
           <GasWarning
@@ -351,7 +377,7 @@ function TradeForm({
       ) : (
         <TradeButton
           state={state}
-          label={ctaLabel(state, trade, amounts)}
+          label={ctaLabel(state, trade, amounts, form.impact)}
           ready={view.ready && sending.loaded}
           busy={sending.preparing}
           onSignIn={onSignIn}
@@ -371,30 +397,28 @@ function TradeForm({
   )
 }
 
-/** The least the trade returns, beside how far under the quote it may fill. */
-function FloorRow({
-  floor,
-  slippage,
-  onSlippage,
+/** "You pay" over "You get", in one well; the MON side carries its dollar estimate. */
+function TradeFields({
+  form,
+  side,
+  view,
 }: {
-  floor: string
-  slippage: Slippage
-  onSlippage: (next: Slippage) => void
+  form: ReturnType<typeof useTradeForm>
+  side: `0x${string}` | null
+  view: ReturnType<typeof formView>
 }) {
+  const buy = form.trade === 'buy'
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-      <p className="min-w-0 flex-1 basis-48 text-ui text-pretty text-muted-foreground tabular-nums">{floor}</p>
-      <div className="flex items-center gap-2">
-        <span aria-hidden className="text-ui text-muted-foreground">
-          Slippage
-        </span>
-        <Segmented
-          label="Slippage"
-          value={String(slippage)}
-          options={SLIPPAGES.map((bps) => [String(bps), slippageText(bps)] as const)}
-          onChange={(next) => onSlippage(SLIPPAGES.find((bps) => String(bps) === next) ?? DEFAULT_SLIPPAGE)}
-        />
-      </div>
+    <div className="grid gap-1.5 rounded-xl bg-muted/60 p-1.5">
+      <PayField
+        form={form}
+        side={side}
+        open={view.open}
+        max={view.max}
+        short={view.short}
+        usd={buy ? view.usd : undefined}
+      />
+      <GetField form={form} side={side} open={view.open} usd={buy ? undefined : view.usd} />
     </div>
   )
 }
@@ -442,6 +466,7 @@ function PayField({
   open,
   max,
   short,
+  usd,
 }: {
   form: ReturnType<typeof useTradeForm>
   side: `0x${string}` | null
@@ -450,6 +475,8 @@ function PayField({
   max: bigint | undefined
   /** Why the amount is too much, or null. */
   short: string | null
+  /** The amount in dollars ("≈ $5.06"), where it is MON and MON has a price. */
+  usd?: string | undefined
 }) {
   const buy = form.trade === 'buy'
   const canMax = max !== undefined && max > 0n
@@ -464,7 +491,7 @@ function PayField({
       onMax={canMax ? () => form.type('pay', fillText(max)) : undefined}
       pending={form.edited === 'get' && form.quoting}
       tone={short === null ? 'neutral' : 'warning'}
-      hint={short ?? undefined}
+      hint={short ?? usd}
       disabled={!open}
     />
   )
@@ -475,10 +502,13 @@ function GetField({
   form,
   side,
   open,
+  usd,
 }: {
   form: ReturnType<typeof useTradeForm>
   side: `0x${string}` | null
   open: boolean
+  /** The amount in dollars, where it is MON and MON has a price. */
+  usd?: string | undefined
 }) {
   const bond = useBondPolicy().data?.minimumCreatorBond
   const buy = form.trade === 'buy'
@@ -496,7 +526,7 @@ function GetField({
       symbol={buy ? 'SIDE' : MON}
       chips={chip}
       pending={form.edited === 'pay' && form.quoting}
-      hint={failed ? 'nad.fun can’t quote this amount right now.' : undefined}
+      hint={failed ? 'nad.fun can’t quote this amount right now.' : usd}
       tone={failed ? 'destructive' : 'neutral'}
       disabled={!open}
     />

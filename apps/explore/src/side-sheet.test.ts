@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_SLIPPAGE,
+  IMPACT_HIGH,
+  IMPACT_WARN,
   fillText,
+  impactText,
+  monPerMillion,
+  priceImpact,
   quoteHolds,
   sideRequest,
   sideShort,
@@ -92,5 +97,23 @@ describe('the SIDE sheet', () => {
     expect(wholeUp(5n * 10n ** 17n)).toBe(5n * 10n ** 17n)
     expect(fillText(side(500_000n))).toBe('500,000')
     expect(fillText(5n * 10n ** 17n)).toBe('0.5')
+  })
+
+  it('measures price impact against a small reference trade, and the rate per million SIDE', () => {
+    // 13 Oct, mainnet: 1 MON bought ~12,140 SIDE near the top of the curve; 206.22 MON for 2.5M is a worse rate.
+    const ref = { refIn: side(1n), refOut: side(12_140n) }
+    const big = { amountIn: 206_220_000_000_000_000_000n, expectedOut: side(2_500_000n) }
+    const impact = priceImpact(big, ref)!
+    expect(impact).toBeGreaterThan(0)
+    expect(impact).toBeLessThan(IMPACT_WARN)
+    expect(impactText(impact)).toBe('0.1%')
+    expect(priceImpact({ amountIn: side(1n), expectedOut: side(12_200n) }, ref)).toBe(0)
+    expect(priceImpact(null, ref)).toBeNull()
+    expect(priceImpact(big, undefined)).toBeNull()
+    expect(impactText(0.0004)).toBe('<0.1%')
+    expect(impactText(0.18)).toBe('18%')
+    expect(IMPACT_HIGH).toBeGreaterThan(IMPACT_WARN)
+    expect(monPerMillion('buy', big)).toBe(82_488_000_000_000_000_000n)
+    expect(monPerMillion('sell', { amountIn: side(1_000_000n), expectedOut: side(80n) })).toBe(side(80n))
   })
 })

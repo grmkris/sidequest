@@ -7,9 +7,10 @@ import { stakeContext } from './stake-context.ts'
 import { deployed, deployment, network } from './wallet.ts'
 
 /*
- * Dollar estimates for the wallet. Only two sources count: tokens the network config pegs at one dollar
- * (`usdPegged`: USDC, testnet's mUSD) and SIDE through its market pool when that pool is quoted in a pegged token.
- * Every other token has no price and shows none; nothing is guessed. Testnet values are test value.
+ * Dollar estimates for the wallet. Only three sources count: tokens the network config pegs at one dollar
+ * (`usdPegged`: USDC, testnet's mUSD), SIDE through its market pool when that pool is quoted in a pegged token, and
+ * MON through the native/pegged pool the config names (`prices.native`, mainnet). Every other token has no price and
+ * shows none; nothing is guessed. Testnet values are test value.
  */
 
 const PEGGED = new Set(sdk.networkMeta(network).usdPegged.map((a) => a.toLowerCase()))
@@ -24,6 +25,23 @@ export function useSidePrice(): number | undefined {
     queryFn: () => sdk.sidePrice(stakeContext(), m!, tokenInfo(m!.quote).decimals),
     enabled: deployed && m !== null && isUsdPegged(m.quote),
     refetchInterval: 30_000,
+    retry: false,
+  })
+  return price.data !== undefined && Number.isFinite(price.data) && price.data > 0 ? price.data : undefined
+}
+
+/**
+ * One MON in dollars from the native/pegged pool's mid price, or undefined without one (testnet) or while unread. A
+ * quote token this app doesn't know the decimals of prices nothing, rather than a price off by a power of ten.
+ */
+export function useMonPrice(): number | undefined {
+  const p = deployment.nativePrice
+  const known = p !== null && tokenInfo(p.quote).symbol !== 'tokens'
+  const price = useQuery({
+    queryKey: publicKey('native-price', p?.poolId),
+    queryFn: () => sdk.nativeUsdPrice(stakeContext(), p!, tokenInfo(p!.quote).decimals),
+    enabled: deployed && known,
+    refetchInterval: 60_000,
     retry: false,
   })
   return price.data !== undefined && Number.isFinite(price.data) && price.data > 0 ? price.data : undefined

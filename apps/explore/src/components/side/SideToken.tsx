@@ -1,8 +1,9 @@
 /**
- * The SIDE control: one chip with SIDE's address that copies it and opens the SIDE sheet, where people see what the
- * posting bond costs in MON, buy or sell SIDE through nad.fun's router, and find SIDE on nad.fun and the explorers. One
+ * The SIDE control: one chip with SIDE's address that copies it and opens the SIDE sheet, where people buy or sell
+ * SIDE through nad.fun's router, see what the posting bond costs, and find SIDE on nad.fun and the explorers. One
  * provider in the root layout holds the sheet, so any page opens it (`useSideSheet`), and a `?side` or `?side=<SIDE>`
- * link opens it on load. Utility only: what SIDE is for and what it costs in MON, never a dollar price or a chart.
+ * link opens it on load. Utility only: amounts in MON with a dollar estimate beside them on mainnet (14 Oct, Kris),
+ * never a chart.
  */
 import * as sdk from '@sidequest/sdk'
 import { useQuery } from '@tanstack/react-query'
@@ -10,7 +11,7 @@ import { useLocation } from '@tanstack/react-router'
 import { ExternalLink } from 'lucide-react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { erc20Abi } from 'viem'
-import { useBalance, useReadContract } from 'wagmi'
+import { useReadContract } from 'wagmi'
 import { useBondPolicy } from '../../bond-policy.ts'
 import { formatAmount } from '../../format.ts'
 import { cn } from '../../lib/cn.ts'
@@ -21,7 +22,8 @@ import { sideRequest, wholeUp, withoutSide } from '../../side-sheet.ts'
 import { stakeContext } from '../../stake-context.ts'
 import { chain, deployed, deployment, explorer, getSideLink, isMainnet, sidePages, sideToken } from '../../wallet.ts'
 import { TradeCard } from './TradeCard.tsx'
-import { AddressRow, CopyButton, Stat, shortAddress, textLinkClass } from '../kit.tsx'
+import { CopyButton, shortAddress, textLinkClass } from '../kit.tsx'
+import { approxUsd, useMonPrice, usdValue } from '../../usd.ts'
 import { usePrivyModalOpen } from '../Privy.tsx'
 import { Sheet } from '../Sheet.tsx'
 import { TokenIcon } from '../token/TokenIcon.tsx'
@@ -151,42 +153,54 @@ function SideSheetBody({
   onSignIn: () => void
   onClose: () => void
 }) {
+  // The trade leads; what SIDE is for (the bond) and what the wallet holds follow it in one sentence.
   return (
     <>
-      <div className="-mt-2 grid gap-2">
-        <p className="leading-snug text-pretty text-muted-foreground">Bonds and backing on Sidequest</p>
-        <AddressRow value={side} kind="token" short copyLabel="Copy SIDE contract address" className="w-fit" />
-      </div>
-      {deployed && <BondCost side={side} need={need} />}
+      {deployed && need !== null && <NeedLine need={need} />}
       <TradeCard need={need} onBusyChange={onBusyChange} onSignIn={onSignIn} onClose={onClose} />
+      {deployed && <BondLine side={side} />}
       <Elsewhere side={side} />
     </>
   )
 }
 
-/**
- * What SIDE is for and what the wallet has, as two figures: the posting bond with its cost in MON now, and the wallet's
- * SIDE and MON. Then any SIDE still needed, with its cost and a Fill for the buy.
- */
-function BondCost({ side, need }: { side: `0x${string}`; need: bigint | null }) {
+/** MON as the sheet writes it beside an amount: "82.36 MON", with "≈ $2.02" where MON has a price (mainnet). */
+function monText(mon: bigint, price: number | undefined): string {
+  const usd = usdValue(mon, 18, price)
+  return `${formatAmount(mon, 18)} ${chain.nativeCurrency.symbol}${usd === undefined ? '' : `, ${approxUsd(usd)}`}`
+}
+
+/** What the router charges for `amount` SIDE now, refreshed with the curve; undefined while unread. */
+function useSideCost(amount: bigint | null | undefined) {
   const ctx = stakeContext()
   const launcher = deployment.launcher
+  return useQuery({
+    queryKey: publicKey('side-cost', launcher?.router, amount?.toString()),
+    queryFn: () => sdk.launcherSideCost(ctx, launcher!, amount!),
+    enabled: launcher !== null && amount !== null && amount !== undefined,
+    refetchInterval: 30_000,
+    retry: false,
+  }).data
+}
+
+/** The SIDE a page asked for and the wallet lacks, with its cost: the buy below is filled in with it. */
+function NeedLine({ need }: { need: bigint }) {
+  const cost = useSideCost(need)
+  const price = useMonPrice()
+  return (
+    <p className="-mt-1 text-pretty text-warning-text tabular-nums">
+      You need {formatAmount(wholeUp(need), 18)} more SIDE{cost !== undefined && `, about ${monText(cost, price)}`}. The
+      buy below is filled in.
+    </p>
+  )
+}
+
+/** One sentence under the trade: the SIDE the wallet holds, and what one posting bond is and costs now. */
+function BondLine({ side }: { side: `0x${string}` }) {
   const { address } = useAuth()
   const bond = useBondPolicy().data?.minimumCreatorBond
-  const cost = useQuery({
-    queryKey: publicKey('side-cost', launcher?.router, bond?.toString()),
-    queryFn: () => sdk.launcherSideCost(ctx, launcher!, bond!),
-    enabled: launcher !== null && bond !== undefined,
-    refetchInterval: 30_000,
-    retry: false,
-  })
-  const needCost = useQuery({
-    queryKey: publicKey('side-cost', launcher?.router, need?.toString()),
-    queryFn: () => sdk.launcherSideCost(ctx, launcher!, need!),
-    enabled: launcher !== null && need !== null,
-    refetchInterval: 30_000,
-    retry: false,
-  })
+  const cost = useSideCost(bond)
+  const price = useMonPrice()
   const held = useReadContract({
     address: side,
     abi: erc20Abi,
@@ -195,42 +209,12 @@ function BondCost({ side, need }: { side: `0x${string}`; need: bigint | null }) 
     chainId: chain.id,
     query: { enabled: address !== undefined, refetchInterval: 10_000 },
   }).data
-  const gas = useBalance({
-    address,
-    chainId: chain.id,
-    query: { enabled: address !== undefined, refetchInterval: 15_000 },
-  }).data?.value
-  const mon = chain.nativeCurrency.symbol
+  if (bond === undefined) return null
   return (
-    <div className="grid gap-2">
-      <dl className="grid grid-cols-2 gap-3 rounded-lg bg-muted/50 px-3 py-2.5">
-        <Stat
-          label="Posting bond"
-          value={bond === undefined ? '…' : `${formatAmount(bond, 18)} SIDE`}
-          sub={
-            cost.data !== undefined
-              ? `≈ ${formatAmount(cost.data, 18)} ${mon} on nad.fun`
-              : cost.isError
-                ? 'nad.fun can’t quote it now'
-                : undefined
-          }
-        />
-        {address !== undefined && (
-          <Stat
-            label="In your wallet"
-            value={held === undefined ? '…' : `${formatAmount(held, 18)} SIDE`}
-            sub={gas === undefined ? undefined : `${formatAmount(gas, 18)} ${mon}`}
-          />
-        )}
-      </dl>
-      {need !== null && (
-        <p className="text-pretty text-warning-text tabular-nums">
-          You need {formatAmount(wholeUp(need), 18)} more SIDE
-          {needCost.data !== undefined && `, about ${formatAmount(needCost.data, 18)} ${mon}`}. The buy below is filled
-          in.
-        </p>
-      )}
-    </div>
+    <p className="text-ui text-pretty text-muted-foreground tabular-nums">
+      {held !== undefined && `You hold ${formatAmount(held, 18)} SIDE. `}
+      Posting a job bonds {formatAmount(bond, 18)} SIDE{cost !== undefined && ` (about ${monText(cost, price)})`}.
+    </p>
   )
 }
 
@@ -277,6 +261,10 @@ function Elsewhere({ side }: { side: `0x${string}` }) {
           <a href="/docs/token" className={link}>
             About SIDE
           </a>
+        </li>
+        <li className="inline-flex items-center gap-0.5 font-mono text-ui text-muted-foreground">
+          {shortAddress(side)}
+          <CopyButton value={side} label="Copy SIDE contract address" className="size-8 pointer-coarse:size-11" />
         </li>
       </ul>
     </div>
