@@ -173,15 +173,14 @@ export const PERMISSION_TOOLS = new Set([
   'use_permission',
   'revoke_permission',
 ])
-/** A hosted agent's own directory listing (WS8) stays testnet-only until its signer rules reach mainnet. */
+/** A hosted agent's own directory listing (WS8); its ServiceAd and RevokeAd signer rules reached mainnet in the
+ *  chain-143 Privy policy on 13 Oct, so listing runs on both networks. */
 export const LISTING_TOOLS = new Set(['advertise_service', 'withdraw_service'])
 /** x402 waits for the testnet routine signer policy; mainnet remains hidden. */
 export const X402_TOOLS = new Set(['x402_pay'])
 
 export function networkTool(network: string, name: string): boolean {
-  return (
-    network !== 'monad-mainnet' || (!PERMISSION_TOOLS.has(name) && !LISTING_TOOLS.has(name) && !X402_TOOLS.has(name))
-  )
+  return network !== 'monad-mainnet' || (!PERMISSION_TOOLS.has(name) && !X402_TOOLS.has(name))
 }
 const CONTINUATIONS = new Set([
   'submit_selection',

@@ -13,14 +13,14 @@ afterEach(() => {
   for (const database of databases.splice(0)) database.close()
 })
 
-it('listing tools are work tools of the hosted agent and stay off mainnet until its signer rules are promoted', () => {
+it('listing tools are work tools of the hosted agent on both networks since the mainnet signer rules (13 Oct)', () => {
   for (const name of LISTING_TOOLS) {
     expect(Object.hasOwn(agentTools, name)).toBe(true)
     expect(requiredToolScope(name)).toBe('sidequest:work')
     expect(permittedTool({ scopes: ['sidequest:read', 'sidequest:work'] }, name)).toBe(true)
     expect(permittedTool({ scopes: ['sidequest:read', 'sidequest:hire'] }, name)).toBe(false)
     expect(networkTool('monad-testnet', name)).toBe(true)
-    expect(networkTool('monad-mainnet', name)).toBe(false)
+    expect(networkTool('monad-mainnet', name)).toBe(true)
   }
 })
 
