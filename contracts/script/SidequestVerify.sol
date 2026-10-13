@@ -68,6 +68,7 @@ library SidequestVerify {
         _require(d.holding.MIN_DISPUTE_WINDOW() == c.clocks.minDisputeWindow, "holding.MIN_DISPUTE_WINDOW");
         _require(d.holding.MIN_ARBITRATION_WINDOW() == c.clocks.minArbitrationWindow, "holding.MIN_ARBITRATION_WINDOW");
         _require(d.vault.slashRecipient() == c.slashRecipient, "vault.slashRecipient");
+        if (c.chainId == 143) _require(d.vault.slashRecipient() == c.safe, "slash recipient must be the Safe");
         _require(d.vault.UNSTAKE_DELAY() == c.clocks.unstakeDelay, "vault.UNSTAKE_DELAY");
         _require(d.vault.HOLDING_DELAY() == c.clocks.holdingDelay, "vault.HOLDING_DELAY");
         _require(d.vault.PROPOSAL_GRACE() == c.clocks.proposalGrace, "vault.PROPOSAL_GRACE");
@@ -80,6 +81,7 @@ library SidequestVerify {
             _require(s.thresholds[i] == c.thresholds[i] * 1e18 && s.bps[i] == c.bps[i], "fee schedule");
         }
         _require(s.treasury == c.feeTreasury, "fee treasury");
+        if (c.chainId == 143) _require(s.treasury == c.safe, "fee treasury must be the Safe");
         (, uint48 feeEta) = d.fees.pending();
         _require(feeEta == 0, "fee schedule pending");
 

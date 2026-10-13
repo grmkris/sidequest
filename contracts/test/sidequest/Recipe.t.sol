@@ -12,6 +12,7 @@ import {IERC8004Identity, IERC8004Reputation} from "../../src/vendor/erc8004/IER
 import {MockPaymentToken} from "../../src/MockPaymentToken.sol";
 import {ISidequestHolding} from "../../src/sidequest/interfaces/ISidequestHolding.sol";
 import {IStakeVault} from "../../src/sidequest/interfaces/IStakeVault.sol";
+import {IFeeSchedule} from "../../src/sidequest/interfaces/IFeeSchedule.sol";
 import {IFactory} from "../../src/sidequest/interfaces/IFactory.sol";
 import {SidequestRecipe} from "../../script/SidequestRecipe.sol";
 import {SidequestOutput} from "../../script/SidequestOutput.sol";
@@ -415,6 +416,35 @@ contract RecipeTest is Test {
             mainnet.step(i);
         }
         assertEq(mainnet.deployed().holding.defaultArbitrator(), fresh);
+    }
+
+    /// @dev Launch custody is pinned to the Safe: mainnet fee income and slash forfeitures must not be configured to a
+    /// different recipient. Testnet keeps the configured recipients for its existing deployments.
+    function test_recipe_mainnetTreasuryAndSlashRecipientAreTheSafe() public {
+        vm.chainId(143);
+        SidequestRecipe.Config memory m = _mainnetLaunchConfig();
+
+        m.feeTreasury = stranger;
+        vm.expectRevert(
+            abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "mainnet fee treasury must be the Safe")
+        );
+        driver.configure(m);
+
+        m.feeTreasury = safe;
+        m.slashRecipient = stranger;
+        vm.expectRevert(
+            abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "mainnet slash recipient must be the Safe")
+        );
+        driver.configure(m);
+    }
+
+    function _mainnetLaunchConfig() internal returns (SidequestRecipe.Config memory m) {
+        m = c;
+        m.chainId = 143;
+        m.arbitrator = m.defaultArbitrator;
+        m.launchCurve = makeAddr("launch-curve");
+        m.launchImplementation = address(new MockNadToken(m.launchCurve));
+        m.token = IFactory(Clones.clone(m.launchImplementation));
     }
 
     /// @dev Off mainnet the default arbitrator is not tied to roles.arbitrator.
@@ -875,6 +905,30 @@ contract RecipeTest is Test {
         _expectNotLive(cc, d, "SIDE token");
         vm.mockCall(address(side), abi.encodeWithSignature("totalSupply()"), abi.encode(uint256(1)));
         _expectNotLive(c, d, "SIDE supply");
+        vm.clearMockedCalls();
+    }
+
+    /// @dev The live promotion readback pins both money sinks to the Safe on mainnet, even when the config and live
+    /// getter agree with each other but are both wrong.
+    function test_promotion_mainnetTreasuryAndSlashRecipientAreTheSafe() public {
+        vm.chainId(143);
+        SidequestRecipe.Config memory m = _mainnetLaunchConfig();
+        RecipeDriver mainnet = new RecipeDriver();
+        mainnet.configure(m);
+        for (uint256 i; i < 8; ++i) mainnet.step(i);
+        SidequestRecipe.Deployed memory d = mainnet.deployed();
+        this.verifyExternal(m, d);
+
+        IFeeSchedule.Schedule memory wrong = d.fees.schedule();
+        wrong.treasury = stranger;
+        vm.mockCall(address(d.fees), abi.encodeWithSelector(IFeeSchedule.schedule.selector), abi.encode(wrong));
+        m.feeTreasury = stranger;
+        _expectNotLive(m, d, "fee treasury must be the Safe");
+        vm.clearMockedCalls();
+
+        vm.mockCall(address(d.vault), abi.encodeWithSignature("slashRecipient()"), abi.encode(stranger));
+        m.slashRecipient = stranger;
+        _expectNotLive(m, d, "slash recipient must be the Safe");
         vm.clearMockedCalls();
     }
 

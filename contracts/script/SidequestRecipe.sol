@@ -207,6 +207,8 @@ library SidequestRecipe {
         // LAUNCH-AUDIT-FIX-001: the Holding's default arbitrator rules every offer that names none. On mainnet it is
         // the configured fresh arbiter, never a key retired on 1 Oct, whatever the API preflight was given.
         if (c.chainId == MAINNET) {
+            if (c.feeTreasury != c.safe) revert BadConfig("mainnet fee treasury must be the Safe");
+            if (c.slashRecipient != c.safe) revert BadConfig("mainnet slash recipient must be the Safe");
             if (retired(c.defaultArbitrator)) revert BadConfig("defaultArbitrator is a retired 1 Oct key");
             if (c.defaultArbitrator != c.arbitrator) revert BadConfig("defaultArbitrator is not roles.arbitrator");
             // The exposed attester would become an Evaluator verifier if `roles.attester` were never replaced.
