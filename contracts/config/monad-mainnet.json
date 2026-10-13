@@ -49,6 +49,16 @@
     "testnet": "https://dev.sidequest.exchange",
     "x": "https://x.com/sidequest_0"
   },
+  "firstParty": {
+    "addresses": [
+      "0x7d363EBFcE050E6e4173ea10b5e3cBB050E8e635",
+      "0x5884FCC45DF1AEb31B25171FB9cb04cEeCBcb3E0",
+      "0xf3a5163fe4be20442e4fed1f34a978cad123b7b4",
+      "0x4437fd60d4dac2c321476e71e4c2229ee9a18eb0"
+    ],
+    "agents": ["10399", "10401"],
+    "demoJobs": []
+  },
   "liquidity": {
     "uniswapV4": {
       "poolManager": "0x188d586Ddcf52439676Ca21A244753fA19F9Ea8e",

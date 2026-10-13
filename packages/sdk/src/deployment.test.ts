@@ -248,7 +248,13 @@ describe('network meta', () => {
   })
   it('reads the first-party wallets, crew agents and demo jobs, empty until named', () => {
     const c = currentConfig()
-    expect(networkMeta('monad-mainnet').firstParty).toEqual({ addresses: [], agents: [], demoJobs: [] })
+    expect(networkMeta('monad-testnet').firstParty).toEqual({ addresses: [], agents: [], demoJobs: [] })
+    // Mainnet names the Safe, the official account and the launch crew (13 Oct).
+    const launched = networkMeta('monad-mainnet').firstParty
+    expect(launched.addresses.map((a) => a.toLowerCase())).toContain(
+      deployment('monad-mainnet').sidequest!.safe.toLowerCase(),
+    )
+    expect(launched.agents.length).toBeGreaterThan(0)
     const safe = '0x2222222222222222222222222222222222222222'
     const named = { ...c, firstParty: { addresses: [safe], agents: ['2023'], demoJobs: ['1'] } }
     expect(networkMetaFromConfig(named).firstParty).toEqual({ addresses: [safe], agents: ['2023'], demoJobs: ['1'] })
