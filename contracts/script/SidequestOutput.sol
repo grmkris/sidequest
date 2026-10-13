@@ -25,6 +25,7 @@ library SidequestOutput {
     error UnknownKey(string where, string key);
     error AlreadyDeployed();
     error ClockMismatch();
+    error SlashRecipientMismatch();
     /// @dev Mainnet: no `rewardTokens` and no `knownTokens`, or a reward list without `x402.usdc` or `sidequest.token`.
     error MainnetRewardTokens();
 
@@ -101,6 +102,8 @@ library SidequestOutput {
     ) internal {
         string memory json = vm.readFile(path);
         preflight(vm, json);
+        address recipient = d.vault.slashRecipient();
+        if (recipient != vm.parseJsonAddress(json, ".sidequest.slashRecipient")) revert SlashRecipientMismatch();
         SidequestClocks.Config memory clocks = readClocks(d);
         SidequestClocks.Config memory input = SidequestRecipe.loadClocks(vm, json, ".sidequest.clocks");
         if (keccak256(abi.encode(clocks)) != keccak256(abi.encode(input))) revert ClockMismatch();
@@ -122,6 +125,7 @@ library SidequestOutput {
         vm.serializeAddress(h, "safe", safe);
         vm.serializeAddress(h, "factory", address(d.factory));
         vm.serializeAddress(h, "vault", address(d.vault));
+        vm.serializeAddress(h, "slashRecipient", recipient);
         vm.serializeAddress(h, "feeSchedule", address(d.fees));
         string memory clockKey = "deployment.sidequest.clocks";
         vm.serializeUint(clockKey, "minReviewWindow", clocks.minReviewWindow);
@@ -178,6 +182,11 @@ library SidequestOutput {
             && vm.parseJsonAddress(json, ".deployment.core") == address(d.core);
         if (!same || !vm.keyExistsJson(json, ".deployment.sidequest.clocks")) revert AlreadyDeployed();
         if (
+            !vm.keyExistsJson(json, ".deployment.sidequest.slashRecipient")
+                || d.vault.slashRecipient() != vm.parseJsonAddress(json, ".deployment.sidequest.slashRecipient")
+                || d.vault.slashRecipient() != vm.parseJsonAddress(json, ".sidequest.slashRecipient")
+        ) revert AlreadyDeployed();
+        if (
             d.holding.minimumCreatorBond() != vm.parseJsonUint(json, ".sidequest.minimumCreatorBond")
                 || d.holding.MAX_MINIMUM_CREATOR_BOND() != vm.parseJsonUint(json, ".sidequest.maxMinimumCreatorBond")
                 || d.holding.unfilledForfeitBps() != vm.parseJsonUint(json, ".sidequest.unfilledForfeitBps")
@@ -217,6 +226,7 @@ library SidequestOutput {
         vm.serializeAddress(k, "factory", address(d.factory));
         vm.serializeAddress(k, "feeSchedule", address(d.fees));
         vm.serializeAddress(k, "vault", address(d.vault));
+        vm.serializeAddress(k, "slashRecipient", d.vault.slashRecipient());
         vm.serializeAddress(k, "holding", address(d.holding));
         vm.writeJson(vm.serializeAddress(k, "evaluator", address(d.evaluator)), path);
     }
@@ -233,6 +243,7 @@ library SidequestOutput {
         d.factory = IFactory(vm.parseJsonAddress(json, ".factory"));
         d.fees = FeeSchedule(vm.parseJsonAddress(json, ".feeSchedule"));
         d.vault = StakeVault(vm.parseJsonAddress(json, ".vault"));
+        if (d.vault.slashRecipient() != vm.parseJsonAddress(json, ".slashRecipient")) revert SlashRecipientMismatch();
         d.holding = SidequestHolding(vm.parseJsonAddress(json, ".holding"));
         d.evaluator = SidequestEvaluator(vm.parseJsonAddress(json, ".evaluator"));
     }

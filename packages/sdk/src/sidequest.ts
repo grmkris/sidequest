@@ -16,7 +16,7 @@ export const SidequestOutcome = [
   'DeliveryMissed',
 ] as const
 
-/** The evaluator records a finding; only Holding's actual bond event proves release or burn. */
+/** The evaluator records a finding; only Holding's actual bond event proves release or slash to the vault's recipient. */
 export function bondSettlementEvent(
   receipts: readonly TransactionReceipt[],
   holding: Address,

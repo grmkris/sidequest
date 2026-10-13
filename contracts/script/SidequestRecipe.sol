@@ -48,6 +48,7 @@ library SidequestRecipe {
         IERC8004Identity identity;
         IERC8004Reputation reputation;
         address safe;
+        address slashRecipient;
         address defaultArbitrator;
         uint48 margin;
         /// @dev Raw SIDE units.
@@ -141,6 +142,7 @@ library SidequestRecipe {
         c = loadBase(vm, network);
         string memory json = vm.readFile(path(vm, network));
         c.safe = vm.parseJsonAddress(json, ".sidequest.safe");
+        c.slashRecipient = vm.parseJsonAddress(json, ".sidequest.slashRecipient");
         c.defaultArbitrator = vm.parseJsonAddress(json, ".sidequest.defaultArbitrator");
         // Narrowing casts revert instead of wrapping (C9 MATH-6): a typo like 66536 bps must not load as 1000.
         c.margin = SafeCast.toUint48(vm.parseJsonUint(json, ".sidequest.margin"));
@@ -186,8 +188,8 @@ library SidequestRecipe {
             revert BadConfig("invalid creator bond policy");
         }
         if (
-            c.safe == address(0) || c.defaultArbitrator == address(0) || c.feeTreasury == address(0)
-                || c.attester == address(0)
+            c.safe == address(0) || c.slashRecipient == address(0) || c.defaultArbitrator == address(0)
+                || c.feeTreasury == address(0) || c.attester == address(0)
         ) revert BadConfig("zero address");
         // SIDE exists before the deploy and is exactly the launcher's token: code, 18 decimals and the fixed 1e9
         // supply (nad.fun V2 tokens have no mint and no burn, so live totalSupply cannot drift).
@@ -205,6 +207,8 @@ library SidequestRecipe {
         // LAUNCH-AUDIT-FIX-001: the Holding's default arbitrator rules every offer that names none. On mainnet it is
         // the configured fresh arbiter, never a key retired on 1 Oct, whatever the API preflight was given.
         if (c.chainId == MAINNET) {
+            if (c.feeTreasury != c.safe) revert BadConfig("mainnet fee treasury must be the Safe");
+            if (c.slashRecipient != c.safe) revert BadConfig("mainnet slash recipient must be the Safe");
             if (retired(c.defaultArbitrator)) revert BadConfig("defaultArbitrator is a retired 1 Oct key");
             if (c.defaultArbitrator != c.arbitrator) revert BadConfig("defaultArbitrator is not roles.arbitrator");
             // The exposed attester would become an Evaluator verifier if `roles.attester` were never replaced.
@@ -278,7 +282,7 @@ library SidequestRecipe {
     }
 
     function stepVault(Config memory c, Deployed memory d) internal {
-        d.vault = new StakeVault(c.token, c.clocks);
+        d.vault = new StakeVault(c.token, c.slashRecipient, c.clocks);
     }
 
     function stepHolding(Config memory c, Deployed memory d) internal {

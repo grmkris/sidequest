@@ -10,7 +10,6 @@ import {ISidequestHolding} from "../src/sidequest/interfaces/ISidequestHolding.s
 import {ISidequestEvaluator} from "../src/sidequest/interfaces/ISidequestEvaluator.sol";
 import {IStakeVault} from "../src/sidequest/interfaces/IStakeVault.sol";
 import {SidequestRecipe} from "./SidequestRecipe.sol";
-import {SidequestConstants} from "../src/sidequest/interfaces/SidequestConstants.sol";
 
 /// @dev Launch rehearsal only (R7, `script/rehearse-launch.sh`): runs against a scratch `config/rehearsal-*.json` on a
 ///      local anvil fork, with throwaway keys passed in the environment. Refuses any other config name.
@@ -184,7 +183,7 @@ contract RehearseHire is RehearsalScript {
 }
 
 /// @notice The undelivered hire, strictly after its delivery deadline: anyone rejects it, which penalizes the worker
-///         bond, then settles. SIDE has no burn, so the slashed bond must arrive at `SidequestConstants.SLASH_SINK`.
+///         bond, then settles. The slashed SIDE must arrive at the vault's current `slashRecipient`.
 ///         Keys: CREATOR_KEY (any account works; the calls are permissionless).
 contract RehearseSlash is RehearsalScript {
     function run(uint256 jobId) external {
@@ -192,13 +191,15 @@ contract RehearseSlash is RehearsalScript {
         ISidequestHolding holding = ISidequestHolding(_addr(".deployment.main.holding"));
         IERC20 side = IERC20(_addr(".deployment.sidequest.factory"));
         uint256 bond = holding.getListing(jobId).workerBond;
-        uint256 sunk = side.balanceOf(SidequestConstants.SLASH_SINK);
+        address recipient = IStakeVault(_addr(".deployment.sidequest.vault")).slashRecipient();
+        uint256 before = side.balanceOf(recipient);
         vm.startBroadcast(vm.envUint("CREATOR_KEY"));
         ISidequestEvaluator(_addr(".deployment.main.evaluator")).rejectAfterDeliveryDeadline{gas: 1_200_000}(jobId);
         holding.settle{gas: 1_000_000}(jobId);
         vm.stopBroadcast();
         require(holding.getListing(jobId).workerBondBurned, "the missed delivery did not penalize the worker bond");
-        require(side.balanceOf(SidequestConstants.SLASH_SINK) == sunk + bond, "the slashed bond is not in the sink");
-        console2.log("slashed to the sink", bond);
+        require(side.balanceOf(recipient) == before + bond, "the slashed bond did not reach the recipient");
+        console2.log("slash recipient", recipient);
+        console2.log("slashed to the recipient", bond);
     }
 }

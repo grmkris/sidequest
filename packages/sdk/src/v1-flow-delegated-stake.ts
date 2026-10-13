@@ -272,7 +272,7 @@ export async function runDelegatedStakeFlow(d: V1FlowDeps, flow: DelegatedStakeF
     const listing = await sdk.getV1Listing(ctx, x.jobId)
     exact('worker bond settled', listing.workerBondSettled, true)
     exact('creator bond settled', listing.creatorBondSettled, true)
-    exact('worker burn decision', listing.workerBondBurned, slash)
+    exact('worker slash decision', listing.workerBondBurned, slash)
     exact('job outcome', listing.outcome, slash ? 2 : 1)
     verifyJobEconomics(
       ['accept', 'rule', 'settle'].flatMap((label) => {

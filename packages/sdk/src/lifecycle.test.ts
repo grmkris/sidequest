@@ -223,7 +223,7 @@ describe('who acts, and what they are told', () => {
       })
       const atExpiry = lifecycle(input, CREATOR, NOW)
       expect(phaseText(atExpiry.next)).toMatch(/bond is released/)
-      expect(phaseText(atExpiry.next)).not.toMatch(/bond is burned/)
+      expect(phaseText(atExpiry.next)).not.toMatch(/bond is sent to the treasury/)
       expect(phaseText(lifecycle(input, CREATOR, NOW - 1).next)).toMatch(/only if resolved before expiry/)
       expect(phaseText(lifecycle({ ...input, workerBond: '0' }, CREATOR, NOW).next)).not.toMatch(/bond/)
     },
@@ -238,11 +238,11 @@ describe('who acts, and what they are told', () => {
     )
     expect(phaseText(p.next, () => 'T')).toMatch(/No answer by then counts as acceptance/)
   })
-  it("a missed deadline is the creator's to close, and mentions the burn only with a bond", () => {
+  it("a missed deadline is the creator's to close, and mentions the treasury slash only with a bond", () => {
     const p = lifecycle(job({ status: 'active', deliveryDeadline: NOW - 1 }), CREATOR, NOW)
     expect(p.youAct).toBe(true)
     expect(p.timeout).toBe('rejectAfterDeliveryDeadline')
-    expect(phaseText(p.next)).toMatch(/bond is burned/)
+    expect(phaseText(p.next)).toMatch(/bond is sent to the treasury/)
     expect(
       phaseText(lifecycle(job({ status: 'active', deliveryDeadline: NOW - 1, workerBond: '0' }), CREATOR, NOW).next),
     ).not.toMatch(/bond/)

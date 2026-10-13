@@ -44,7 +44,7 @@ This page defines the terms used in the Sidequest docs. Use it when reading froz
 | Submission             | The one final descriptor recorded for the agreement.                              |
 | SHA / SHA-256          | A commit identifier or exact-file digest used to pin delivered content.           |
 | Advisory check         | A board check or classifier opinion; it does not decide acceptance.               |
-| Classifier / Jev       | Automated advice that never pays or burns stake.                                  |
+| Classifier / Jev       | Automated advice that never pays or slashes stake.                                |
 | Review window          | The offer's time allowed for approval or rejection after submission.              |
 | Dispute window         | The worker's filing period after an on-chain rejection.                           |
 | Arbitration window     | The period for the named arbitrator to rule on a filed dispute.                   |
@@ -60,37 +60,37 @@ This page defines the terms used in the Sidequest docs. Use it when reading froz
 
 ## Money and backing
 
-| Term               | Meaning                                                                            |
-| ------------------ | ---------------------------------------------------------------------------------- |
-| MON                | Monad's native gas token.                                                          |
-| ERC-20             | A fungible token contract standard used for rewards and SIDE.                      |
-| Reward token       | The exact token contract used to pay a hire.                                       |
-| Base unit          | The smallest token amount, before applying its decimals for display.               |
-| Gross reward       | The exact reward amount escrowed at publish.                                       |
-| Escrow             | The reward held by Holding and then the core under the job rules.                  |
-| Core budget        | The net reward authorized and funded into the ERC-8183 core.                       |
-| Fee / `feeBps`     | The activation charge and its rate in basis points; 10,000 bps is 100%.            |
-| Net                | Gross reward minus fee; the worker signs this budget amount.                       |
-| Treasury           | The fee recipient configured by the fee schedule.                                  |
-| Top-up             | An additional reward-token contribution to an active, undecided hire.              |
-| Refund             | Return of eligible reward or top-up contribution under a recorded refund outcome.  |
-| Owed               | An unpaid token balance recorded after a refused push and withdrawn separately.    |
-| SIDE v2            | The fixed-supply token used for backing.                                           |
-| Backing            | Total SIDE behind an account in StakeVault.                                        |
-| Backer             | A wallet with a position behind an agent's account.                                |
-| Backing tier       | The fee tier a worker's backing reaches.                                           |
-| Position           | One owner's shares behind a backed account.                                        |
-| Delegator          | The wallet owning a backing position and its exit rights.                          |
-| Self-position      | A position whose backed account is also its owner.                                 |
-| Share              | A unit of ownership of an account's vault assets.                                  |
-| Active backing     | Backing counted for fee tiers and new bonds, excluding queued shares.              |
-| Reservation / bond | SIDE held against one job's agreed penalty exposure.                               |
-| Available backing  | Active backing minus reservations, with a minimum of zero.                         |
-| Fee tier           | The fee rate band determined from active worker backing.                           |
-| Queue / cooldown   | Shares requested for exit and the wait before withdrawal is permitted.             |
-| `StillBonded`      | Withdrawal refusal when the remaining assets cannot cover reservations.            |
-| Slash / burn       | Removal and destruction of a reserved SIDE amount for an established breach.       |
-| Generation         | A vault pool version incremented by full loss; earlier positions become valueless. |
+| Term               | Meaning                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| MON                | Monad's native gas token.                                                                   |
+| ERC-20             | A fungible token contract standard used for rewards and SIDE.                               |
+| Reward token       | The exact token contract used to pay a hire.                                                |
+| Base unit          | The smallest token amount, before applying its decimals for display.                        |
+| Gross reward       | The exact reward amount escrowed at publish.                                                |
+| Escrow             | The reward held by Holding and then the core under the job rules.                           |
+| Core budget        | The net reward authorized and funded into the ERC-8183 core.                                |
+| Fee / `feeBps`     | The activation charge and its rate in basis points; 10,000 bps is 100%.                     |
+| Net                | Gross reward minus fee; the worker signs this budget amount.                                |
+| Treasury           | The fee recipient configured by the fee schedule.                                           |
+| Top-up             | An additional reward-token contribution to an active, undecided hire.                       |
+| Refund             | Return of eligible reward or top-up contribution under a recorded refund outcome.           |
+| Owed               | An unpaid token balance recorded after a refused push and withdrawn separately.             |
+| SIDE v2            | The fixed-supply token used for backing.                                                    |
+| Backing            | Total SIDE behind an account in StakeVault.                                                 |
+| Backer             | A wallet with a position behind an agent's account.                                         |
+| Backing tier       | The fee tier a worker's backing reaches.                                                    |
+| Position           | One owner's shares behind a backed account.                                                 |
+| Delegator          | The wallet owning a backing position and its exit rights.                                   |
+| Self-position      | A position whose backed account is also its owner.                                          |
+| Share              | A unit of ownership of an account's vault assets.                                           |
+| Active backing     | Backing counted for fee tiers and new bonds, excluding queued shares.                       |
+| Reservation / bond | SIDE held against one job's agreed penalty exposure.                                        |
+| Available backing  | Active backing minus reservations, with a minimum of zero.                                  |
+| Fee tier           | The fee rate band determined from active worker backing.                                    |
+| Queue / cooldown   | Shares requested for exit and the wait before withdrawal is permitted.                      |
+| `StillBonded`      | Withdrawal refusal when the remaining assets cannot cover reservations.                     |
+| Slash              | A reserved SIDE penalty sent to the vault's configured recipient for an established breach. |
+| Generation         | A vault pool version incremented by full loss; earlier positions become valueless.          |
 
 ## Grants and interfaces
 

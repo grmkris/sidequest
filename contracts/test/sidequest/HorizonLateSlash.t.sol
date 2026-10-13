@@ -59,7 +59,7 @@ contract HorizonLateSlashTest is BaseV1 {
         assertEq(vault.stakeOf(worker), WORKER_STAKE);
         assertEq(vault.reservedOf(worker), 0);
         assertEq(vault.reservedOf(creator), 0);
-        assertEq(circulating(), 1_000_000_000e18);
+        assertEq(sideOutsideSlashRecipient(), 1_000_000_000e18);
     }
 
     function _assertRefund(uint256 job) internal view {
@@ -78,7 +78,7 @@ contract HorizonLateSlashTest is BaseV1 {
         );
         assertEq(vault.positionOf(worker, contributor).queuedShares, WORKER_STAKE);
         assertEq(vault.reservedOf(worker), 0);
-        assertEq(circulating(), 1_000_000_000e18 - WORKER_BOND);
+        assertEq(sideOutsideSlashRecipient(), 1_000_000_000e18 - WORKER_BOND);
     }
 
     function test_delayedMissedDeliveryReleasesAfterBackerExit() public {
@@ -245,7 +245,7 @@ contract HorizonLateSlashTest is BaseV1 {
         assertTrue(listing(job).workerBondBurned, "zero-amount decision flag is unchanged");
         assertEq(vault.stakeOf(worker), WORKER_STAKE);
         assertEq(vault.stakeOf(creator), CREATOR_STAKE);
-        assertEq(circulating(), 1_000_000_000e18);
+        assertEq(sideOutsideSlashRecipient(), 1_000_000_000e18);
         holding.settle(job);
         _assertRefund(job);
     }

@@ -12,10 +12,12 @@ import {IERC8004Identity, IERC8004Reputation} from "../../src/vendor/erc8004/IER
 import {MockPaymentToken} from "../../src/MockPaymentToken.sol";
 import {ISidequestHolding} from "../../src/sidequest/interfaces/ISidequestHolding.sol";
 import {IStakeVault} from "../../src/sidequest/interfaces/IStakeVault.sol";
+import {IFeeSchedule} from "../../src/sidequest/interfaces/IFeeSchedule.sol";
 import {IFactory} from "../../src/sidequest/interfaces/IFactory.sol";
 import {SidequestRecipe} from "../../script/SidequestRecipe.sol";
 import {SidequestOutput} from "../../script/SidequestOutput.sol";
 import {SidequestVerify} from "../../script/SidequestVerify.sol";
+import {PromoteSidequest} from "../../script/PromoteSidequest.s.sol";
 import {SidequestHolding} from "../../src/sidequest/SidequestHolding.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {MockIdentity} from "../mocks/MockIdentity.sol";
@@ -89,6 +91,7 @@ contract RecipeTest is Test {
         c.identity = IERC8004Identity(address(new MockIdentity()));
         c.reputation = IERC8004Reputation(address(new MockReputation()));
         c.safe = safe;
+        c.slashRecipient = safe;
         c.defaultArbitrator = arbitrator;
         c.margin = 1 days;
         c.thresholds = [uint256(0), 10_000, 100_000, 1_000_000];
@@ -416,6 +419,35 @@ contract RecipeTest is Test {
         assertEq(mainnet.deployed().holding.defaultArbitrator(), fresh);
     }
 
+    /// @dev Launch custody is pinned to the Safe: mainnet fee income and slash forfeitures must not be configured to a
+    /// different recipient. Testnet keeps the configured recipients for its existing deployments.
+    function test_recipe_mainnetTreasuryAndSlashRecipientAreTheSafe() public {
+        vm.chainId(143);
+        SidequestRecipe.Config memory m = _mainnetLaunchConfig();
+
+        m.feeTreasury = stranger;
+        vm.expectRevert(
+            abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "mainnet fee treasury must be the Safe")
+        );
+        driver.configure(m);
+
+        m.feeTreasury = safe;
+        m.slashRecipient = stranger;
+        vm.expectRevert(
+            abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "mainnet slash recipient must be the Safe")
+        );
+        driver.configure(m);
+    }
+
+    function _mainnetLaunchConfig() internal returns (SidequestRecipe.Config memory m) {
+        m = c;
+        m.chainId = 143;
+        m.arbitrator = m.defaultArbitrator;
+        m.launchCurve = makeAddr("launch-curve");
+        m.launchImplementation = address(new MockNadToken(m.launchCurve));
+        m.token = IFactory(Clones.clone(m.launchImplementation));
+    }
+
     /// @dev Off mainnet the default arbitrator is not tied to roles.arbitrator.
     function test_recipe_testnetDefaultArbitratorIsFree() public {
         SidequestRecipe.Config memory t = c;
@@ -496,7 +528,11 @@ contract RecipeTest is Test {
         vm.writeJson("{}", path, ".deployment");
         vm.writeJson(
             string.concat(
-                '{"maxMinimumCreatorBond":100000000000000000000000,"unfilledForfeitBps":2500,"minimumCreatorBond":10000000000000000000000,"token":"',
+                '{"safe":"',
+                vm.toString(safe),
+                '","slashRecipient":"',
+                vm.toString(safe),
+                '","maxMinimumCreatorBond":100000000000000000000000,"unfilledForfeitBps":2500,"minimumCreatorBond":10000000000000000000000,"token":"',
                 vm.toString(address(side)),
                 '"}'
             ),
@@ -513,7 +549,9 @@ contract RecipeTest is Test {
         SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
         string memory shipped = vm.readFile(string.concat(vm.projectRoot(), "/config/monad-testnet.json"));
         string memory path = _temp("testnet", shipped);
-        string memory real = UnpromotedTestnet.write(vm, path, shipped);
+        UnpromotedTestnet.write(vm, path, shipped);
+        vm.writeJson(string.concat('"', vm.toString(safe), '"'), path, ".sidequest.slashRecipient");
+        string memory real = vm.readFile(path);
         SidequestOutput.write(vm, path, d, safe, 122, 123);
         string memory out = vm.readFile(path);
         vm.removeFile(path);
@@ -527,6 +565,7 @@ contract RecipeTest is Test {
         assertFalse(vm.keyExistsJson(out, ".deployment.sidequest.t0"), "no mining genesis in the record");
         assertEq(vm.parseJsonUint(out, ".deployment.sidequest.block"), 123);
         assertEq(vm.parseJsonAddress(out, ".deployment.sidequest.safe"), safe, "D5");
+        assertEq(vm.parseJsonAddress(out, ".deployment.sidequest.slashRecipient"), safe);
         _assertOutputClocks(out, c.clocks);
         assertEq(vm.parseJsonString(out, ".deployment.main.kind"), "sidequest-v1");
         assertEq(vm.parseJsonAddress(out, ".deployment.main.holding"), address(d.holding));
@@ -597,7 +636,9 @@ contract RecipeTest is Test {
         SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
         string memory shipped = vm.readFile(SidequestRecipe.path(vm, "monad-testnet"));
         string memory path = _temp("clock-mismatch", shipped);
-        string memory fixture = UnpromotedTestnet.write(vm, path, shipped);
+        UnpromotedTestnet.write(vm, path, shipped);
+        vm.writeJson(string.concat('"', vm.toString(safe), '"'), path, ".sidequest.slashRecipient");
+        string memory fixture = vm.readFile(path);
         string[] memory names = vm.parseJsonKeys(fixture, ".sidequest.clocks");
         assertEq(names.length, 7);
         for (uint256 i; i < names.length; ++i) {
@@ -711,7 +752,7 @@ contract RecipeTest is Test {
     function test_load_sidequestInputBlock() public {
         string memory base = vm.readFile(string.concat(vm.projectRoot(), "/config/monad-testnet.json"));
         string memory block_ = string.concat(
-            '{"safe":"0x00000000000000000000000000000000000000a1",',
+            '{"safe":"0x00000000000000000000000000000000000000a1","slashRecipient":"0x00000000000000000000000000000000000000a4",',
             '"defaultArbitrator":"0x00000000000000000000000000000000000000a2","margin":86400,"maxMinimumCreatorBond":100000000000000000000000,"unfilledForfeitBps":2500,"minimumCreatorBond":10000000000000000000000,',
             '"schedule":{"thresholds":[0,10000,100000,1000000],"bps":[3000,1000,300,100],',
             '"treasury":"0x00000000000000000000000000000000000000a1"},',
@@ -729,6 +770,7 @@ contract RecipeTest is Test {
         );
         vm.removeFile(path);
         assertEq(l.safe, address(0xa1));
+        assertEq(l.slashRecipient, address(0xa4));
         assertEq(l.defaultArbitrator, address(0xa2));
         assertEq(l.margin, 86400);
         assertEq(l.thresholds[3], 1_000_000);
@@ -763,6 +805,37 @@ contract RecipeTest is Test {
         assertEq(this.guardExt(testnet, true), 10143);
         vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.WrongChain.selector, 143, 10143));
         this.guardExt(mainnet, true);
+    }
+
+    function test_recipe_refusesZeroSlashRecipient() public {
+        c.slashRecipient = address(0);
+        vm.expectRevert(abi.encodeWithSelector(SidequestRecipe.BadConfig.selector, "zero address"));
+        driver.configure(c);
+    }
+
+    function test_output_slashRecipientMismatch_preservesConfig() public {
+        SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
+        string memory path = _mainnetTemp("slash-recipient-mismatch");
+        vm.writeJson(string.concat('"', vm.toString(stranger), '"'), path, ".sidequest.slashRecipient");
+        string memory before = vm.readFile(path);
+        vm.expectRevert(SidequestOutput.SlashRecipientMismatch.selector);
+        this.writeExternal(path, d);
+        assertEq(vm.readFile(path), before);
+        vm.removeFile(path);
+    }
+
+    function test_promotion_changedSlashRecipientRefuses() public {
+        SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
+        string memory path = _mainnetTemp("slash-recipient-promoted");
+        SidequestOutput.write(vm, path, d, safe, 10, 11);
+        vm.writeJson(string.concat('"', vm.toString(stranger), '"'), path, ".deployment.sidequest.slashRecipient");
+        vm.expectRevert(SidequestOutput.AlreadyDeployed.selector);
+        this.isPromotedExternal(vm.readFile(path), d);
+        vm.writeJson(string.concat('"', vm.toString(safe), '"'), path, ".deployment.sidequest.slashRecipient");
+        vm.writeJson(string.concat('"', vm.toString(stranger), '"'), path, ".sidequest.slashRecipient");
+        vm.expectRevert(SidequestOutput.AlreadyDeployed.selector);
+        this.isPromotedExternal(vm.readFile(path), d);
+        vm.removeFile(path);
     }
 
     function writeExternal(string memory path, SidequestRecipe.Deployed memory d) external {
@@ -815,6 +888,13 @@ contract RecipeTest is Test {
         _accept(d);
         this.verifyExternal(c, d);
 
+        vm.mockCall(address(d.core), abi.encodeWithSignature("paused()"), abi.encode(true));
+        _expectNotLive(c, d, "core.paused");
+        vm.clearMockedCalls();
+        vm.mockCall(address(d.core), abi.encodeWithSignature("platformTreasury()"), abi.encode(stranger));
+        _expectNotLive(c, d, "core.platformTreasury");
+        vm.clearMockedCalls();
+
         SidequestRecipe.Deployed memory bad = driver.deployed(); // a fresh copy, not an alias of d
         bad.holding = SidequestHolding(stranger);
         _expectNotLive(c, bad, "holding code");
@@ -823,12 +903,40 @@ contract RecipeTest is Test {
         cc.defaultArbitrator = stranger;
         _expectNotLive(cc, d, "holding.defaultArbitrator");
 
+        cc = c;
+        cc.slashRecipient = stranger;
+        _expectNotLive(cc, d, "vault.slashRecipient");
+
         // The vault stakes another token than the configured SIDE, or SIDE's supply is not the launch supply.
         cc = c;
         cc.token = IFactory(address(new LaunchToken(admin)));
         _expectNotLive(cc, d, "SIDE token");
         vm.mockCall(address(side), abi.encodeWithSignature("totalSupply()"), abi.encode(uint256(1)));
         _expectNotLive(c, d, "SIDE supply");
+        vm.clearMockedCalls();
+    }
+
+    /// @dev The live promotion readback pins both money sinks to the Safe on mainnet, even when the config and live
+    /// getter agree with each other but are both wrong.
+    function test_promotion_mainnetTreasuryAndSlashRecipientAreTheSafe() public {
+        vm.chainId(143);
+        SidequestRecipe.Config memory m = _mainnetLaunchConfig();
+        RecipeDriver mainnet = new RecipeDriver();
+        mainnet.configure(m);
+        for (uint256 i; i < 8; ++i) mainnet.step(i);
+        SidequestRecipe.Deployed memory d = mainnet.deployed();
+        this.verifyExternal(m, d);
+
+        IFeeSchedule.Schedule memory wrong = d.fees.schedule();
+        wrong.treasury = stranger;
+        vm.mockCall(address(d.fees), abi.encodeWithSelector(IFeeSchedule.schedule.selector), abi.encode(wrong));
+        m.feeTreasury = stranger;
+        _expectNotLive(m, d, "fee treasury must be the Safe");
+        vm.clearMockedCalls();
+
+        vm.mockCall(address(d.vault), abi.encodeWithSignature("slashRecipient()"), abi.encode(stranger));
+        m.slashRecipient = stranger;
+        _expectNotLive(m, d, "slash recipient must be the Safe");
         vm.clearMockedCalls();
     }
 
@@ -945,6 +1053,67 @@ contract RecipeTest is Test {
         vm.expectRevert(SidequestOutput.AlreadyDeployed.selector);
         this.isPromotedExternal(vm.readFile(path), d);
         vm.removeFile(path);
+    }
+
+    /// @dev A repeated promotion preserves its record but must refuse a core that became unhealthy since the first.
+    function test_promotion_repeatedRunChecksCurrentCoreState() public {
+        SidequestRecipe.Deployed memory d = _runWithThirdPartyBetweenSteps();
+        string memory network = ".test-promote-health";
+        string memory path = SidequestRecipe.path(vm, network);
+        vm.writeFile(path, vm.readFile(string.concat(vm.projectRoot(), "/config/monad-testnet.json")));
+        vm.writeJson("{}", path, ".deployment");
+        vm.writeJson(vm.toString(c.chainId), path, ".chainId");
+        _writeAddress(path, ".roles.admin", c.admin);
+        _writeAddress(path, ".roles.attester", c.attester);
+        _writeAddress(path, ".erc8004.identity", address(c.identity));
+        _writeAddress(path, ".erc8004.reputation", address(c.reputation));
+        _writeAddress(path, ".sidequest.safe", c.safe);
+        _writeAddress(path, ".sidequest.slashRecipient", c.slashRecipient);
+        _writeAddress(path, ".sidequest.defaultArbitrator", c.defaultArbitrator);
+        _writeAddress(path, ".sidequest.token", address(c.token));
+        vm.writeJson(vm.toString(c.margin), path, ".sidequest.margin");
+        vm.writeJson(vm.toString(c.minimumCreatorBond), path, ".sidequest.minimumCreatorBond");
+        vm.writeJson(vm.toString(c.maxMinimumCreatorBond), path, ".sidequest.maxMinimumCreatorBond");
+        vm.writeJson(vm.toString(c.unfilledForfeitBps), path, ".sidequest.unfilledForfeitBps");
+        vm.writeJson(
+            '{"thresholds":[0,10000,100000,1000000],"bps":[3000,1000,300,100],"treasury":"0x0000000000000000000000000000000000000001"}',
+            path,
+            ".sidequest.schedule"
+        );
+        _writeAddress(path, ".sidequest.schedule.treasury", c.feeTreasury);
+        vm.writeJson(
+            '{"minReviewWindow":3600,"minDisputeWindow":3600,"minArbitrationWindow":43200,"unstakeDelay":1209600,"holdingDelay":1814400,"feeDelay":259200,"proposalGrace":604800}',
+            path,
+            ".sidequest.clocks"
+        );
+        SidequestOutput.write(vm, path, d, safe, 10, 11);
+        string memory candidate = SidequestOutput.candidatePath(vm, network);
+        SidequestOutput.writeCandidate(vm, candidate, c.chainId, d, safe);
+        string memory before = vm.readFile(path);
+        string memory previous = vm.envOr("NETWORK", string(""));
+        vm.setEnv("NETWORK", network);
+        PromoteSidequest promote = new PromoteSidequest();
+        promote.run();
+        assertEq(vm.readFile(path), before, "repeat promotion changed the record");
+
+        vm.prank(safe);
+        d.core.pause();
+        vm.expectRevert(abi.encodeWithSelector(SidequestVerify.NotLive.selector, "core.paused"));
+        promote.run();
+        vm.prank(safe);
+        d.core.unpause();
+        vm.prank(safe);
+        d.core.setPlatformFee(0, stranger);
+        vm.expectRevert(abi.encodeWithSelector(SidequestVerify.NotLive.selector, "core.platformTreasury"));
+        promote.run();
+        assertEq(vm.readFile(path), before, "failed health check changed the record");
+        vm.setEnv("NETWORK", previous);
+        vm.removeFile(candidate);
+        vm.removeFile(path);
+    }
+
+    function _writeAddress(string memory path, string memory key, address value) internal {
+        vm.writeJson(string.concat('"', vm.toString(value), '"'), path, key);
     }
 
     function isPromotedExternal(string memory json, SidequestRecipe.Deployed memory d) external view returns (bool) {

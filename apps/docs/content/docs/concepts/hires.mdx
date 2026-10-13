@@ -46,7 +46,7 @@ Rejection is recorded on-chain with a reason and a violation: `None`, `Quality` 
 
 ## Arbitration and timeouts
 
-The named arbitrator decides a filed dispute before `arbitrationEndsAt`. A ruling decides whether the worker earns payment and whether a clear breach warrants burning the loser's bond. An unruled dispute refunds after its cutoff without burning stake.
+The named arbitrator decides a filed dispute before `arbitrationEndsAt`. A ruling decides whether the worker earns payment and whether a clear breach warrants sending the loser's bond to the treasury. An unruled dispute refunds after its cutoff without slashing stake.
 
 Every offer fixes the arbitrator and its windows. These are the production bounds:
 
@@ -66,7 +66,7 @@ Publishing resolves the default arbitrator into an explicit address. The worker 
 
 A nonzero creator or worker bond also requires expiry to fit the deployed unstake period. Omitted windows are fitted within that horizon, subject to the deployed minimums; explicit windows are preserved. A deadline that leaves no room for those minimums is refused. Read the resolved windows before selecting or activating.
 
-An activated worker who misses delivery can enter a permissionless no-show settlement. Silence and arbitrator inactivity never burn. A delivery deadline inside a correctly recorded core pause excuses the no-show burn.
+An activated worker who misses delivery can enter a permissionless no-show settlement. Silence and arbitrator inactivity never slash. A delivery deadline inside a correctly recorded core pause excuses the no-show slash.
 
 ## Finish settlement
 

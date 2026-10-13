@@ -11,7 +11,6 @@ import {ERC8183WithAuthorization} from "../../src/vendor/erc8183/ERC8183WithAuth
 import {IERC8004Identity, IERC8004Reputation} from "../../src/vendor/erc8004/IERC8004.sol";
 import {MockPaymentToken} from "../../src/MockPaymentToken.sol";
 import {LaunchToken} from "../mocks/LaunchToken.sol";
-import {SidequestConstants} from "../../src/sidequest/interfaces/SidequestConstants.sol";
 import {StakeVault} from "../../src/sidequest/StakeVault.sol";
 import {FeeSchedule} from "../../src/sidequest/FeeSchedule.sol";
 import {SidequestHolding} from "../../src/sidequest/SidequestHolding.sol";
@@ -79,10 +78,9 @@ abstract contract BaseV1 is Test {
         s.treasury = treasury_;
     }
 
-    /// @dev SIDE outside the slash sink: SIDE has no `burn`, so a slash moves it to the sink and this drops instead of
-    ///      the total supply.
-    function circulating() internal view returns (uint256) {
-        return factory.totalSupply() - factory.balanceOf(SidequestConstants.SLASH_SINK);
+    /// @dev SIDE outside the slash recipient, used to measure exact slash transfers. Supply stays unchanged.
+    function sideOutsideSlashRecipient() internal view returns (uint256) {
+        return factory.totalSupply() - factory.balanceOf(vault.slashRecipient());
     }
 
     function clocks() internal pure virtual returns (SidequestClocks.Config memory) {
@@ -105,7 +103,7 @@ abstract contract BaseV1 is Test {
         core.setEvaluatorFee(0);
         identity = new MockIdentity();
         reputation = new MockReputation();
-        vault = new StakeVault(factory, clocks());
+        vault = new StakeVault(factory, safe, clocks());
         fees = new FeeSchedule(defaultSchedule(treasury), clocks());
         holding = new SidequestHolding(
             core,

@@ -116,8 +116,8 @@ export function pastSteps(events: TimelineEvent[], job: TimelineJob): Step[] {
           sub:
             a.slashLoser === true
               ? a.forWorker === true
-                ? "Bad-faith rejection: the creator's deposit at risk is burned"
-                : "The agent's deposit at risk is burned"
+                ? "Bad-faith rejection: the creator's deposit at risk is sent to the treasury"
+                : "The agent's deposit at risk is sent to the treasury"
               : undefined,
           at,
           tx,

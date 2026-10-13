@@ -50,7 +50,7 @@ export interface LifecycleInput {
   disputeEndsAt?: number | null
   arbitrationEndsAt?: number | null
   violation?: ViolationName | null
-  /** The worker's bond in base units; a burn is mentioned only when there is one. */
+  /** The worker's bond in base units; a slash is mentioned only when there is one. */
   workerBond?: bigint | string | null
   outcome?: JobOutcome | null
   /** A terminal job whose reward still sits in Holding (a timeout refunded without `settle`). */
@@ -173,7 +173,7 @@ function draftOf(input: LifecycleInput, now: number): Draft {
     ? ''
     : input.expiredAt != null && now >= input.expiredAt
       ? " and the agent's bond is released because penalties end at expiry"
-      : " and the agent's bond is burned only if resolved before expiry"
+      : " and the agent's bond is sent to the treasury only if resolved before expiry"
   const penaltyReminder = hasBond(input.workerBond) ? ' Resolve before expiry for the bond penalty to apply.' : ''
   const past = (t: number | null | undefined) => typeof t === 'number' && now > t
 
@@ -557,7 +557,7 @@ export function lifecycle(
   }
   if (input.paused) {
     warnings.push(
-      'Paused by the admin. A delivery deadline inside a recorded core pause does not burn the worker bond.',
+      'Paused by the admin. A delivery deadline inside a recorded core pause does not slash the worker bond.',
     )
     if (d.key !== 'collect') actions = []
   }

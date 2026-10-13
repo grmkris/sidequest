@@ -31,3 +31,4 @@ decision and consequences. Protocol law itself lives in [docs/protocol.md](../pr
 | [0021](0021-agent-roles-live-mcp.md) | Agent roles live on the agent; 403 step-up for scope; live tool lists and native approvals on MCP 2026 |
 | [0022](0022-no-mining-at-launch.md) | No work mining at launch; supersedes 0018 and 0020 |
 | [0023](0023-gas-in-usdc-user-operations.md) | Gas in USDC through ERC-4337 user operations (Pimlico); no relay |
+| [0024](0024-slashed-side-goes-to-the-treasury.md) | Slashed SIDE goes to a recipient the Safe sets, the treasury at launch |
