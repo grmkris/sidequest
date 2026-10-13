@@ -47,6 +47,11 @@ CHAIN=$(cfg .chainId)
 RPC=${KIT_RPC:-$(cfg .launchKit.rpc)}
 EXPLORER=$(cfg .launchKit.explorer)
 mainnet() { [[ "$CHAIN" == 143 ]]; }
+chain_check() {
+  local actual
+  actual=$(cast chain-id --rpc-url "$RPC") || die "cannot read the RPC chain"
+  [[ "$actual" == "$CHAIN" ]] || die "RPC chain $actual does not match config chain $CHAIN ($NETWORK)"
+}
 calc() { echo "$1" | BC_LINE_LENGTH=0 bc; }
 lower() { tr '[:upper:]' '[:lower:]' <<<"$1"; }
 num() { awk '{print $1}' <<<"$1"; } # cast prints "123 [1.23e2]"
@@ -133,6 +138,7 @@ unlock() {
   (umask 077 && secret_read "$1" >"$PWFILE") || die "no password for $1 (Keychain prompt denied?)"
 }
 go_check() {
+  chain_check
   mainnet || return 0
   [[ "${MAINNET_GO:-}" == yes ]] || die "a mainnet send needs MAINNET_GO=yes, given only after Kris's go on the launch desk"
   [[ "$(jq -r .testnetOnly "$KIT_HOME/addresses.json")" != true ]] || die "these keystores were made by an agent for a testnet dry run"
@@ -142,6 +148,7 @@ LAST_HASH=
 send_tx() {
   local name=$1 to=$2 value=$3 from est out status
   shift 3
+  go_check
   from=$(addr "$name")
   est=$(cast estimate --rpc-url "$RPC" --from "$from" --value "$value" "$to" "$@") || die "the estimate reverted: not sent"
   out=$(cast send --rpc-url "$RPC" --keystore "$KEYS/sidequest-$name" --password-file "$PWFILE" --value "$value" \
@@ -513,6 +520,11 @@ cmd_fund() {
   send_tx owner "$safe" 0 "$EXEC" "$token" 0 "$data" 0 0 0 0 $ZERO $ZERO "$sig"
   say "$to now holds $(cast from-wei "$(side_balance "$token" "$to")") SIDE; the Safe holds $(cast from-wei "$(side_balance "$token" "$safe")")."
 }
+
+# Guard every plan before simulations/uploads, independently of the selected network's approval guard.
+case "${1:-}" in
+  safe|token|move|accept|backing|exit|bond|fund|balances) chain_check ;;
+esac
 
 case "${1:-}" in
   setup) cmd_setup ;;

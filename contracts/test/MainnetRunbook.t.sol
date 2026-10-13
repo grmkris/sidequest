@@ -63,6 +63,18 @@ contract MainnetRunbookTest is Test {
         assertFalse(vm.contains(kit, "--private-key"), "launch-kit.sh passes a raw key");
     }
 
+    /// LAUNCH-AUDIT-CHAIN-001: every kit plan and send starts by binding its configured network to the selected RPC.
+    function test_launchKitBindsEveryPlanAndSendToConfigChain() public view {
+        assertTrue(vm.contains(kit, "chain_check()"), "launch kit has no RPC chain check");
+        assertTrue(vm.contains(kit, "cast chain-id --rpc-url \"$RPC\""), "launch kit does not query the RPC chain");
+        assertTrue(
+            vm.contains(kit, "safe|token|move|accept|backing|exit|bond|fund|balances) chain_check"),
+            "launch kit does not check before command dispatch"
+        );
+        assertTrue(vm.contains(kit, "go_check() {\n  chain_check"), "send path does not recheck the RPC chain");
+        assertTrue(vm.contains(kit, "config chain $CHAIN ($NETWORK)"), "chain mismatch refusal omits config context");
+    }
+
     function test_runbookSequenceWithGates() public view {
         string memory live = "bun scripts/preflight-prod.ts docs/p0-prod-artifact.json --live";
         string[] memory s = new string[](18);
