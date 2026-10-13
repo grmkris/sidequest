@@ -35,7 +35,9 @@ const configured = () => {
     x402: { usdc: USDC },
     knownTokens: [USDC],
   })
-  config.sidequest = { ...config.sidequest, defaultArbitrator: arbitrator }
+  // The shipped config names the launched SIDE since 13 Oct; this record is the drained USDC-only shape, so it names none.
+  const { token: _launched, ...sidequest } = config.sidequest ?? {}
+  config.sidequest = { ...sidequest, defaultArbitrator: arbitrator }
   config.deployment = {
     network: 'monad-mainnet',
     block: 123,

@@ -1548,7 +1548,7 @@
     "anti-slop(no-runtime-typeof)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 29,
     "complexity(complexity)": 2,
-    "typescript(no-unnecessary-type-assertion)": 2
+    "typescript(no-unnecessary-type-assertion)": 1
   },
   "packages/sdk/src/directory.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1

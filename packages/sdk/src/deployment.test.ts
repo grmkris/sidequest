@@ -182,11 +182,14 @@ describe('network meta', () => {
     const side = '0x1111111111111111111111111111111111117777'
     // G1f's SIDE is a nad.fun testnet launch, but nad.fun has no testnet website, so testnet gets SIDE from the faucet.
     expect(networkMeta('monad-testnet').getSide).toBeUndefined()
-    expect(networkMeta('monad-mainnet').getSide).toBeUndefined() // no SIDE before the launch commit
+    // Mainnet's SIDE launched on nad.fun on 13 Oct.
+    expect(networkMeta('monad-mainnet').getSide).toBe(
+      'https://nad.fun/tokens/0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777',
+    )
     const launched = { ...c, nadfun: { app: 'https://nad.fun' }, sidequest: { token: side } }
     expect(networkMetaFromConfig(launched).getSide).toBe(`https://nad.fun/tokens/${side}`)
     expect(networkMetaFromConfig(launched).side).toBe(side)
-    expect(networkMeta('monad-mainnet').side).toBeUndefined()
+    expect(networkMeta('monad-mainnet').side).toBe('0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777')
     expect(() => networkMetaFromConfig({ ...launched, sidequest: { token: 'SIDE' } })).toThrow('token address')
   })
   it("lists SIDE's other pages with its address once the config names SIDE, and refuses anything but https paths", () => {
@@ -200,7 +203,18 @@ describe('network meta', () => {
         graduated: false,
       },
     ])
-    expect(networkMeta('monad-mainnet').sidePages).toEqual([]) // no SIDE before the launch commit
+    expect(networkMeta('monad-mainnet').sidePages).toEqual([
+      {
+        name: 'MonadVision',
+        href: 'https://monadvision.com/token/0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777',
+        graduated: false,
+      },
+      {
+        name: 'DEX Screener',
+        href: 'https://dexscreener.com/monad/0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777',
+        graduated: false,
+      },
+    ]) // mainnet's SIDE, launched 13 Oct
     const launched = { ...c, sidequest: { token: side }, sidePages: mainnet.sidePages }
     expect(networkMetaFromConfig(launched).sidePages).toEqual([
       { name: 'MonadVision', href: `https://monadvision.com/token/${side}`, graduated: false },

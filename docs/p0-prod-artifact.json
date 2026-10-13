@@ -4,14 +4,14 @@
   "chainId": 143,
   "rpc": {
     "url": "https://rpc.monad.xyz",
-    "chainId": null
+    "chainId": 143
   },
   "hyperSync": {
     "url": "https://monad.hypersync.xyz",
-    "chainId": null
+    "chainId": 143
   },
   "privy": {
-    "appId": null,
+    "appId": "cmui9skoc01zr0dl03tyahirs",
     "origins": [
       "https://sidequest.exchange"
     ],
@@ -37,34 +37,39 @@
     "PRIVY_SIGNER_KEY": "PRIVY_SIGNER_KEY"
   },
   "addresses": {
-    "admin": null,
-    "attester": null,
-    "arbitrator": null,
+    "admin": "0x2372209b597A3879D8868939FAc139F476173210",
+    "attester": "0xf91D385C700e6285116fD0faFEF0dfEa015A06B8",
+    "arbitrator": "0x3A7B6464c60c27B44917654bCb3A2D703F8864B7",
     "identity": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
     "reputation": "0x8004BAa17C55a88189AE136b182e5fdA19dE9b63",
     "usdc": "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
-    "core": null,
-    "factory": null,
-    "holding": null,
-    "evaluator": null
+    "core": "0xA4178600Eee6e2A50B0fC6533bbc9e9ea5e59f60",
+    "factory": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+    "holding": "0x6919738f047E4403BbD12Cb7BbE470c85a59bBE3",
+    "evaluator": "0x8086CC2885Ad6dC3436C3389641041fBE887A804"
   },
   "deployment": {
     "main": {
       "kind": "sidequest-v1",
-      "factory": null,
-      "holding": null,
-      "evaluator": null,
+      "factory": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+      "holding": "0x6919738f047E4403BbD12Cb7BbE470c85a59bBE3",
+      "evaluator": "0x8086CC2885Ad6dC3436C3389641041fBE887A804",
       "openTokens": true
     },
-    "rewardTokens": [],
+    "rewardTokens": [
+      "0x754704Bc059F8C67012fEd69BC8A327a5aafb603",
+      "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777"
+    ],
     "sidequest": {
-      "block": null,
-      "safe": null,
-      "safeOwners": [],
-      "safeThreshold": null,
-      "factory": null,
-      "vault": null,
-      "feeSchedule": null
+      "block": 113042677,
+      "safe": "0x7d363EBFcE050E6e4173ea10b5e3cBB050E8e635",
+      "safeOwners": [
+        "0x1E3746373C9784282bb1a4a39651A7c530a02af6"
+      ],
+      "safeThreshold": 1,
+      "factory": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+      "vault": "0xe8082B571bE7C9C88049C7F85B3aCc50b1164E7B",
+      "feeSchedule": "0x9c570E8Ab9d0363aB4263D830C7e3746F1c6a2aD"
     }
   }
 }
