@@ -137,6 +137,16 @@ describe('a SIDE trade from the sheet survives a reload', () => {
     expect((await loadSideTrade(s.storage, key, s.checkpoint))?.id).toBe(sell.id)
   })
 
+  it('reads a USDC trade back, and every trade saved before USDC existed', async () => {
+    const s = store()
+    const usdcBuy: SideTradeIntent = { ...buy, id: 'usdc-1', payWith: 'usdc', paid: '5349874' }
+    await saveSideTrade(s.storage, key, usdcBuy, s.checkpoint)
+    expect(await loadSideTrade(s.storage, key, s.checkpoint)).toEqual(usdcBuy)
+    const old = store()
+    await saveSideTrade(old.storage, key, buy, old.checkpoint)
+    expect((await loadSideTrade(old.storage, key, old.checkpoint))?.payWith).toBeUndefined()
+  })
+
   it('refuses a local copy without its durable record, and an unreadable one', async () => {
     const s = store()
     s.local.set(key, JSON.stringify(buy))

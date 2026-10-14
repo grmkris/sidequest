@@ -22,10 +22,8 @@ export interface RevertReads {
   delegated(): Promise<boolean>
 }
 
-/** The router call's own amounts: what went in and the floor it was sent with. */
-function tradeCall(trade: SideTradeIntent): { amountIn: bigint; minOut: bigint } | null {
-  const step = trade.txs.at(-1)
-  if (step === undefined) return null
+/** One step's nad.fun router call: what went in and the floor it was sent with; null for any other call. */
+function routerCall(step: SideTradeIntent['txs'][number]): { amountIn: bigint; minOut: bigint } | null {
   try {
     const call = decodeFunctionData({ abi: nadRouterAbi, data: step.data })
     if (call.functionName === 'buyWithNative')
@@ -33,7 +31,16 @@ function tradeCall(trade: SideTradeIntent): { amountIn: bigint; minOut: bigint }
     if (call.functionName === 'sellToNative')
       return { amountIn: call.args[0].amountIn, minOut: call.args[0].amountOutMin }
   } catch {
-    // not a router call this sheet built
+    // not a router call this sheet built (an approval, or a USDC trade's swap)
+  }
+  return null
+}
+
+/** The trade's nad.fun call: its last step for a MON trade, wherever it sits in a USDC trade's batch. */
+function tradeCall(trade: SideTradeIntent): { amountIn: bigint; minOut: bigint } | null {
+  for (const step of trade.txs.toReversed()) {
+    const call = routerCall(step)
+    if (call !== null) return call
   }
   return null
 }
@@ -51,7 +58,8 @@ export async function tradeRevertCause(
     if (timestamp > BigInt(trade.deadline)) return 'deadline'
     // The state the trade met is the previous block's: what its MON or SIDE returned then, against its floor.
     if ((await reads.amountOut(trade.trade, call.amountIn, block - 1n)) < call.minOut) return 'price'
-    if (trade.trade === 'buy' && (await reads.delegated())) {
+    // A USDC trade's MON ends where it started, so the reserve can't be what stopped it.
+    if (trade.trade === 'buy' && trade.payWith !== 'usdc' && (await reads.delegated())) {
       const left = (await reads.balance(block - 1n)) - call.amountIn
       if (left < MONAD_RESERVE_BALANCE) return 'reserve'
     }

@@ -135,9 +135,9 @@ export function wholeUp(value: bigint): bigint {
   return (value / UNIT + 1n) * UNIT
 }
 
-/** An 18-decimal amount as the trade card fills it in: grouped thousands, every decimal kept ("500,000", "0.5"). */
-export function fillText(value: bigint): string {
-  const [whole = '0', frac = ''] = formatUnits(value, 18).split('.')
+/** An amount as the trade card fills it in (18 decimals unless given): grouped thousands, every decimal kept ("500,000", "0.5"). */
+export function fillText(value: bigint, decimals = 18): string {
+  const [whole = '0', frac = ''] = formatUnits(value, decimals).split('.')
   const grouped = BigInt(whole).toLocaleString('en-US')
   return frac === '' ? grouped : `${grouped}.${frac}`
 }

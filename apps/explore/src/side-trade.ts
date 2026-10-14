@@ -21,10 +21,14 @@ export interface SideTradeIntent {
   trade: 'buy' | 'sell'
   owner: `0x${string}`
   txs: WalletStep[]
-  /** What the trade was quoted to return, in base units: SIDE for a buy, MON for a sale. */
+  /** What the trade was quoted to return, in base units: SIDE for a buy, MON (USDC when `payWith`) for a sale. */
   out: string
   /** The router's deadline, in seconds: after it, an unsent trade can only revert. */
   deadline: number
+  /** Paid or paid out in USDC through the MON/USDC pool, as one batch (absent: MON, and every trade saved before). */
+  payWith?: 'usdc'
+  /** On a USDC buy, the most USDC it may spend, in base units. */
+  paid?: string
 }
 
 /** One saved trade per wallet, router and network: a second trade waits until the first is terminal. */
@@ -193,6 +197,8 @@ const isSavedTrade = Schema.is(
     txs: Schema.Array(Step).pipe(Schema.check(Schema.makeFilter((steps) => steps.length > 0))),
     out: Decimal,
     deadline: Int,
+    payWith: Schema.optionalKey(Schema.Literal('usdc')),
+    paid: Schema.optionalKey(Decimal),
   }),
 )
 

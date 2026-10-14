@@ -66,6 +66,19 @@ describe('why a SIDE trade reverted', () => {
     expect(await tradeRevertCause(reads({ balance: async () => parseEther('210') }), buy, hash)).toBeNull()
   })
 
+  it('finds the nad.fun call inside a USDC trade, and never blames the reserve for one', async () => {
+    const usdcBuy: SideTradeIntent = {
+      ...buy,
+      payWith: 'usdc',
+      paid: '5349874',
+      txs: [{ ...buy.txs[0]!, data: '0x1234', value: '0', description: 'Swap USDC for MON' }, buy.txs[0]!],
+    }
+    const moved = reads({ amountOut: async () => parseEther('2437500') })
+    expect(await tradeRevertCause(moved, usdcBuy, hash)).toBe('price')
+    const short = reads({ delegated: async () => true, balance: async () => 0n })
+    expect(await tradeRevertCause(short, usdcBuy, hash)).toBeNull()
+  })
+
   it('names nothing when the chain cannot say, or nothing it can check explains it', async () => {
     expect(await tradeRevertCause(reads(), buy, hash)).toBeNull()
     const down = reads({
