@@ -81,6 +81,10 @@
       "tickSpacing": 10
     }
   },
+  "swap": {
+    "universalRouter": "0x0D97Dc33264bfC1c226207428A79b26757fb9dc3",
+    "quoter": "0xa222Dd357A9076d1091Ed6Aa2e16C9742dD26891"
+  },
   "nadfun": {
     "app": "https://nad.fun",
     "router": "0x8986C8fD44eb85294A725a7e61AF35E76bA26F91",

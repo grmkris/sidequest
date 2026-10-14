@@ -111,6 +111,7 @@ function undeployed(): V1Deployment {
     testnetFaucet: null,
     market: null,
     nativePrice: null,
+    nativeSwap: null,
     launcher: null,
     aa: null,
     agentSweep: null,

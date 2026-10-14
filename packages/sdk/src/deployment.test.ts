@@ -280,6 +280,20 @@ describe("the chain's coin in dollars", () => {
     expect(deployment('monad-testnet').nativePrice).toBeNull()
   })
 
+  it("routes that pool through Uniswap's router and quoter on mainnet, and nowhere on testnet", () => {
+    const s = deployment('monad-mainnet').nativeSwap!
+    expect(s.poolId).toBe('0x18a9fc874581f3ba12b7898f80a683c66fd5877fd74b26a85ba9a3a79c549954')
+    expect(s.universalRouter).toBe('0x0D97Dc33264bfC1c226207428A79b26757fb9dc3')
+    expect(s.quoter).toBe('0xa222Dd357A9076d1091Ed6Aa2e16C9742dD26891')
+    expect(s.permit2).toBe(mainnet.liquidity.uniswapV4.permit2)
+    // The router stays out of `liquidity.uniswapV4`: mainnet has no SIDE pool, so no market.
+    expect(deployment('monad-mainnet').market).toBeNull()
+    expect(deployment('monad-testnet').nativeSwap).toBeNull()
+    const c = currentConfig()
+    c.swap = { universalRouter: address(1), quoter: address(2) }
+    expect(() => deploymentFromConfig('monad-testnet', c)).toThrow('prices.native')
+  })
+
   it('refuses a pool quoted in a token the network does not peg at a dollar', () => {
     const c = currentConfig()
     c.prices = { native: { quote: address(7), fee: 500, tickSpacing: 10 } }

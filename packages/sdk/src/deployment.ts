@@ -2,18 +2,11 @@
  * Addresses come from `contracts/config/<network>.json`, the file the deployment recipe writes; never from code
  * (AGENTS.md). One network, one core and the current Sidequest v1 pair.
  */
-import {
-  type Address,
-  type Hex,
-  encodeAbiParameters,
-  isAddress,
-  keccak256,
-  parseAbiParameters,
-  zeroAddress,
-} from 'viem'
+import { type Address, type Hex, isAddress, zeroAddress } from 'viem'
 import testnet from '../../../contracts/config/monad-testnet.json' with { type: 'json' }
 import mainnet from '../../../contracts/config/monad-mainnet.json' with { type: 'json' }
 import type { Launcher } from './launcher.ts'
+import { nativePriceFromConfig, nativeSwapFromConfig, poolIdOf, validAddress } from './pool-config.ts'
 
 export type Network = 'monad-testnet' | 'monad-mainnet'
 export type StackName = 'main'
@@ -183,6 +176,12 @@ export interface Deployment {
    */
   readonly nativePrice: NativePrice | null
   /**
+   * The same native/pegged pool as a route (config `swap`): Uniswap's UniversalRouter and V4Quoter, and Permit2 from
+   * `liquidity.uniswapV4`, so a wallet can turn USDC into MON and back within one batch (a SIDE buy or sale in USDC).
+   * Null unless `prices.native`, `swap` and Permit2 are all configured (testnet has none).
+   */
+  readonly nativeSwap: NativeSwap | null
+  /**
    * SIDE on nad.fun's router (config `nadfun.router` and the deployment's SIDE), which Explore's Buy and Sell use where
    * there is no market of ours: the same calls on testnet and mainnet. Null until both exist.
    */
@@ -210,6 +209,13 @@ export interface NativePrice {
   readonly poolId: Hex
   readonly quote: Address
   readonly stateView: Address
+}
+
+/** `NativePrice` as a route: the router and quoter that trade it, and Permit2 for the pegged token's approval. */
+export interface NativeSwap extends NativePrice {
+  readonly permit2: Address
+  readonly universalRouter: Address
+  readonly quoter: Address
 }
 
 export interface Market {
@@ -249,6 +255,8 @@ export interface DeploymentConfig {
   liquidity?: LiquidityConfig
   /** `native`: the v4 pool that prices the chain's coin, against a token in `usdPegged`. */
   prices?: { native?: { quote: string; fee: number; tickSpacing: number } }
+  /** Uniswap's UniversalRouter and V4Quoter for `prices.native` (not `liquidity.uniswapV4`, which would open a market). */
+  swap?: { universalRouter: string; quoter: string }
   chainId: number
   boards?: string[]
   roles: { admin: string; relay?: string; attester: string; arbitrator: string }
@@ -305,9 +313,6 @@ interface StackEntry {
   evaluator: string
   openTokens?: boolean
 }
-
-const validAddress = (value: unknown): value is Address =>
-  typeof value === 'string' && /^0x[0-9a-fA-F]{40}$/.test(value) && !/^0x0{40}$/.test(value)
 
 const stackOf = (s: StackEntry): Stack => {
   const kind = s.kind
@@ -516,6 +521,7 @@ export function deploymentFromConfig(network: Network, c: DeploymentConfig): Dep
     testnetFaucet: d.testnetFaucet === undefined || c.chainId === 143 ? null : (d.testnetFaucet as Address),
     market: marketFromConfig(d.factory as Address, c.liquidity),
     nativePrice: nativePriceFromConfig(c),
+    nativeSwap: nativeSwapFromConfig(c),
     launcher:
       validAddress(c.nadfun?.router) && validAddress(d.factory) ? { router: c.nadfun.router, side: d.factory } : null,
     aa: aaFromConfig(c),
@@ -568,44 +574,6 @@ function agentSweepFromConfig(c: DeploymentConfig): Address | null {
   if (address === undefined) return null
   if (!validAddress(address)) throw new Error('Deployment agentSweep must be an address')
   return address
-}
-
-/** A v4 pool's id: the hash of its key, as the PoolManager computes it. */
-const poolIdOf = (key: PoolKey): Hex =>
-  keccak256(
-    encodeAbiParameters(parseAbiParameters('address, address, uint24, int24, address'), [
-      key.currency0,
-      key.currency1,
-      key.fee,
-      key.tickSpacing,
-      key.hooks,
-    ]),
-  )
-
-/** Config `prices.native`: refused unless its quote token is pegged and the network names its StateView. */
-function nativePriceFromConfig(c: DeploymentConfig): NativePrice | null {
-  const p = c.prices?.native
-  if (p === undefined) return null
-  const stateView = c.liquidity?.uniswapV4.stateView
-  const pegged = (c.usdPegged ?? []).some((token) => token.toLowerCase() === p.quote.toLowerCase())
-  if (
-    !validAddress(p.quote) ||
-    !pegged ||
-    !validAddress(stateView) ||
-    !Number.isSafeInteger(p.fee) ||
-    !Number.isSafeInteger(p.tickSpacing)
-  )
-    throw new Error(
-      'Network config prices.native needs a usdPegged quote token, a fee, a tickSpacing and liquidity.uniswapV4.stateView',
-    )
-  const key: PoolKey = {
-    currency0: zeroAddress,
-    currency1: p.quote,
-    fee: p.fee,
-    tickSpacing: p.tickSpacing,
-    hooks: zeroAddress,
-  }
-  return { key, poolId: poolIdOf(key), quote: p.quote, stateView }
 }
 
 function marketFromConfig(side: Address, l: LiquidityConfig | undefined): Market | null {
