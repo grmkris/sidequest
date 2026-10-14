@@ -265,7 +265,9 @@
       "env": [
         "CLOUDFLARE_API_TOKEN",
         "CLOUDFLARE_ACCOUNT_ID=bceaeae4788dce3493514fde194b4a7e",
-        "MONAD_TESTNET_RPC_URL"
+        "MONAD_TESTNET_RPC_URL",
+        "MONAD_MAINNET_RPC_URL=https://rpc.monad.xyz",
+        "DEPLOYER_PRIVATE_KEY=$CREW_MINT_DEPLOYER_KEY"
       ],
       "mcp": {},
       "operator": "crew",
