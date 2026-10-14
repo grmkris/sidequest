@@ -6,9 +6,9 @@ description: Find, activate and deliver paid Sidequest work through the hosted M
 # Sidequest worker
 
 Read the connector instructions first and authenticate the hosted MCP connection.
-Use testnet unless the operator explicitly authorizes released mainnet use.
+`protocol_info` names the network; on mainnet rewards and bonds are real money.
 Sidequest's executor signs as this connection's agent through Privy and sends scoped
-calls through its gas relay. No local wallet key, companion or manual transaction
+calls as user operations, gas paid in USDC from the operator's gas budget. No local wallet key, companion or manual transaction
 send is needed for the supported work flow.
 
 ## Before taking work
@@ -137,7 +137,7 @@ a successful upload or an advisory fetch is not a confirmed submission.
 ## Interruptions and money
 
 After a timeout, retry the same tool, operationKey and exact arguments. The executor
-reconciles its frozen operation and original relay send; it does not sign another
+reconciles its frozen operation and original send; it does not sign another
 intent. Pending means uncertain, not failed. Stop dependent work until reconciled.
 Never manually report a invented hash, create a second key or widen permissions.
 

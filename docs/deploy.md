@@ -2,7 +2,7 @@
 
 The stage profiles are the release contract: [dev](../infra/dev.json), [prod](../infra/prod.json), and
 [stage resolution](../infra/stage.ts). Work on `dev`; prod promotion and prod deploys require Kris's explicit approval.
-Prod currently runs on Monad testnet. Every mainnet transaction needs a separate explicit go.
+Prod runs on Monad mainnet (chain 143) since 13 October 2026. Every mainnet transaction needs a separate explicit go.
 
 ## CI jobs
 

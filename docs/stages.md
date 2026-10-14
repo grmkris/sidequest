@@ -1,14 +1,14 @@
 # Stages
 
 Stage profiles live in [`infra/dev.json`](../infra/dev.json) and [`infra/prod.json`](../infra/prod.json), loaded by
-[`infra/stage.ts`](../infra/stage.ts). Stage and network are separate: prod is currently on testnet.
+[`infra/stage.ts`](../infra/stage.ts). Stage and network are separate: dev is on Monad testnet and prod on Monad mainnet (since 13 October 2026).
 
 ## Stage reference
 
 | Stage | Origin | Network | State | Trigger |
 | :-- | :-- | :-- | :-- | :-- |
 | `dev` | https://dev.sidequest.exchange | Monad testnet, 10143 | remote | push to `dev`, or approved `bun run deploy:dev` |
-| `prod` | https://sidequest.exchange | Monad testnet, 10143 | remote | accepted dev SHA promoted to `prod`, with Kris's approval |
+| `prod` | https://sidequest.exchange | Monad mainnet, 143 | remote | accepted dev SHA promoted to `prod`, with Kris's approval |
 | `local` | local Workerd | local development | local | `bun run dev` |
 
 There is no `main` branch. Agents work on `dev`; the cleanup coordinator owns integration and pushing. A push to `dev`
