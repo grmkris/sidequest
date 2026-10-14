@@ -24,6 +24,7 @@ export const v4QuoterAbi = parseAbi([
   'struct PoolKey { address currency0; address currency1; uint24 fee; int24 tickSpacing; address hooks; }',
   'struct QuoteExactSingleParams { PoolKey poolKey; bool zeroForOne; uint128 exactAmount; bytes hookData; }',
   'function quoteExactInputSingle(QuoteExactSingleParams params) returns (uint256 amountOut, uint256 gasEstimate)',
+  'function quoteExactOutputSingle(QuoteExactSingleParams params) returns (uint256 amountIn, uint256 gasEstimate)',
 ])
 export const universalRouterAbi = parseAbi([
   'function execute(bytes commands, bytes[] inputs, uint256 deadline) payable',
@@ -108,6 +109,21 @@ export async function quoteExactIn(
 export const minOutFor = (amountOut: bigint, slippageBps = DEFAULT_SLIPPAGE_BPS) =>
   (amountOut * BigInt(10_000 - slippageBps)) / 10_000n
 
+/** `UniversalRouter.execute(V4_SWAP)` calldata for one v4 action list: the actions in order, then their params. */
+export function v4SwapCalldata(actions: readonly number[], params: readonly Hex[], deadline: number): Hex {
+  const list = `0x${actions.map((a) => a.toString(16).padStart(2, '0')).join('')}` as Hex
+  const swap = encodeAbiParameters(parseAbiParameters('bytes, bytes[]'), [list, [...params]])
+  return encodeFunctionData({
+    abi: universalRouterAbi,
+    functionName: 'execute',
+    args: [V4_SWAP, [swap], BigInt(deadline)],
+  })
+}
+
+/** SETTLE_ALL or TAKE_ALL's params: the currency (the zero address for MON) and its maximum or minimum. */
+export const currencyAmount = (currency: Address, amount: bigint): Hex =>
+  encodeAbiParameters(parseAbiParameters('address, uint256'), [currency, amount])
+
 /** `UniversalRouter.execute` calldata for one exact-input swap on the market's pool. */
 export function swapCalldata(
   m: Market,
@@ -115,8 +131,6 @@ export function swapCalldata(
 ): Hex {
   const zeroForOne = direction(m, input.tokenIn)
   const [currencyIn, currencyOut] = zeroForOne ? [m.key.currency0, m.key.currency1] : [m.key.currency1, m.key.currency0]
-  const actions =
-    `0x${[SWAP_EXACT_IN_SINGLE, SETTLE_ALL, TAKE_ALL].map((a) => a.toString(16).padStart(2, '0')).join('')}` as Hex
   const params = [
     m.minHopPrice
       ? encodeAbiParameters(exactInputSingleMinHop, [
@@ -138,15 +152,60 @@ export function swapCalldata(
             hookData: '0x',
           },
         ]),
-    encodeAbiParameters(parseAbiParameters('address, uint256'), [currencyIn, input.amountIn]),
-    encodeAbiParameters(parseAbiParameters('address, uint256'), [currencyOut, input.minOut]),
+    currencyAmount(currencyIn, input.amountIn),
+    currencyAmount(currencyOut, input.minOut),
   ]
-  const swap = encodeAbiParameters(parseAbiParameters('bytes, bytes[]'), [actions, params])
-  return encodeFunctionData({
-    abi: universalRouterAbi,
-    functionName: 'execute',
-    args: [V4_SWAP, [swap], BigInt(input.deadline)],
-  })
+  return v4SwapCalldata([SWAP_EXACT_IN_SINGLE, SETTLE_ALL, TAKE_ALL], params, input.deadline)
+}
+
+/**
+ * The approvals a swap of `amount` of `token` needs, each only when short: Permit2 for exactly `amount`, then the
+ * router's Permit2 allowance of `amount` for 30 minutes (and past `deadline`).
+ */
+export async function permit2Approvals(
+  ctx: Ctx,
+  input: { owner: Address; token: Address; permit2: Address; router: Address; amount: bigint; deadline: number },
+): Promise<TxRequest[]> {
+  const chainId = ctx.deployment.chainId
+  const now = Math.floor(Date.now() / 1000)
+  const txs: TxRequest[] = []
+  const [tokenAllowance, [permitted, expiration]] = await Promise.all([
+    ctx.publicClient.readContract({
+      address: input.token,
+      abi: erc20Abi,
+      functionName: 'allowance',
+      args: [input.owner, input.permit2],
+    }),
+    ctx.publicClient.readContract({
+      address: input.permit2,
+      abi: permit2Abi,
+      functionName: 'allowance',
+      args: [input.owner, input.token, input.router],
+    }),
+  ])
+  if (tokenAllowance < input.amount)
+    txs.push({
+      description: 'Allow Uniswap Permit2 to move exactly this amount',
+      chainId,
+      to: input.token,
+      data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [input.permit2, input.amount] }),
+      value: '0',
+      gas: '80000',
+    })
+  if (permitted < input.amount || expiration < input.deadline || expiration <= now)
+    txs.push({
+      description: 'Allow the Uniswap router to spend it for 30 minutes',
+      chainId,
+      to: input.permit2,
+      data: encodeFunctionData({
+        abi: permit2Abi,
+        functionName: 'approve',
+        args: [input.token, input.router, input.amount, now + PERMIT2_TTL_SECONDS],
+      }),
+      value: '0',
+      gas: '80000',
+    })
+  return txs
 }
 
 /**
@@ -160,50 +219,17 @@ export async function swapTransactions(
   input: { owner: Address; tokenIn: Address; amountIn: bigint; minOut: bigint; deadline: number },
 ): Promise<TxRequest[]> {
   direction(m, input.tokenIn)
-  const chainId = ctx.deployment.chainId
-  const now = Math.floor(Date.now() / 1000)
-  const txs: TxRequest[] = []
-  const [tokenAllowance, [permitted, expiration]] = await Promise.all([
-    ctx.publicClient.readContract({
-      address: input.tokenIn,
-      abi: erc20Abi,
-      functionName: 'allowance',
-      args: [input.owner, m.permit2],
-    }),
-    ctx.publicClient.readContract({
-      address: m.permit2,
-      abi: permit2Abi,
-      functionName: 'allowance',
-      args: [input.owner, input.tokenIn, m.universalRouter],
-    }),
-  ])
-  if (tokenAllowance < input.amountIn) {
-    txs.push({
-      description: 'Allow Uniswap Permit2 to move exactly this amount',
-      chainId,
-      to: input.tokenIn,
-      data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [m.permit2, input.amountIn] }),
-      value: '0',
-      gas: '80000',
-    })
-  }
-  if (permitted < input.amountIn || expiration < input.deadline || expiration <= now) {
-    txs.push({
-      description: 'Allow the Uniswap router to spend it for 30 minutes',
-      chainId,
-      to: m.permit2,
-      data: encodeFunctionData({
-        abi: permit2Abi,
-        functionName: 'approve',
-        args: [input.tokenIn, m.universalRouter, input.amountIn, now + PERMIT2_TTL_SECONDS],
-      }),
-      value: '0',
-      gas: '80000',
-    })
-  }
+  const txs = await permit2Approvals(ctx, {
+    owner: input.owner,
+    token: input.tokenIn,
+    permit2: m.permit2,
+    router: m.universalRouter,
+    amount: input.amountIn,
+    deadline: input.deadline,
+  })
   txs.push({
     description: 'Swap',
-    chainId,
+    chainId: ctx.deployment.chainId,
     to: m.universalRouter,
     data: swapCalldata(m, input),
     value: '0',
