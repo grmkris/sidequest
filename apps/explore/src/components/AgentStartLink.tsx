@@ -39,7 +39,7 @@ export function useCopy(): [boolean, (text: string) => void] {
 }
 
 /** The MCP URL with a labelled Copy, for apps (ChatGPT) that cannot add a connector for themselves. */
-export function McpUrlRow({ className }: { className?: string }) {
+function McpUrlRow({ className }: { className?: string }) {
   const url = mcpUrl(startOrigin())
   const [copied, copy] = useCopy()
   return (
