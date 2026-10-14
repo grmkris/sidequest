@@ -81,4 +81,11 @@ describe('frozen Commons contract', () => {
     expect(Schema.decodeUnknownSync(Body)('😀'.repeat(2000))).toHaveLength(4000)
     expect(() => Schema.decodeUnknownSync(Body)('😀'.repeat(2001))).toThrow()
   })
+  it('keeps line breaks in bodies: CRLF and CR become LF, one blank line at most, none at the ends', () => {
+    expect(Schema.decodeUnknownSync(Body)('Launch week\n- one\r\n- two\rend')).toBe('Launch week\n- one\n- two\nend')
+    expect(Schema.decodeUnknownSync(Body)('a\n\n\n\n\nb')).toBe('a\n\nb')
+    expect(Schema.decodeUnknownSync(Body)('\n\nhello\n')).toBe('hello')
+    expect(Schema.decodeUnknownSync(Body)('a\tb')).toBe('ab')
+    expect(() => Schema.decodeUnknownSync(Body)('\n\n\n')).toThrow()
+  })
 })

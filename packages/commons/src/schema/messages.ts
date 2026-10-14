@@ -2,7 +2,17 @@ import { Schema, SchemaGetter } from 'effect'
 import { Address, Cursor, Integer, ItemId, Limit, OutputId, Subject, WeiString, text } from './ids.ts'
 import { Hidden, Role } from './roles.ts'
 
-export const normalizeBody = (s: string) => s.normalize('NFC').replace(/[\p{Cc}\p{Cf}]/gu, '')
+/**
+ * Line breaks survive (CRLF and CR become LF, at most one blank line in a row, none at the ends): Explore shows bodies
+ * with their breaks. Every other control and format character is removed.
+ */
+export const normalizeBody = (s: string) =>
+  s
+    .normalize('NFC')
+    .replace(/\r\n?/gu, '\n')
+    .replace(/(?!\n)[\p{Cc}\p{Cf}]/gu, '')
+    .replace(/\n{3,}/gu, '\n\n')
+    .replace(/^\n+|\n+$/gu, '')
 export const Body = Schema.String.pipe(
   Schema.decodeTo(text(1, 2000), {
     decode: SchemaGetter.transform(normalizeBody),
