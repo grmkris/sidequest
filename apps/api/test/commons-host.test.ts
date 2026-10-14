@@ -209,7 +209,8 @@ it('reads numeric and string gap IDs and reports safe field constraints through 
 })
 
 it('disables every tool without stage roles, exposing only disabled list_roles', async () => {
-  const f = await fixture('prod')
+  // A stage with no profile has no roles; dev and prod both run Commons.
+  const f = await fixture('local')
   await expect(
     f.host.run('post_message', { address: maintainer }, { subject: 'lobby', body: 'hello' }),
   ).rejects.toMatchObject({ code: 'unavailable' })

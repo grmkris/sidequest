@@ -11,12 +11,15 @@ import { assertLiveRelease, stateMode } from '../../../scripts/sidequest/state.t
 
 afterEach(() => vi.unstubAllEnvs())
 
-test('Commons is enabled by validated dev roles and absent in prod', () => {
+test('Commons is enabled by validated roles: dev with its maintainers, prod with a moderator and no maintainer', () => {
   expect(stageProfile('dev')?.roles).toEqual({
     moderator: ['0xe834D5B7b9703E0BFB8a756Eb27bd9B4e41D1373'],
     maintainer: ['0x5f3D114a607b5bBB71a2E11Ba045fC9f4F239Ce7', '0x77aEBfcCc5D10fDD4ca9A351B8D0eB75385BbC32'],
   })
-  expect(stageProfile('prod')?.roles).toBeUndefined()
+  expect(stageProfile('prod')?.roles).toEqual({
+    moderator: ['0xaC7F8233dc0CC8F613F73c220dFf2c1D7809f504'],
+    maintainer: [],
+  })
   for (const roles of [null, {}, { moderator: [], maintainer: ['invalid'] }, { moderator: 'invalid', maintainer: [] }])
     expect(() => validateStageProfile({ ...stageProfile('dev'), roles }, 'dev')).toThrow()
 })
