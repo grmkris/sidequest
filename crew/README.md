@@ -160,19 +160,23 @@ loop:
 
 ## Roles: the arbiter, the moderator and the maintainer
 
-`bin/roles.ts` runs the ecosystem roles as always-on containers of the crew image, from a detached worktree pinned to a
-released commit (`agent-jobs.wt/roles`), never the shared checkout:
+`bin/roles.ts` runs the ecosystem roles as always-on containers of the crew image, each from a detached worktree of a
+released commit (`agent-jobs.wt/roles-<sha12>`, `roles-mainnet-<sha12>` for prod), never the shared checkout:
 
-- `sq-arbiter` rules disputes on both testnet boards (dev and prod);
-- `sq-moderator` and `sq-maintainer` keep dev's Commons (moderation, and the CTO bot's triage and shipping).
+- `sq-arbiter` rules disputes on the testnet board (dev); `sq-arbiter-mainnet` on mainnet (prod);
+- `sq-moderator` and `sq-maintainer` keep dev's Commons (moderation, and the CTO bot's triage and shipping);
+  `sq-moderator-mainnet` moderates prod's Commons. The maintainer does not run on mainnet.
 
-Each role's keys and model key reach its container through its own env file (mode 600, `.crew/roles/env/`) holding
-only the variables that role reads, from `.env.local`, `~/.config/secrets.env`, `~/.config/cliproxy.env` and the dev
-stage env; nothing is printed. The moderator's and maintainer's cursors live in `.crew/roles/state`.
+Every commit gets its own tree, and `up` replaces only the roles it names in the stage's compose file, so starting one
+role never moves the source under another or drops it from the file. Each role's keys and model key reach its container
+through its own env file (mode 600, `.crew/roles/env/`, `.crew/roles/mainnet/env/`) holding only the variables that role
+reads, from `.env.local` (testnet), `~/.config/secrets.env`, `~/.config/cliproxy.env` and the stage env; nothing is
+printed. The moderator's and maintainer's cursors live in the stage's `state` directory.
 
-    bun crew/bin/roles.ts up <released sha> [arbiter|moderator|maintainer…]   # pin, install once, start
+    bun crew/bin/roles.ts up <released sha> [arbiter|moderator|maintainer…]   # add the commit's tree, start those roles
     bun crew/bin/roles.ts status
     docker logs -f sq-arbiter
-    bun crew/bin/roles.ts down
+    bun crew/bin/roles.ts prune                                              # remove trees no role runs from
+    bun crew/bin/roles.ts down                                               # stops every role in the stage's file
 
 Run one arbiter at a time: stop any other arbiter for the same key before starting `sq-arbiter`.

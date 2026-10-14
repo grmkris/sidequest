@@ -3,6 +3,48 @@ import type { StageProfile } from '../../infra/stage.ts'
 
 export type Role = 'arbiter' | 'moderator' | 'maintainer'
 export type RoleInputs = Readonly<Record<string, string | undefined>>
+export interface RoleCompose {
+  readonly name: string
+  readonly services: Readonly<Record<string, Readonly<Record<string, unknown>>>>
+  readonly networks: Readonly<Record<string, unknown>>
+}
+
+/** Mainnet runs the arbiter and the Commons moderator; the maintainer ships code from Commons and stays on testnet. */
+export function assertRoleOnNetwork(role: Role, stage: StageProfile): void {
+  if (stage.network === 'monad-mainnet' && role === 'maintainer')
+    throw new Error('The maintainer is not enabled on mainnet')
+}
+
+/** Each released commit gets its own tree, so pinning a new commit never removes a tree a running role mounts. */
+export function roleTree(layout: { readonly tree: string }, sha: string): string {
+  return `${layout.tree}-${sha.slice(0, 12)}`
+}
+
+/** The stage's compose file with only `services` replaced: roles not being started keep their entries and commits. */
+export function mergeCompose(
+  existing: RoleCompose | undefined,
+  project: string,
+  services: RoleCompose['services'],
+): RoleCompose {
+  return {
+    name: project,
+    services: { ...existing?.services, ...services },
+    networks: { crew: { name: 'sidequest-crew', external: true } },
+  }
+}
+
+/** This stage's per-commit trees that no service in its compose file runs from: what `prune` may remove. */
+export function unusedTrees(
+  layout: { readonly tree: string },
+  compose: RoleCompose | undefined,
+  trees: readonly string[],
+): string[] {
+  const used = new Set(Object.values(compose?.services ?? {}).map((service) => service.working_dir))
+  const prefix = `${layout.tree}-`
+  return trees.filter(
+    (tree) => tree.startsWith(prefix) && /^[0-9a-f]{12}$/.test(tree.slice(prefix.length)) && !used.has(tree),
+  )
+}
 
 export function roleLayout(repo: string, stage: StageProfile) {
   const mainnet = stage.network === 'monad-mainnet'
@@ -24,7 +66,7 @@ export function roleEnvironment(
   modelBaseUrl: string,
   testnetBoards: readonly string[],
 ): Record<string, string | undefined> {
-  if (stage.network === 'monad-mainnet' && role !== 'arbiter') throw new Error('Only arbiter is enabled on mainnet')
+  assertRoleOnNetwork(role, stage)
   const model = { ARBITER_MODEL_BASE_URL: modelBaseUrl, ARBITER_MODEL_API_KEY: inputs.CLIPROXY_API_KEY }
   if (role === 'arbiter') {
     const mainnet = stage.network === 'monad-mainnet'

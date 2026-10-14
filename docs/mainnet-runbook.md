@@ -221,7 +221,9 @@ SIDEQUEST_STAGE=prod bun --no-env-file crew/bin/roles.ts up <released-sha> arbit
 ```
 
 This starts `sq-arbiter-mainnet` in `sidequest-roles-mainnet`, against only the mainnet stage board, with its own pinned
-worktree and `.crew/roles/mainnet/state` journal volume. It leaves the running testnet `sq-arbiter`, compose project and
+worktree (`agent-jobs.wt/roles-mainnet-<sha12>`) and `.crew/roles/mainnet/state` journal volume. `up … moderator` starts
+`sq-moderator-mainnet` for prod's Commons the same way; `up` replaces only the roles it names, so the arbiter keeps its
+commit and tree. It leaves the running testnet `sq-arbiter`, compose project and
 journal alone. Run only one signer process per mainnet key. The daemon checks the RPC chain before a ruling send and
 persists intent and signed bytes before broadcast; after a timeout reconcile the journal's nonce and receipt. Probe a
 disputed mainnet hire and read its ruling receipt and index before opening. `SIDEQUEST_STAGE=dev` keeps the testnet key
