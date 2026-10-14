@@ -54,9 +54,12 @@
       "0x7d363EBFcE050E6e4173ea10b5e3cBB050E8e635",
       "0x5884FCC45DF1AEb31B25171FB9cb04cEeCBcb3E0",
       "0xf3a5163fe4be20442e4fed1f34a978cad123b7b4",
-      "0x4437fd60d4dac2c321476e71e4c2229ee9a18eb0"
+      "0x4437fd60d4dac2c321476e71e4c2229ee9a18eb0",
+      "0xc4ec400e2076f1a1fb3df13af9afbd248271381e",
+      "0x4e251ca0d1ee8d2e445a7ebf798969858368e263",
+      "0x418e9b691fcd792ffa874a597c473ea507d51945"
     ],
-    "agents": ["10399", "10401"],
+    "agents": ["10399", "10401", "10403", "10404", "10408"],
     "demoJobs": []
   },
   "liquidity": {
