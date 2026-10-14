@@ -236,6 +236,11 @@ function useUserOp(props: OpProps) {
     props.onBusyChange?.(busy || view.pending)
     props.onSafeToRestartChange?.(!view.pending && view.record?.aa?.built === undefined)
   }, [busy, view.pending, view.record?.aa?.built])
+  // A reverted operation is over, as a reverted transaction is in MonTxSteps: tell the caller, which may start afresh.
+  const reverted = view.record?.aa?.receipt?.status === 'reverted' ? view.record.aa.receipt.txHash : null
+  useEffect(() => {
+    if (reverted !== null) props.onFailure?.('The user operation reverted. Gas was charged; none of these steps ran.')
+  }, [reverted])
   const submit = async () => {
     await withWalletAccountLock(navigator.locks, chain.id, wallet.address!, async () => {
       if (view.built === null) await controller.prepare()

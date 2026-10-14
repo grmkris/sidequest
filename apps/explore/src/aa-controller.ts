@@ -104,8 +104,11 @@ export class BrowserUserOp {
   async #finish(record: OpRecord) {
     const receipt = record.aa?.receipt
     if (receipt === undefined) return
-    if (receipt.status === 'reverted')
+    if (receipt.status === 'reverted') {
+      // Nothing is in flight any more: the caller may end the action (a SIDE trade quotes afresh) or show the error.
+      this.#update({ pending: false })
       throw new Error('The user operation reverted. Gas was charged; none of these steps ran.')
+    }
     await this.deps.verify(receipt.txHash)
     if (record.recorded[0] !== true) await this.deps.report(receipt.txHash)
     await this.#write({ ...record, hashes: [receipt.txHash], recorded: [true] })

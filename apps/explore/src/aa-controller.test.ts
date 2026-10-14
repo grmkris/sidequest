@@ -293,7 +293,11 @@ it('a reverted receipt remains saved and cannot cause another broadcast', async 
   await controller.load()
   await controller.prepare()
   await expect(controller.send()).rejects.toThrow('Gas was charged')
+  // Nothing is in flight once the receipt says reverted: the caller ends the action instead of waiting on it.
+  expect(f.view()?.pending).toBe(false)
+  expect(f.record()!.aa!.receipt?.status).toBe('reverted')
   await expect(new BrowserUserOp(f.deps).load()).rejects.toThrow('Gas was charged')
+  expect(f.view()?.pending).toBe(false)
   expect(f.log.filter((method) => method === 'eth_sendUserOperation')).toHaveLength(1)
   expect(f.log).not.toContain('report')
 })

@@ -108,15 +108,18 @@ async function tradeJournals(
 function progress(journal: OpRecord, steps: number) {
   const confirmed = (i: number) => journal.recorded[i] === true
   const indexes = Array.from({ length: steps }, (_, i) => i)
-  const reverted = journal.reverted?.at(-1) ?? null
+  // The user-op path keeps its state in the same record (`aa`): a built operation is in flight until its receipt says
+  // otherwise, and a reverted receipt ended it without effect, like a reverted transaction.
+  const opReverted = journal.aa?.receipt?.status === 'reverted' ? journal.aa.receipt.txHash : null
+  const reverted = opReverted ?? journal.reverted?.at(-1) ?? null
   return {
     // Nothing went to the wallet or the bundler that is still unaccounted for: no pending send, no unconfirmed hash,
-    // no sponsorship and no built user operation (the user-op path keeps its state in the same record, `aa`).
+    // no sponsorship and no user operation still in flight.
     quiet:
       journal.pending === null &&
       journal.hashes.every((hash, i) => hash === null || confirmed(i)) &&
       journal.sponsor == null &&
-      (journal.aa == null || journal.aa.built === undefined),
+      (journal.aa == null || journal.aa.built === undefined || opReverted !== null),
     unsent: journal.hashes.every((hash) => hash === null),
     finished: indexes.every(confirmed),
     started: indexes.some(confirmed),

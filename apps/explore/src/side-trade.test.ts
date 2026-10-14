@@ -213,6 +213,41 @@ describe('a SIDE trade that did not happen is over, and quoted afresh', () => {
     expect(await sideTradeEnded(s.storage, buy, s.checkpoint)).toBeNull()
   })
 
+  it('ends a USDC-gas sale whose user operation reverted, and keeps one still in flight', async () => {
+    const s = store()
+    const built = {
+      op: {
+        sender: owner,
+        nonce: '0x1',
+        callData: '0xabcd',
+        callGasLimit: '0x1',
+        verificationGasLimit: '0x1',
+        preVerificationGas: '0x1',
+        maxFeePerGas: '0x1',
+        maxPriorityFeePerGas: '0x1',
+        signature: '0x1234',
+      },
+      entryPoint: owner,
+      chainId: d.chainId,
+      maxCost: '4739',
+      userOpHash: hash,
+    } as const
+    const reverted = `0x${'44'.repeat(32)}` as const
+    await journal(s, sell, { batch: true, aa: { actionId: 'sell-1', built, submittedAt: 1 } })
+    expect(await sideTradeEnded(s.storage, sell, s.checkpoint)).toBeNull()
+    await writeTxJournalDurable(
+      s.storage,
+      journalOf(sell),
+      {
+        ...emptyJournal(),
+        batch: true,
+        aa: { actionId: 'sell-1', built, submittedAt: 1, receipt: { txHash: reverted, status: 'reverted' } },
+      },
+      s.checkpoint,
+    )
+    expect(await sideTradeEnded(s.storage, sell, s.checkpoint)).toEqual({ tried: true, reverted })
+  })
+
   it('leaves a finished trade to its done screen', async () => {
     const s = store()
     await journal(s, buy, { hashes: [hash], recorded: [true], attempts: [3], from: owner })
