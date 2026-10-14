@@ -11,6 +11,7 @@ import { formatAmount } from '../../format.ts'
 import { refreshBalances } from '../../query-refresh.ts'
 import { type RevertCause, type RevertReads, tradeRevertCause } from '../../side-revert.ts'
 import { quoteHolds, type tradeAmounts } from '../../side-sheet.ts'
+import { USDC_DECIMALS, usdcMaxText } from '../../side-usdc.ts'
 import {
   type SideTradeIntent,
   clearSideTrade,
@@ -23,7 +24,7 @@ import {
 } from '../../side-trade.ts'
 import { stakeContext } from '../../stake-context.ts'
 import { friendlyError } from '../../txErrors.ts'
-import { chain } from '../../wallet.ts'
+import { chain, deployment } from '../../wallet.ts'
 import { TxLink } from '../kit.tsx'
 import { TxSteps } from '../TxSteps.tsx'
 import { withWalletStepLock } from '../txOperation.ts'
@@ -128,6 +129,37 @@ function useRevertCause(
 
 type Amounts = NonNullable<ReturnType<typeof tradeAmounts>>
 
+const STALE =
+  'The price moved past your slippage since this quote, so nothing was sent. Check the new amounts, then try again.'
+
+/**
+ * A trade paid or paid out in USDC: every leg re-checked at the price now, then the route's one batch (Permit2
+ * approvals, the pool's swap, nad.fun), saved with what it may spend.
+ */
+async function prepareUsdcTrade(
+  ctx: ReturnType<typeof stakeContext>,
+  l: sdk.Launcher,
+  owner: `0x${string}`,
+  amounts: Amounts,
+  plan: sdk.UsdcPlan,
+): Promise<SideTradeIntent> {
+  if (deployment.nativeSwap === null) throw new Error('Paying with USDC isn’t available on this network.')
+  const route = { swap: deployment.nativeSwap, launcher: l }
+  if (!(await sdk.usdcPlanHolds(ctx, route, plan))) throw new Error(STALE)
+  const deadline = Math.floor(Date.now() / 1000) + 600
+  const txs = await sdk.usdcPlanTransactions(ctx, route, plan, { owner, deadline })
+  return {
+    id: crypto.randomUUID(),
+    trade: plan.trade,
+    owner,
+    txs,
+    out: amounts.expectedOut.toString(),
+    deadline,
+    payWith: 'usdc',
+    ...(plan.trade === 'buy' ? { paid: plan.usdcMax.toString() } : {}),
+  }
+}
+
 /**
  * The trade to save, built against the router's price now: the quote on screen may be a while old, so a trade whose
  * floor no longer holds stops here, before the wallet opens and before it costs any gas.
@@ -135,17 +167,14 @@ type Amounts = NonNullable<ReturnType<typeof tradeAmounts>>
 async function prepareTrade(
   ctx: ReturnType<typeof stakeContext>,
   l: sdk.Launcher,
-  owner: `0x${string}`,
-  trade: Trade,
-  amounts: Amounts,
+  input: { owner: `0x${string}`; trade: Trade; amounts: Amounts; plan: sdk.UsdcPlan | null },
 ): Promise<SideTradeIntent> {
-  if (!quoteHolds(amounts, await sdk.launcherQuote(ctx, l, trade, amounts.amountIn)))
-    throw new Error(
-      'The price moved past your slippage since this quote, so nothing was sent. Check the new amounts, then try again.',
-    )
+  const { owner, trade, amounts, plan } = input
+  if (plan !== null) return prepareUsdcTrade(ctx, l, owner, amounts, plan)
+  if (!quoteHolds(amounts, await sdk.launcherQuote(ctx, l, trade, amounts.amountIn))) throw new Error(STALE)
   const deadline = Math.floor(Date.now() / 1000) + 600
-  const input = { owner, side: trade, amountIn: amounts.amountIn, minOut: amounts.minOut, deadline }
-  const txs = await sdk.launcherTransactions(ctx, l, input)
+  const call = { owner, side: trade, amountIn: amounts.amountIn, minOut: amounts.minOut, deadline }
+  const txs = await sdk.launcherTransactions(ctx, l, call)
   return { id: crypto.randomUUID(), trade, owner, txs, out: amounts.expectedOut.toString(), deadline }
 }
 
@@ -155,16 +184,16 @@ export function useTradeSend(l: sdk.Launcher | null, address: `0x${string}` | un
   const key = l === null || address === undefined ? null : sideTradeKey(chain.id, l.router, address)
   const { saved, setSaved, fresh, setFresh, loaded, error: loadError, ended, setEnded } = useSavedTrade(key)
   useRevertCause(l, ended, setEnded)
-  const [done, setDone] = useState<{ trade: Trade; out: bigint } | null>(null)
+  const [done, setDone] = useState<{ trade: Trade; out: bigint; payWith?: 'usdc' } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [preparing, setPreparing] = useState(false)
-  const send = async (trade: Trade, amounts: Amounts) => {
+  const send = async (trade: Trade, amounts: Amounts, plan: sdk.UsdcPlan | null = null) => {
     if (l === null || address === undefined || key === null) return
     setPreparing(true)
     setError(null)
     setEnded(null)
     try {
-      const next = await prepareTrade(ctx, l, address, trade, amounts)
+      const next = await prepareTrade(ctx, l, { owner: address, trade, amounts, plan })
       await tradeLock(key, () => saveSideTrade(localStorage, key, next))
       setFresh(true)
       setSaved(next)
@@ -179,7 +208,11 @@ export function useTradeSend(l: sdk.Launcher | null, address: `0x${string}` | un
     if (saved === null || key === null) return
     void tradeLock(key, async () => {
       if (!(await clearSideTrade(localStorage, key, saved.id))) throw new Error(NEWER)
-      setDone({ trade: saved.trade, out: BigInt(saved.out) })
+      setDone({
+        trade: saved.trade,
+        out: BigInt(saved.out),
+        ...(saved.payWith === undefined ? {} : { payWith: saved.payWith }),
+      })
       setSaved(null)
       void refreshBalances(qc)
     }).catch((failure: unknown) => setError(friendlyError(failure)))
@@ -255,22 +288,10 @@ export function SavedTrade({
 }) {
   const [safe, setSafe] = useState(false)
   const buy = trade.trade === 'buy'
-  const out = formatAmount(BigInt(trade.out), 18)
-  const paid = buy ? formatAmount(BigInt(trade.txs[0]?.value ?? '0'), 18) : null
+  const usdc = trade.payWith === 'usdc'
   return (
     <div className="grid gap-3">
-      <div className="grid gap-0.5">
-        <p className="text-base font-semibold text-pretty tabular-nums">
-          {buy ? `Buying about ${out} SIDE` : `Selling SIDE for about ${out} ${MON}`}
-        </p>
-        <p className="text-ui text-pretty text-muted-foreground tabular-nums">
-          {fresh
-            ? paid === null
-              ? 'Through nad.fun, from your wallet.'
-              : `For ${paid} ${MON}, through nad.fun.`
-            : 'Started earlier and not settled yet. You can trade again once it settles.'}
-        </p>
-      </div>
+      <SavedTradeHeading trade={trade} fresh={fresh} />
       <TxSteps
         key={trade.id}
         taskId={sideTradeTaskId(trade.id)}
@@ -279,6 +300,7 @@ export function SavedTrade({
         reportToBoard={false}
         allowSponsorship={false}
         requireJournal
+        requireAtomic={usdc}
         retainRecord
         verifyReceipt
         autoStart={fresh}
@@ -309,6 +331,30 @@ export function SavedTrade({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+    </div>
+  )
+}
+
+/** What a saved trade is and how it goes: its amount, then its route (or, recovered after a reload, that it's pending). */
+function SavedTradeHeading({ trade, fresh }: { trade: SideTradeIntent; fresh: boolean }) {
+  const buy = trade.trade === 'buy'
+  const usdc = trade.payWith === 'usdc'
+  const out = formatAmount(BigInt(trade.out), !buy && usdc ? USDC_DECIMALS : 18)
+  const route = usdc
+    ? buy
+      ? `For up to ${usdcMaxText(BigInt(trade.paid ?? '0'))} USDC, through Uniswap and nad.fun in one step.`
+      : 'Through nad.fun and Uniswap in one step.'
+    : buy
+      ? `For ${formatAmount(BigInt(trade.txs[0]?.value ?? '0'), 18)} ${MON}, through nad.fun.`
+      : 'Through nad.fun, from your wallet.'
+  return (
+    <div className="grid gap-0.5">
+      <p className="text-base font-semibold text-pretty tabular-nums">
+        {buy ? `Buying about ${out} SIDE` : `Selling SIDE for about ${out} ${usdc ? 'USDC' : MON}`}
+      </p>
+      <p className="text-ui text-pretty text-muted-foreground tabular-nums">
+        {fresh ? route : 'Started earlier and not settled yet. You can trade again once it settles.'}
+      </p>
     </div>
   )
 }

@@ -28,6 +28,8 @@ interface AmountFieldProps {
   onMax?: (() => void) | undefined
   /** Quick amounts beside the label, such as one posting bond. */
   chips?: ReactNode
+  /** In place of the token's mark and symbol: a choice of token (the SIDE card's MON or USDC). */
+  tokenSlot?: ReactNode
   /** One line under the figure: a shortfall, a limit, the floor of a quote. */
   hint?: ReactNode
   tone?: keyof typeof TONE
@@ -48,6 +50,7 @@ export function AmountField({
   balance,
   onMax,
   chips,
+  tokenSlot,
   hint,
   tone = 'neutral',
   placeholder = '0',
@@ -93,10 +96,7 @@ export function AmountField({
             pending && 'text-muted-foreground',
           )}
         />
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted py-1 pr-2.5 pl-1.5 text-sm font-medium">
-          <TokenIcon token={token ?? zeroAddress} className="size-5" />
-          {symbol}
-        </span>
+        {tokenSlot ?? <TokenPill token={token} symbol={symbol} />}
       </div>
       {hint !== undefined && (
         <p id={hintId} className={cn('text-ui text-pretty', TONE[tone])}>
@@ -104,6 +104,21 @@ export function AmountField({
         </p>
       )}
     </div>
+  )
+}
+
+/** The token's mark and symbol, as every amount field shows it; null is the chain's coin (MON). */
+export function TokenPill({ token, symbol, className }: { token: string | null; symbol: string; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted py-1 pr-2.5 pl-1.5 text-sm font-medium',
+        className,
+      )}
+    >
+      <TokenIcon token={token ?? zeroAddress} className="size-5" />
+      {symbol}
+    </span>
   )
 }
 

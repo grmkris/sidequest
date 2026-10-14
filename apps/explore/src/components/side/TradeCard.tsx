@@ -1,40 +1,32 @@
 /**
- * The SIDE sheet's trade card. Buy or Sell, with "You pay" over "You get". Either side can be typed in; nad.fun's router
- * quotes the other. One posting bond is a chip away, and one button says what it does. The card is the same signed in
- * or out: signed out, its button signs in, and the sheet stays open.
+ * The SIDE sheet's trade card. Buy or Sell, with "You pay" over "You get". Either side can be typed in; the other is
+ * the quote, from nad.fun's router, or on mainnet, paying or paid out in USDC, from one route through the MON/USDC pool
+ * (useTradeForm.ts). One posting bond is a chip away, and one button says what it does. The card is the same signed
+ * in or out: signed out, its button signs in, and the sheet stays open.
  */
 import { usePrivy } from '@privy-io/react-auth'
 import * as sdk from '@sidequest/sdk'
 import { useQuery } from '@tanstack/react-query'
 import { Check } from 'lucide-react'
-import { type ReactNode, useEffect, useState } from 'react'
-import { erc20Abi, parseEther, parseUnits } from 'viem'
+import { useEffect } from 'react'
+import { erc20Abi } from 'viem'
 import { useBalance, useReadContract } from 'wagmi'
-import { useBondPolicy } from '../../bond-policy.ts'
 import { formatAmount } from '../../format.ts'
 import { publicKey } from '../../queries.ts'
-import {
-  DEFAULT_SLIPPAGE,
-  type Edited,
-  IMPACT_HIGH,
-  type SideTrade,
-  type Slippage,
-  fillText,
-  priceImpact,
-  sideTrade,
-  tradeAmounts,
-  wholeUp,
-} from '../../side-sheet.ts'
+import { IMPACT_HIGH, type SideTrade, sideTrade, type tradeAmounts } from '../../side-sheet.ts'
+import { USDC_DECIMALS, usdcBuyCap, usdcTexts } from '../../side-usdc.ts'
 import { stakeContext } from '../../stake-context.ts'
-import { chain, deployed, deployment, getSideLink, isMainnet, privyAppId, writesOpen } from '../../wallet.ts'
+import { chain, deployment, getSideLink, isMainnet, privyAppId, writesOpen } from '../../wallet.ts'
 import { GasWarning, SWAP_GAS } from '../GasWarning.tsx'
 import { AddressRow, Segmented } from '../kit.tsx'
-import { AmountField } from '../money/AmountField.tsx'
 import { approxUsd, useMonPrice, usdValue } from '../../usd.ts'
-import { usePrivyAuthenticated } from '../Privy.tsx'
+import { useDelegatorAuthorization, usePrivyAuthenticated } from '../Privy.tsx'
 import { TestnetFaucet } from '../TestnetFaucet.tsx'
+import type { CoinChoice } from './TokenPicker.tsx'
 import { TradeDetails } from './TradeDetails.tsx'
+import { TradeFields } from './TradeFields.tsx'
 import { SavedTrade, TradeEndedNotice, useTradeSend } from './TradeSend.tsx'
+import { useTradeForm } from './useTradeForm.ts'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
 import { useAuth } from '../Wallet.tsx'
@@ -42,21 +34,6 @@ import { useAuth } from '../Wallet.tsx'
 type Trade = 'buy' | 'sell'
 
 const MON = chain.nativeCurrency.symbol
-
-/** A typed amount, parsed a moment after typing stops; grouping commas and spaces are ignored. */
-function useAmount(text: string): bigint | null {
-  const [settled, setSettled] = useState(text)
-  useEffect(() => {
-    const t = setTimeout(() => setSettled(text), 300)
-    return () => clearTimeout(t)
-  }, [text])
-  try {
-    const v = parseUnits(settled.replace(/[,\s]/g, ''), 18)
-    return v > 0n ? v : null
-  } catch {
-    return null
-  }
-}
 
 /** Privy's login, or null without Privy or before it is ready. */
 function usePrivyLogin(): (() => void) | null {
@@ -79,11 +56,16 @@ function useWallet(l: sdk.Launcher | null, address: `0x${string}` | undefined) {
     chainId: chain.id,
     query: { enabled: on, refetchInterval: 10_000 },
   }).data
-  const delegated = useQuery({
-    queryKey: publicKey('delegation', address),
-    queryFn: async () => (await sdk.delegationOf(ctx.publicClient, address!)) !== null,
+  const delegate = useQuery({
+    queryKey: publicKey('delegate-of', address),
+    queryFn: () => sdk.delegationOf(ctx.publicClient, address!),
     enabled: on,
   }).data
+  const delegated = delegate === undefined ? undefined : delegate !== null
+  // One batch (a USDC trade) needs the configured DeleGator, or a Privy wallet that can sign the upgrade.
+  const authorize = useDelegatorAuthorization(address)
+  const batches =
+    authorize !== null || (delegate != null && delegate.toLowerCase() === deployment.delegation.delegator.toLowerCase())
   // A sale can pay its gas in USDC through the paymaster (ADR-0023); a buy carries MON, so it always pays in MON.
   const usdc = useReadContract({
     address: deployment.aa?.gasToken,
@@ -97,7 +79,46 @@ function useWallet(l: sdk.Launcher | null, address: `0x${string}` | undefined) {
     gas === undefined || delegated === undefined
       ? undefined
       : { max: sdk.nativeBuyCap({ balance: gas, gasCost: SWAP_GAS, delegated }), reserve: delegated }
-  return { gas, side, usdc, cap }
+  return { gas, side, usdc, cap, batches }
+}
+
+const USDC_REFUSAL =
+  'Paying with USDC needs your Sidequest wallet: this wallet can’t send the swap and the trade as one step.'
+
+/**
+ * MON or USDC for the trade's coin side: USDC only where the network routes it (mainnet's MON/USDC pool, with the
+ * USDC paymaster), and refused, with why, for a signed-in wallet that can't send one batch.
+ */
+function coinChoices(address: string | undefined, wallet: ReturnType<typeof useWallet>): CoinChoice[] | null {
+  const s = deployment.nativeSwap
+  if (s === null || deployment.aa?.paymaster == null) return null
+  return [
+    {
+      coin: 'mon',
+      token: null,
+      symbol: MON,
+      balance: wallet.gas === undefined ? undefined : formatAmount(wallet.gas, 18),
+      refusal: null,
+    },
+    {
+      coin: 'usdc',
+      token: s.quote,
+      symbol: 'USDC',
+      balance: wallet.usdc === undefined ? undefined : formatAmount(wallet.usdc, USDC_DECIMALS),
+      refusal: address !== undefined && !wallet.batches ? USDC_REFUSAL : null,
+    },
+  ]
+}
+
+/**
+ * A USDC trade's shortfall: a buy keeps twice the gas ceiling for the paymaster, which charges after the swap; a sale
+ * pays its gas in USDC too.
+ */
+function usdcShort(trade: Trade, max: bigint | undefined, wallet: ReturnType<typeof useWallet>): string {
+  const keep = formatAmount(2n * (deployment.aa?.maxCostPerOp ?? 0n), USDC_DECIMALS)
+  if (trade === 'sell') return `A sale into USDC pays its gas in USDC: keep at least ${keep} USDC.`
+  if (max === undefined || max === 0n) return `Add USDC to buy with it: a buy keeps ${keep} USDC for its gas.`
+  return `Up to ${formatAmount(max, USDC_DECIMALS)} USDC: ${keep} USDC stays for the gas.`
 }
 
 /** What the card's one button says: what it would do, or what stands in the way. */
@@ -117,9 +138,6 @@ function ctaLabel(
     ? `Buy ${formatAmount(amounts.expectedOut, 18)} SIDE${anyway}`
     : `Sell ${formatAmount(amounts.amountIn, 18)} SIDE${anyway}`
 }
-
-/** A small trade to measure price impact against: 0.1 MON in on a buy, 1,000 SIDE in on a sale. */
-const REF_IN = { buy: parseEther('0.1'), sell: parseEther('1000') } as const
 
 /** Why the amount paid is too much: Monad's reserve in an upgraded wallet, gas, or more SIDE than the wallet holds. */
 function shortHint(trade: Trade, cap: { max: bigint; reserve: boolean } | undefined): string {
@@ -144,70 +162,13 @@ function cantBuy(reserve: boolean): string {
   return `${why} Add ${MON} to buy here.${instead}`
 }
 
-/**
- * The card's form state: Buy or Sell, which side was typed, the slippage, and the router's quote for the other side,
- * with what the trade would send. The quote follows the curve every 10 s. A shortfall pre-fills "You get" on Buy.
- */
-function useTradeForm(l: sdk.Launcher | null, need: bigint | null) {
-  const ctx = stakeContext()
-  const [trade, setTrade] = useState<Trade>('buy')
-  const [edited, setEdited] = useState<Edited>(need === null ? 'pay' : 'get')
-  const [text, setText] = useState(need === null ? '' : fillText(wholeUp(need)))
-  const [slippage, setSlippage] = useState<Slippage>(DEFAULT_SLIPPAGE)
-  const typed = useAmount(text)
-  const quote = useQuery({
-    queryKey: publicKey('launcher-quote', l?.router, trade, edited, typed?.toString()),
-    queryFn: () =>
-      edited === 'pay' ? sdk.launcherQuote(ctx, l!, trade, typed!) : sdk.launcherQuoteIn(ctx, l!, trade, typed!),
-    enabled: deployed && l !== null && typed !== null,
-    refetchInterval: 10_000,
-    retry: false,
-  })
-  const ref = useQuery({
-    queryKey: publicKey('launcher-ref', l?.router, trade),
-    queryFn: () => sdk.launcherQuote(ctx, l!, trade, REF_IN[trade]),
-    enabled: deployed && l !== null && typed !== null,
-    refetchInterval: 10_000,
-    retry: false,
-  })
-  const amounts = tradeAmounts({ edited, typed, quoted: quote.data, slippageBps: slippage })
-  const computed = quote.data === undefined ? '' : formatAmount(quote.data, 18)
-  return {
-    trade,
-    edited,
-    typed,
-    quote,
-    slippage,
-    setSlippage,
-    amounts,
-    impact: priceImpact(amounts, ref.data === undefined ? undefined : { refIn: REF_IN[trade], refOut: ref.data }),
-    // A new amount is quoting; the 10 s refresh of one already quoted updates in place.
-    quoting: typed !== null && quote.isFetching && !quote.isRefetching,
-    payText: edited === 'pay' ? text : computed,
-    getText: edited === 'get' ? text : computed,
-    type: (side: Edited, next: string) => {
-      setEdited(side)
-      setText(next)
-    },
-    setTrade: (next: Trade) => {
-      setTrade(next)
-      setEdited('pay')
-      setText('')
-    },
-    clear: () => {
-      setEdited('pay')
-      setText('')
-    },
-  }
-}
-
 /** A finished trade: what it returned, then more of the same or done. */
 function TradeDone({
   done,
   onAgain,
   onClose,
 }: {
-  done: { trade: Trade; out: bigint }
+  done: { trade: Trade; out: bigint; payWith?: 'usdc' | undefined }
   onAgain: () => void
   onClose: () => void
 }) {
@@ -223,7 +184,9 @@ function TradeDone({
       <output className="text-base font-semibold tabular-nums">
         {done.trade === 'buy'
           ? `Bought about ${formatAmount(done.out, 18)} SIDE`
-          : `Sold for about ${formatAmount(done.out, 18)} ${MON}`}
+          : done.payWith === 'usdc'
+            ? `Sold for about ${formatAmount(done.out, USDC_DECIMALS)} USDC`
+            : `Sold for about ${formatAmount(done.out, 18)} ${MON}`}
       </output>
       <div className="flex gap-2">
         <Button variant="secondary" onClick={onAgain}>
@@ -292,6 +255,30 @@ function gasReady(trade: Trade, wallet: ReturnType<typeof useWallet>): boolean {
   return wallet.usdc >= aa.maxCostPerOp
 }
 
+/** The most the wallet can pay: MON less gas (and the reserve), USDC less twice the gas ceiling, or its SIDE. */
+function tradeMax(form: ReturnType<typeof useTradeForm>, wallet: ReturnType<typeof useWallet>): bigint | undefined {
+  if (form.trade === 'sell') return wallet.side
+  if (form.coin === 'mon') return wallet.cap?.max
+  return wallet.usdc === undefined ? undefined : usdcBuyCap(wallet.usdc, deployment.aa?.maxCostPerOp ?? 0n)
+}
+
+/**
+ * Whether the trade asks for more than the wallet has: an amount over its limit, a buy with nothing to spend (said
+ * before anything is typed), or a USDC sale without its gas in USDC.
+ */
+function isShort(
+  state: SideTrade,
+  form: ReturnType<typeof useTradeForm>,
+  wallet: ReturnType<typeof useWallet>,
+  max: bigint | undefined,
+): boolean {
+  if (form.amounts !== null && max !== undefined && form.amounts.amountIn > max) return true
+  if (state !== 'trade') return false
+  if (form.trade === 'buy') return max === 0n
+  const gas = 2n * (deployment.aa?.maxCostPerOp ?? 0n)
+  return form.coin === 'usdc' && wallet.usdc !== undefined && wallet.usdc < gas
+}
+
 /** What the form shows, from the trade state, the form and the wallet: kept out of the component to keep it plain. */
 function formView(
   state: SideTrade,
@@ -300,19 +287,17 @@ function formView(
   monPrice: number | undefined,
 ) {
   const { trade, amounts } = form
-  const max = trade === 'buy' ? wallet.cap?.max : wallet.side
-  // A buy with no MON to spend says so before anything is typed, not only once an amount is too much.
-  const short =
-    (amounts !== null && max !== undefined && amounts.amountIn > max) ||
-    (trade === 'buy' && state === 'trade' && max === 0n)
-  // The MON side of the trade in dollars, where MON has a price (mainnet).
-  const usd = usdValue(trade === 'buy' ? amounts?.amountIn : amounts?.expectedOut, 18, monPrice)
+  const usdc = form.coin === 'usdc'
+  const max = tradeMax(form, wallet)
+  const short = isShort(state, form, wallet, max)
+  // The MON side of the trade in dollars, where MON has a price (mainnet); a USDC trade is in dollars already.
+  const usd = usdc ? undefined : usdValue(trade === 'buy' ? amounts?.amountIn : amounts?.expectedOut, 18, monPrice)
   return {
     usd: usd === undefined ? undefined : approxUsd(usd),
     open: state !== 'closed' && state !== 'unavailable',
     max: state === 'trade' ? max : undefined,
-    short: short ? shortHint(trade, wallet.cap) : null,
-    noGas: state === 'trade' && !gasReady(trade, wallet),
+    short: short ? (usdc ? usdcShort(trade, max, wallet) : shortHint(trade, wallet.cap)) : null,
+    noGas: state === 'trade' && !usdc && !gasReady(trade, wallet),
     ready: state === 'trade' && amounts !== null && !short && !form.quoting,
   }
 }
@@ -355,13 +340,14 @@ function TradeForm({
         }}
         className="w-full"
       />
-      <TradeFields form={form} side={l?.side ?? null} view={view} />
+      <TradeFields form={form} side={l?.side ?? null} view={view} choices={coinChoices(address, wallet)} />
       <TradeDetails
         trade={trade}
         amounts={amounts}
         impact={form.impact}
         slippage={form.slippage}
         onSlippage={form.setSlippage}
+        texts={form.plan === null ? null : usdcTexts(form.plan, MON)}
       />
       {view.noGas && address !== undefined ? (
         <div className="grid gap-2">
@@ -383,7 +369,10 @@ function TradeForm({
           onSignIn={onSignIn}
           onSend={() => {
             // A refused stale quote leaves the form: price it again at once rather than at the next refresh.
-            if (amounts !== null) void sending.send(trade, amounts).then(() => form.quote.refetch())
+            if (amounts !== null)
+              void sending.send(trade, amounts, form.plan).then(() => {
+                void form.quote.refetch()
+              })
           }}
         />
       )}
@@ -393,32 +382,6 @@ function TradeForm({
         </Alert>
       )}
       {state === 'trade' && address !== undefined && <TestnetFaucet address={address} compact />}
-    </div>
-  )
-}
-
-/** "You pay" over "You get", in one well; the MON side carries its dollar estimate. */
-function TradeFields({
-  form,
-  side,
-  view,
-}: {
-  form: ReturnType<typeof useTradeForm>
-  side: `0x${string}` | null
-  view: ReturnType<typeof formView>
-}) {
-  const buy = form.trade === 'buy'
-  return (
-    <div className="grid gap-1.5 rounded-xl bg-muted/60 p-1.5">
-      <PayField
-        form={form}
-        side={side}
-        open={view.open}
-        max={view.max}
-        short={view.short}
-        usd={buy ? view.usd : undefined}
-      />
-      <GetField form={form} side={side} open={view.open} usd={buy ? undefined : view.usd} />
     </div>
   )
 }
@@ -456,93 +419,5 @@ function TradeButton({
     >
       {label}
     </Button>
-  )
-}
-
-/** "You pay": typed, or quoted from "You get"; Max and a shortfall for a connected wallet. */
-function PayField({
-  form,
-  side,
-  open,
-  max,
-  short,
-  usd,
-}: {
-  form: ReturnType<typeof useTradeForm>
-  side: `0x${string}` | null
-  open: boolean
-  /** The most the wallet can pay, for Max; undefined signed out. */
-  max: bigint | undefined
-  /** Why the amount is too much, or null. */
-  short: string | null
-  /** The amount in dollars ("≈ $5.06"), where it is MON and MON has a price. */
-  usd?: string | undefined
-}) {
-  const buy = form.trade === 'buy'
-  const canMax = max !== undefined && max > 0n
-  return (
-    <AmountField
-      label="You pay"
-      value={form.payText}
-      onChange={(next) => form.type('pay', next)}
-      token={buy ? null : side}
-      symbol={buy ? MON : 'SIDE'}
-      balance={max === undefined ? undefined : formatAmount(max, 18)}
-      onMax={canMax ? () => form.type('pay', fillText(max)) : undefined}
-      pending={form.edited === 'get' && form.quoting}
-      tone={short === null ? 'neutral' : 'warning'}
-      hint={short ?? usd}
-      disabled={!open}
-    />
-  )
-}
-
-/** "You get": typed, or quoted from "You pay"; on Buy, one posting bond a chip away. */
-function GetField({
-  form,
-  side,
-  open,
-  usd,
-}: {
-  form: ReturnType<typeof useTradeForm>
-  side: `0x${string}` | null
-  open: boolean
-  /** The amount in dollars, where it is MON and MON has a price. */
-  usd?: string | undefined
-}) {
-  const bond = useBondPolicy().data?.minimumCreatorBond
-  const buy = form.trade === 'buy'
-  const failed = form.typed !== null && form.quote.isError
-  const chip =
-    buy && bond !== undefined ? (
-      <AmountChip onClick={() => form.type('get', fillText(bond))}>1 bond</AmountChip>
-    ) : undefined
-  return (
-    <AmountField
-      label="You get"
-      value={form.getText}
-      onChange={(next) => form.type('get', next)}
-      token={buy ? side : null}
-      symbol={buy ? 'SIDE' : MON}
-      chips={chip}
-      pending={form.edited === 'pay' && form.quoting}
-      hint={failed ? 'nad.fun can’t quote this amount right now.' : usd}
-      tone={failed ? 'destructive' : 'neutral'}
-      disabled={!open}
-    />
-  )
-}
-
-/** A quick amount beside a field's label: one posting bond. */
-function AmountChip({ children, onClick, disabled }: { children: ReactNode; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className="inline-flex min-h-7 items-center rounded-full bg-muted px-2.5 text-xs font-medium text-foreground transition-[background-color,scale] duration-(--dur-fast) active:scale-[0.96] disabled:opacity-50 pointer-coarse:min-h-11 [@media(hover:hover)]:hover:bg-muted/70"
-    >
-      {children}
-    </button>
   )
 }

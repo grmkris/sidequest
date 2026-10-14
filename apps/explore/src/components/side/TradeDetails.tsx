@@ -33,21 +33,29 @@ export function TradeDetails({
   impact,
   slippage,
   onSlippage,
+  texts,
 }: {
   trade: 'buy' | 'sell'
   amounts: { amountIn: bigint; expectedOut: bigint; minOut: bigint } | null
   impact: number | null
   slippage: Slippage
   onSlippage: (next: Slippage) => void
+  /** A USDC trade's own lines (side-usdc.ts usdcTexts), in place of the MON rate and floor. */
+  texts?: { rate: string; floor: string; note: string | null } | null | undefined
 }) {
   const what = trade === 'buy' ? 'buy' : 'sale'
+  const rate =
+    texts?.rate ?? (amounts === null ? null : `1M SIDE ≈ ${formatAmount(monPerMillion(trade, amounts), 18)} ${MON}`)
+  const floor =
+    texts?.floor ??
+    (amounts === null
+      ? `Fills at most ${slippageText(slippage)} under the quote`
+      : `You’ll get at least ${formatAmount(amounts.minOut, 18)} ${trade === 'buy' ? 'SIDE' : MON}`)
   return (
     <div className="grid gap-1 px-1 text-ui text-muted-foreground tabular-nums">
-      {amounts !== null && (
+      {rate !== null && (
         <div className="flex flex-wrap justify-between gap-x-3">
-          <span>
-            1M SIDE ≈ {formatAmount(monPerMillion(trade, amounts), 18)} {MON}
-          </span>
+          <span>{rate}</span>
           {impact !== null && (
             <span className={cn(impact >= IMPACT_WARN && 'font-medium text-warning-text')}>
               Price impact {impactText(impact)}
@@ -56,13 +64,10 @@ export function TradeDetails({
         </div>
       )}
       <div className="flex flex-wrap items-center justify-between gap-x-3">
-        <span className="min-w-0">
-          {amounts === null
-            ? `Fills at most ${slippageText(slippage)} under the quote`
-            : `You’ll get at least ${formatAmount(amounts.minOut, 18)} ${trade === 'buy' ? 'SIDE' : MON}`}
-        </span>
+        <span className="min-w-0">{floor}</span>
         <SlippagePicker slippage={slippage} onSlippage={onSlippage} />
       </div>
+      {texts?.note != null && <p className="text-pretty">{texts.note}</p>}
       {impact !== null && impact >= IMPACT_HIGH && (
         <p className="text-pretty text-warning-text">
           This {what} moves the price {impactText(impact)}, so it{' '}
@@ -73,15 +78,23 @@ export function TradeDetails({
   )
 }
 
+/**
+ * Where a popover inside the SIDE sheet portals: a popup portalled to <body> renders under the sheet's modal
+ * <dialog>, so it goes into the dialog its trigger sits in. Call `find` as it opens.
+ */
+export function useDialogContainer() {
+  const trigger = useRef<HTMLButtonElement>(null)
+  const [container, setContainer] = useState<HTMLElement | undefined>(undefined)
+  return { trigger, container, find: () => setContainer(trigger.current?.closest('dialog') ?? undefined) }
+}
+
 /** "Slippage 3%": opens the choice of how far under the quote a trade may fill, inside the sheet's dialog. */
 function SlippagePicker({ slippage, onSlippage }: { slippage: Slippage; onSlippage: (next: Slippage) => void }) {
-  const trigger = useRef<HTMLButtonElement>(null)
-  // A popup portalled to <body> renders under the sheet's modal <dialog>: portal into the dialog.
-  const [container, setContainer] = useState<HTMLElement | undefined>(undefined)
+  const { trigger, container, find } = useDialogContainer()
   return (
     <Popover
       onOpenChange={(open) => {
-        if (open) setContainer(trigger.current?.closest('dialog') ?? undefined)
+        if (open) find()
       }}
     >
       <PopoverTrigger
