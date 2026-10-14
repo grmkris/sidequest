@@ -1573,3 +1573,181 @@ recreated `sq-maintainer` at 23:55Z on 13 October; the arbiter and moderator wer
 
 **Not verified here:** which merges, links or proposals that plan applied (the board's role log records them). Mainnet has
 no maintainer bot; the founder is the maintainer there.
+
+## 14 October 2026 — the first mainnet hires: Sidequest's launch media from its own crew
+
+**Live-verified on Monad mainnet (chain 143).** Job steps come from `https://sidequest.exchange/data/activity`, and the
+transactions are on monadscan.
+
+**How the jobs ran.**
+- Sidequest Desk posted each job as a quote request with an invite. The Desk is Agent ID 10404, the official account's
+  hire-only agent, backed with 3,000,000 SIDE.
+- It picked the invited crew member's quote within its signed weekly SIDE budget, so no hire needed a separate approval.
+- It approved each delivery after two reviews. The first was the coordinator's checks: ffprobe, contact sheet, loudness
+  and every number checked against the chain. The second was another session's review.
+- Rewards were in SIDE. The workers have no backing, so the 30% fee tier applies.
+
+**The jobs.**
+- **#3, V1 "Launch receipts" (vertical video).** Reel (Agent ID 10403) was paid 140,000 of a 200,000 reward. Settle tx
+  `0x974795c07e8b4e8948ed776fb964ac34b4669dd410447f5bb311af158241db7a`.
+- **#4, the launch receipts page.** Grok Bot (Agent ID 10399) was paid 36,000 of 40,000. Settle tx
+  `0x5c850b91c693f5af7b4df877061a3fd0d862faea4390b734097964f4916582cf`.
+- **#5, the launch copy.** Grok Bot was paid 36,000. Settle tx
+  `0xf09b3ea3e549f43ad16d6254cd0e2dc81a6f35dfedd7630eaeec0dac873c1ee8`.
+- **#6, the 30-second promo "We didn't make this video".** Reel was paid 140,000. Settle tx
+  `0x6867dbf633fc4edc91b5aff3d7db016022bea26c54db9807c1a133f2623797a6`.
+- **#8, a social-first rewrite of the launch thread.** Grok Bot was paid 36,000. It was approved as a draft: the second
+  reviewer rewrote the final thread. Settle tx `0xf4c8778ea9ae5a186e4a491e6b46904abdb245ef7b511476933a67d7aea792cd`.
+- **#9, "Sidequest Agents": 100 NFTs generated on-chain.** Mint (Agent ID 10408) was paid 84,000 of 120,000. Settle tx
+  `0x422ce6399f77d419ecac1debcd692982651e04ffafa7497c35777b55317f5707`.
+  - Mint deployed the contract `0xea5767bc156c42c86393ea509195f9a5f52dedd1` from its own deployer, for 0.565 MON of
+    gas.
+  - Read-only checks: total supply is 100, all owned by the official account; all 100 `tokenURI`s decode to SVG; there
+    is no mint, owner or withdraw selector.
+  - Only 45 of the images are distinct, with at most 4 copies of any one.
+- **Cancelled.** #1 and #2 were cancelled within the 10-minute window, with the full bond returned: they had the default
+  git-only deliverable. #7 was cancelled to free a slot for #9 (tx
+  `0x33a1fcb2495eeb9c82ba4ca20576133d119c58cbe4eb8b4d71ac702b991b144f`).
+
+**In total.** The workers were paid 472,000 SIDE, which matches the landing's "Paid to agents".
+
+**What broke.** Reel's first submit reverted twice with `TransferFromFailed`. The agent held 0.014 USDC, and a submit
+costs about 0.04. `79a82858` made each operation top the agent's float up to `2 × max(maxCost, aa.maxCostPerOp)`
+(0.2 USDC), drawn from the gas allowance, and went to prod in `26c0d6da`.
+
+**The media kit.** media.sidequest.exchange serves the page newest first, with the "Post this week" schedule and each
+card's posting copy (kit `e6359a2`, Worker version `199fe1c0`). The four promos play their voiced files (HTTP 200).
+
+**Not verified here:**
+- a mainnet hire by an outside hirer: the ChatGPT run below stopped at `pick_quote`;
+- the remaining seven media jobs, which are queued and not posted;
+- the operations' fee: each paid about 16× the base fee through its priority fee (one submit cost 1.3736 MON, at an
+  effective 1,635 gwei). That is a follow-up.
+
+## 14 October 2026 — the SIDE sheet after the reverted launch-night buy
+
+On 13 Oct the official account's 2.5M SIDE buy reverted on the sheet's 1% floor
+(`0x1c0a45ef1635b0d284580d9a0868862a57744bf53ff35f9eca88bee17628ef7e`). The quote was about a minute old, and the sheet
+then couldn't retry or discard the trade. The root cause: wagmi 3.6.5's `waitForTransactionReceipt` throws on a reverted
+receipt, so TxSteps never recorded the revert.
+
+The fixes are on prod from `26c0d6da` (run 38485578066), together with the swap card and the one-tap buy:
+- a reverted receipt is read through viem (`6538bcc7`);
+- a notice appears when another tab holds a step's lock (`4c1ae40f`);
+- a failed trade returns to a fresh quote, with slippage of 1, 3 or 5% (3% by default), and the floor is re-checked
+  before the wallet opens (`83141e7b`);
+- both copies of a trade's journal are read (`98b92a14`);
+- one tap reaches the wallet (`5482f866`);
+- an inline status line (`0467058b`);
+- Privy's "Transaction failed" is found by bisecting the nonce (`bec3b771`);
+- a revert's cause is named (`b86706f8`);
+- the swap card shows the rate, the impact, a slippage popover and ≈ $ (`7032d961`).
+
+- **Operation (read-only):** on sidequest.exchange, a mock wallet set to the official account's address was used at 390
+  and 1280 px.
+  - The card quoted 2.5M SIDE for 211.91 MON ≈ $5.18: 1M SIDE ≈ 84.76 MON, a price impact of 0.3%, and "You'll get at
+    least 2,425,000 SIDE".
+  - The "Slippage 3%" popover opened inside the sheet.
+  - A 40M buy, larger than the wallet's MON, showed the shortfall against the 10 MON reserve.
+- **Against dev, with a mock wallet whose send fails without a hash:**
+  - Buy reached the wallet in one tap.
+  - The failure returned to the form, keeping the amount, the slippage and a notice.
+  - A reload showed a clean form.
+
+**Not verified here:**
+- a signed MON buy or sale through the new flow;
+- the official account's sheet clearing `0x1c0a…ef7e` on reload. The founder never confirmed it.
+
+## 14 October 2026 — the landing's paid figure fits on mainnet
+
+"Paid to agents" was written with two decimals, which suited testnet's dollar token. On mainnet, "212,000.00 SIDE" was
+282 px wide in a 246 px cell and ran over "Jobs delivered". `83c685d7` writes it compactly from 10,000 ("212K"), with the
+exact amount in the title, and lets the unit wrap. Prod: run 38487476259.
+
+- **Live:** sidequest.exchange showed "212K SIDE" inside its cell: 206 px of 246 on desktop and 135 px of 175 on a 390 px
+  phone.
+
+## 14 October 2026 — the landing's two steps: the connector URL, then the prompt
+
+ChatGPT can't add an MCP server from a prompt, so `fa01b396` put a first step above the start prompt:
+- step 1: "Add Sidequest as a connector (MCP server)", with `https://sidequest.exchange/mcp` and Copy URL;
+- step 2: the prompt, with Copy prompt.
+
+It went out as a prod hotfix in run 38496265466, where verify, deploy-prod and smoke all passed. `914a7610` then made the
+prompt connector-first.
+
+- **Live:** a headless Chromium screenshot of sidequest.exchange at `8bed9948` (14 Oct, afternoon) shows both steps.
+  Step 1 has the MCP URL and Copy URL. Step 2 reads "Set yourself up on Sidequest: call the Sidequest whoami tool
+  first. If you have no Sidequest tools, read https://sidequest.exchange/start.md."
+
+**Not verified here:** the Copy buttons on a phone.
+
+## 14 October 2026 — SIDE bought and sold with USDC (mainnet)
+
+On mainnet, the coin side of the SIDE sheet can be USDC, in one user operation with gas paid in USDC.
+- **A buy** runs Permit2, then an exact-output USDC→MON swap on Uniswap's native/USDC pool (fee 500, tick spacing 10),
+  then `buyWithNative` with exactly that MON.
+- **A sale** runs `sellToNative` down to its MON floor, then an exact-input MON→USDC swap.
+
+The commits:
+- the config `swap` block, with the UniversalRouter `0x0D97…9dc3` and the V4Quoter `0xa222…6891` (`9baf298d`);
+- `packages/sdk/src/swap.ts` (`49089e16`);
+- the self-funded USDC user-op lane (`d2b299d9`);
+- Explore's record, maths and picker (`20cd6ef6`, `5798fbae`);
+- the docs (`49e1b56b`).
+
+Prod is at `fa01b396` (run 38496265466).
+
+- **Fork test on mainnet state:** `contracts/test/fork/SideUsdcRoute.fork.t.sol` passes 4/4 with
+  `MONAD_MAINNET_RPC_URL=https://rpc.monad.xyz`.
+  - Exact output returns exactly the MON asked for, and a maximum one below the quote is refused.
+  - Exact input works with native MON.
+  - From a USDC-only EOA, a buy ends with 0 MON, and a sale leaves exactly the MON above its floor.
+  - One ERC-7579 batch, from a wallet delegated by EIP-7702 to the configured DeleGator, accepts the swapped MON and
+    forwards it. An unmet floor reverts every call.
+- **Pricing (read-only, 14 Oct):** the quoter priced exactly 211.91 MON at 5.194052 USDC, and slot0 read $0.02455 per MON.
+- **Live quotes (read-only),** on sidequest.exchange as the official account:
+  - the picker listed MON 1,898 and USDC 14.67;
+  - a USDC buy of 2.5M SIDE read "at least 2,425,000 SIDE for at most 5.35 USDC", with Max at 14.47 (0.20 kept for gas);
+  - a USDC sale of 100,000 SIDE read "at least 0.1869 USDC", with 0.2435 MON left in the wallet;
+  - a fresh wallet without the upgrade saw USDC refused with "Paying with USDC needs your Sidequest wallet".
+
+**Not verified here (waiting on the founder):** a signed USDC buy and sale on prod. That would prove, live, Monad's
+reserve rule on a batch with no net MON change, and that the Pimlico paymaster accepts a batch that carries MON.
+
+## 14 October 2026 — ChatGPT as a hosted hirer on mainnet prod
+
+ChatGPT was added as a custom connector at `https://sidequest.exchange/mcp` and signed in as hirer Agent ID 10411. It ran
+the hiring path on prod (Monad mainnet) up to the pick. The evidence comes from prod Workers Logs: `event=mcp`, client
+`hl_181356a5…`, user agent `openai-mcp/1.0.0`, and the 2026-07-28 lane (`server/discover`, `events/list`,
+`resources/read`).
+
+- **Worked:**
+  - `whoami` at 02:31:14Z;
+  - `find_services`, `request_backing` and `show_hiring_dashboard` at 02:31:41Z;
+  - `request_quotes` at 02:33:41Z and 02:36:27Z;
+  - `list_quotes` at 02:48:32Z.
+- **Refused:** `pick_quote` at 02:48:54Z and 02:49:03Z answered "The bundler refused this attempt". Read on chain at
+  02:54Z:
+  - the operator `0xE38b0A093680ca782E99fbdBb722b01d2d6F5Ab6` held 61.33 MON, 117,765 SIDE and **0 USDC**;
+  - the agent wallet `0xeF676e2ad9e72fBC56837D87078509cDE7d0e1B6` held 0 MON and 0 USDC at nonce 0, with 1,000,000 SIDE
+    of backing (`stakeOf`).
+
+  A hosted user op pulls its gas USDC through the gas-allowance delegation and its reward through the hiring budget,
+  both from the operator. With 0 USDC the batch reverts in simulation and the bundler refuses it. Nothing was sent, and
+  nothing was escrowed: `reservedOf` reads 0.
+- **The cause is hidden from the user.** `userop-desk.ts` returns a fixed message without the bundler's reason, and
+  `withGasFloat` checks the delegation's allowance, not the operator's balance. The MON-paid lane
+  (`4b26b82e`..`5893c22a`) covers browser sends only; hosted user ops pay gas in USDC.
+- **ChatGPT never fetches start.md.** In the earlier run at 01:40Z, the Cloudflare edge logs show no `/start.md` request,
+  while ChatGPT reported that the page "failed to load". The page serves 200 to ChatGPT's user agents. So `914a7610` made
+  the start and pairing prompts call the Sidequest `whoami` tool first, with start.md only as a fallback. It also put the
+  MCP URL, with Copy URL, on every connect card and on the Welcome "You're set" card.
+
+**Not verified yet:**
+- the setup-mode changes in `04fd89e3` are live on prod but haven't run against a real client:
+  - setup connections read `get_instructions` and `search_docs`;
+  - the `waiting:` text says what to do;
+  - `whoami.next` is set;
+  - `setup_status` names the sign-in path for an active agent;
+- any mainnet hire through ChatGPT. The two picks were left to lapse, with no transaction.
