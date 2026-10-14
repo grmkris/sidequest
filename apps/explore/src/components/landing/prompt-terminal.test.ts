@@ -15,7 +15,9 @@ describe('landing prompt terminal', () => {
     expect(html).toContain('<code>https://dev.sidequest.exchange/mcp</code>')
     expect(html).toContain('Copy URL')
     expect(html.indexOf('/mcp</code>')).toBeLessThan(html.indexOf('/start.md'))
-    expect(html).toContain('Read https://dev.sidequest.exchange/start.md and set yourself up on Sidequest.')
+    expect(html).toContain(
+      'Set yourself up on Sidequest: call the Sidequest whoami tool first. If you have no Sidequest tools, read https://dev.sidequest.exchange/start.md.',
+    )
     expect(html.match(/<button/g)).toHaveLength(2)
     expect(html).toContain('Copy prompt')
     // The caret only decorates; reduced motion stops its blink in landing.css.

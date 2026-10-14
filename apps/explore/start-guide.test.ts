@@ -5,7 +5,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { build, createServer, type ViteDevServer } from 'vite'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import { StartPrompt, startPrompt } from './src/components/AgentStartLink.tsx'
+import { AgentConnect, StartPrompt, pairingPrompt, startPrompt } from './src/components/AgentStartLink.tsx'
 import { startGuide } from './start-guide-plugin.ts'
 import { renderStartGuide } from './start-guide.ts'
 import worker from './worker.ts'
@@ -169,17 +169,45 @@ describe('agent start guide built assets and deployed routes', () => {
 })
 
 describe('Explore onboarding examples', () => {
-  it('gives the landing one role-free prompt that points at the served guide', () => {
-    expect(startPrompt('https://dev.sidequest.exchange')).toBe(
-      'Read https://dev.sidequest.exchange/start.md and set yourself up on Sidequest.',
+  const origin = 'https://dev.sidequest.exchange'
+  const start = `Set yourself up on Sidequest: call the Sidequest whoami tool first. If you have no Sidequest tools, read ${origin}/start.md.`
+  const scout = { name: 'Scout', agentId: '42' }
+
+  it('gives the landing one role-free prompt that starts from the connector and falls back to the served guide', () => {
+    // A hosted app such as ChatGPT may not open start.md, so the prompt starts from the connector's own whoami.
+    expect(startPrompt(origin)).toBe(start)
+    expect(pairingPrompt(origin, scout)).toBe(
+      `Connect to Sidequest as Scout (agent 42): call the Sidequest whoami tool first. If you have no Sidequest tools, read ${origin}/start.md.`,
     )
     // The human chooses work, hire or both in the browser when approving the agent, so the prompt can stay role-free.
     expect(source).toMatch(/Your human chooses which in the browser/)
-    vi.stubGlobal('window', { location: { origin: 'https://dev.sidequest.exchange' } })
+    vi.stubGlobal('window', { location: { origin } })
     try {
       const html = renderToStaticMarkup(createElement(StartPrompt))
-      expect(html).toContain('Read https://dev.sidequest.exchange/start.md and set yourself up on Sidequest.')
+      // Step 1 is the MCP URL to add as a connector; step 2 the prompt.
+      expect(html).toContain(`${origin}/mcp</code>`)
+      expect(html).toContain('Copy URL')
+      expect(html.indexOf('/mcp</code>')).toBeLessThan(html.indexOf(start))
       expect(html).toContain('Copy prompt')
+      expect(html).toContain('ChatGPT')
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it('ends setup with the MCP URL and the line naming the agent, until an app acts as it', () => {
+    vi.stubGlobal('window', { location: { origin } })
+    try {
+      const waiting = renderToStaticMarkup(createElement(AgentConnect, { agent: scout, connected: null }))
+      expect(waiting).toContain(`${origin}/mcp</code>`)
+      expect(waiting).toContain('Connect to Sidequest as Scout (agent 42)')
+      expect(waiting).toContain('Copy prompt')
+      const connected = renderToStaticMarkup(
+        createElement(AgentConnect, { agent: scout, connected: 'ChatGPT is connected as Scout.' }),
+      )
+      expect(connected).toContain('ChatGPT is connected as Scout.')
+      expect(connected).toContain(`${origin}/mcp</code>`)
+      expect(connected).not.toContain('Copy prompt')
     } finally {
       vi.unstubAllGlobals()
     }

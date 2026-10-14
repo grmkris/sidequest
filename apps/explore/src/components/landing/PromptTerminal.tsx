@@ -1,21 +1,6 @@
 import { Check, Copy } from 'lucide-react'
-import { type ReactNode, useState } from 'react'
-import { startOrigin, startPrompt } from '../AgentStartLink.tsx'
-
-/** Copies `text` and reports it for a moment; a refused clipboard changes nothing. */
-function useCopy(): [boolean, (text: string) => void] {
-  const [copied, setCopied] = useState(false)
-  const copy = (text: string) => {
-    void navigator.clipboard.writeText(text).then(
-      () => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1600)
-      },
-      () => undefined,
-    )
-  }
-  return [copied, copy]
-}
+import type { ReactNode } from 'react'
+import { mcpUrl, startOrigin, startPrompt, useCopy } from '../AgentStartLink.tsx'
 
 /**
  * The landing's one action, in two steps: the MCP URL to add as a connector (apps such as ChatGPT cannot add one for
@@ -25,7 +10,7 @@ function useCopy(): [boolean, (text: string) => void] {
 export function PromptTerminal({ children }: { children?: ReactNode }) {
   const origin = startOrigin()
   const prompt = startPrompt(origin)
-  const mcp = `${origin}/mcp`
+  const mcp = mcpUrl(origin)
   const [urlCopied, copyUrl] = useCopy()
   const [promptCopied, copyPrompt] = useCopy()
   return (

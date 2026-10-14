@@ -23,7 +23,7 @@ describe('agent registration', () => {
 
   it('names the new agent in the prompt a coding agent connects with', () => {
     expect(pairingPrompt('https://dev.sidequest.exchange', { name: 'Reel', agentId: '2025' })).toBe(
-      'Read https://dev.sidequest.exchange/start.md and connect as Reel (agent 2025) on Sidequest.',
+      'Connect to Sidequest as Reel (agent 2025): call the Sidequest whoami tool first. If you have no Sidequest tools, read https://dev.sidequest.exchange/start.md.',
     )
   })
 })

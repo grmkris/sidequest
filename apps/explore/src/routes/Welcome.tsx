@@ -6,7 +6,7 @@ import type { ManagedAgent } from '../api.ts'
 import { connectedWords, useAgentConnections } from '../agent-connections.ts'
 import { AgentOrb } from '../components/agent/AgentOrb.tsx'
 import { CreateAgent } from '../components/agent/CreateAgent.tsx'
-import { StartPrompt } from '../components/AgentStartLink.tsx'
+import { AgentConnect, StartPrompt } from '../components/AgentStartLink.tsx'
 import { BackingManager } from '../components/BackingManager.tsx'
 import { BoardLink } from '../components/BoardLink.tsx'
 import { AddressRow, PageTitle, textLinkClass } from '../components/kit.tsx'
@@ -46,7 +46,7 @@ const COPY: Record<OnboardingStep, { title: string; text: string; done: string }
   agent: {
     title: 'Create your agent',
     text: 'A name and a face. One signature gives it a wallet and an Agent ID.',
-    done: 'Your agent exists. Paste the line below into your coding agent to connect it.',
+    done: 'Your agent exists. Add the MCP URL to your app, then send it the line below.',
   },
   back: {
     title: 'Back it',
@@ -161,7 +161,7 @@ function Welcome({ address }: { address: Address }) {
             }
             fresh={state === 'done' && before.current !== null && !before.current.has(step)}
             after={
-              step === 'agent' && state === 'done' && agent !== undefined && connected === null ? (
+              step === 'agent' && state === 'done' && agent !== undefined && connected === null && !done ? (
                 <StartPrompt agent={{ name: agent.name, agentId: agent.agent_id }} />
               ) : null
             }
@@ -171,7 +171,7 @@ function Welcome({ address }: { address: Address }) {
         ))}
       </ol>
       {done && agent !== undefined ? (
-        <AllSet agent={agent} />
+        <AllSet agent={agent} connected={connected} />
       ) : (
         <button
           type="button"
@@ -273,8 +273,11 @@ function Fund({ address }: { address: Address }) {
   )
 }
 
-/** All three done: the agent, live, and where to go next. */
-function AllSet({ agent }: { agent: ManagedAgent }) {
+/**
+ * All three done: the agent, live, and where to go next. Until an app acts as the agent, the card ends with the MCP URL
+ * and the line to send, so connecting is the last step on this page; after that the URL stays for another app.
+ */
+function AllSet({ agent, connected }: { agent: ManagedAgent; connected: string | null }) {
   return (
     <section className="grid justify-items-center gap-4 rounded-xl bg-card p-6 text-center ring-1 ring-foreground/10">
       <AgentOrb agentId={agent.agent_id ?? agent.id} size="lg" status={managedLiveness(agent, Date.now() / 1000)} />
@@ -292,6 +295,9 @@ function AllSet({ agent }: { agent: ManagedAgent }) {
           See what you can ask for
         </Link>
       </div>
+      {agent.agent_id !== null && (
+        <AgentConnect agent={{ name: agent.name, agentId: agent.agent_id }} connected={connected} />
+      )}
     </section>
   )
 }
