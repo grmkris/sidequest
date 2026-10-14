@@ -18,6 +18,25 @@ export interface PaymentModeInput {
   readonly canBatch: boolean
   readonly canSignAuthorization: boolean
   readonly sponsor: boolean
+  /**
+   * A batch that funds every MON it sends from MON it receives first (a SIDE trade paid in USDC,
+   * `usdcPlanFunding`), with the USDC it may spend. Its value never leaves the wallet's own MON.
+   */
+  readonly funded?: { readonly gasTokenSpend: bigint } | null
+}
+
+/**
+ * Whether a self-funding batch can go as one USDC-paid user operation: the paymaster's charge comes after the batch
+ * has spent its USDC, so twice the per-operation ceiling must remain after that spend (14 Oct: a float sized to the
+ * estimate failed in the paymaster's postOp).
+ */
+function fundedLane(input: PaymentModeInput, aa: AccountAbstraction, spend: bigint): boolean {
+  return (
+    aa.paymaster !== null &&
+    !input.sponsor &&
+    (input.canSignAuthorization || input.delegated) &&
+    input.carriedGasToken + input.gasTokenBalance - spend >= 2n * aa.maxCostPerOp
+  )
 }
 
 /** Whether the wallet can pay a user operation's gas in USDC (or have a faucet claim sponsored). */
@@ -40,6 +59,9 @@ function nativeLane(input: PaymentModeInput, aa: AccountAbstraction): boolean {
 /** Choose the browser's payment lane without doing any RPC work. USDC is preferred; MON-paid user operations next. */
 export function paymentMode(input: PaymentModeInput): PaymentMode {
   const aa = input.aa
+  // A self-funding batch must be one atomic operation: the USDC lane or nothing, never MON transactions one by one.
+  const funded = input.funded ?? null
+  if (funded !== null) return aa !== null && fundedLane(input, aa, funded.gasTokenSpend) ? 'userop' : 'unfunded'
   if (aa !== null && input.nativeValue === 0n && (input.canSignAuthorization || input.delegated)) {
     if (tokenLane(input, aa)) return 'userop'
     if (nativeLane(input, aa)) return 'userop-native'

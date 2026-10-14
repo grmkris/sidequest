@@ -66,6 +66,10 @@ export class BrowserUserOp {
     await this.deps.write(record)
     this.#update({ record })
   }
+  /** Whether the reviewed calls fund every MON they send (a SIDE trade paid in USDC): only then may they carry value. */
+  get #funded(): boolean {
+    return sdk.usdcPlanFunding(this.deps.deployment, this.deps.sender, this.deps.txs) !== null
+  }
   /** The saved action's gas lane: what its record says, else what this mount was opened for. */
   get payment(): 'token' | 'native' {
     const saved = this.#view.record?.aa
@@ -164,7 +168,7 @@ export class BrowserUserOp {
   }
   /** The reviewed calls, and only on the USDC lane the standing paymaster approval after them. */
   #callsAllowed(built: sdk.BuiltUserOp, aa: sdk.AccountAbstraction, payment: 'token' | 'native'): boolean {
-    const expected = userOpCalls(this.deps.txs, this.deps.deployment.chainId)
+    const expected = userOpCalls(this.deps.txs, this.deps.deployment.chainId, this.#funded)
     const actual = sdk.decodeExecuteCalldata(built.op.callData)
     if (actual === null) throw new Error('The saved operation has no readable gas configuration or calls.')
     const approval =
@@ -240,7 +244,7 @@ export class BrowserUserOp {
       chainId: deployment.chainId,
       ...rpc,
       sender,
-      calls: () => userOpCalls(this.deps.txs, deployment.chainId),
+      calls: () => userOpCalls(this.deps.txs, deployment.chainId, this.#funded),
       nonceKey: sdk.nonceKey(record.aa!.actionId),
       authorization,
       sponsor: this.deps.sponsor,

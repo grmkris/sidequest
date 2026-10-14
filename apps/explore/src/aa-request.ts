@@ -33,12 +33,15 @@ export async function browserPaymentMode(
   const nativeBalance = hexQuantity(balance)
   const aa = deployment.aa
   const gasTokenBalance = aa === null ? 0n : await tokenBalance(rpc.node, aa.gasToken, address)
+  const funded = sdk.usdcPlanFunding(deployment, address, txs)
   return paymentMode({
     aa,
     gasTokenBalance,
     carriedGasToken: aa === null ? 0n : carriedGasToken(txs, aa.gasToken, address),
     nativeBalance,
-    nativeValue: txs.reduce((total, tx) => total + BigInt(tx.value), 0n),
+    // MON a batch receives and spends within itself is not the wallet's to pay.
+    nativeValue: funded === null ? txs.reduce((total, tx) => total + BigInt(tx.value), 0n) : 0n,
+    funded,
     delegated,
     canBatch: delegated,
     canSignAuthorization: options.canAuthorize,
@@ -80,11 +83,15 @@ async function tokenBalance(node: sdk.JsonRpc, token: Address, address: Address)
   return decodeFunctionResult({ abi: erc20Abi, functionName: 'balanceOf', data: answer as Hex })
 }
 
-export function userOpCalls(txs: readonly WalletStep[], chainId: number): sdk.Call[] {
+/**
+ * A user operation's calls. They carry no MON value, unless the batch funds every MON it sends itself (`funded`: a SIDE
+ * trade paid in USDC, as `sdk.usdcPlanFunding` recognizes it), whose calls keep their values.
+ */
+export function userOpCalls(txs: readonly WalletStep[], chainId: number, funded = false): sdk.Call[] {
   return txs.map((tx) => {
-    if (tx.chainId !== chainId || tx.value !== '0')
+    if (tx.chainId !== chainId || (!funded && tx.value !== '0'))
       throw new Error('The user operation must use this network and no MON value.')
-    return { to: tx.to, data: tx.data, value: 0n }
+    return { to: tx.to, data: tx.data, value: funded ? BigInt(tx.value) : 0n }
   })
 }
 

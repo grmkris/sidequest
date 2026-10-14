@@ -19,6 +19,50 @@ describe('browser AA request building', () => {
     expect(userOpCalls(steps, 10143)).toEqual([{ to: steps[0]!.to, data: steps[0]!.data, value: 0n }])
     expect(() => userOpCalls([{ ...steps[0]!, value: '1' }], 10143)).toThrow(/no MON value/)
     expect(() => userOpCalls(steps, 143)).toThrow(/network/)
+    // A batch that funds its own MON (a SIDE trade paid in USDC) keeps its calls' values.
+    expect(userOpCalls([{ ...steps[0]!, value: '7' }], 10143, true)).toEqual([
+      { to: steps[0]!.to, data: steps[0]!.data, value: 7n },
+    ])
+  })
+
+  it('reads a USDC SIDE buy from a wallet with no MON as one USDC operation, its MON funded within the batch', async () => {
+    const deployment = sdk.deployment('monad-mainnet')
+    const owner: Address = '0x00000000000000000000000000000000000000AA'
+    const swap = deployment.nativeSwap!
+    const mon = 211_910_000_000_000_000_000n
+    const buy: WalletStep[] = [
+      {
+        description: 'Swap',
+        chainId: 143,
+        to: swap.universalRouter,
+        data: sdk.buyMonCalldata(swap, { monOut: mon, usdcMax: 5_349_874n, deadline: 2_000_000_000 }),
+        value: '0',
+      },
+      {
+        description: 'Buy SIDE',
+        chainId: 143,
+        to: deployment.launcher!.router,
+        data: encodeFunctionData({
+          abi: sdk.nadRouterAbi,
+          functionName: 'buyWithNative',
+          args: [{ amountOutMin: 1n, token: deployment.launcher!.side, to: owner, deadline: 2_000_000_000n }],
+        }),
+        value: mon.toString(),
+      },
+    ]
+    const mode = async (usdc: bigint) => {
+      const node: sdk.JsonRpc = async (method) => {
+        if (method === 'eth_getCode') return '0x'
+        if (method === 'eth_getBalance') return toHex(0n)
+        return encodeAbiParameters([{ type: 'uint256' }], [usdc])
+      }
+      return browserPaymentMode({ node, bundler: node, paymaster: node }, deployment, owner, buy, {
+        canAuthorize: true,
+      })
+    }
+    const ceiling = deployment.aa!.maxCostPerOp
+    expect(await mode(5_349_874n + 2n * ceiling)).toBe('userop')
+    expect(await mode(5_349_874n + 2n * ceiling - 1n)).toBe('unfunded')
   })
 
   it('keeps node direct while bundler and paymaster use the same-origin proxy', async () => {

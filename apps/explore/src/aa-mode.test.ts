@@ -40,6 +40,27 @@ describe('browser payment mode', () => {
     ).toBe('userop')
   })
 
+  it('sends a batch that funds its own MON as one USDC operation only, with twice the ceiling left after its spend', () => {
+    const base: PaymentModeInput = {
+      aa,
+      gasTokenBalance: 5_000_000n,
+      carriedGasToken: 0n,
+      nativeBalance: 0n,
+      nativeValue: 0n,
+      delegated: false,
+      canBatch: false,
+      canSignAuthorization: true,
+      sponsor: false,
+    }
+    const spend = 5_000_000n - 2n * aa.maxCostPerOp
+    expect(paymentMode({ ...base, funded: { gasTokenSpend: spend } })).toBe('userop')
+    // One unit less USDC and the paymaster's charge could fail after the swap: refused, not split into MON sends.
+    expect(paymentMode({ ...base, funded: { gasTokenSpend: spend + 1n } })).toBe('unfunded')
+    expect(paymentMode({ ...base, nativeBalance: 10n ** 21n, funded: { gasTokenSpend: spend + 1n } })).toBe('unfunded')
+    expect(paymentMode({ ...base, aa: { ...aa, paymaster: null }, funded: { gasTokenSpend: 0n } })).toBe('unfunded')
+    expect(paymentMode({ ...base, canSignAuthorization: false, funded: { gasTokenSpend: 0n } })).toBe('unfunded')
+  })
+
   it('allows a faucet user operation with zero USDC', () => {
     expect(
       paymentMode({
