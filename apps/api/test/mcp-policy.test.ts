@@ -48,6 +48,10 @@ it('decides by scope first, then by the agent’s roles for tools that start new
   expect(toolDecision({ scopes: both }, 'create_task')).toBe('allow')
   expect(toolDecision({ scopes: ['sidequest:setup'], setup: true, roles: [] }, 'apply')).toBe('wait')
   expect(toolDecision({ scopes: ['sidequest:setup'], setup: true, roles: [] }, 'create_agent')).toBe('allow')
+  // A setup connection reads the docs it is told to read; reads that need an agent still wait.
+  for (const name of ['get_instructions', 'search_docs'])
+    expect(toolDecision({ scopes: ['sidequest:setup'], setup: true, roles: [] }, name)).toBe('allow')
+  expect(toolDecision({ scopes: ['sidequest:setup'], setup: true, roles: [] }, 'protocol_info')).toBe('wait')
 })
 
 it('says what a connection may do now: its scope and its agent’s roles together', () => {
@@ -67,6 +71,7 @@ it('lists exactly what a listening connection may call, and everything its scope
   expect(listedTool(setup, 'apply')).toBe(true)
   expect(listedTool({ ...setup, listening: true }, 'apply')).toBe(false)
   expect(listedTool({ ...setup, listening: true }, 'create_agent')).toBe(true)
+  expect(listedTool({ ...setup, listening: true }, 'get_instructions')).toBe(true)
 })
 
 // A role granted after a narrower sign-in must still reach the connection: its tools are listed and step up on call.

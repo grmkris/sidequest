@@ -28,6 +28,9 @@ export async function agentFirstMcpRoute(input: Parameters<typeof mcpRoute>[0]):
   const body = record(reply.body)
   const result = record(body.result)
   const tools = records(result.tools).map((tool) => {
+    // The docs a setup connection may read say so, so a client that reads securitySchemes does not ask to sign in again.
+    if (grant?.setup === true && (tool.name === 'get_instructions' || tool.name === 'search_docs'))
+      return { ...tool, securitySchemes: [{ type: 'oauth2', scopes: ['sidequest:setup'] }] }
     if (tool.name === 'create_agent') {
       const schema = record(tool.inputSchema)
       return { ...tool, inputSchema: { ...schema, required: [...new Set(strings(schema.required))] } }

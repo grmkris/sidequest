@@ -73,7 +73,15 @@ const WORK_TOOLS = new Set([
 ])
 /** Either side of a job: settle what is due, and state its case to the arbitrator (a hirer answers a dispute too). */
 const SHARED_TOOLS = new Set(['settlement_actions', 'add_statement', ...commonsWriteTools])
-export const SETUP_TOOLS = new Set(['whoami', 'create_agent', 'setup_status', 'find_services'])
+/** A setup connection may read the docs it is told to read: MCP answers get_instructions and search_docs itself. */
+export const SETUP_TOOLS = new Set([
+  'whoami',
+  'create_agent',
+  'setup_status',
+  'find_services',
+  'get_instructions',
+  'search_docs',
+])
 
 /** Hand-reviewed effects from tools.ts, runAgent and AgentExecutor (not inferred from scope).
  * Tool                       read   destructive  idempotent  effect
@@ -275,7 +283,8 @@ function stepsUp(grant: PolicyGrant, name: string): boolean {
 }
 
 /** What a setup connection is told while its operator has not approved its agent yet. */
-export const SETUP_WAITING = 'waiting: your operator has not approved this agent yet.'
+export const SETUP_WAITING =
+  'waiting: this connection has no approved agent yet. Call whoami: create_agent proposes one for your operator to approve; to use an agent they already have, they reconnect Sidequest in this app and pick it at sign-in.'
 
 /**
  * Why a connection may not call a tool, or undefined when it may: a tool result to answer with, or the scope a client

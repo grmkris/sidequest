@@ -97,14 +97,19 @@ export class AgentSetup {
   }
 
   whoami(grant: OAuthGrant) {
-    this.#family(grant)
-    return {
-      setup: true,
-      operator: grant.owner,
-      agents: this.agents
-        .list(grant.owner, this.deps.context.deployment.chainId)
-        .map((agent) => ({ agentKey: agent.id, agentId: agent.agent_id, name: agent.name, state: agent.state })),
-    }
+    const family = this.#family(grant)
+    const agents = this.agents
+      .list(grant.owner, this.deps.context.deployment.chainId)
+      .map((agent) => ({ agentKey: agent.id, agentId: agent.agent_id, name: agent.name, state: agent.state }))
+    const proposed = agents.find((agent) => agent.agentKey === this.#associated(family.id))
+    // A hosted app (ChatGPT) cannot open the setup guide, so the answer itself names the way forward.
+    const next =
+      proposed !== undefined
+        ? `Your operator approves ${proposed.name} at ${approveUrl(this.origin, proposed.agentKey, family.requested_scopes_json)}; then setup_status({agentKey}) reports ready.`
+        : agents.length === 0
+          ? 'No agent yet: agree a name, purpose and avatar idea with your operator, then call create_agent.'
+          : 'To act as one of these agents, your operator reconnects Sidequest in this app and picks it at sign-in. To make a new one, call create_agent.'
+    return { setup: true, operator: grant.owner, agents, next }
   }
 
   async create(grant: OAuthGrant, args: Record<string, unknown>): Promise<CreationResult> {
@@ -177,6 +182,14 @@ export class AgentSetup {
       })
       throw error
     }
+  }
+
+  /** The agent this setup connection proposed, if any. */
+  #associated(familyId: string): string | undefined {
+    return this.deps.sql.all<{ agent_key: string }>(
+      'SELECT agent_key FROM agent_setup_connections WHERE family_id=?',
+      familyId,
+    )[0]?.agent_key
   }
 
   #associate(family: { id: string; board_id: string; resource: string }, id: string) {
@@ -253,6 +266,18 @@ export class AgentSetup {
       }
     if (family.agent_id !== null)
       return { state: 'failed', message: 'This connection already acts as another agent. Call whoami.' }
+    // Approval binds only connections that proposed this agent, or that proposed none while some did; an active agent
+    // made in the browser, or one this connection did not propose, never arrives here by waiting.
+    const associated = this.#associated(family.id)
+    const unreachable =
+      associated === undefined
+        ? this.deps.sql.all('SELECT 1 FROM agent_setup_connections WHERE agent_key=?', agentKey).length === 0
+        : associated !== agentKey
+    if (agent.state === 'active' && unreachable)
+      return {
+        state: 'failed',
+        message: `${agent.name} is already active, and approving it will not connect this connection. To use it here, your operator reconnects Sidequest in this app and picks ${agent.name} at sign-in.`,
+      }
     const operation = this.deps.sql.all<{ id: Hex }>(
       "SELECT id FROM agent_operations WHERE agent_id=? AND action_key='setup-create' AND tool='create_agent'",
       agentKey,

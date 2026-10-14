@@ -85,7 +85,12 @@ async function fixture(verified = true) {
 
 it('answers setup whoami, creates its managed wallet/profile/avatar once, and returns one approval link', async () => {
   const f = await fixture()
-  expect(f.boot().whoami(f.grant)).toEqual({ setup: true, operator: operator.toLowerCase(), agents: [] })
+  expect(f.boot().whoami(f.grant)).toEqual({
+    setup: true,
+    operator: operator.toLowerCase(),
+    agents: [],
+    next: 'No agent yet: agree a name, purpose and avatar idea with your operator, then call create_agent.',
+  })
   const first = await f.boot().create(f.grant, args)
   // The answer comes before the avatar is drawn; a retry while it is drawn starts no second draw.
   expect(first).toMatchObject({
@@ -104,6 +109,30 @@ it('answers setup whoami, creates its managed wallet/profile/avatar once, and re
   expect(f.boot().whoami(f.grant).agents).toEqual([
     { agentKey: first.agentKey, agentId: null, name: 'Quill', state: 'grants-live' },
   ])
+  // A hosted app may have lost the link, so whoami repeats where its operator approves the proposed agent.
+  expect(f.boot().whoami(f.grant).next).toContain(first.approveUrl)
+})
+
+// ChatGPT asked setup_status about an agent its operator made in the browser and was told to keep polling forever.
+it('tells a setup connection that an active agent it cannot become is reached by picking it at sign-in', async () => {
+  const f = await fixture()
+  f.active('scout')
+  expect(f.boot().whoami(f.grant).next).toBe(
+    'To act as one of these agents, your operator reconnects Sidequest in this app and picks it at sign-in. To make a new one, call create_agent.',
+  )
+  expect(f.boot().status(f.grant, { agentKey: 'scout' })).toEqual({
+    state: 'failed',
+    message:
+      'scout is already active, and approving it will not connect this connection. To use it here, your operator reconnects Sidequest in this app and picks scout at sign-in.',
+  })
+  // Once this connection proposes its own agent, another active one stays out of reach; its own still waits.
+  const created = await f.boot().create(f.grant, args)
+  expect(f.boot().status(f.grant, { agentKey: 'scout' })).toMatchObject({ state: 'failed' })
+  f.registered(created.agentKey)
+  expect(f.boot().status(f.grant, { agentKey: created.agentKey })).toMatchObject({ state: 'awaiting-approval' })
+  // A connection that proposed nothing still waits for an agent another setup connection proposed.
+  const other = (await resolveOAuth(f.sql, (await f.newConnection()).tokens.access_token, resource, f.now()))!
+  expect(f.boot().status(other, { agentKey: created.agentKey })).toMatchObject({ state: 'awaiting-approval' })
 })
 
 it('refuses caller-supplied ownership, missing Privy proof, changed operation arguments and a second creation key', async () => {
@@ -326,6 +355,22 @@ it('MCP setup tools work without an agent selector; future tools are listed up f
   // A wait, never insufficient_scope: that would send the client to sign in again.
   expect(early._meta).toBeUndefined()
   expect(call).not.toHaveBeenCalledWith('apply', expect.anything(), expect.anything())
+  // The docs it is told to read answer before approval, and ask for no wider sign-in.
+  const guide = Schema.decodeUnknownSync(Call)(
+    (await route(f.grant, 'tools/call', { name: 'get_instructions', arguments: { role: 'connector' } })).body,
+  ).result
+  expect(guide.isError).toBeUndefined()
+  expect(guide.content[0]?.text).toContain('# Sidequest connector')
+  const Schemes = Schema.Struct({
+    result: Schema.Struct({
+      tools: Schema.Array(Schema.Struct({ name: Schema.String, securitySchemes: Schema.optionalKey(Schema.Unknown) })),
+    }),
+  })
+  const schemes = Schema.decodeUnknownSync(Schemes)((await route(f.grant, 'tools/list')).body).result.tools
+  for (const name of ['get_instructions', 'search_docs'])
+    expect(schemes.find((tool) => tool.name === name)?.securitySchemes).toEqual([
+      { type: 'oauth2', scopes: ['sidequest:setup'] },
+    ])
   expect(listed.find((tool) => tool.name === 'create_agent')?.inputSchema.required).toEqual(['name', 'operationKey'])
   expect(listed.find((tool) => tool.name === 'setup_status')?.inputSchema.required).toEqual(['agentKey'])
   const whoami = async (grant: typeof f.grant) =>
