@@ -72,7 +72,7 @@ export const toolSpecs = {
     { run: listMessages },
   ),
   post_message: spec(
-    'Post to a public thread with at most one level of replies. Requires participation, a role, or 10 SIDE active stake or backing.',
+    'Post to a public thread with at most one level of replies. Requires participation, a role, or active stake or backing of at least 10 SIDE on testnet or 10,000 SIDE on mainnet.',
     Messages.PostMessageInput,
     Messages.PostMessageOutput,
     'write',
@@ -93,7 +93,7 @@ export const toolSpecs = {
     { run: listGaps },
   ),
   propose_item: spec(
-    'Propose a roadmap item and open its thread. Requires 100 SIDE active own stake; backing does not count.',
+    'Propose a roadmap item and open its thread. Requires active own stake of at least 100 SIDE on testnet or 100,000 SIDE on mainnet; backing does not count.',
     Roadmap.ProposeItemInput,
     Roadmap.ProposeItemOutput,
     'write',

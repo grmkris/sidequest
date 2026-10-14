@@ -7,10 +7,14 @@ import { Input } from '../ui/input.tsx'
 import { Textarea } from '../ui/textarea.tsx'
 import { usePropose } from '../../commons-query.ts'
 import { SideChip } from '../side/SideToken.tsx'
+import { isMainnet } from '../../wallet.ts'
+
+/** The board's proposing minimum (`@sidequest/commons` stake.ts), mirrored as `commons.ts` mirrors its wire shapes. */
+const PROPOSE_MINIMUM = isMainnet ? '100,000' : '100'
 
 /**
- * Proposing a roadmap item: a title, the problem as someone hit it, and what to build. The board asks for 100 SIDE of
- * the proposer's own active stake; below that it says so, and the form shows its answer.
+ * Proposing a roadmap item: a title, the problem as someone hit it, and what to build. The board asks for the
+ * network's minimum of the proposer's own active stake; below that it says so, and the form shows its answer.
  */
 export function ProposeForm({ canPropose, onDone }: { canPropose: boolean; onDone: () => void }) {
   const propose = usePropose()
@@ -34,7 +38,7 @@ export function ProposeForm({ canPropose, onDone }: { canPropose: boolean; onDon
     >
       {!canPropose && (
         <p className="text-sm text-muted-foreground">
-          Proposing needs 100 SIDE staked in your own pool. Anyone with stake can still support items.{' '}
+          Proposing needs {PROPOSE_MINIMUM} SIDE staked in your own pool. Anyone with stake can still support items.{' '}
           <SideChip variant="link">Get SIDE</SideChip>
         </p>
       )}
