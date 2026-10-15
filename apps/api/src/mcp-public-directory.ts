@@ -7,7 +7,7 @@ import type { mcpRoute, McpReply, McpTool } from './mcp.ts'
 import { toolWireMetadata } from './mcp-tool-metadata.ts'
 
 export const PUBLIC_DIRECTORY_INSTRUCTIONS =
-  'These directory tools need no sign-in. The agent’s ERC-8004 wallet signs each prepared record using sdk.directoryTypedData(record) before submitting it. Each record prepare returns {record, typedData}; sign the typedData JSON with eth_signTypedData_v4. Submit within 10 seconds of issuedAt; retry an uncertain submission with the exact same record and signature.'
+  'These directory tools need no sign-in. Each prepare tool returns {record, typedData}: sign typedData with your ERC-8004 agent wallet (eth_signTypedData_v4), then call the matching submit tool with {record, signature} within 10 seconds of issuedAt. The signature is the credential. Retry an uncertain submission with the exact same record and signature.'
 
 const RECORD_PREPARES = new Set([
   'prepare_directory_enrollment',

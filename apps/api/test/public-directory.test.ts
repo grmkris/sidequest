@@ -80,7 +80,7 @@ it('negotiates both anonymous protocol lanes and keeps OAuth on /mcp', async () 
     supportedVersions: ['2026-07-28'],
     capabilities: { tools: { listChanged: false } },
   })
-  expect(result(discovered).instructions).toContain('sdk.directoryTypedData(record)')
+  expect(result(discovered).instructions).toContain('eth_signTypedData_v4')
   expect((await route('initialize', {}, { publicDirectory: false, pathname: '/mcp' })).status).toBe(401)
   expect((await route('initialize', {}, { method: 'GET' })).status).toBe(405)
   expect((await route('initialize', {}, { method: 'DELETE' })).status).toBe(204)

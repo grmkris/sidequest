@@ -55,9 +55,6 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 7,
     "complexity(complexity)": 2
   },
-  "apps/api/src/directory-admission.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1
-  },
   "apps/api/src/directory-object.ts": {
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 7,
@@ -1033,7 +1030,7 @@
   "packages/board/src/directory.ts": {
     "anti-slop(no-chained-type-assertions)": 2,
     "anti-slop(no-runtime-typeof)": 9,
-    "anti-slop(require-safety-comment-for-type-assertion)": 19,
+    "anti-slop(require-safety-comment-for-type-assertion)": 18,
     "complexity(complexity)": 1,
     "eslint(max-lines-per-function)": 1,
     "typescript(no-misused-spread)": 1,
