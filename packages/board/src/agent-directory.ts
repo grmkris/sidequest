@@ -32,6 +32,7 @@ const failure = (error: unknown): never => {
     error.message,
     `directory-${error.code}`,
     error.code === 'invalid' || error.code === 'forbidden' ? 'new-key' : 'same-key',
+    error.retryAfter,
   )
 }
 

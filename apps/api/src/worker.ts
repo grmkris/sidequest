@@ -53,7 +53,13 @@ import {
 import { boardView, tenantArgs, tenantTools } from './tools-tenant.ts'
 import { edgeCache, isPreviewPath, previewRoute, previewTarget } from './deliverable-preview.ts'
 import DirectoryObject, { directoryObjectName } from './directory-object.ts'
-import { directoryTools, migrateDirectory, runDirectoryTool } from './directory.ts'
+import {
+  directoryTools,
+  directoryMutationTool,
+  migrateDirectory,
+  runDirectoryTool,
+  runDirectoryEdgeTool,
+} from './directory.ts'
 import { servicesRoute } from './services.ts'
 import { hostedCallFailure } from './hosted-admission.ts'
 import { enforceHostedRate } from './admission-rate.ts'
@@ -414,23 +420,23 @@ export default class Api extends Cloudflare.Worker<Api>()(
         }
         const bearer = request.headers.authorization?.replace(/^Bearer\s+/i, '') || undefined
         const ip = request.headers['cf-connecting-ip']
-        const directoryCall = (tool: string, args: Record<string, unknown>, mcpSession?: string, caller?: string) =>
-          runDirectoryTool(
-            {
-              sql,
-              network,
-              rpcUrl,
-              audience: url.origin,
-              call: async (id, req) =>
-                JSON.parse(
-                  await yieldlessDirectoryCall(id, {
-                    ...req,
-                    admission: { boardId: tenant.id, bearer, mcpSession, caller, ip },
-                  }),
-                ),
-              activity: async (agentIds) =>
-                JSON.parse(await runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds }))),
-            },
+        const directoryDeps = {
+          sql,
+          network,
+          rpcUrl,
+          audience: url.origin,
+          call: async (id: string, req: import('./directory-object.ts').DirectoryCall) =>
+            JSON.parse(await yieldlessDirectoryCall(id, req)),
+          activity: async (agentIds: string[]) =>
+            JSON.parse(await runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds }))),
+        }
+        const directoryCall = (tool: string, args: Record<string, unknown>) =>
+          runDirectoryTool(directoryDeps, tool, args)
+        // SAFETY: runtimeEnv holds the host bindings; edge IP comes only from CF-Connecting-IP.
+        const directoryEdgeCall = (tool: string, args: Record<string, unknown>) =>
+          runDirectoryEdgeTool(
+            directoryDeps,
+            { bindings: runtimeEnv as Record<string, unknown>, ...(ip === undefined ? {} : { ip }) },
             tool,
             args,
           )
@@ -545,11 +551,12 @@ export default class Api extends Cloudflare.Worker<Api>()(
                         result: await feedTools.inbox.run({ sql, network, now: now() }, session?.address, args),
                       },
                     }
+                  if (directoryMutationTool(tool)) return { reply: await directoryEdgeCall(tool, args) }
                   const denied = hostedCallFailure(admission, network, tenant.id, tool, args, session?.address, stage)
                   if (denied !== undefined) return { reply: { ok: false, code: 'forbidden', message: denied } }
                   if (Object.hasOwn(directoryTools, tool))
                     return {
-                      reply: { ok: true, result: await directoryCall(tool, args, mcpSession, session?.address) },
+                      reply: { ok: true, result: await directoryCall(tool, args) },
                     }
                   const telegram = telegramTools[tool]
                   if (telegram !== undefined)
@@ -677,6 +684,23 @@ export default class Api extends Cloudflare.Worker<Api>()(
                   status: reply.status,
                   headers: { ...reply.headers, location: reply.redirect },
                 })
+        }
+        if (path === '/mcp/directory') {
+          const reply = yield* Effect.promise(() =>
+            mcpRoute({
+              method: request.method,
+              pathname: url.pathname,
+              body: oauthBody,
+              origin: url.origin,
+              headers: request.headers,
+              publicDirectory: true,
+              tools: directoryTools,
+              call: directoryEdgeCall,
+            }),
+          )
+          return reply.status === 204 || reply.status === 202
+            ? HttpServerResponse.empty({ status: reply.status, headers: { ...cors, ...reply.headers } })
+            : json(reply.body, reply.status, { ...cors, ...reply.headers })
         }
         if (path === '/mcp') {
           const runMcp = Effect.runPromiseWith(yield* Effect.context<RuntimeContext>())

@@ -107,6 +107,19 @@ function fixture() {
 }
 
 describe('a hosted agent listing itself', () => {
+  it('preserves the directory quota retry delay and same-key recovery', async () => {
+    const f = fixture()
+    f.port.read = async () => {
+      throw new DirectoryError('rate-limited', 'directory mutation limit reached', 23)
+    }
+    await expect(f.directory.advertise('lister', 'limited', ad)).rejects.toMatchObject({
+      code: 'rate-limited',
+      reason: 'directory-rate-limited',
+      retry: 'same-key',
+      retryAfter: 23,
+    })
+  })
+
   it('uses the stored description for first enrollment', async () => {
     const f = fixture()
     f.profiles.update('lister', { description: 'Careful code review' }, 'owner')

@@ -12,8 +12,7 @@ import * as Cloudflare from 'alchemy/Cloudflare'
 import * as Effect from 'effect/Effect'
 import { DirectoryProjectionJournal } from './directory-projection.ts'
 import { toJson } from './tools.ts'
-import type { AdmissionCall } from './admission-rate.ts'
-import { directoryAdmission } from './directory-admission.ts'
+import { directoryPolicy } from './directory-admission.ts'
 
 export interface DirectoryCall {
   network: sdk.Network
@@ -26,8 +25,6 @@ export interface DirectoryCall {
   expiresAt?: number
   record?: unknown
   signature?: unknown
-  /** Host-only session and edge metadata; never sourced from directory tool arguments. */
-  admission?: Omit<AdmissionCall, 'network' | 'tool'>
 }
 
 export function directoryAudience(audience: string): string {
@@ -40,15 +37,22 @@ export function directoryAudience(audience: string): string {
   throw new DirectoryError('invalid', 'directory audience must be an HTTP(S) origin')
 }
 
+function directoryFailure(error: unknown) {
+  if (!(error instanceof DirectoryError)) return { ok: false, code: 'error', message: 'directory unavailable' }
+  return {
+    ok: false,
+    code: error.code,
+    message: error.message,
+    ...(error.retryAfter === undefined ? {} : { retryAfter: error.retryAfter }),
+  }
+}
+
 export const directoryObjectName = (chainId: number, registry: string, audience: string, agentId: string) =>
   `${chainId}:${registry.toLowerCase()}:${directoryAudience(audience)}:${directoryAgentId(agentId)}`
 
-const DIRECTORY_CODES = new Set(['invalid', 'forbidden', 'conflict', 'chain', 'not-found'])
+const DIRECTORY_CODES = new Set(['invalid', 'forbidden', 'conflict', 'chain', 'not-found', 'rate-limited'])
 
-/**
- * An agent's directory object as the management object calls it for the agent's own hosted listing tools. No
- * admission metadata is passed: those tools are testnet-only, where the directory admits without rate checks.
- */
+/** An agent's directory object as the management object calls it for the agent's own hosted listing tools. */
 export function directoryPort(
   bindings: Record<string, unknown>,
   target: Pick<DirectoryCall, 'network' | 'rpcUrl' | 'audience' | 'agentId'>,
@@ -64,11 +68,12 @@ export function directoryPort(
   const run = async <T>(more: Omit<DirectoryCall, 'network' | 'rpcUrl' | 'audience' | 'agentId'>): Promise<T> => {
     const reply = JSON.parse(await stub.call({ ...target, ...more })) as
       | { ok: true; result: T }
-      | { ok: false; code: string; message: string }
+      | { ok: false; code: string; message: string; retryAfter?: number }
     if (reply.ok) return reply.result
     throw new DirectoryError(
       DIRECTORY_CODES.has(reply.code) ? (reply.code as DirectoryError['code']) : 'chain',
       reply.message,
+      reply.retryAfter,
     )
   }
   return {
@@ -150,7 +155,7 @@ export default class DirectoryObject extends Cloudflare.DurableObject<DirectoryO
                 // Canonicalize host metadata only. Signed records keep their exact audience.
                 request = { ...request, audience: directoryAudience(request.audience) }
                 const bindings = environment as Record<string, unknown>
-                const denied = await directoryAdmission(bindings, request)
+                const denied = directoryPolicy(bindings, request)
                 if (denied !== undefined) return toJson(denied)
                 const config = sdk.deployment(request.network)
                 const namespace = bindings.DirectoryObject as
@@ -177,11 +182,7 @@ export default class DirectoryObject extends Cloudflare.DurableObject<DirectoryO
                   flush = (result as { projection: sdk.DirectoryAgent | null }).projection !== null
                 return toJson({ ok: true, result })
               } catch (error) {
-                return toJson({
-                  ok: false,
-                  code: error instanceof DirectoryError ? error.code : 'error',
-                  message: error instanceof DirectoryError ? error.message : 'directory unavailable',
-                })
+                return toJson(directoryFailure(error))
               } finally {
                 if (service !== undefined && flush) await flushProjection(service)
               }

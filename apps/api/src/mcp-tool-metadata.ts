@@ -134,7 +134,15 @@ const PUBLISHER_OUTPUT_SCHEMAS: Readonly<Record<string, Record<string, unknown>>
 }
 
 /** What tools/list says about a tool beyond its input: title, annotations, output schema and OAuth schemes. */
-export function toolWireMetadata(name: string, tool: McpTool) {
+export function toolWireMetadata(name: string, tool: McpTool, publicDirectory = false) {
+  if (publicDirectory)
+    return {
+      title: tool.title ?? name.replaceAll('_', ' '),
+      annotations: tool.annotations ?? toolAnnotations(name),
+      outputSchema: tool.outputSchema ??
+        PUBLISHER_OUTPUT_SCHEMAS[name] ?? { type: 'object', additionalProperties: true },
+      securitySchemes: [{ type: 'noauth' }],
+    }
   const scope = requiredToolScope(name)
   const schemes =
     scope === 'write'

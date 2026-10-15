@@ -319,6 +319,14 @@ describe('legacy wire snapshots and rollback', () => {
 })
 
 describe('hosted tool metadata', () => {
+  it('allows noauth metadata only on the public directory transport', async () => {
+    // SAFETY: tools/list returns its advertised tool objects under result.tools.
+    const listed = result(
+      await route('tools/list', {}, { pathname: '/mcp/directory', publicDirectory: true, tools: directoryTools }),
+    ).tools as Record<string, unknown>[]
+    expect(listed.length).toBe(12)
+    for (const tool of listed) expect(tool.securitySchemes).toEqual([{ type: 'noauth' }])
+  })
   const fullGrant = { ...grant, scopes: ['sidequest:read', 'sidequest:hire', 'sidequest:work'] }
   it.each([{}, { _meta: meta }])('annotates every visible tool on both lanes', async (params) => {
     const listed = result(await route('tools/list', params, { grant: fullGrant, tools: registry })).tools as Record<
@@ -336,6 +344,7 @@ describe('hosted tool metadata', () => {
       })
       expect(tool.outputSchema).toMatchObject({ type: 'object' })
       expect(tool.securitySchemes).toEqual(expect.arrayContaining([{ type: 'oauth2', scopes: expect.any(Array) }]))
+      expect(tool.securitySchemes).not.toContainEqual({ type: 'noauth' })
     }
     expect(listed.find((tool) => tool.name === 'check_operation')?.inputSchema).not.toHaveProperty(
       'properties.operationKey',

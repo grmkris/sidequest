@@ -54,6 +54,12 @@ export function serverCard(origin: string, boardPath = '') {
         url: `${origin}${boardPath}/mcp`,
         supportedProtocolVersions: [MCP_PROTOCOL_VERSION, ...MCP_LEGACY_PROTOCOL_VERSIONS],
       },
+      {
+        type: 'streamable-http',
+        url: `${origin}${boardPath}/mcp/directory`,
+        supportedProtocolVersions: [MCP_PROTOCOL_VERSION, ...MCP_LEGACY_PROTOCOL_VERSIONS],
+        authentication: { type: 'none' },
+      },
     ],
   }
 }

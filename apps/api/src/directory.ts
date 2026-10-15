@@ -9,6 +9,7 @@ import {
   prepareDirectoryIdentity,
 } from '@sidequest/sdk'
 import type { DirectoryCall } from './directory-object.ts'
+import { enforceDirectoryIp } from './admission-rate.ts'
 
 export const DIRECTORY_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS directory_agents (
@@ -168,6 +169,9 @@ const SUBMIT: Record<string, DirectoryKind> = {
   revoke_service_ad: 'RevokeAd',
 }
 
+export const directoryMutationTool = (tool: string): boolean =>
+  Object.hasOwn(PREPARE, tool) || Object.hasOwn(SUBMIT, tool)
+
 /** Preserve the admission reply across the directory RPC boundary. */
 export class DirectoryCallError extends Error {
   constructor(
@@ -190,6 +194,27 @@ export interface DirectoryApiDeps {
   ) => Promise<{ ok: true; result: unknown } | { ok: false; code: string; message: string; retryAfter?: number }>
   /** Hosted agents' last MCP calls, from the management object. */
   activity?: (agentIds: string[]) => Promise<Array<{ agent_id: string; address: string; last_activity_at: number }>>
+}
+
+/** Edge preflight for anonymous REST and public MCP. Authentication is the signed record checked by the object. */
+export async function runDirectoryEdgeTool(
+  deps: DirectoryApiDeps,
+  edge: { bindings: Record<string, unknown>; ip?: string },
+  tool: string,
+  args: Record<string, unknown>,
+): Promise<
+  | { ok: true; result: Awaited<ReturnType<typeof runDirectoryTool>> }
+  | { ok: false; code: string; message: string; retryAfter?: number }
+> {
+  if (directoryMutationTool(tool) || tool === 'prepare_agent_profile') {
+    const rate = await enforceDirectoryIp(edge.bindings, {
+      network: deps.network,
+      tool,
+      ...(edge.ip === undefined ? {} : { ip: edge.ip }),
+    })
+    if (!rate.ok) return rate
+  }
+  return { ok: true, result: await runDirectoryTool(deps, tool, args) }
 }
 
 const ACTIVITY_BUCKET = 300

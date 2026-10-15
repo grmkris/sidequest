@@ -4,7 +4,7 @@ import * as Test from 'alchemy/Test/Vitest'
 import * as Effect from 'effect/Effect'
 import * as HttpBody from 'effect/http/HttpBody'
 import * as HttpClient from 'effect/http/HttpClient'
-import { WRITE_LIMITS } from '@sidequest/board'
+import { ADMISSION_OBJECT_NAME } from '@sidequest/board'
 import { afterAll, beforeAll as hookBeforeAll, expect } from 'vitest'
 import * as sdk from '@sidequest/sdk'
 import { zeroAddress, type Hex } from 'viem'
@@ -56,53 +56,70 @@ const request = (patch: Partial<DirectoryCall> = {}): DirectoryCall => ({
 })
 
 test(
-  'real directory RPC refuses missing/forged sessions, IPs, runtime networks and drained writes before service construction',
+  'real mainnet directory reaches identity verification without a session and binds its runtime network',
   Effect.gen(function* () {
-    const urls = yield* stack
-    const wallet = '0x1111111111111111111111111111111111111111',
-      token = crypto.randomUUID()
-    const auth = { boardId: 'public', bearer: token, caller: wallet, ip: '203.0.113.71' }
-    for (const call of [
-      request(),
-      request({ admission: { ...auth, bearer: undefined } }),
-      request({ admission: { ...auth, caller: '0x2222222222222222222222222222222222222222' } }),
-      request({ admission: { ...auth, ip: undefined } }),
-      request({ network: 'monad-testnet', admission: auth }),
-    ]) {
-      expect(yield* post(urls.open, { name: 'denied', call, seed: { token, wallet } })).toMatchObject({
-        ok: false,
-        code: 'forbidden',
-      })
+    const { open } = yield* stack
+    const config = sdk.deployment('monad-mainnet')
+    const call = request({
+      payload: {
+        profile: { name: 'Probe', description: '', services: [] },
+        delegate: zeroAddress,
+        adDelegate: false,
+        grantExpiresAt: 0,
+        enrolled: true,
+      },
+    })
+    const name = directoryObjectName(config.chainId, config.identity, call.audience, call.agentId)
+    expect(yield* post(open, { name, call })).toMatchObject({ ok: false, code: 'chain' })
+    const now = Math.floor(Date.now() / 1000)
+    // SAFETY: call.payload above is the concrete enrollment payload supplied by this probe.
+    const record: sdk.DirectoryEnvelope = {
+      version: 1,
+      kind: 'Enrollment',
+      chainId: config.chainId,
+      identityRegistry: config.identity,
+      audience: call.audience,
+      agentId: call.agentId,
+      wallet: zeroAddress,
+      generation: 1,
+      nonce: 1,
+      issuedAt: now,
+      expiresAt: now + 300,
+      payload: call.payload as Record<string, unknown>,
     }
-    expect(
-      yield* post(urls.drained, { name: 'denied', call: request({ admission: auth }), seed: { token, wallet } }),
-    ).toMatchObject({ ok: false, code: 'forbidden' })
+    expect(yield* post(open, { name, call: { ...call, action: 'submit', record, signature: '0x00' } })).toMatchObject({
+      ok: false,
+      code: 'chain',
+    })
+    expect(yield* post(open, { name, call: { ...call, network: 'monad-testnet' } })).toMatchObject({
+      ok: false,
+      code: 'forbidden',
+      message: 'directory runtime network mismatch',
+    })
   }),
 )
 
 test(
-  'directory submits cannot bypass the real shared wallet counter with a forged read label',
+  'real drained directory blocks new ads while revocation and opt-out reach the service',
   Effect.gen(function* () {
-    const { open } = yield* stack
-    const wallet = `0x${crypto.randomUUID().replaceAll('-', '')}${crypto.randomUUID().slice(0, 8)}`,
-      token = crypto.randomUUID()
-    const prefix = `2001:db8:${crypto.randomUUID().slice(0, 4)}:${crypto.randomUUID().slice(0, 4)}`
-    const auth = { boardId: 'public', bearer: token, caller: wallet, ip: `${prefix}::1` }
-    for (let n = 0; n < WRITE_LIMITS.wallet; n++) {
-      expect(
-        yield* post(open, {
-          admit: { ...auth, network: 'monad-mainnet', tool: 'create_task', ip: `${prefix}::${n + 10}` },
-          seed: { token, wallet },
-        }),
-      ).toEqual({ ok: true })
-    }
-    const forgedAuth = { ...auth, tool: 'list_directory', network: 'monad-testnet' }
-    const call = request({ action: 'submit', record: { kind: 'Enrollment' }, admission: forgedAuth })
-    expect(yield* post(open, { name: 'rate-denied', call })).toMatchObject({
+    const { drained } = yield* stack
+    const config = sdk.deployment('monad-mainnet')
+    const call = request({ kind: 'ServiceAd' })
+    const name = directoryObjectName(config.chainId, config.identity, call.audience, call.agentId)
+    expect(yield* post(drained, { name, call })).toMatchObject({
       ok: false,
-      code: 'rate-limited',
-      retryAfter: expect.any(Number),
+      code: 'forbidden',
+      message: 'directory listing is paused',
     })
+    const profile = { name: 'Probe', description: '', services: [] }
+    for (const more of [
+      { kind: 'RevokeAd', payload: { serviceId: 'research' } },
+      {
+        kind: 'Enrollment',
+        payload: { profile, delegate: zeroAddress, adDelegate: false, grantExpiresAt: 0, enrolled: false },
+      },
+    ])
+      expect(yield* post(drained, { name, call: { ...call, ...more } })).toMatchObject({ ok: false, code: 'chain' })
   }),
 )
 
@@ -158,6 +175,29 @@ test(
     expect(
       yield* post(testnet, { name, call: { ...call, action: 'submit', record, signature: '0x00' } }),
     ).toMatchObject({ ok: false, code: 'forbidden', message: 'wrong chain, registry, audience, or agent' })
+  }),
+)
+
+test(
+  'real anonymous IP admission limits the 241st call and rejects missing IP or the wrong object',
+  Effect.gen(function* () {
+    const { open } = yield* stack
+    const ip = `2001:db8:${crypto.randomUUID().slice(0, 4)}:${crypto.randomUUID().slice(0, 4)}::1`
+    const admitIp = { network: 'monad-mainnet', tool: 'prepare_service_ad', ip }
+    for (let index = 0; index < 240; index++)
+      expect(yield* post(open, { name: ADMISSION_OBJECT_NAME, admitIp })).toEqual({ ok: true })
+    expect(yield* post(open, { name: ADMISSION_OBJECT_NAME, admitIp })).toMatchObject({
+      ok: false,
+      code: 'rate-limited',
+      retryAfter: expect.any(Number),
+    })
+    expect(
+      yield* post(open, {
+        name: ADMISSION_OBJECT_NAME,
+        admitIp: { network: 'monad-mainnet', tool: 'enroll_directory' },
+      }),
+    ).toMatchObject({ ok: false, code: 'unavailable' })
+    expect(yield* post(open, { name: 'public', admitIp })).toMatchObject({ ok: false, code: 'unavailable' })
   }),
 )
 

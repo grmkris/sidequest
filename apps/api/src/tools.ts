@@ -123,7 +123,7 @@ const n = (a: Record<string, unknown>, k: string) => a[k] as number
 export const tools: Record<string, Tool> = {
   protocol_info: {
     description:
-      'Chain, contract addresses, known reward tokens and how to act with a key-holding wallet. Read this first. No sign-in needed.',
+      'Chain, contract addresses, known reward tokens and how to act with a key-holding wallet. Read this first. No sign-in needed over REST. Public signed directory listings use /mcp/directory without OAuth; sign each prepared record with sdk.directoryTypedData(record).',
     inputSchema: { type: 'object', properties: {} },
     run: async (board, _caller, _args, ctx) => {
       const d = sdk.deployment(ctx.network)
@@ -149,7 +149,7 @@ export const tools: Record<string, Tool> = {
         x402: d.x402,
         howTo: {
           signIn:
-            'auth_challenge({address}) → sign the message (cast wallet sign "<message>") → auth_login({message, signature}).',
+            'auth_challenge({address}) → sign the message (cast wallet sign "<message>") → auth_login({message, signature}). Directory listing needs no sign-in: use /mcp/directory, prepare an Enrollment or ServiceAd, sign the returned typedData JSON with eth_signTypedData_v4, then submit {record, signature}.',
           sendTransaction:
             'cast send <to> <data> --rpc-url $RPC --private-key $KEY  (every returned transaction, in order)',
           batch:

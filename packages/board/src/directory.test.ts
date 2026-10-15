@@ -96,6 +96,55 @@ function fixture() {
   }
 }
 
+describe('directory mutation quota', () => {
+  it('limits verified mutations across record kinds and accepts again at the window boundary', async () => {
+    const context = fixture()
+    await context.enroll()
+    for (let index = 0; index < 59; index++) await context.submit(await context.ad())
+    context.advance(5)
+    await expect(context.submit(await context.ad())).rejects.toMatchObject({ code: 'rate-limited', retryAfter: 55 })
+    expect(context.service.state().mutations).toHaveLength(60)
+    context.advance(55)
+    await context.submit(await context.ad())
+    expect(context.service.state().mutations).toEqual([context.deps.now()])
+  }, 20_000)
+
+  it('does not charge forged, invalid or idempotent submissions', async () => {
+    const context = fixture()
+    await context.enroll()
+    const record = await context.ad()
+    await expect(context.submit(record, context.delegate)).rejects.toMatchObject({ code: 'forbidden' })
+    await expect(context.submit({ ...record, audience: 'https://other.example' })).rejects.toMatchObject({
+      code: 'forbidden',
+    })
+    await expect(context.submit({ ...record, payload: {} })).rejects.toMatchObject({ code: 'invalid' })
+    expect(context.service.state().mutations).toHaveLength(1)
+    await context.submit(record)
+    for (let index = 0; index < 65; index++) expect((await context.submit(record)).idempotent).toBe(true)
+    expect(context.service.state().mutations).toHaveLength(2)
+  })
+
+  it('preserves the mutation bucket through enrollment and keeps heartbeat limits separate', async () => {
+    const context = fixture()
+    for (let index = 0; index < 60; index++) await context.enroll()
+    await expect(context.enroll()).rejects.toMatchObject({ code: 'rate-limited' })
+    for (let index = 0; index < 8; index++) await context.submit(await context.beat())
+    expect(context.service.state().mutations).toHaveLength(60)
+    await expect(context.submit(await context.beat())).rejects.toThrow(/heartbeat rate limit/)
+  }, 20_000)
+
+  it('defaults the mutation bucket when reading older persisted directory state', async () => {
+    const context = fixture()
+    await context.enroll()
+    const { mutations: _mutations, ...legacy } = context.service.state()
+    context.database.prepare('UPDATE directory_state SET json = ? WHERE id = 1').run(JSON.stringify(legacy))
+    expect(context.service.state().mutations).toEqual([])
+    expect((await context.service.read()).enrolled).toBe(true)
+    await context.submit(await context.ad())
+    expect(context.service.state().mutations).toEqual([context.deps.now()])
+  })
+})
+
 describe('signed directory', () => {
   it('enrolls a zero-job identity and keeps chain job tables untouched', async () => {
     const context = fixture()

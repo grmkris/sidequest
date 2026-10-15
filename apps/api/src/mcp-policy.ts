@@ -164,6 +164,16 @@ const REVIEW: Readonly<Record<string, readonly [boolean, boolean, boolean]>> = {
   request_permissions: [false, true, true],
   use_permission: [false, true, true],
   revoke_permission: [false, true, false],
+  // Public directory signatures are the credential; prepare calls do not mutate directory state.
+  prepare_agent_profile: [true, false, true],
+  prepare_directory_enrollment: [true, false, true],
+  enroll_directory: [false, false, true],
+  prepare_service_ad: [true, false, true],
+  publish_service_ad: [false, false, true],
+  prepare_revoke_service_ad: [true, false, true],
+  revoke_service_ad: [false, false, true],
+  prepare_heartbeat: [true, false, true],
+  post_heartbeat: [false, false, true],
 }
 
 export function toolAnnotations(name: string) {
@@ -184,6 +194,20 @@ export const PERMISSION_TOOLS = new Set([
 /** A hosted agent's own directory listing (WS8); its ServiceAd and RevokeAd signer rules reached mainnet in the
  *  chain-143 Privy policy on 13 Oct, so listing runs on both networks. */
 export const LISTING_TOOLS = new Set(['advertise_service', 'withdraw_service'])
+export const PUBLIC_DIRECTORY_TOOLS = new Set([
+  'find_services',
+  'list_directory',
+  'get_directory_agent',
+  'prepare_agent_profile',
+  'prepare_directory_enrollment',
+  'enroll_directory',
+  'prepare_service_ad',
+  'publish_service_ad',
+  'prepare_revoke_service_ad',
+  'revoke_service_ad',
+  'prepare_heartbeat',
+  'post_heartbeat',
+])
 /** x402 waits for the testnet routine signer policy; mainnet remains hidden. */
 export const X402_TOOLS = new Set(['x402_pay'])
 

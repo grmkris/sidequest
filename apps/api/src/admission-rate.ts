@@ -28,7 +28,10 @@ export interface AdmissionCall {
 export type AdmissionReply = { ok: true } | { ok: false; code: string; message: string; retryAfter?: number }
 export interface AdmissionNamespace {
   idFromName(name: string): { toString(): string }
-  get(id: { toString(): string }): { admit(input: AdmissionCall): Promise<string> }
+  get(id: { toString(): string }): {
+    admit(input: AdmissionCall): Promise<string>
+    admitIp(input: Pick<AdmissionCall, 'network' | 'tool' | 'ip'>): Promise<string>
+  }
 }
 
 export const needsWriteRate = (tool: string) =>
@@ -112,5 +115,28 @@ export async function enforceHostedRate(
     return JSON.parse(await namespace.get(namespace.idFromName(ADMISSION_OBJECT_NAME)).admit(input)) as AdmissionReply
   } catch {
     return { ok: false, code: 'unavailable', message: 'hosted write admission unavailable' }
+  }
+}
+
+export async function enforceDirectoryIp(
+  bindings: Record<string, unknown>,
+  input: { network: Network; tool: string; ip?: string },
+): Promise<AdmissionReply> {
+  if (input.network !== 'monad-mainnet' && bindings.DEPLOY_STAGE !== 'prod') return { ok: true }
+  try {
+    if (input.ip === undefined || isIP(input.ip) === 0) throw new Error('invalid edge IP')
+    // SAFETY: Board is the host's Durable Object binding and exposes the admission RPCs.
+    const namespace = bindings.Board as AdmissionNamespace | undefined
+    if (namespace === undefined) throw new Error('missing admission namespace')
+    // SAFETY: admitIp serializes only AdmissionReply values.
+    return JSON.parse(
+      await namespace.get(namespace.idFromName(ADMISSION_OBJECT_NAME)).admitIp({
+        network: input.network,
+        tool: input.tool,
+        ip: input.ip,
+      }),
+    ) as AdmissionReply
+  } catch {
+    return { ok: false, code: 'unavailable', message: 'directory IP admission unavailable' }
   }
 }
