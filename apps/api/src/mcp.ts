@@ -288,7 +288,7 @@ export async function mcpRoute(input: {
     return respond({ skill: entry, ...SKILLS_CACHE })
   }
   // A setup connection has no agent to receive events yet: it may read the catalog and is told to wait for the rest.
-  if (methodName.startsWith('events/') && input.events === undefined && grant.setup === true)
+  if (methodName.startsWith('events/') && grant.setup === true)
     return methodName === 'events/list'
       ? respond({ events: EVENT_DESCRIPTORS })
       : rpcError(-32003, `${SETUP_WAITING} Poll setup_status; events work on this connection once it reports ready.`)

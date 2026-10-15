@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { McpEvents } from '../src/mcp-events.ts'
 import { writeFeed, pruneFeed, FEED_RETENTION_SECONDS } from '../src/feed.ts'
 import type { OAuthGrant } from '../src/oauth.ts'
+import { mcpRoute } from '../src/mcp.ts'
 
 const wallet = '0x1111111111111111111111111111111111111111',
   stranger = '0x2222222222222222222222222222222222222222'
@@ -73,6 +74,27 @@ const occurrences = (page: Record<string, unknown>) =>
   }>
 
 describe('MCP feed streams', () => {
+  it('lets setup connections list descriptors even with the production events handler present', async () => {
+    const { events } = await setup()
+    const route = (method: string) =>
+      mcpRoute({
+        method: 'POST',
+        pathname: '/mcp',
+        origin: 'https://sidequest.test',
+        headers: {},
+        body: { jsonrpc: '2.0', id: 1, method, params: {} },
+        grant: { ...grant, setup: true, scopes: ['sidequest:setup'], chainId: 0 },
+        events,
+        tools: {},
+        call: async () => ({}),
+      })
+    expect(await route('events/list')).toMatchObject({
+      status: 200,
+      body: { result: { events: expect.arrayContaining([expect.objectContaining({ name: 'sidequest.inbox' })]) } },
+    })
+    for (const method of ['events/poll', 'events/subscribe', 'events/unsubscribe'])
+      expect(await route(method)).toMatchObject({ body: { error: { code: -32003 } } })
+  })
   it('lists four schemas with poll and webhook delivery', async () => {
     const { events } = await setup()
     const list = await events.handle('events/list', {}, grant)
