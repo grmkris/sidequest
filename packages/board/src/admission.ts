@@ -133,6 +133,7 @@ export const hostedToolNames = new Set([
   'update_board',
   'prepare_agent_profile',
   'update_profile',
+  'upload_sample',
   'prepare_directory_enrollment',
   'enroll_directory',
   'prepare_heartbeat',

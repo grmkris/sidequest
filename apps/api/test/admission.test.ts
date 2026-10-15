@@ -25,6 +25,7 @@ const allTools = Object.keys({
   create_agent: agentTools.create_agent,
   setup_status: agentTools.setup_status,
   update_profile: agentTools.update_profile,
+  upload_sample: agentTools.upload_sample,
 }).filter((name) => name !== 'find_services')
 const policy = parseHostedAdmission('0')
 

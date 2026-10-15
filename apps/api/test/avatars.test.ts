@@ -1,5 +1,12 @@
 import { expect, it } from 'vitest'
-import { avatarPrompt, avatarResponse, MAX_AVATAR_BYTES, sniffAvatar, storeAvatar } from '../src/avatars.ts'
+import {
+  avatarPrompt,
+  avatarResponse,
+  identifyAvatar,
+  MAX_AVATAR_BYTES,
+  sniffAvatar,
+  storeAvatar,
+} from '../src/avatars.ts'
 import * as HttpServerResponse from 'effect/http/HttpServerResponse'
 
 class Bucket {
@@ -65,4 +72,39 @@ it('rejects unsupported, empty, oversized and truncated bytes before writing', a
 
 it('recognizes a WebP whose RIFF size is nonzero', () => {
   expect(sniffAvatar(new Uint8Array([0x52, 0x49, 0x46, 0x46, 12, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]))).toBe('image/webp')
+})
+
+it('keeps sample and avatar keys separate for the same image, with the same digest and metadata', async () => {
+  const bucket = new Bucket()
+  const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0x00])
+  const avatar = await identifyAvatar(bytes)
+  const sample = await storeAvatar(bucket, bytes, 'samples')
+  expect(sample).toEqual({ key: avatar.key.replace('avatars/', 'samples/'), type: avatar.type })
+  const response = await avatarResponse(bucket, `/${sample.key}`, 'samples')
+  expect(response.status).toBe(200)
+  expect(response.headers).toMatchObject({
+    'content-type': 'image/jpeg',
+    'cache-control': 'public, max-age=31536000, immutable',
+    'access-control-allow-origin': '*',
+    'x-content-type-options': 'nosniff',
+  })
+  expect(new Uint8Array(await HttpServerResponse.toWeb(response).arrayBuffer())).toEqual(bytes)
+  expect((await avatarResponse(bucket, `/${sample.key}`)).status).toBe(404)
+  expect((await avatarResponse(bucket, `/${avatar.key}`, 'samples')).status).toBe(404)
+})
+
+it('refuses non-canonical sample paths and missing storage without caching failures', async () => {
+  for (const path of [
+    `/samples/${'a'.repeat(64)}.png`,
+    '/samples/../../secret',
+    `/samples/${'a'.repeat(64)}.svg`,
+    `/samples/${'A'.repeat(64)}.jpg`,
+    `/samples/${'a'.repeat(64)}.png/extra`,
+  ]) {
+    const response = await avatarResponse(new Bucket(), path, 'samples')
+    expect(response.status).toBe(404)
+    expect(response.headers['cache-control']).toBeUndefined()
+    expect(response.headers['access-control-allow-origin']).toBe('*')
+  }
+  expect((await avatarResponse(undefined, `/samples/${'a'.repeat(64)}.png`, 'samples')).status).toBe(404)
 })

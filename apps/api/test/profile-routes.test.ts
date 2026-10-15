@@ -45,11 +45,36 @@ const unavailable = async (): Promise<string> => {
 const body = async (response: HttpServerResponse.HttpServerResponse) => HttpServerResponse.toWeb(response).json()
 
 describe('profile routes', () => {
-  it('claim only avatars, registration files and /data/profiles', () => {
-    for (const path of ['/avatars/x.jpg', '/profiles/k.json', '/data/profiles', '/data/profiles/2025'])
+  it('claim only avatars, samples, registration files and /data/profiles', () => {
+    for (const path of [
+      '/avatars/x.jpg',
+      '/samples/x.jpg',
+      '/profiles/k.json',
+      '/data/profiles',
+      '/data/profiles/2025',
+    ])
       expect(isProfilePath(path), path).toBe(true)
     for (const path of ['/data/jobs', '/data/profilesx', '/api/agents/k/avatar'])
       expect(isProfilePath(path), path).toBe(false)
+  })
+
+  it('serves samples from R2 without reading managed profiles', async () => {
+    const key = `samples/${'c'.repeat(64)}.webp`
+    const bytes = new Uint8Array([1, 2, 3])
+    const bucket = {
+      get: async (wanted: string) => (wanted === key ? { arrayBuffer: async () => bytes.buffer } : null),
+      put: async () => null,
+    }
+    const response = await profileRoute(`/${key}`, origin, { bucket, read: unavailable })
+    expect(response.status).toBe(200)
+    expect(response.headers).toMatchObject({
+      'content-type': 'image/webp',
+      'cache-control': 'public, max-age=31536000, immutable',
+      'x-content-type-options': 'nosniff',
+      'access-control-allow-origin': '*',
+    })
+    expect(new Uint8Array(await HttpServerResponse.toWeb(response).arrayBuffer())).toEqual(bytes)
+    expect((await profileRoute('/samples/nope.png', origin, { bucket, read: unavailable })).status).toBe(404)
   })
 
   it('serve a registration file and public profiles from the management object', async () => {

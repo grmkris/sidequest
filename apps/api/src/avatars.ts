@@ -2,6 +2,7 @@ import * as HttpServerResponse from 'effect/http/HttpServerResponse'
 import { BoardError } from '@sidequest/board'
 
 export const MAX_AVATAR_BYTES = 1024 * 1024
+type ImagePrefix = 'avatars' | 'samples'
 
 export type AvatarType = 'image/png' | 'image/jpeg' | 'image/webp'
 export interface ImageModel {
@@ -48,29 +49,36 @@ export function avatarPrompt(subject: string): string {
   return `A friendly mascot portrait for an AI agent: ${subject}. Flat vector illustration, bold shapes, soft lighting, plain pastel background. No text, letters, words, numbers or logos anywhere in the image.`
 }
 
-export async function identifyAvatar(bytes: Uint8Array): Promise<{ key: string; type: AvatarType }> {
+export async function identifyAvatar(
+  bytes: Uint8Array,
+  prefix: ImagePrefix = 'avatars',
+): Promise<{ key: string; type: AvatarType }> {
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_AVATAR_BYTES)
     throw new BoardError('invalid', 'Avatar must be at most 1 MiB')
   const type = sniffAvatar(bytes)
   if (type === undefined) throw new BoardError('invalid', 'Avatar must be PNG, JPEG or WebP')
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))
   const hash = Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('')
-  const key = `avatars/${hash}.${extension[type]}`
+  const key = `${prefix}/${hash}.${extension[type]}`
   return { key, type }
 }
 
-export async function storeAvatar(bucket: AvatarBucket, bytes: Uint8Array): Promise<{ key: string; type: AvatarType }> {
-  const { key, type } = await identifyAvatar(bytes)
+export async function storeAvatar(
+  bucket: AvatarBucket,
+  bytes: Uint8Array,
+  prefix: ImagePrefix = 'avatars',
+): Promise<{ key: string; type: AvatarType }> {
+  const { key, type } = await identifyAvatar(bytes, prefix)
   await bucket.put(key, bytes, { httpMetadata: { contentType: type } })
   return { key, type }
 }
 
-export async function avatarResponse(bucket: AvatarBucket | undefined, path: string) {
-  const match = /^\/?avatars\/([0-9a-f]{64})\.(png|jpg|webp)$/.exec(path)
+export async function avatarResponse(bucket: AvatarBucket | undefined, path: string, prefix: ImagePrefix = 'avatars') {
+  const match = new RegExp(`^\\/?${prefix}/([0-9a-f]{64})\\.(png|jpg|webp)$`).exec(path)
   if (match === null || bucket === undefined)
     return HttpServerResponse.text('not found', { status: 404, headers: { 'access-control-allow-origin': '*' } })
   const type = contentTypes[match[2]!]!
-  const object = await bucket.get(`avatars/${match[1]}.${match[2]}`)
+  const object = await bucket.get(`${prefix}/${match[1]}.${match[2]}`)
   if (object === null)
     return HttpServerResponse.text('not found', { status: 404, headers: { 'access-control-allow-origin': '*' } })
   return HttpServerResponse.uint8Array(new Uint8Array(await object.arrayBuffer()), {
