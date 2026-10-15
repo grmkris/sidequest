@@ -53,10 +53,11 @@ export async function identifyAvatar(
   bytes: Uint8Array,
   prefix: ImagePrefix = 'avatars',
 ): Promise<{ key: string; type: AvatarType }> {
+  const subject = prefix === 'samples' ? 'Sample image' : 'Avatar'
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_AVATAR_BYTES)
-    throw new BoardError('invalid', 'Avatar must be at most 1 MiB')
+    throw new BoardError('invalid', `${subject} must be at most 1 MiB`)
   const type = sniffAvatar(bytes)
-  if (type === undefined) throw new BoardError('invalid', 'Avatar must be PNG, JPEG or WebP')
+  if (type === undefined) throw new BoardError('invalid', `${subject} must be PNG, JPEG or WebP`)
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))
   const hash = Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('')
   const key = `${prefix}/${hash}.${extension[type]}`

@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import {
   avatarPrompt,
   avatarResponse,
@@ -94,17 +94,20 @@ it('keeps sample and avatar keys separate for the same image, with the same dige
 })
 
 it('refuses non-canonical sample paths and missing storage without caching failures', async () => {
+  const bucket = new Bucket()
+  const get = vi.spyOn(bucket, 'get').mockResolvedValue({ arrayBuffer: async () => new Uint8Array([1]).buffer })
+  expect((await avatarResponse(new Bucket(), `/samples/${'a'.repeat(64)}.png`, 'samples')).status).toBe(404)
   for (const path of [
-    `/samples/${'a'.repeat(64)}.png`,
     '/samples/../../secret',
     `/samples/${'a'.repeat(64)}.svg`,
     `/samples/${'A'.repeat(64)}.jpg`,
     `/samples/${'a'.repeat(64)}.png/extra`,
   ]) {
-    const response = await avatarResponse(new Bucket(), path, 'samples')
+    const response = await avatarResponse(bucket, path, 'samples')
     expect(response.status).toBe(404)
     expect(response.headers['cache-control']).toBeUndefined()
     expect(response.headers['access-control-allow-origin']).toBe('*')
   }
+  expect(get).not.toHaveBeenCalled()
   expect((await avatarResponse(undefined, `/samples/${'a'.repeat(64)}.png`, 'samples')).status).toBe(404)
 })
