@@ -414,26 +414,18 @@ export default class Api extends Cloudflare.Worker<Api>()(
         }
         const bearer = request.headers.authorization?.replace(/^Bearer\s+/i, '') || undefined
         const ip = request.headers['cf-connecting-ip']
-        const directoryCall = (tool: string, args: Record<string, unknown>, mcpSession?: string, caller?: string) =>
-          runDirectoryTool(
-            {
-              sql,
-              network,
-              rpcUrl,
-              audience: url.origin,
-              call: async (id, req) =>
-                JSON.parse(
-                  await yieldlessDirectoryCall(id, {
-                    ...req,
-                    admission: { boardId: tenant.id, bearer, mcpSession, caller, ip },
-                  }),
-                ),
-              activity: async (agentIds) =>
-                JSON.parse(await runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds }))),
-            },
-            tool,
-            args,
-          )
+        const directoryDeps = {
+          sql,
+          network,
+          rpcUrl,
+          audience: url.origin,
+          call: async (id: string, req: import('./directory-object.ts').DirectoryCall) =>
+            JSON.parse(await yieldlessDirectoryCall(id, req)),
+          activity: async (agentIds: string[]) =>
+            JSON.parse(await runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds }))),
+        }
+        const directoryCall = (tool: string, args: Record<string, unknown>) =>
+          runDirectoryTool(directoryDeps, tool, args)
         const yieldlessDirectoryCall = async (id: string, req: import('./directory-object.ts').DirectoryCall) =>
           runRequest(directory.getByName(directoryObjectName(chainId, deployment.identity, url.origin, id)).call(req))
 
@@ -549,7 +541,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
                   if (denied !== undefined) return { reply: { ok: false, code: 'forbidden', message: denied } }
                   if (Object.hasOwn(directoryTools, tool))
                     return {
-                      reply: { ok: true, result: await directoryCall(tool, args, mcpSession, session?.address) },
+                      reply: { ok: true, result: await directoryCall(tool, args) },
                     }
                   const telegram = telegramTools[tool]
                   if (telegram !== undefined)
