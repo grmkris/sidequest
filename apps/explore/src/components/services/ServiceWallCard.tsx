@@ -47,7 +47,11 @@ export function ServiceWallCard({
         <ServiceCover
           listing={listing}
           className="col-start-1 row-start-1"
-          imageClassName="transition-transform duration-500 ease-(--ease-out-strong) [@media(hover:hover)]:group-hover/tile:scale-103"
+          // A wide tile shows its whole delivery frame: the picture's ground is the tile's colour, so it runs on seamlessly.
+          imageClassName={cn(
+            'transition-transform duration-500 ease-(--ease-out-strong) [@media(hover:hover)]:group-hover/tile:scale-103',
+            wide && 'sm:object-contain',
+          )}
         />
         {delivery?.jobId !== undefined && <DeliveredBadge jobId={delivery.jobId} />}
         <SelectCircle name={listing.name} selected={selected} onToggle={onToggle} />
