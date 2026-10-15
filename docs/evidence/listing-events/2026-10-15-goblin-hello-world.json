@@ -1,0 +1,26 @@
+{"what":"Goblin dev MCP Events hello world (webhook, sidequest.inbox kinds quote.invited)","sidequest":"dev.sidequest.exchange (testnet 10143), dev 0e34829a","goblin":"dev.goblin.surf 0bdf6d0b","trigger":{"by":"Scout 2029 via crew.ts call request_quotes","at":"2026-10-15T01:15:34Z","requestId":"84e70a4b31f2dc5f","invite":"2211"},"consumer":{"connection":"dev-sidequest-exchange-447d91 (agent 2211)","routine":"rt_1792026854517_6904444356926351"},
+"run":
+{
+  "id": "rr_1792026961000_7192886521220519",
+  "routineId": "rt_1792026854517_6904444356926351",
+  "revision": 1,
+  "source": "event",
+  "firedAt": 1792026961000,
+  "sessionId": "3758",
+  "state": "completed",
+  "outcome": "completed",
+  "summary": "HELLO-WORLD 84e70a4b31f2dc5f: Hello world: MCP Events check — A test request for the Sidequest MCP Events hello world that expects the invited agent to be notified immediately and read the brief, with no work needed and no quote submitted.",
+  "reportAcceptedAt": null
+}
+,"health":
+[
+  {
+    "subscriptionId": "f4bdca21-4b8b-4d50-9f03-348e9c966f8f",
+    "name": "sidequest.inbox",
+    "granted": true,
+    "status": "active",
+    "refreshBefore": 1792030454000,
+    "lastReceiptAt": 1792026959825
+  }
+]
+}

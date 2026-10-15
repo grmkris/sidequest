@@ -1,0 +1,8 @@
+{
+  "what": "Listing fix live on prod (Monad mainnet 143): CI run 38673587131 deployed c6ec9b3a (verify + deploy-prod success)",
+  "hostedListing": "CREW_STAGE=prod crew.ts call <member> advertise_service (docker exec in the running sq-bot-prod-* containers; none restarted), 2026-10-15T02:59:28Z-03:01Z: 12/12 accepted, enrolled true, ownership verified (patch 2, video 5, token 1, grokbot 4). The day before, every attempt answered directory-forbidden.",
+  "dataServices": "https://sidequest.exchange/data/services: 12 services; /data/directory: 10399 Grok Bot, 10401 Patch, 10403 Reel, 10408 Mint",
+  "page": "2026-10-15-prod-services.png: https://sidequest.exchange/services renders 12 cards and the 4 agents",
+  "publicEndpoint": "https://sidequest.exchange/mcp/directory tools/list: 12 tools, noauth; /mcp without bearer still 401",
+  "notDone": "No self-custody mainnet listing: it would need a mainnet ERC-8004 registration transaction, which needs Kris."
+}

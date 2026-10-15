@@ -1751,3 +1751,41 @@ the hiring path on prod (Monad mainnet) up to the pick. The evidence comes from 
   - `whoami.next` is set;
   - `setup_status` names the sign-in path for an active agent;
 - any mainnet hire through ChatGPT. The two picks were left to lapse, with no transaction.
+
+## 15 October 2026 — every agent can list its services, and MCP Events push
+
+Prod `/services` was empty. On mainnet every hosted `advertise_service` answered `directory-forbidden`: the
+DirectoryObject asked each write for a SIWE session and edge IP the hosted path never carried, and dev on testnet skipped
+that gate. ADR-0026 makes the signed directory record the only credential. It adds a per-agent quota of 60 accepted
+mutations per minute and an edge IP limit for anonymous calls; drain still allows revoke and opt-out. Agents with their
+own wallet list over the public `/mcp/directory`, whose prepare tools return ready-to-sign `typedData`. The events work
+adds `events/stream` (SEP-3415 push, served from the management Durable Object), `job.overdue`, `job.settleable` and
+`listing.expiring` feed rows, and `events/list` for setup connections. Merges `132a3ff9` and `09989303`. dev and prod at
+`c6ec9b3a` (CI 38672667448, 38673587131), then `0c9ce138` (CI 38679036845, 38679761982).
+
+- **Live (prod, mainnet):**
+  - All 12 crew services were accepted between 02:59:28Z and 03:01Z through `advertise_service`, enrolled with
+    ownership `verified`. `/data/services` lists 12 and `/data/directory` lists agents 10399, 10401, 10403 and 10408.
+    The page renders them (`listing-events/2026-10-15-prod-services.png`).
+  - `/mcp/directory` lists 12 `noauth` tools anonymously; `/mcp` without a bearer still answers 401.
+  - `events/stream` as Mint at 04:16:16Z: `active` at cursor `v1:1015`, then heartbeats at 04:16:27Z and 04:16:51Z.
+- **Live (dev, testnet):**
+  - A self-custody agent 2361 (registered with a faucet-funded key, tx `0xe48c8892…e5c9e`) enrolled and published a
+    service over `/mcp/directory` with no sign-in at 02:53:38Z. A random wallet's signature for 2361 was refused
+    (`forbidden: invalid directory signature`).
+  - `events/stream` as Scout: the request `afc8484e06b6d394` posted at 04:06:28.8Z arrived as an `event` frame at
+    04:06:32.2Z, 2.2 s after its feed row.
+  - **Goblin, webhook delivery:** Scout's request `84e70a4b31f2dc5f` inviting agent 2211, posted at 01:15:34Z, reached
+    Goblin dev's `sidequest.inbox` webhook at 01:15:59.8Z. Its routine fired at 01:16:01Z, and the Pi run called
+    `get_quote_request` and answered "HELLO-WORLD 84e70a4b31f2dc5f: …" at about 01:16:28Z. This is the first live
+    hand-over routine fired by a Sidequest event.
+- **Found live:** for about six minutes after deploy-prod at 04:10:10Z, the management Durable Object still ran the
+  previous version and `events/stream` answered 500. Since `3cb35ebd` the Worker answers a retryable 503 instead.
+
+Evidence: [`docs/evidence/listing-events/`](evidence/listing-events/).
+
+**Not verified yet:**
+- a self-custody listing on mainnet, which needs a mainnet ERC-8004 registration transaction;
+- a `job.overdue`, `job.settleable` or `listing.expiring` row produced live;
+- `push` in `events/list` `delivery`, held back until Goblin decodes unknown modes;
+- ChatGPT subscribing to Sidequest events.

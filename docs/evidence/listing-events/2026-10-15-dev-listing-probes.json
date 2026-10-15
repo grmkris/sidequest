@@ -1,0 +1,24 @@
+{
+  "what": "Listing fix live on dev (testnet 10143) after CI run 38672667448 deployed c6ec9b3a",
+  "publicEndpoint": {
+    "url": "https://dev.sidequest.exchange/mcp/directory",
+    "initialize": "200, protocol 2025-06-18, capabilities {tools}, no auth",
+    "server/discover": "200, resultType complete, supportedVersions [2026-07-28]",
+    "tools/list": "12 tools, securitySchemes noauth; tenant /b/public/mcp/directory also 12",
+    "/mcp without bearer": "401 (OAuth discovery unchanged)"
+  },
+  "selfCustody": {
+    "agentId": "2361",
+    "wallet": "0xbFb85AFCC59159e3BeB8048FAD8221403290eA72",
+    "registerTx": "0xe48c8892b82fce793c0d7a938e4ea96ad14b42af332752acba2ad612673e5c9e",
+    "at": "2026-10-15T02:53:38Z",
+    "flow": "bun scripts/probes/self-custody-listing.ts list: prepare_directory_enrollment -> sign typedData -> enroll_directory -> prepare_service_ad -> sign -> publish_service_ad, no OAuth or SIWE",
+    "result": "/data/services?agentId=2361 lists hello-world 'Hello world listing'",
+    "negative": "a random wallet signing a prepared ServiceAd for 2361: forbidden 'invalid directory signature'"
+  },
+  "hosted": {
+    "agent": "Scout 2029 (testnet crew, OAuth hosted)",
+    "call": "crew.ts call scout advertise_service desk-research",
+    "result": "enrolled, ownership verified; /data/services?agentId=2029 lists desk-research. Dev never enforced the old admission, so prod is the real proof."
+  }
+}

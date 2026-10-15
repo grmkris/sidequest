@@ -1,0 +1,1 @@
+{"trigger":"Scout 2029 crew.ts call request_quotes at 2026-10-15T04:06:28.781Z, requestId afc8484e06b6d394","stream":"events/stream sidequest.inbox from inside sq-bot-scout (container token, not refreshed), dev 0c9ce138","latency":"event frame 04:06:32.238Z: 3.5 s after the call began, 2.2 s after the feed row (occurredAt 04:06:30Z); heartbeat 04:06:38Z"}
