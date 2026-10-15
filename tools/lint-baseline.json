@@ -559,11 +559,6 @@
     "complexity(complexity)": 1,
     "jsx-a11y(prefer-tag-over-role)": 1
   },
-  "apps/explore/src/components/agent/ListingCard.tsx": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1,
-    "complexity(complexity)": 1,
-    "eslint(max-lines-per-function)": 1
-  },
   "apps/explore/src/components/agent/ManageCards.tsx": {
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 3,
