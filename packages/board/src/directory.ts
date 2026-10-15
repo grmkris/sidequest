@@ -14,8 +14,9 @@ import type { Sql } from './store.ts'
 
 export class DirectoryError extends Error {
   constructor(
-    readonly code: 'invalid' | 'forbidden' | 'conflict' | 'chain' | 'not-found',
+    readonly code: 'invalid' | 'forbidden' | 'conflict' | 'chain' | 'not-found' | 'rate-limited',
     message: string,
+    readonly retryAfter?: number,
   ) {
     super(message)
   }
@@ -53,6 +54,7 @@ interface DirectoryState {
   ads: Record<string, { ad: ServiceAdvertisement; hash: Hex; expiresAt: number; revoked: boolean }>
   accepted: Partial<Record<DirectoryKind, Accepted>>
   beats: number[]
+  mutations: number[]
   projectionAt: number
 }
 
@@ -72,6 +74,7 @@ const initial = (): DirectoryState => ({
   ads: {},
   accepted: {},
   beats: [],
+  mutations: [],
   projectionAt: 0,
 })
 const invalid = (message: string): never => {
@@ -167,7 +170,10 @@ export class DirectoryService {
 
   state(): DirectoryState {
     const [row] = this.deps.sql.all<{ json: string }>('SELECT json FROM directory_state WHERE id = 1')
-    return row === undefined ? initial() : (JSON.parse(row.json) as DirectoryState)
+    if (row === undefined) return initial()
+    // SAFETY: this object is written by save; older records predate the mutation bucket.
+    const state = JSON.parse(row.json) as DirectoryState
+    return { ...state, mutations: state.mutations ?? [] }
   }
 
   save(state: DirectoryState, expectedRevision: number): void {
@@ -373,6 +379,11 @@ export class DirectoryService {
     }
     if (record.expiresAt <= this.deps.now() || Math.abs(record.issuedAt - this.deps.now()) > 10)
       forbidden('record expired during verification; prepare again')
+    if (record.kind !== 'Heartbeat') {
+      state.mutations = state.mutations.filter((at) => at > now - 60)
+      if (state.mutations.length >= 60)
+        throw new DirectoryError('rate-limited', 'directory mutation limit reached', state.mutations[0]! + 60 - now)
+    }
     const projectedState = state.heartbeat?.state
     state.wallet = identity.wallet
     state.agentURI = identity.agentURI
@@ -425,6 +436,7 @@ export class DirectoryService {
     }
     const project =
       record.kind !== 'Heartbeat' || projectedState !== state.heartbeat?.state || state.projectionAt + 60 <= now
+    if (record.kind !== 'Heartbeat') state.mutations.push(now)
     if (project) state.projectionAt = now
     this.save(state, state.revision)
     const agent = this.publicView(state)
