@@ -635,6 +635,34 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
             } satisfies AdmissionReply)
           }
         }),
+      admitIp: (req: Pick<AdmissionCall, 'network' | 'tool' | 'ip'>) =>
+        Effect.promise(async (): Promise<string> => {
+          try {
+            // SAFETY: runtimeEnv holds this Worker's configured bindings.
+            const bindings = runtimeEnv as Record<string, unknown>
+            // SAFETY: Board is the host Durable Object binding with the admission RPCs.
+            const namespace = bindings.Board as AdmissionNamespace | undefined
+            if (namespace?.idFromName(ADMISSION_OBJECT_NAME).toString() !== state.id.toString())
+              throw new Error('admission object identity mismatch')
+            if (
+              bindings.NETWORK !== req.network ||
+              (req.network !== 'monad-mainnet' && bindings.DEPLOY_STAGE !== 'prod')
+            )
+              throw new Error('admission runtime network/stage mismatch')
+            const ipHash = await admissionIpHash(req.ip)
+            limits ??= new AdmissionRateLimits(fromDurableObjectSql(state.storage.sql.raw))
+            const result = state.raw.storage.transactionSync(() =>
+              limits!.consume(undefined, ipHash, req.tool, Math.floor(Date.now() / 1000)),
+            )
+            return toJson(result)
+          } catch {
+            return toJson({
+              ok: false,
+              code: 'unavailable',
+              message: 'directory IP admission unavailable',
+            } satisfies AdmissionReply)
+          }
+        }),
       /** Runs one tool and returns its JSON reply; tool errors are replies, not failures. */
       call: (req: BoardCall) =>
         callQueue(async (): Promise<string> => {

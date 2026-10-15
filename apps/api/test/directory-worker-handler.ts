@@ -21,6 +21,7 @@ export const directoryProbeHandler = Effect.gen(function* () {
         name: string
         call: DirectoryCall
         admit?: AdmissionCall
+        admitIp?: Pick<AdmissionCall, 'network' | 'tool' | 'ip'>
         seed?: { token: string; wallet: string }
       }
       const sql = fromD1((yield* facts.raw) as never)
@@ -42,9 +43,11 @@ export const directoryProbeHandler = Effect.gen(function* () {
           ]),
         )
       const reply =
-        body.admit === undefined
-          ? yield* directory.getByName(body.name).call(body.call)
-          : yield* boards.getByName(ADMISSION_OBJECT_NAME).admit(body.admit)
+        body.admitIp !== undefined
+          ? yield* boards.getByName(body.name || ADMISSION_OBJECT_NAME).admitIp(body.admitIp)
+          : body.admit === undefined
+            ? yield* directory.getByName(body.name).call(body.call)
+            : yield* boards.getByName(ADMISSION_OBJECT_NAME).admit(body.admit)
       return HttpServerResponse.text(reply, { headers: { 'content-type': 'application/json' } })
     }),
   }

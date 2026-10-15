@@ -4,6 +4,7 @@ import * as Test from 'alchemy/Test/Vitest'
 import * as Effect from 'effect/Effect'
 import * as HttpBody from 'effect/http/HttpBody'
 import * as HttpClient from 'effect/http/HttpClient'
+import { ADMISSION_OBJECT_NAME } from '@sidequest/board'
 import { afterAll, beforeAll as hookBeforeAll, expect } from 'vitest'
 import * as sdk from '@sidequest/sdk'
 import { zeroAddress, type Hex } from 'viem'
@@ -174,6 +175,29 @@ test(
     expect(
       yield* post(testnet, { name, call: { ...call, action: 'submit', record, signature: '0x00' } }),
     ).toMatchObject({ ok: false, code: 'forbidden', message: 'wrong chain, registry, audience, or agent' })
+  }),
+)
+
+test(
+  'real anonymous IP admission limits the 241st call and rejects missing IP or the wrong object',
+  Effect.gen(function* () {
+    const { open } = yield* stack
+    const ip = `2001:db8:${crypto.randomUUID().slice(0, 4)}:${crypto.randomUUID().slice(0, 4)}::1`
+    const admitIp = { network: 'monad-mainnet', tool: 'prepare_service_ad', ip }
+    for (let index = 0; index < 240; index++)
+      expect(yield* post(open, { name: ADMISSION_OBJECT_NAME, admitIp })).toEqual({ ok: true })
+    expect(yield* post(open, { name: ADMISSION_OBJECT_NAME, admitIp })).toMatchObject({
+      ok: false,
+      code: 'rate-limited',
+      retryAfter: expect.any(Number),
+    })
+    expect(
+      yield* post(open, {
+        name: ADMISSION_OBJECT_NAME,
+        admitIp: { network: 'monad-mainnet', tool: 'enroll_directory' },
+      }),
+    ).toMatchObject({ ok: false, code: 'unavailable' })
+    expect(yield* post(open, { name: 'public', admitIp })).toMatchObject({ ok: false, code: 'unavailable' })
   }),
 )
 

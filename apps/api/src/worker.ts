@@ -53,7 +53,13 @@ import {
 import { boardView, tenantArgs, tenantTools } from './tools-tenant.ts'
 import { edgeCache, isPreviewPath, previewRoute, previewTarget } from './deliverable-preview.ts'
 import DirectoryObject, { directoryObjectName } from './directory-object.ts'
-import { directoryTools, migrateDirectory, runDirectoryTool } from './directory.ts'
+import {
+  directoryTools,
+  directoryMutationTool,
+  migrateDirectory,
+  runDirectoryTool,
+  runDirectoryEdgeTool,
+} from './directory.ts'
 import { servicesRoute } from './services.ts'
 import { hostedCallFailure } from './hosted-admission.ts'
 import { enforceHostedRate } from './admission-rate.ts'
@@ -426,6 +432,14 @@ export default class Api extends Cloudflare.Worker<Api>()(
         }
         const directoryCall = (tool: string, args: Record<string, unknown>) =>
           runDirectoryTool(directoryDeps, tool, args)
+        // SAFETY: runtimeEnv holds the host bindings; edge IP comes only from CF-Connecting-IP.
+        const directoryEdgeCall = (tool: string, args: Record<string, unknown>) =>
+          runDirectoryEdgeTool(
+            directoryDeps,
+            { bindings: runtimeEnv as Record<string, unknown>, ...(ip === undefined ? {} : { ip }) },
+            tool,
+            args,
+          )
         const yieldlessDirectoryCall = async (id: string, req: import('./directory-object.ts').DirectoryCall) =>
           runRequest(directory.getByName(directoryObjectName(chainId, deployment.identity, url.origin, id)).call(req))
 
@@ -537,6 +551,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
                         result: await feedTools.inbox.run({ sql, network, now: now() }, session?.address, args),
                       },
                     }
+                  if (directoryMutationTool(tool)) return { reply: await directoryEdgeCall(tool, args) }
                   const denied = hostedCallFailure(admission, network, tenant.id, tool, args, session?.address, stage)
                   if (denied !== undefined) return { reply: { ok: false, code: 'forbidden', message: denied } }
                   if (Object.hasOwn(directoryTools, tool))
