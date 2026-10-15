@@ -12,15 +12,10 @@ import {
 import { type Address, type Hex, getAddress, isAddress, maxUint256, zeroAddress } from 'viem'
 import type { Sql } from './store.ts'
 
-export class DirectoryError extends Error {
-  constructor(
-    readonly code: 'invalid' | 'forbidden' | 'conflict' | 'chain' | 'not-found' | 'rate-limited',
-    message: string,
-    readonly retryAfter?: number,
-  ) {
-    super(message)
-  }
-}
+import { DirectoryError } from './directory-error.ts'
+import { validateCardFields } from './directory-card.ts'
+
+export { DirectoryError } from './directory-error.ts'
 
 export interface DirectoryDeps {
   sql: Sql
@@ -51,7 +46,10 @@ interface DirectoryState {
   ownership: DirectoryAgent['ownership']
   checkedAt: number
   heartbeat: { state: Availability; capacity: number; receivedAt: number; expiresAt: number; sessionId: string } | null
-  ads: Record<string, { ad: ServiceAdvertisement; hash: Hex; expiresAt: number; revoked: boolean }>
+  ads: Record<
+    string,
+    { ad: ServiceAdvertisement; hash: Hex; publishedAt?: number; expiresAt: number | null; revoked: boolean }
+  >
   accepted: Partial<Record<DirectoryKind, Accepted>>
   beats: number[]
   mutations: number[]
@@ -133,9 +131,21 @@ export function validateDirectoryProfile(value: unknown): DirectoryProfile {
   }
 }
 
-export function validateAdvertisement(value: unknown): ServiceAdvertisement {
+export function validateAdvertisement(value: unknown, audience: string): ServiceAdvertisement {
   const ad = object(value)
-  exact(ad, ['serviceId', 'name', 'description', 'inputs', 'outputs', 'turnaroundSeconds', 'price'])
+  exact(ad, [
+    'serviceId',
+    'name',
+    'description',
+    'inputs',
+    'outputs',
+    'turnaroundSeconds',
+    'price',
+    'category',
+    'tags',
+    'examples',
+    'samples',
+  ])
   const serviceId = text(ad.serviceId, 'serviceId', 64)
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(serviceId)) return invalid('serviceId must be a lowercase slug')
   const price = object(ad.price)
@@ -157,6 +167,7 @@ export function validateAdvertisement(value: unknown): ServiceAdvertisement {
       amountBaseUnits: amount,
       token: address(price.token),
     },
+    ...validateCardFields(ad, audience),
   }
 }
 
@@ -245,7 +256,7 @@ export class DirectoryService {
         endpointHash: payload.endpointHash,
       }
     }
-    if (kind === 'ServiceAd') return { ...validateAdvertisement(payload) }
+    if (kind === 'ServiceAd') return { ...validateAdvertisement(payload, this.deps.audience) }
     exact(payload, ['serviceId'])
     const serviceId = text(payload.serviceId, 'serviceId', 64)
     if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(serviceId)) invalid('serviceId must be a lowercase slug')
@@ -424,11 +435,22 @@ export class DirectoryService {
       }
     } else if (record.kind === 'ServiceAd') {
       const ad = record.payload as unknown as ServiceAdvertisement
-      if (state.ads[ad.serviceId] === undefined && Object.keys(state.ads).length >= 10)
+      const live = (entry: DirectoryState['ads'][string]) =>
+        !entry.revoked && (entry.expiresAt === null || entry.expiresAt > now)
+      if (
+        !Object.entries(state.ads).some(([id, entry]) => id === ad.serviceId && live(entry)) &&
+        Object.values(state.ads).filter(live).length >= 10
+      )
         forbidden('at most ten service IDs per enrolled identity')
       if (signer !== identity.wallet && record.expiresAt > state.grantExpiresAt)
         forbidden('ad outlives its delegate grant')
-      state.ads[ad.serviceId] = { ad, hash, expiresAt: record.expiresAt, revoked: false }
+      state.ads[ad.serviceId] = {
+        ad,
+        hash,
+        publishedAt: record.issuedAt,
+        expiresAt: signer === identity.wallet ? null : record.expiresAt,
+        revoked: false,
+      }
     } else {
       const ad = state.ads[String(record.payload.serviceId)]
       if (ad === undefined) throw new DirectoryError('not-found', 'unknown service ID')
@@ -465,8 +487,16 @@ export class DirectoryService {
         lastSeenBucket: beat === null ? null : Math.floor(beat.receivedAt / 60) * 60,
       },
       ads: Object.values(state.ads)
-        .filter((entry) => !entry.revoked && entry.expiresAt > now && ownership === 'verified')
-        .map((entry) => ({ ...entry.ad, adHash: entry.hash, expiresAt: entry.expiresAt })),
+        .filter(
+          (entry) => !entry.revoked && (entry.expiresAt === null || entry.expiresAt > now) && ownership === 'verified',
+        )
+        .map((entry) => ({
+          ...entry.ad,
+          adHash: entry.hash,
+          // Legacy entries stored no signed record: approximate publication from their one-day expiry.
+          publishedAt: entry.publishedAt ?? (entry.expiresAt ?? now) - 86400,
+          expiresAt: entry.expiresAt,
+        })),
       observedAt: now,
       projectionAt: state.projectionAt,
       revision: state.revision,

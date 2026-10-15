@@ -44,6 +44,22 @@ const refusing = async <T>(work: () => Promise<T> | T): Promise<T> => {
   }
 }
 
+function advertisement(ad: sdk.DirectoryAgent['ads'][number]): sdk.ServiceAdvertisement {
+  return {
+    serviceId: ad.serviceId,
+    name: ad.name,
+    description: ad.description,
+    inputs: ad.inputs,
+    outputs: ad.outputs,
+    turnaroundSeconds: ad.turnaroundSeconds,
+    price: ad.price,
+    ...(ad.category === undefined ? {} : { category: ad.category }),
+    ...(ad.tags === undefined ? {} : { tags: ad.tags }),
+    ...(ad.examples === undefined ? {} : { examples: ad.examples }),
+    ...(ad.samples === undefined ? {} : { samples: ad.samples }),
+  }
+}
+
 export class AgentDirectory {
   constructor(
     private readonly deps: {
@@ -55,15 +71,15 @@ export class AgentDirectory {
     },
   ) {}
 
-  /** Lists `ad` for 24 hours, enrolling the agent first (manual mode, no delegate) unless it is enrolled as its current wallet. */
+  /** Lists `ad` until withdrawn, enrolling in manual mode only when unlisted or the wallet's ownership changed. */
   async advertise(id: string, key: string, ad: unknown): Promise<sdk.DirectoryAgent> {
-    const checked = await refusing(() => validateAdvertisement(ad))
+    const checked = await refusing(() => validateAdvertisement(ad, this.deps.audience))
     const operation = this.deps.agents.begin(id, key, this.deps.boardId, 'advertise_service', { ad: checked })
     // A finished operation answers from its journal: a retry must not enroll again after a later opt-out.
     const done = this.deps.agents.step<sdk.DirectoryAgent>(operation.id, 'ad:done')
     if (done !== undefined) return done
     const listing = await refusing(() => this.deps.port.read())
-    if (!listing.enrolled || listing.ownership !== 'verified') {
+    if (!listing.enrolled || listing.ownership === 'changed') {
       const profile = new AgentProfiles(this.deps.agents.sql, this.deps.agents.now).read(id)
       await this.#record(operation.id, 'enroll', id, 'Enrollment', {
         profile: {
@@ -90,7 +106,7 @@ export class AgentDirectory {
       this.deps.agents.step<sdk.DirectoryAgent>(operationId, 'profile-directory:listing') ??
       this.deps.agents.freezeStep(operationId, 'profile-directory:listing', await refusing(() => this.deps.port.read()))
     if (listing.enrolled) {
-      const liveAds = listing.ads.filter((ad) => ad.expiresAt > this.deps.agents.now())
+      const liveAds = listing.ads.filter((ad) => ad.expiresAt === null || ad.expiresAt > this.deps.agents.now())
       await this.#record(operationId, 'profile-directory:enroll', id, 'Enrollment', {
         profile: { ...profile, services: [...new Set(liveAds.map((ad) => ad.name))] },
         delegate: zeroAddress,
@@ -100,8 +116,8 @@ export class AgentDirectory {
       })
       for (const ad of liveAds) {
         // Enrollment or a previous publication may have waited past this ad's original expiry.
-        if (ad.expiresAt <= this.deps.agents.now()) continue
-        const { adHash: _adHash, expiresAt: _expiresAt, ...service } = ad
+        if (ad.expiresAt !== null && ad.expiresAt <= this.deps.agents.now()) continue
+        const service = advertisement(ad)
         await this.#record(operationId, `profile-directory:ad:${ad.serviceId}`, id, 'ServiceAd', service)
       }
     }

@@ -201,7 +201,7 @@ describe('a hosted agent listing itself', () => {
     expect(f.signedCount()).toBe(0)
     expect((await f.service.read()).enrolled).toBe(false)
   })
-  it('enrolls in manual mode, then advertises for a day; a retry with the same key signs nothing again', async () => {
+  it('enrolls in manual mode, then advertises until withdrawn; a retry with the same key signs nothing again', async () => {
     const f = fixture()
     const listing = await f.directory.advertise('lister', 'list-1', ad)
     expect(listing).toMatchObject({
@@ -209,7 +209,7 @@ describe('a hosted agent listing itself', () => {
       enrolled: true,
       ownership: 'verified',
       profile: { name: 'Quill', services: ['Code review'] },
-      ads: [{ serviceId: 'review', expiresAt: 1_800_000_000 + 86_400 }],
+      ads: [{ serviceId: 'review', publishedAt: 1_800_000_000, expiresAt: null }],
     })
     expect(f.calls).toEqual([
       'read',
@@ -229,6 +229,35 @@ describe('a hosted agent listing itself', () => {
     const both = await f.directory.advertise('lister', 'list-2', { ...ad, serviceId: 'audit', name: 'Audit' })
     expect(both.ads.map((a) => a.serviceId).toSorted()).toEqual(['audit', 'review'])
     expect(f.calls.filter((c) => c === 'prepare:Enrollment')).toHaveLength(1)
+  })
+
+  it('does not re-enroll on unknown ownership, so a transient read does not revoke other listings', async () => {
+    const f = fixture()
+    await f.directory.advertise('lister', 'list-1', ad)
+    const read = f.port.read.bind(f.port)
+    f.port.read = async () => ({ ...(await read()), ownership: 'unknown' })
+    const both = await f.directory.advertise('lister', 'list-2', { ...ad, serviceId: 'audit' })
+    expect(both.ads.map((service) => service.serviceId).toSorted()).toEqual(['audit', 'review'])
+    expect(f.calls.filter((call) => call === 'prepare:Enrollment')).toHaveLength(1)
+  })
+
+  it('refreshes an old durable listing while preserving every optional card field and stripping projection keys', async () => {
+    const f = fixture()
+    const fields = {
+      category: 'code',
+      tags: ['typescript'],
+      examples: ['Review this PR'],
+      samples: [
+        { url: `${audience}/samples/${'a'.repeat(64)}.webp`, caption: 'Review', kind: 'delivery', jobId: '42' },
+      ],
+    }
+    await f.directory.advertise('lister', 'card-1', { ...ad, ...fields })
+    f.advance(25 * 3600)
+    const operation = f.agents.begin('lister', 'profile-card', 'public', 'update_profile', { name: 'Changed' })
+    await f.directory.refreshProfile('lister', operation.id, { name: 'Changed', description: '' })
+    expect((await f.service.read()).ads).toEqual([
+      { ...ad, ...fields, adHash: expect.any(String), publishedAt: f.agents.now(), expiresAt: null },
+    ])
   })
 
   it('answers a finished ad from its journal, so a retry after the operator opted out does not enroll again (VV2-028)', async () => {

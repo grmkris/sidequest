@@ -2,8 +2,8 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { type Address, type Hex, verifyTypedData, zeroAddress } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
-import { type DirectoryEnvelope, directoryTypedData } from '@sidequest/sdk'
-import { DirectoryService } from './directory.ts'
+import { type DirectoryEnvelope, directoryTypedData, canonicalDirectoryJson, SERVICE_CATEGORIES } from '@sidequest/sdk'
+import { DirectoryService, validateAdvertisement } from './directory.ts'
 import { fromNodeSqlite } from './store.ts'
 
 const registry: Address = '0x8004A818BFB912233c491871b3d84c89A494BD9e'
@@ -143,6 +143,83 @@ describe('directory mutation quota', () => {
     await context.submit(await context.ad())
     expect(context.service.state().mutations).toEqual([context.deps.now()])
   })
+})
+
+describe('durable service listings', () => {
+  it('keeps a wallet-signed listing 25 hours later, even with an expired delegate grant', async () => {
+    const f = fixture()
+    await f.enroll(true)
+    const record = await f.ad()
+    expect((await f.submit(record)).agent.ads[0]).toMatchObject({ publishedAt: record.issuedAt, expiresAt: null })
+    f.advance(25 * 3600)
+    expect((await f.service.read()).ads).toHaveLength(1)
+  })
+
+  it('keeps legacy numeric expiry and approximates publication when no record was stored', async () => {
+    const f = fixture()
+    await f.enroll()
+    const record = await f.ad()
+    await f.submit(record)
+    const state = f.service.state()
+    state.ads.research!.expiresAt = record.expiresAt
+    delete state.ads.research!.publishedAt
+    f.service.save(state, state.revision)
+    expect((await f.service.read()).ads[0]).toMatchObject({
+      publishedAt: record.expiresAt - 86400,
+      expiresAt: record.expiresAt,
+    })
+    f.advance(3600)
+    expect((await f.service.read()).ads).toEqual([])
+  })
+
+  it('bounds a delegate-signed listing by its grant and still lets it lapse', async () => {
+    const f = fixture()
+    await f.enroll(true)
+    const record = await f.ad()
+    expect((await f.submit(record, f.delegate)).agent.ads[0]).toMatchObject({
+      publishedAt: record.issuedAt,
+      expiresAt: record.expiresAt,
+    })
+    const tooLong = await f.service.prepare('ServiceAd', record.payload, record.expiresAt + 1)
+    await expect(f.submit(tooLong, f.delegate)).rejects.toThrow(/outlives its delegate grant/)
+    f.advance(3600)
+    expect((await f.service.read()).ads).toEqual([])
+  })
+
+  it('keeps the signed ServiceAd acceptance window bounded despite durable listings', async () => {
+    const f = fixture()
+    await f.enroll()
+    const record = await f.ad()
+    await expect(f.submit({ ...record, expiresAt: record.issuedAt + 86401 })).rejects.toThrow(/validity window/)
+    f.advance(11)
+    await expect(f.submit(record)).rejects.toThrow(/validity window/)
+  })
+
+  it.each(['revoked', 'expired'] as const)(
+    'ignores %s entries in the cap and refuses reviving one when ten others are live',
+    async (dead) => {
+      const f = fixture()
+      await f.enroll()
+      const payload = (await f.ad()).payload
+      for (let i = 0; i < 10; i++)
+        await f.submit(await f.service.prepare('ServiceAd', { ...payload, serviceId: `service-${i}` }))
+      await expect(
+        f.submit(await f.service.prepare('ServiceAd', { ...payload, serviceId: 'eleventh' })),
+      ).rejects.toThrow(/at most ten/)
+      // Replacing an already live service remains allowed at the cap.
+      await f.submit(await f.service.prepare('ServiceAd', { ...payload, serviceId: 'service-1' }))
+      const state = f.service.state()
+      if (dead === 'revoked') state.ads['service-0']!.revoked = true
+      else state.ads['service-0']!.expiresAt = f.deps.now()
+      f.service.save(state, state.revision)
+      expect(
+        (await f.submit(await f.service.prepare('ServiceAd', { ...payload, serviceId: 'eleventh' }))).agent.ads,
+      ).toHaveLength(10)
+      await expect(
+        f.submit(await f.service.prepare('ServiceAd', { ...payload, serviceId: 'service-0' })),
+      ).rejects.toThrow(/at most ten/)
+    },
+  )
 })
 
 describe('signed directory', () => {
@@ -376,5 +453,103 @@ describe('signed directory', () => {
     const results = await Promise.allSettled([context.submit(first), context.submit(second)])
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1)
     expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1)
+  })
+})
+
+const cardAudience = 'https://testnet.example'
+const cardAd = {
+  serviceId: 'research',
+  name: 'Research',
+  description: '',
+  inputs: 'A question',
+  outputs: 'A report',
+  turnaroundSeconds: 3600,
+  price: { model: 'quote', amountBaseUnits: '0', token: zeroAddress },
+}
+const cardSample = { url: `${cardAudience}/samples/${'a'.repeat(64)}.png`, caption: 'Sample', kind: 'illustration' }
+
+describe('service card validation', () => {
+  it('omits absent fields from canonical JSON and preserves explicit empty lists', () => {
+    const checked = validateAdvertisement(cardAd, cardAudience)
+    expect(checked).toEqual(cardAd)
+    expect(() => canonicalDirectoryJson(checked)).not.toThrow()
+    expect(validateAdvertisement({ ...cardAd, tags: [], examples: [], samples: [] }, cardAudience)).toMatchObject({
+      tags: [],
+      examples: [],
+      samples: [],
+    })
+  })
+
+  it.each(SERVICE_CATEGORIES)('accepts category %s', (category) => {
+    expect(validateAdvertisement({ ...cardAd, category }, cardAudience).category).toBe(category)
+  })
+
+  it('accepts maximum counts and lengths, all sample kinds and all allowed formats', () => {
+    const fields = {
+      category: 'code',
+      tags: Array.from({ length: 6 }, () => 'x'.repeat(32)),
+      examples: Array.from({ length: 3 }, () => 'x'.repeat(200)),
+      samples: Array.from({ length: 6 }, (_, i) => ({
+        ...cardSample,
+        caption: 'x'.repeat(120),
+        url: `${cardAudience}/samples/${'f'.repeat(64)}.${['png', 'jpg', 'webp'][i % 3]}`,
+        ...(i < 2 ? { kind: 'delivery', jobId: '123' } : { kind: i < 4 ? 'example' : 'illustration' }),
+      })),
+    }
+    expect(validateAdvertisement({ ...cardAd, ...fields }, cardAudience)).toEqual({ ...cardAd, ...fields })
+  })
+
+  it.each([
+    { unknown: true },
+    { publishedAt: 1 },
+    { category: 'unknown' },
+    { category: null },
+    { category: 1 },
+    { tags: 'tag' },
+    { tags: Array.from({ length: 7 }, () => 'tag') },
+    { tags: [''] },
+    { tags: ['x'.repeat(33)] },
+    { tags: [1] },
+    ...['\n', '\r', '\t', '\0', '\u007f', '\u0085'].map((control) => ({ tags: [`a${control}b`] })),
+    { examples: 'brief' },
+    { examples: Array.from({ length: 4 }, () => 'brief') },
+    { examples: [''] },
+    { examples: ['x'.repeat(201)] },
+    { examples: [1] },
+    { samples: 'sample' },
+    { samples: Array.from({ length: 7 }, () => cardSample) },
+    { samples: [null] },
+    ...[
+      { caption: '' },
+      { caption: 'x'.repeat(121) },
+      { caption: 1 },
+      { kind: 'unknown' },
+      { url: cardSample.url.replace('testnet.example', 'testnetXexample') },
+      { url: cardSample.url.replace(cardAudience, 'https://other.example') },
+      { url: cardSample.url.replace('/samples/', '/avatars/') },
+      { url: cardSample.url.replace('a'.repeat(64), 'a'.repeat(63)) },
+      { url: cardSample.url.replace('a'.repeat(64), 'A'.repeat(64)) },
+      { url: cardSample.url.replace('.png', '.jpeg') },
+      { url: `${cardSample.url}?extra=1` },
+      { url: `${cardSample.url}\n` },
+      { jobId: '1' },
+      { kind: 'example', jobId: '1' },
+      { kind: 'delivery' },
+      { kind: 'delivery', jobId: '' },
+      { kind: 'delivery', jobId: 'x1' },
+      { kind: 'delivery', jobId: 1 },
+      { verified: true },
+    ].map((patch) => ({ samples: [{ ...cardSample, ...patch }] })),
+  ])('refuses an invalid card field: %j', (patch) => {
+    expect(() => validateAdvertisement({ ...cardAd, ...patch }, cardAudience)).toThrow()
+  })
+
+  it('carries the card unchanged through preparation, wallet signature verification and public projection', async () => {
+    const f = fixture()
+    await f.enroll()
+    const fields = { category: 'research', tags: ['sources'], examples: ['Research a topic'], samples: [cardSample] }
+    const record = await f.service.prepare('ServiceAd', { ...cardAd, ...fields })
+    expect(record.payload).toEqual({ ...cardAd, ...fields })
+    expect((await f.submit(record)).agent.ads[0]).toMatchObject(fields)
   })
 })
