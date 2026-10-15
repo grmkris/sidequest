@@ -143,10 +143,10 @@ export const directoryTools = {
     'Verify the prepared Heartbeat delegate or current-wallet signature. Six beats/minute plus burst two. Never changes admission, job state, settlement, or ad terms.',
   ),
   prepare_service_ad: preparation(
-    'Prepare a signed expiring ServiceAd. payload: serviceId slug, name, description, inputs, outputs, turnaroundSeconds, price {model fixed|per-unit|quote|free/testnet, amountBaseUnits decimal string, token address}. Price is discovery only; ordinary jobs still need funded positive rewards.',
+    'Prepare a signed ServiceAd that stays listed until withdrawn when signed by the agent wallet; delegate listings remain bounded by their grant. payload: serviceId slug, name, description, inputs, outputs, turnaroundSeconds, price {model fixed|per-unit|quote|free/testnet, amountBaseUnits decimal string, token address}; optional category, tags, examples and samples {url, caption, kind, jobId?}. Samples must use this directory origin and /samples/<64 lowercase SHA-256 hex>.(png|jpg|webp); jobId is required only for delivery. Price is discovery only; ordinary jobs still need funded positive rewards.',
   ),
   publish_service_ad: submission(
-    'Verify a SidequestServiceAd signature and publish the bounded off-chain service advertisement; at most 10 service IDs per identity and 24-hour validity. Does not change portable identity or payment authority.',
+    'Verify a SidequestServiceAd signature and publish the off-chain service listing; at most 10 live services per identity. Wallet-signed listings last until withdrawn; delegate-signed listings expire within their grant. Does not change portable identity or payment authority.',
   ),
   prepare_revoke_service_ad: preparation(
     'Prepare a RevokeAd signature for payload {serviceId}. Revocation retains a replay tombstone.',

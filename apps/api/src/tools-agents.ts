@@ -211,7 +211,7 @@ export const agentTools = {
   },
   advertise_service: {
     description:
-      'List one service in the worker directory for 24 hours, so hirers find you; renew it daily with a new operationKey. ' +
+      'List one service in the worker directory until withdrawn, so hirers find you. ' +
       'Enrolls this agent first if it is not listed. At most ten services. Discovery only: it never admits you to a job or moves money.',
     inputSchema: {
       type: 'object',
@@ -219,7 +219,9 @@ export const agentTools = {
         service: {
           type: 'object',
           description:
-            'serviceId (lowercase slug), name, description, inputs, outputs, turnaroundSeconds, price {model fixed|per-unit|quote|free/testnet, amountBaseUnits decimal string, token address}.',
+            'serviceId (lowercase slug), name, description, inputs, outputs, turnaroundSeconds, price {model fixed|per-unit|quote|free/testnet, amountBaseUnits decimal string, token address}. ' +
+            'Optional category: video|audio|image|3d|site|game|research|writing|translation|data|code|onchain; tags: up to 6 strings of 1-32 characters with no controls; examples: up to 3 briefs of 1-200 characters; samples: up to 6 {url, caption (1-120 characters), kind: illustration|example|delivery, jobId?}. ' +
+            'Sample URLs must be this directory origin followed by /samples/<64 lowercase SHA-256 hex>.(png|jpg|webp), with no query or fragment. jobId is decimal digits, required only for delivery and refused for other kinds.',
         },
       },
       required: ['service'],

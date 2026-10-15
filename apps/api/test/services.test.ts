@@ -34,6 +34,7 @@ function listing(patch: Partial<ServiceListing> = {}): ServiceListing {
     turnaroundSeconds: 3600,
     price: { model: 'quote', amountBaseUnits: '0', token: zeroAddress },
     adHash: '0x01',
+    publishedAt: now,
     expiresAt: now + 100,
     presence: { freshness: 'unknown', state: null, accepting: false, lastSeenBucket: null },
     lastMcpCallAt: null,
@@ -68,6 +69,7 @@ function agent(id: string, patch: Partial<DirectoryAgent> = {}): DirectoryAgent 
         turnaroundSeconds: service.turnaroundSeconds,
         price: service.price,
         adHash: '0x01',
+        publishedAt: service.publishedAt,
         expiresAt: service.expiresAt,
       },
     ],
@@ -108,8 +110,11 @@ it('requires accepting fresh presence or an MCP call within the hour', () => {
 
 it.each([
   [{ delivered7d: 2 }, { delivered7d: 1, delivered: 100 }],
-  [{ delivered: 2 }, { delivered: 1, expiresAt: now + 1000 }],
-  [{ expiresAt: now + 1000 }, { expiresAt: now + 100 }],
+  [{ delivered: 2 }, { delivered: 1, publishedAt: now + 1000 }],
+  [
+    { publishedAt: now + 1000, expiresAt: null },
+    { publishedAt: now + 100, expiresAt: now + 1000 },
+  ],
   [{ agentId: '2' }, { agentId: '10' }],
   [{ agentId: '9007199254740992' }, { agentId: '9007199254740993' }],
   [{ serviceId: 'a-review' }, { serviceId: 'b-review' }],
@@ -174,6 +179,141 @@ it('filters one agent and preserves a projected image', async () => {
   const page = await servicesPage(f.deps, { agentId: '2', q: ' ' }, now)
   expect(page.services.map((value) => value.agentId)).toEqual(['2'])
   expect(page.services[0]?.agentImage).toBe(profile.image)
+})
+
+it('keeps wallet listings after 25 hours while legacy projections still lapse and infer publication time', async () => {
+  const f = await fixture()
+  const live = agent('2')
+  await f.enroll({ ...live, ads: live.ads.map((ad) => ({ ...ad, expiresAt: null })) })
+  const legacy = agent('3')
+  // This fixture models JSON already stored before publishedAt was introduced.
+  await f.enroll(legacy)
+  f.db
+    .prepare("UPDATE directory_agents SET json = json_remove(json, '$.ads[0].publishedAt') WHERE agent_id = ?")
+    .run('3')
+  const first = await servicesPage(f.deps, {}, now)
+  expect(first.services.find((value) => value.agentId === '3')?.publishedAt).toBe(now + 100 - 86400)
+  const later = await servicesPage(f.deps, {}, now + 25 * 3600)
+  expect(later.services).toMatchObject([{ agentId: '2', publishedAt: now, expiresAt: null }])
+})
+
+const cardFields = {
+  category: 'code' as const,
+  tags: ['typescript', 'audit'],
+  examples: ['Review a pull request'],
+  samples: [
+    { url: `${audience}/samples/${'a'.repeat(64)}.png`, caption: 'Illustration', kind: 'illustration' as const },
+    { url: `${audience}/samples/${'b'.repeat(64)}.jpg`, caption: 'Example', kind: 'example' as const },
+  ],
+}
+
+it.each(['/data/services', '/b/team-board/data/services'])(
+  'returns optional card fields and publication time at %s',
+  async (path) => {
+    const f = await fixture()
+    const live = agent('2')
+    await f.enroll({ ...live, ads: live.ads.map((ad) => ({ ...ad, ...cardFields, expiresAt: null })) })
+    const response = HttpServerResponse.toWeb(await servicesRoute(f.deps, new URL(path, audience), now, {}))
+    expect(await response.json()).toMatchObject({ services: [{ ...cardFields, publishedAt: now, expiresAt: null }] })
+  },
+)
+
+it('omits optional card keys when absent and searches tags and category', async () => {
+  const f = await fixture()
+  await f.enroll(agent('2'))
+  const plain = (await servicesPage(f.deps, {}, now)).services[0]!
+  for (const key of ['category', 'tags', 'examples', 'samples']) expect(plain).not.toHaveProperty(key)
+  const live = agent('3')
+  await f.enroll({ ...live, ads: live.ads.map((ad) => ({ ...ad, ...cardFields, category: 'onchain' })) })
+  expect(
+    (await servicesPage(f.deps, { q: 'ONCHAIN TypeScript audit' }, now)).services.map((service) => service.agentId),
+  ).toEqual(['3'])
+})
+
+it('verifies only matching completed or accepted jobs on this chain, in one query per page', async () => {
+  const f = await fixture()
+  await f.sql.batch([
+    stmt(
+      "INSERT INTO jobs (chain_id, job_id, agent_id, status, outcome, kind, updated_block) VALUES (?, '1', '2', 'completed', NULL, 'sidequest-v1', 1)",
+      config.chainId,
+    ),
+    stmt(
+      "INSERT INTO jobs (chain_id, job_id, agent_id, status, outcome, kind, updated_block) VALUES (?, '2', '2', 'submitted', 'Accepted', 'sidequest-v1', 1)",
+      config.chainId,
+    ),
+    stmt(
+      "INSERT INTO jobs (chain_id, job_id, agent_id, status, outcome, kind, updated_block) VALUES (?, '3', '3', 'completed', NULL, 'sidequest-v1', 1)",
+      config.chainId,
+    ),
+    stmt(
+      "INSERT INTO jobs (chain_id, job_id, agent_id, status, outcome, kind, updated_block) VALUES (1, '4', '2', 'completed', NULL, 'sidequest-v1', 1)",
+    ),
+    stmt(
+      "INSERT INTO jobs (chain_id, job_id, agent_id, status, outcome, kind, updated_block) VALUES (?, '5', '2', 'submitted', NULL, 'sidequest-v1', 1)",
+      config.chainId,
+    ),
+    stmt(
+      "INSERT INTO jobs (chain_id, job_id, agent_id, status, outcome, kind, updated_block) VALUES (?, '6', '2', 'completed', NULL, 'legacy', 1)",
+      config.chainId,
+    ),
+  ])
+  const deliveries = Array.from({ length: 6 }, (_, i) => ({
+    ...cardFields.samples[0]!,
+    kind: 'delivery' as const,
+    jobId: String(i + 1),
+  }))
+  const live = agent('2')
+  await f.enroll({
+    ...live,
+    ads: [
+      { ...live.ads[0]!, ...cardFields },
+      { ...live.ads[0]!, serviceId: 'deliveries', samples: deliveries },
+      { ...live.ads[0]!, serviceId: 'missing', samples: [{ ...deliveries[0]!, jobId: '7' }] },
+    ],
+  })
+  const other = agent('3')
+  await f.enroll({ ...other, ads: [{ ...other.ads[0]!, samples: [{ ...deliveries[0]! }] }] })
+  const all = vi.spyOn(f.sql, 'all')
+  const page = await servicesPage(f.deps, {}, now)
+  expect(
+    page.services.find((value) => value.serviceId === 'deliveries')?.samples?.map((sample) => sample.verified),
+  ).toEqual([true, true, false, false, false, false])
+  expect(page.services.find((value) => value.serviceId === 'missing')?.samples?.[0]?.verified).toBe(false)
+  expect(page.services.find((value) => value.agentId === '3')?.samples?.[0]?.verified).toBe(false)
+  expect(page.services.find((value) => value.agentId === '2' && value.serviceId === 'review')?.samples).toEqual(
+    cardFields.samples,
+  )
+  expect(all.mock.calls.filter(([query]) => query.includes('json_each'))).toHaveLength(1)
+  const [storedRow] = await f.sql.all<{ json: string }>('SELECT json FROM directory_agents WHERE agent_id = ?', '2')
+  const stored = JSON.parse(storedRow!.json)
+  expect(stored.ads[1].samples[0]).not.toHaveProperty('verified')
+})
+
+it('batches all 600 claims on a maximum page using two bound parameters and checks only returned listings', async () => {
+  const f = await fixture()
+  for (let id = 1; id <= 101; id++) {
+    const live = agent(String(id))
+    await f.enroll({
+      ...live,
+      ads: live.ads.map((ad) => ({
+        ...ad,
+        samples: Array.from({ length: 6 }, (_, i) => ({
+          ...cardFields.samples[0]!,
+          kind: 'delivery' as const,
+          jobId: String(id * 10 + i),
+        })),
+      })),
+    })
+  }
+  const all = vi.spyOn(f.sql, 'all')
+  const page = await servicesPage(f.deps, { limit: 100 }, now)
+  expect(page.services).toHaveLength(100)
+  const calls = all.mock.calls.filter(([query]) => query.includes('json_each'))
+  expect(calls).toHaveLength(1)
+  expect(calls[0]).toHaveLength(3)
+  // SAFETY: verifyDeliveries binds JSON.stringify(ids) as its second SQL argument.
+  expect(JSON.parse(calls[0]![2] as string)).toHaveLength(600)
+  expect(calls[0]![2]).not.toContain('"1010"')
 })
 
 it('pages after filtering and ranking, with defaults and a final null cursor', async () => {

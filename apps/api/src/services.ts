@@ -20,8 +20,13 @@ export interface ServiceListing {
   outputs: string
   turnaroundSeconds: number
   price: ServiceAdvertisement['price']
+  category?: ServiceAdvertisement['category']
+  tags?: string[]
+  examples?: string[]
+  samples?: Array<NonNullable<ServiceAdvertisement['samples']>[number] & { verified?: boolean }>
   adHash: string
-  expiresAt: number
+  publishedAt: number
+  expiresAt: number | null
   presence: DirectoryAgent['presence']
   lastMcpCallAt: number | null
   delivered: number
@@ -82,7 +87,17 @@ export function parseServicesInput(input: unknown, maxLimit = 100): ServicesInpu
 }
 
 const searchable = (listing: ServiceListing): string =>
-  [listing.name, listing.description, listing.inputs, listing.outputs, listing.agentName].join(' ').toLowerCase()
+  [
+    listing.name,
+    listing.description,
+    listing.inputs,
+    listing.outputs,
+    listing.agentName,
+    listing.category,
+    ...(listing.tags ?? []),
+  ]
+    .join(' ')
+    .toLowerCase()
 
 function matches(listing: ServiceListing, query: string | undefined): boolean {
   if (query === undefined || query.trim() === '') return true
@@ -105,7 +120,7 @@ export function rankServices(listings: readonly ServiceListing[], now: number): 
     if (liveDiff !== 0) return liveDiff
     if (b.delivered7d !== a.delivered7d) return b.delivered7d - a.delivered7d
     if (b.delivered !== a.delivered) return b.delivered - a.delivered
-    if (b.expiresAt !== a.expiresAt) return b.expiresAt - a.expiresAt
+    if (b.publishedAt !== a.publishedAt) return b.publishedAt - a.publishedAt
     const agentDiff = BigInt(a.agentId) < BigInt(b.agentId) ? -1 : BigInt(a.agentId) > BigInt(b.agentId) ? 1 : 0
     if (agentDiff !== 0) return agentDiff
     return a.serviceId < b.serviceId ? -1 : a.serviceId > b.serviceId ? 1 : 0
@@ -137,7 +152,7 @@ const cursorFor = (offset: number): string => btoa(`services:${offset}`).replace
 
 function serviceListing(
   agent: DirectoryAgent,
-  ad: ServiceAdvertisement & { adHash: `0x${string}`; expiresAt: number },
+  ad: DirectoryAgent['ads'][number],
   counts: { delivered: number; delivered7d: number } | undefined,
   origin: string,
 ): ServiceListing {
@@ -153,7 +168,13 @@ function serviceListing(
     outputs: ad.outputs,
     turnaroundSeconds: ad.turnaroundSeconds,
     price: ad.price,
+    ...(ad.category === undefined ? {} : { category: ad.category }),
+    ...(ad.tags === undefined ? {} : { tags: ad.tags }),
+    ...(ad.examples === undefined ? {} : { examples: ad.examples }),
+    ...(ad.samples === undefined ? {} : { samples: ad.samples }),
     adHash: ad.adHash,
+    // D1 projections written before durable listings have only the one-day expiry.
+    publishedAt: ad.publishedAt ?? (ad.expiresAt ?? agent.observedAt) - 86400,
     expiresAt: ad.expiresAt,
     presence: agent.presence,
     lastMcpCallAt: agent.activity?.lastMcpCallAt ?? null,
@@ -187,7 +208,7 @@ export async function servicesPage(deps: ServicesDeps, input: ServicesInput, now
   const counts = await completedByAgent(deps.sql, config.chainId, now - 7 * 24 * 60 * 60)
   const listings = agents.flatMap((agent) =>
     agent.ads
-      .filter((ad) => ad.expiresAt > now)
+      .filter((ad) => ad.expiresAt === null || ad.expiresAt > now)
       .map((ad) => serviceListing(agent, ad, counts.get(agent.agentId), deps.exploreOrigin ?? publicOrigin())),
   )
   const ranked = rankServices(
@@ -195,12 +216,44 @@ export async function servicesPage(deps: ServicesDeps, input: ServicesInput, now
     now,
   )
   const page = ranked.slice(offset, offset + limit)
+  await verifyDeliveries(deps.sql, config.chainId, page)
   return {
     services: page,
     nextCursor: offset + limit < ranked.length ? cursorFor(offset + limit) : null,
     observedAt: now,
     chainId: config.chainId,
     identityRegistry: config.identity,
+  }
+}
+
+/** One bounded query for this page's delivery claims, matched to the listing's worker agent. */
+async function verifyDeliveries(sql: AsyncSql, chainId: number, page: ServiceListing[]): Promise<void> {
+  const ids = [
+    ...new Set(
+      page.flatMap(
+        (listing) =>
+          listing.samples?.flatMap((sample) =>
+            sample.kind === 'delivery' && sample.jobId !== undefined ? [sample.jobId] : [],
+          ) ?? [],
+      ),
+    ),
+  ]
+  if (ids.length === 0) return
+  const rows = await sql.all<{ job_id: string; agent_id: string }>(
+    `SELECT job_id, agent_id FROM jobs WHERE chain_id = ? AND kind = 'sidequest-v1'
+      AND (status = 'completed' OR outcome = 'Accepted')
+      AND job_id IN (SELECT value FROM json_each(?))`,
+    chainId,
+    JSON.stringify(ids),
+  )
+  const workers = new Map(rows.map((row) => [row.job_id, row.agent_id]))
+  for (const listing of page) {
+    if (listing.samples === undefined) continue
+    listing.samples = listing.samples.map((sample) =>
+      sample.kind === 'delivery'
+        ? { ...sample, verified: sample.jobId !== undefined && workers.get(sample.jobId) === listing.agentId }
+        : sample,
+    )
   }
 }
 
