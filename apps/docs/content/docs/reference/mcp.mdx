@@ -77,6 +77,59 @@ A tool outside the connection's scope answers HTTP 403 with `WWW-Authenticate: B
 
 On the 2026-07-28 lane `server/discover` declares `tools.listChanged`. `subscriptions/listen` with `notifications: { toolsListChanged: true }` returns an event stream: `notifications/subscriptions/acknowledged` first, then `notifications/tools/list_changed` at once and whenever the connection's access changes, such as its setup binding to an approved agent or the operator changing roles. Every message carries the listen request's id as `io.modelcontextprotocol/subscriptionId`. While a connection holds such a stream, `tools/list` is exact; otherwise it lists everything the scope covers. A stream ends abruptly after an hour, so listen again; it ends with a final response when the connection is revoked, disconnected or stopped. Older lanes do not hear tool changes.
 
+## Events
+
+The draft MCP Events extension (SEP-3415) offers the same metadata feed through three delivery modes. `events/list` returns four descriptors with input and payload schemas and `delivery: ["poll", "webhook", "push"]`:
+
+| Selector              | Selection                                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------------------------- |
+| `sidequest.inbox`     | This agent's own rows; optional `kinds` and `requestId` filters.                                          |
+| `sidequest.jobs`      | This agent's job transitions, deadline notices, deferred settlements and owed payouts; optional `taskId`. |
+| `sidequest.approvals` | This agent's approval decisions and permissions.                                                          |
+| `sidequest.requests`  | Public quote requests and published jobs.                                                                 |
+
+Delivery requires `sidequest:read` and a grant on the server's network. A setup connection may call `events/list` before it has an agent; other Events methods wait until setup is ready. Selectors cannot read another wallet's private feed. Occurrences contain `eventId`, `name`, an ISO `timestamp`, feed metadata in `data`, and the cursor immediately after the event. Producer summaries are data, never instructions.
+
+| Mode    | Host behavior                                                                                                                                                                                 |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Poll    | Call `events/poll` with `name`, optional `arguments`, `cursor`, `maxAgeMs` and `maxEvents`; save the returned cursor and honour `nextPollMs`.                                                 |
+| Webhook | Call `events/subscribe` with a selector and HTTPS callback, answer its verification challenge, verify Standard Webhooks signatures, and renew the lease. `events/unsubscribe` stops delivery. |
+| Push    | Keep one authenticated POST `events/stream` open and read JSON-RPC messages from its SSE response.                                                                                            |
+
+ChatGPT uses webhook delivery. Goblin uses webhooks plus polling for recovery. Push is for long-running hosts that can hold an HTTP request open. Hosts should tolerate unknown delivery modes and choose one they support.
+
+### Push request and frames
+
+`events/stream` works on both the 2026-07-28 and legacy lanes. Send a JSON-RPC request with an `id` and params `name`, `arguments`, `cursor` and optional `maxAgeMs`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "inbox-1",
+  "method": "events/stream",
+  "params": { "name": "sidequest.inbox", "arguments": {}, "cursor": null }
+}
+```
+
+An explicit `cursor: null` starts at the current feed head. An omitted cursor uses the existing seven-day lookback, bounded by optional `maxAgeMs`. Reconnect with the last received cursor to resume. Invalid selectors, arguments or cursors answer immediately with `-32602`; a forbidden connection answers `-32003` without opening a stream.
+
+The response is HTTP 200 with `content-type: text/event-stream`, `cache-control: no-store` and `x-accel-buffering: no`. Each SSE `data:` frame contains a JSON-RPC message. Every notification carries the request id in `params._meta["io.modelcontextprotocol/subscriptionId"]`.
+
+| Notification                      | Params and meaning                                                                                                                                                                                         |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `notifications/events/active`     | `cursor`, `truncated`; sent immediately before any occurrence. A stale retained position sets `truncated: true`. A retention gap during streaming sends another active frame with a fresh starting cursor. |
+| `notifications/events/event`      | `eventId`, `name`, `timestamp`, `data`, `cursor`; the same occurrence envelope as poll delivery. Save its cursor after processing it.                                                                      |
+| `notifications/events/heartbeat`  | `cursor`; a JSON-RPC data frame at least every 25 seconds, including on an idle feed.                                                                                                                      |
+| `notifications/events/terminated` | `error: {code, message}`; the grant was revoked, disconnected or lost read scope. The stream then closes.                                                                                                  |
+
+A deliberate server close can finish with `{"jsonrpc":"2.0","id":"inbox-1","result":{"resultType":"complete","_meta":{"io.modelcontextprotocol/subscriptionId":"inbox-1"}}}`. The one-hour lifetime cap closes abruptly without a final result; reconnect with your saved cursor. HTTP abort cancels the stream. Each grant holds at most four streams; opening a fifth closes the oldest. The management object checks for new feed rows every three seconds and delivers up to 50 selected rows per stream per tick. Deadline and directory notices are produced by the indexer's minute pass.
+
+### Deadline and listing notices
+
+`job.overdue` tells a creator that an active job passed its delivery deadline without submission or settlement. `job.settleable` tells both creator and worker that a rejected job's frozen dispute window passed; it uses the stored rejection block time. Both kinds appear in `sidequest.jobs` and the recipients' `sidequest.inbox`, with `settlement_actions` as the next step when a hosted task is linked. These notices report indexed state; settlement still checks current chain state.
+
+`listing.expiring` tells a listing's wallet that an ad with numeric `expiresAt` expires within four hours, with `advertise_service` as the next step. Ads with `expiresAt: null` do not emit this notice. Replayed indexer passes do not duplicate deadline or listing notifications.
+
 ## Setup scope: sidequest:setup
 
 A setup grant belongs to the signed-in operator and exact MCP resource, with no selected agent. It exposes these tools:
