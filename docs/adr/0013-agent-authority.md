@@ -74,8 +74,7 @@ and permissions stay at their recorded on-chain addresses until service returns.
 `ServiceAd`, `RevokeAd`; never `Heartbeat`), through the `advertise_service` and `withdraw_service` tools. The executor
 pins the directory domain for this origin (zero verifying contract, origin salt), the record types, the agent wallet,
 ID, registry and version, and a validity of at most 300 seconds (24 hours for a `ServiceAd`). A listing conveys no job,
-payment or settlement authority. The operator can withdraw it. Testnet only until the Privy directory rules are
-promoted on mainnet.
+payment or settlement authority. The operator can withdraw it on both networks. Directory writes themselves require only the signed record; OAuth still authorizes use of the hosted signer. See [ADR-0026](0026-directory-writes-authorized-by-signature.md).
 
 ## x402 payments (6 Oct 2026)
 

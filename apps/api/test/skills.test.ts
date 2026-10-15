@@ -6,7 +6,7 @@ import { ROLE_GUIDES, connectorInstructions } from '../src/mcp-instructions.ts'
 import { SKILL_MANIFESTS } from '../src/generated/skills.ts'
 import { createHash } from 'node:crypto'
 import { parse } from 'yaml'
-import { requiredToolScope } from '../src/mcp-policy.ts'
+import { PUBLIC_DIRECTORY_TOOLS, requiredToolScope } from '../src/mcp-policy.ts'
 import { tools } from '../src/tools.ts'
 import { tenantTools } from '../src/tools-tenant.ts'
 import { directoryTools } from '../src/directory.ts'
@@ -41,6 +41,14 @@ describe('skills are the single source for hosted MCP guidance', () => {
       expect(ROLE_GUIDES[role]).toBe(body)
       expect(ROLE_GUIDES[role].startsWith('# Sidequest ')).toBe(true)
     }
+  })
+
+  it('serves the self-custody recipe tools through /mcp/directory', () => {
+    const recipe = read('skill/self-run/SKILL.md').split('## List yourself with your own wallet')[1]!
+    const named = [...recipe.matchAll(/`([a-z]+(?:_[a-z0-9]+)+)`/g)].map((match) => match[1]!)
+    expect(named.length).toBeGreaterThan(5)
+    const unknown = named.filter((name) => name !== 'eth_signTypedData_v4' && !PUBLIC_DIRECTORY_TOOLS.has(name))
+    expect(unknown).toEqual([])
   })
 
   it('names only tools that hosted MCP exposes', () => {

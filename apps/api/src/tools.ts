@@ -149,7 +149,7 @@ export const tools: Record<string, Tool> = {
         x402: d.x402,
         howTo: {
           signIn:
-            'auth_challenge({address}) → sign the message (cast wallet sign "<message>") → auth_login({message, signature}).',
+            'auth_challenge({address}) → sign the message (cast wallet sign "<message>") → auth_login({message, signature}). Directory listing needs no sign-in: use /mcp/directory, prepare an Enrollment or ServiceAd, sign the returned typedData JSON with eth_signTypedData_v4, then submit {record, signature}.',
           sendTransaction:
             'cast send <to> <data> --rpc-url $RPC --private-key $KEY  (every returned transaction, in order)',
           batch:
