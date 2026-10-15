@@ -50,6 +50,14 @@ import { runAgent, type AgentExecuteRequest } from './agent-runtime.ts'
 import { agentManagement } from './agent-management.ts'
 import { connectionAccess, touchConnection } from './agent-access.ts'
 import { McpListeners, type ListenRequest } from './mcp-listen.ts'
+import {
+  McpEventStreams,
+  eventStreamAccess,
+  eventStreamStart,
+  readEventStreamPage,
+  type EventStreamRequest,
+} from './mcp-event-stream.ts'
+import { eventArguments, eventCursor, eventMaxAge } from '@sidequest/indexer/mcp-events'
 import { profileReader } from './profiles.ts'
 import { recordBoardEvent } from './feed-board.ts'
 import { configurePublicSite } from './telegram.ts'
@@ -270,12 +278,27 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
     // 2026 subscriptions/listen streams live here, where every access change happens (ADR-0021).
     const listeners = new McpListeners({ now: () => Date.now() })
     let keepalive: ReturnType<typeof setInterval> | undefined
+    let streamTick: ReturnType<typeof setInterval> | undefined
+    let streamHead = -1
+    let streamPending = false
+    let streamBusy = false
+    let streamGeneration = 0
+    let lastStreamHeartbeat = Date.now()
+    const streams = new McpEventStreams({
+      now: () => Date.now(),
+      changed: () => {
+        if (streams.active() || streamTick === undefined) return
+        clearInterval(streamTick)
+        streamTick = undefined
+      },
+    })
     /** After a management call: connections whose access changed hear it, and connections that are gone end. */
     const syncListeners = () => {
-      if (!listeners.active()) return
+      if (!listeners.active() && !streams.active()) return
       try {
         const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
         listeners.sync((grantId) => connectionAccess(sql, grantId))
+        streams.sync((grantId) => eventStreamAccess(connectionAccess(sql, grantId)))
       } catch (error) {
         // A failed notice must never fail the call that changed access; clients still re-list on their next turn.
         console.error(JSON.stringify({ event: 'mcp-listen-sync-failed', ...errorDiagnostics(error) }))
@@ -474,6 +497,85 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
             clearInterval(keepalive)
             keepalive = undefined
           }, 25_000)
+          return response
+        }),
+      /** Events use the same management authority as listen, and D1 is the shared feed for all producers. */
+      mcpEventStream: (req: { resource: string; bearer?: string; request: EventStreamRequest }) =>
+        Effect.promise(async () => {
+          // SAFETY: Alchemy supplies this Worker's binding record.
+          const bindings = runtimeEnv as Record<string, unknown>
+          // SAFETY: Board is the namespace bound to this class; only its deterministic identity is needed.
+          const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
+          if (namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString())
+            throw new Error('management object identity mismatch')
+          const local = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
+          migrateAgentSchema(local)
+          const grant = await resolveOAuth(local, req.bearer, req.resource, Math.floor(Date.now() / 1000))
+          // SAFETY: NETWORK is configured by the stage profile and validated by deployment.
+          const network = bindings.NETWORK as sdk.Network
+          const access =
+            grant?.grantId === undefined ? undefined : eventStreamAccess(connectionAccess(local, grant.grantId))
+          if (
+            grant?.grantId === undefined ||
+            !access?.scopes.includes('sidequest:read') ||
+            !grant.scopes.includes('sidequest:read') ||
+            grant.chainId !== sdk.deployment(network).chainId
+          )
+            return new Response(null, { status: 401, headers: { 'cache-control': 'no-store' } })
+          eventArguments(req.request.name, req.request.arguments)
+          eventCursor(req.request.cursor)
+          eventMaxAge(req.request.maxAgeMs)
+          // SAFETY: Database is the stage's D1 binding, adapted to the shared AsyncSql interface.
+          const sql = fromD1(bindings.Database as never)
+          const start = await eventStreamStart(
+            sql,
+            network,
+            grant.address,
+            { ...req.request },
+            Math.floor(Date.now() / 1000),
+          )
+          const response = streams.open(grant.grantId, req.request, { ...start, principal: grant.address, network })
+          // A new stream may start in the backlog even when the global feed head has not moved.
+          streamHead = -1
+          streamPending = false
+          streamGeneration++
+          const tick = async () => {
+            if (streamBusy) return
+            streamBusy = true
+            const generation = streamGeneration
+            try {
+              const [head] = await sql.all<{ seq: number | null }>(
+                'SELECT max(seq) AS seq FROM feed_events WHERE chain_id = ?',
+                grant.chainId,
+              )
+              const current = head?.seq ?? 0
+              if (current > streamHead || streamPending) {
+                const pending = await streams.deliver((stream) =>
+                  readEventStreamPage(sql, stream, Math.floor(Date.now() / 1000)),
+                )
+                streamPending = pending || generation !== streamGeneration
+                streamHead = current
+              }
+            } catch (error) {
+              console.error(JSON.stringify({ event: 'mcp-event-stream-tick-failed', ...errorDiagnostics(error) }))
+            } finally {
+              streamBusy = false
+              if (!streams.active() && streamTick !== undefined) {
+                clearInterval(streamTick)
+                streamTick = undefined
+              }
+            }
+          }
+          streamTick ??= setInterval(() => {
+            syncListeners()
+            streams.expire()
+            // Heartbeats do not wait for D1, including when a previous tick is still reading.
+            if (Date.now() - lastStreamHeartbeat >= 24_000) {
+              streams.heartbeat()
+              lastStreamHeartbeat = Date.now()
+            }
+            if (streams.active()) state.raw.waitUntil(tick())
+          }, 3_000)
           return response
         }),
       /** Directory presence: when hosted agents last used their connection. No operator, grant or approval data. */

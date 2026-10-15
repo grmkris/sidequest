@@ -9,6 +9,7 @@ import * as HttpClient from 'effect/http/HttpClient'
 import * as HttpClientRequest from 'effect/http/HttpClientRequest'
 import { expect } from 'vitest'
 import Stack from '../../../alchemy.run.ts'
+import EventStreamApi, { STREAM_TOKEN, APPEND_TOKEN } from './mcp-event-stream-worker.ts'
 import { decodeX402Header } from '@sidequest/board'
 import { deployment } from '@sidequest/sdk'
 import { pkceChallenge } from '../src/oauth-validation.ts'
@@ -23,6 +24,15 @@ const { test, beforeAll, deploy } = Test.make({
   dev: true,
 })
 
+const StreamStack = Alchemy.Stack(
+  'SidequestEventStreamTest',
+  { providers: Cloudflare.providers(), state: Alchemy.localState() },
+  Effect.gen(function* () {
+    const api = yield* EventStreamApi
+    return { apiUrl: api.url }
+  }),
+)
+const streamStack = beforeAll(deploy(StreamStack))
 const stack = beforeAll(deploy(Stack))
 // No `destroy`: the stack is local (`.alchemy/` is gitignored, CI runners are ephemeral) and
 // destroying a local stack hangs the harness in alchemy 2.0.0-beta.79. Persisting it also makes
@@ -489,3 +499,78 @@ test.skipIf(!rpcSet)(
     ])
   }),
 )
+
+test(
+  'events/stream crosses the real Worker and management object, delivers an appended D1 row and ends on revocation',
+  Effect.gen(function* () {
+    const { apiUrl } = yield* streamStack
+    if (apiUrl === undefined) throw new Error('The local event-stream Worker has no URL')
+    yield* Effect.promise(async () => {
+      const response = await postEventStream(apiUrl, STREAM_TOKEN, 'events/stream')
+      expect(response.status).toBe(200)
+      expect(response.headers.get('content-type')).toBe('text/event-stream')
+      expect(response.headers.get('cache-control')).toBe('no-store')
+      expect(response.headers.get('x-accel-buffering')).toBe('no')
+      const reader = response.body!.getReader()
+      const subscription = { _meta: { 'io.modelcontextprotocol/subscriptionId': 'stream-1' } }
+      try {
+        expect(await sseFrames(reader, 1)).toMatchObject([
+          { method: 'notifications/events/active', params: { truncated: false, ...subscription } },
+        ])
+        const appendedAt = Date.now()
+        const appended = await postEventStream(apiUrl, APPEND_TOKEN, 'events/list')
+        expect(appended.status).toBe(200)
+        expect(await appended.json()).toMatchObject({
+          result: {
+            events: expect.arrayContaining([expect.objectContaining({ delivery: ['poll', 'webhook', 'push'] })]),
+          },
+        })
+        const delivered = await sseFrames(reader, 1)
+        expect(Date.now() - appendedAt).toBeLessThan(6_000)
+        expect(delivered).toMatchObject([
+          {
+            method: 'notifications/events/event',
+            params: {
+              name: 'sidequest.inbox',
+              data: { kind: 'job.overdue', summary: 'Local stream integration' },
+              ...subscription,
+            },
+          },
+        ])
+        expect(await sseFrames(reader, 1)).toMatchObject([
+          { method: 'notifications/events/heartbeat', params: subscription },
+        ])
+        const revoked = await fetch(`${apiUrl}/oauth/revoke`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ token: STREAM_TOKEN, client_id: 'local-stream-client' }),
+        })
+        expect(revoked.status).toBe(200)
+        expect(await sseFrames(reader, 2)).toMatchObject([
+          { method: 'notifications/events/terminated', params: { error: { code: -32003 }, ...subscription } },
+          { id: 'stream-1', result: { resultType: 'complete', ...subscription } },
+        ])
+        expect((await reader.read()).done).toBe(true)
+      } finally {
+        await reader.cancel()
+      }
+    })
+  }),
+)
+
+function postEventStream(apiUrl: string, token: string, method: string) {
+  return fetch(`${apiUrl}/mcp`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${token}`,
+      'content-type': 'application/json',
+      origin: 'https://host.example',
+    },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 'stream-1',
+      method,
+      params: { name: 'sidequest.inbox', arguments: {}, cursor: null },
+    }),
+  })
+}

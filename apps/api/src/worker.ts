@@ -760,6 +760,12 @@ export default class Api extends Cloudflare.Worker<Api>()(
               .mcpListen({ resource, listen: reply.listen, ...(bearer === undefined ? {} : { bearer }) })
             return HttpServerResponse.setHeaders(HttpServerResponse.fromWeb(stream), cors)
           }
+          if (reply.eventStream !== undefined) {
+            const stream = yield* boards
+              .getByName(SPONSOR_OBJECT_NAME)
+              .mcpEventStream({ resource, request: reply.eventStream, ...(bearer === undefined ? {} : { bearer }) })
+            return HttpServerResponse.setHeaders(HttpServerResponse.fromWeb(stream), cors)
+          }
           return reply.status === 204 || reply.status === 202
             ? HttpServerResponse.empty({ status: reply.status, headers: { ...cors, ...reply.headers } })
             : json(reply.body, reply.status, reply.headers)

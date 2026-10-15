@@ -1,6 +1,7 @@
 import { agentFailureReply } from '@sidequest/board'
 import { EVENT_DESCRIPTORS } from '@sidequest/indexer'
 import { Schema } from 'effect'
+import { deployment } from '@sidequest/sdk'
 import type { OAuthGrant } from './oauth.ts'
 import {
   SETUP_WAITING,
@@ -15,7 +16,7 @@ import { toolWireMetadata } from './mcp-tool-metadata.ts'
 import { approvalRound, settledCreation } from './mcp-mrtr.ts'
 import type { ListenRequest } from './mcp-listen.ts'
 import { ROLE_GUIDES, connectorInstructions, renderSkill } from './mcp-instructions.ts'
-import type { McpEvents } from './mcp-events.ts'
+import { eventArguments, eventCursor, eventMaxAge, type McpEvents } from './mcp-events.ts'
 import { EventRpcError } from './webhooks.ts'
 import { renderedSkillManifests } from './generated/skills.ts'
 import { hiringTools, hiringResource, renderHiring } from './mcp-hiring.ts'
@@ -34,6 +35,13 @@ export interface McpReply {
   readonly headers?: Record<string, string>
   /** A 2026 `subscriptions/listen`: the Worker answers with the management object's stream for this connection. */
   readonly listen?: ListenRequest
+  readonly eventStream?: {
+    readonly subscriptionId: string | number
+    readonly name: string
+    readonly arguments: Record<string, unknown>
+    readonly cursor?: unknown
+    readonly maxAgeMs?: number
+  }
 }
 
 const Listen = Schema.Struct({
@@ -195,6 +203,35 @@ export async function mcpRoute(input: {
       listen: { subscriptionId: body.id, notifications: hearsTools ? { toolsListChanged: true } : {} },
     }
   }
+  if (methodName === 'events/stream') {
+    if (
+      input.events === undefined ||
+      grant.setup === true ||
+      !grant.scopes.includes('sidequest:read') ||
+      grant.chainId !== deployment(input.events.network).chainId
+    )
+      return rpcError(-32003, 'This connection does not grant events on this chain')
+    if (!Schema.is(Schema.Struct({ id: Schema.Union([Schema.String, Schema.Number]) }))(body))
+      return rpcError(-32602, 'events/stream needs a request id')
+    try {
+      const parsed = eventArguments(params.name, params.arguments)
+      eventCursor(params.cursor)
+      const maxAgeMs = eventMaxAge(params.maxAgeMs)
+      return {
+        status: 200,
+        eventStream: {
+          subscriptionId: body.id,
+          name: parsed.name,
+          arguments: parsed.args,
+          cursor: params.cursor,
+          ...(maxAgeMs === undefined ? {} : { maxAgeMs }),
+        },
+      }
+    } catch (error) {
+      if (error instanceof EventRpcError) return rpcError(error.code, error.message)
+      return rpcError(-32602, 'Invalid event stream request')
+    }
+  }
   if (methodName === 'tools/list') {
     return respond({
       tools: Object.entries({
@@ -296,7 +333,7 @@ export async function mcpRoute(input: {
     return respond({ skill: entry, ...SKILLS_CACHE })
   }
   // A setup connection has no agent to receive events yet: it may read the catalog and is told to wait for the rest.
-  if (methodName.startsWith('events/') && input.events === undefined && grant.setup === true)
+  if (methodName.startsWith('events/') && grant.setup === true)
     return methodName === 'events/list'
       ? respond({ events: EVENT_DESCRIPTORS })
       : rpcError(-32003, `${SETUP_WAITING} Poll setup_status; events work on this connection once it reports ready.`)

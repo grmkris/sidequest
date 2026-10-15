@@ -21,7 +21,7 @@ import {
 } from '@sidequest/indexer/telegram'
 import { reportRelayWatchFailure, watchRelay } from '@sidequest/indexer/relay-watch'
 import { gasWatches, reportGasWatchFailure, watchGas } from '@sidequest/indexer/gas-watch'
-import { feedFromChain, pruneFeed, reportFeedFailure } from '@sidequest/indexer/feed'
+import { feedFromChain, feedFromDeadlines, pruneFeed, reportFeedFailure } from '@sidequest/indexer/feed'
 import { deliverWebhooks, reportWebhookFailure } from '@sidequest/indexer/webhooks'
 import { recordIndexerRun, type IndexerRunOutcome } from './run-record.ts'
 
@@ -141,6 +141,7 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
           await phase('indexer.feed', () => feedFromChain(sql, network, fedAt, { caughtUp, limit: 100 })).catch(
             reportFeedFailure,
           )
+          await phase('indexer.deadlines', () => feedFromDeadlines(sql, network, fedAt)).catch(reportFeedFailure)
           if (fedAt % 3600 < 60) await pruneFeed(sql, fedAt).catch(reportFeedFailure)
           // Webhooks send what the feed holds; board and approval events arrive whether or not the chain index is caught up.
           await phase('indexer.webhooks', () => deliverWebhooks(sql, network, fedAt)).catch(reportWebhookFailure)

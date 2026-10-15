@@ -292,7 +292,7 @@ export async function readInbox(
 
 const FEED_KINDS =
   'job.published, job.activated, job.submitted, job.rejected, job.disputed, job.ruled, job.completed, job.closed, job.expired, ' +
-  'job.cancelled, settlement.deferred, payout.owed, quote.received, application.received, selection.received, invite.received, quote.invited, quote.lost, request.opened, request.picked, ' +
+  'job.cancelled, job.overdue, job.settleable, listing.expiring, settlement.deferred, payout.owed, quote.received, application.received, selection.received, invite.received, quote.invited, quote.lost, request.opened, request.picked, ' +
   'approval.requested, approval.decided, permission.granted, ' +
   'message.posted, message.mention, message.reply, roadmap.proposed, roadmap.status, gap.reported, gap.status, message.hidden'
 
@@ -491,6 +491,9 @@ const SUMMARY: Readonly<Record<string, (jobId: string, role: string) => string>>
   'job.cancelled': (jobId) => `Job #${jobId} was cancelled.`,
   'settlement.deferred': (jobId) => `Job #${jobId} has a deferred settlement step to finish.`,
   'payout.owed': (jobId) => `Job #${jobId} owes you a payout to withdraw.`,
+  'job.overdue': (jobId) => `Job #${jobId} passed its delivery deadline without a delivery.`,
+  'job.settleable': (jobId) => `Job #${jobId} can now be settled after its dispute window.`,
+  'listing.expiring': (agentId) => `A service listing for agent #${agentId} expires within four hours.`,
 }
 
 function chainNext(kind: string, role: string, taskId: string | null): FeedNext | undefined {
@@ -609,4 +612,94 @@ export async function feedFromChain(
     ),
   ])
   return { processed: events.length, stale: false, waiting: gap !== -1 }
+}
+
+type DeadlineJob = {
+  job_id: string
+  creator: string | null
+  worker: string | null
+  kind: 'job.overdue' | 'job.settleable'
+  due: number
+  task_id: string | null
+  board_id: string | null
+}
+
+async function deadlineJobs(sql: AsyncSql, chainId: number, now: number): Promise<DeadlineJob[]> {
+  const [offers] = await sql.all<{ name: string }>("SELECT name FROM sqlite_master WHERE name = 'board_offers'")
+  const link = offers === undefined ? 'NULL AS task_id, NULL AS board_id' : 'o.task_id, o.board_id'
+  const join = offers === undefined ? '' : `LEFT JOIN board_offers o ON lower(o.terms_hash) = lower(${OFFER_HASH_SQL})`
+  return sql.all<DeadlineJob>(
+    `SELECT j.job_id, j.creator, j.worker, ${link},
+       CASE WHEN j.status IN ('active', 'activated') THEN 'job.overdue' ELSE 'job.settleable' END AS kind,
+       CASE WHEN j.status IN ('active', 'activated') THEN j.delivery_deadline ELSE
+         (SELECT b.timestamp FROM events e JOIN block_times b ON b.chain_id=e.chain_id AND b.block=e.block
+          WHERE e.chain_id=j.chain_id AND e.job_id=j.job_id AND e.name='Rejected'
+          ORDER BY e.block DESC, e.log_index DESC LIMIT 1) + j.dispute_window END AS due
+     FROM jobs j ${join}
+     WHERE j.chain_id=? AND j.status IN ('active', 'activated', 'rejected-pending')
+       AND coalesce(j.settlement_outcome, 'None') = 'None' AND due < ?`,
+    chainId,
+    now,
+  )
+}
+
+function deadlineRows(job: DeadlineJob, chainId: number): FeedEvent[] {
+  const overdue = job.kind === 'job.overdue'
+  const recipients: Array<[string | null, string]> = [[job.creator, 'creator']]
+  if (!overdue) recipients.push([job.worker, 'worker'])
+  const seen = new Set<string>()
+  return recipients.flatMap(([address, role]) => {
+    if (address === null || seen.has(address.toLowerCase())) return []
+    seen.add(address.toLowerCase())
+    const id = `deadline:${chainId}:${job.job_id}:${overdue ? 'delivery' : 'dispute'}`
+    return [
+      {
+        // feed_events.id is globally unique, so the second recipient needs a deterministic suffix.
+        id: role === 'creator' ? id : `${id}:${address.toLowerCase()}`,
+        address,
+        kind: job.kind,
+        boardId: job.board_id,
+        taskId: job.task_id,
+        jobId: job.job_id,
+        role,
+        summary: SUMMARY[job.kind]!(job.job_id, role),
+        url: `${publicOrigin()}/job/${encodeURIComponent(job.job_id)}`,
+        ...(job.task_id === null ? {} : { next: { tool: 'settlement_actions', args: { taskId: job.task_id } } }),
+        occurredAt: job.due,
+      },
+    ]
+  })
+}
+
+async function expiringListings(sql: AsyncSql, chainId: number, now: number): Promise<FeedEvent[]> {
+  const [directory] = await sql.all<{ name: string }>("SELECT name FROM sqlite_master WHERE name = 'directory_agents'")
+  if (directory === undefined) return []
+  // JSON's numeric type test also skips ADR-0025's null expiry and malformed older projections.
+  const ads = await sql.all<{ agent_id: string; wallet: string; ad_hash: string }>(
+    `SELECT DISTINCT d.agent_id, json_extract(d.json, '$.wallet') AS wallet, json_extract(a.value, '$.adHash') AS ad_hash
+     FROM directory_agents d, json_each(d.json, '$.ads') a
+     WHERE d.chain_id=? AND d.enrolled=1 AND json_valid(d.json)
+       AND json_type(d.json, '$.wallet')='text' AND json_type(a.value, '$.adHash')='text'
+       AND json_type(a.value, '$.expiresAt') IN ('integer', 'real')
+       AND json_extract(a.value, '$.expiresAt') > ? AND json_extract(a.value, '$.expiresAt') <= ?`,
+    chainId,
+    now,
+    now + 4 * 3600,
+  )
+  return ads.map((ad) => ({
+    id: `listing:${chainId}:${ad.agent_id}:${ad.ad_hash}:expiring`,
+    address: ad.wallet,
+    kind: 'listing.expiring',
+    summary: SUMMARY['listing.expiring']!(ad.agent_id, 'agent'),
+    next: { tool: 'advertise_service', args: {} },
+    occurredAt: now,
+  }))
+}
+
+/** Deadline notifications are metadata, replay-safe through writeFeed, and never change chain state. */
+export async function feedFromDeadlines(sql: AsyncSql, network: Network, now: number): Promise<void> {
+  const chainId = telegramChainId(network)
+  const jobs = await deadlineJobs(sql, chainId, now)
+  const listings = await expiringListings(sql, chainId, now)
+  await writeFeed(sql, network, [...jobs.flatMap((job) => deadlineRows(job, chainId)), ...listings], now)
 }

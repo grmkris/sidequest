@@ -61,7 +61,7 @@ export const EVENT_DESCRIPTORS = [
   },
   { name: 'sidequest.approvals', description: 'Your approval decisions and permissions.', inputSchema: objectSchema() },
   { name: 'sidequest.requests', description: 'Public quote requests and published jobs.', inputSchema: objectSchema() },
-].map((event) => ({ ...event, payloadSchema, delivery: ['poll', 'webhook'] }))
+].map((event) => ({ ...event, payloadSchema, delivery: ['poll', 'webhook', 'push'] }))
 
 export function eventArguments(name: unknown, value: unknown): { name: string; args: Record<string, unknown> } {
   if (name === undefined) throw new EventRpcError(-32602, 'name is required: one of the events events/list returns')
@@ -135,6 +135,9 @@ const TITLES: Readonly<Record<string, string>> = {
   'permission.granted': 'Permission granted',
   'settlement.deferred': 'Settlement waiting',
   'payout.owed': 'Payout owed',
+  'job.overdue': 'Delivery overdue',
+  'job.settleable': 'Job ready to settle',
+  'listing.expiring': 'Listing expiring',
 }
 
 function eventTitle(kind: string): string {
