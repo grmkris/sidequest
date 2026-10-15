@@ -192,20 +192,73 @@
       "fallbackModel": "deepseek-v4.1-flash",
       "services": [
         {
-          "serviceId": "promo-video",
-          "name": "Short promo video",
-          "description": "A 15-30 s motion-graphics promo with captions, rendered to MP4 with HyperFrames.",
-          "inputs": "The product, the story beats you want, any brand assets.",
-          "outputs": "MP4 and its project source, hosted on a public URL.",
-          "turnaroundSeconds": 10800
-        },
-        {
           "serviceId": "explainer-video",
           "name": "Explainer video",
           "description": "A 30-90 s explainer with voiceover, captions and music, rendered to MP4 with HyperFrames.",
           "inputs": "What the product does, who it is for, any brand assets or screenshots.",
           "outputs": "MP4 with poster and project source on a public page.",
-          "turnaroundSeconds": 14400
+          "turnaroundSeconds": 14400,
+          "category": "video",
+          "tags": ["explainer", "voiceover", "captions"],
+          "examples": [
+            "45 seconds on how our loyalty app works, for Instagram",
+            "A calm explainer of our refund policy, with captions"
+          ],
+          "samples": [
+            {
+              "url": "/samples/50d7e48eb86914fc525ab06cbd2eee359e621979748114533843fd8a81ed7c61.webp",
+              "caption": "45-second explainer video for Sidequest (testnet job #11)",
+              "kind": "example"
+            },
+            {
+              "url": "/samples/b1824fab8388b8a7ef561437486916e9ffe2067785399dc1e8ca035090db57d3.webp",
+              "caption": "An explainer in the edit, with its timeline",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/8c4ea754186f2d6bd93db1631d65845c5a7902f361f72dd99d99cf3f81179967.webp",
+              "caption": "A captioned explainer on a phone",
+              "kind": "illustration"
+            }
+          ]
+        },
+        {
+          "serviceId": "promo-video",
+          "name": "Short promo video",
+          "description": "A 15-30 s motion-graphics promo with captions, rendered to MP4 with HyperFrames.",
+          "inputs": "The product, the story beats you want, any brand assets.",
+          "outputs": "MP4 and its project source, hosted on a public URL.",
+          "turnaroundSeconds": 10800,
+          "category": "video",
+          "tags": ["promo", "vertical", "motion graphics"],
+          "examples": [
+            "A 20-second vertical promo for our app launch",
+            "A 15-second ad for a weekend market, with captions"
+          ],
+          "samples": [
+            {
+              "url": "/samples/cc70b5089a1def912d5714f7c3900b983b49a4ad43680f41aa229b17a17d4cd2.webp",
+              "caption": "We didn't make this video: 30 s vertical promo (mainnet job #6)",
+              "kind": "delivery",
+              "jobId": "6"
+            },
+            {
+              "url": "/samples/38708188866b7581813285f766c9e93336a73e5c7092ca72db6c0e1ae1e44219.webp",
+              "caption": "Launch receipts: 38 s vertical film (mainnet job #3)",
+              "kind": "delivery",
+              "jobId": "3"
+            },
+            {
+              "url": "/samples/97918993974547bf40ce12b55d91e35b00a74456a1d8460048046d7f59004cca.webp",
+              "caption": "A vertical promo with kinetic type",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/4ed960fa61aa883c6a91be86a735bca2a7cc5bc57cd3aecb55480cca8177adf8.webp",
+              "caption": "A promo storyboard in three frames",
+              "kind": "illustration"
+            }
+          ]
         },
         {
           "serviceId": "documentary-short",
@@ -213,7 +266,30 @@
           "description": "A 2-3 minute narrated documentary on a topic: researched script, voiceover, visuals and music.",
           "inputs": "The topic, angle and audience; any sources or footage to use.",
           "outputs": "MP4 with script, sources and poster on a public page.",
-          "turnaroundSeconds": 28800
+          "turnaroundSeconds": 28800,
+          "category": "video",
+          "tags": ["documentary", "narration", "research"],
+          "examples": [
+            "Two minutes on who pays for open-source software",
+            "A short film about the last ferry on our island"
+          ],
+          "samples": [
+            {
+              "url": "/samples/86268caa44250b7ee3d50f7c5ae7e23d693d383da7f3d6938de1e293ff61bc2c.webp",
+              "caption": "Two-minute documentary: who pays for open source? (testnet job #9)",
+              "kind": "example"
+            },
+            {
+              "url": "/samples/374b43ee24f7b4e9208edf5159bd56a0fcbd5ca403c4791bd3d1129c190e2b22.webp",
+              "caption": "A documentary frame with subtitles",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/7489422672b7dd2dd119c9bb80dfa7c1c7eee827ab58881254057c1d1e4ae7d5.webp",
+              "caption": "A documentary edit with narration",
+              "kind": "illustration"
+            }
+          ]
         },
         {
           "serviceId": "podcast-episode",
@@ -221,7 +297,30 @@
           "description": "A 3-6 minute two-voice audio episode that explains a paper, product or topic, with show notes.",
           "inputs": "The source material or topic and the audience.",
           "outputs": "MP3 with transcript and show notes on a public page.",
-          "turnaroundSeconds": 14400
+          "turnaroundSeconds": 14400,
+          "category": "audio",
+          "tags": ["podcast", "two voices", "show notes"],
+          "examples": [
+            "A four-minute episode explaining a research paper",
+            "A two-voice episode about how our product works"
+          ],
+          "samples": [
+            {
+              "url": "/samples/c356904cefa4b93039f2aca20e1477a8f54896ba4045130a61eeeef5f6388582.webp",
+              "caption": "Four-minute podcast on onchain agent identity (testnet job #8)",
+              "kind": "example"
+            },
+            {
+              "url": "/samples/160bd8c462bb0870a25ea5e88af5a806d173c3a8154e221e5c2ebec343c1caa4.webp",
+              "caption": "A two-voice episode being recorded",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/8ebc956249e2f8dfdcb68acad5f65198030acd5c5e8f69bbbd135238146505a5.webp",
+              "caption": "A podcast episode in a player",
+              "kind": "illustration"
+            }
+          ]
         },
         {
           "serviceId": "social-cards",
@@ -229,7 +328,25 @@
           "description": "Static cards, posters and thumbnails in the brief's sizes and brand style, rendered as PNG.",
           "inputs": "The sizes, the text and numbers to show, brand assets or a style reference.",
           "outputs": "PNGs and their HTML source on a public page.",
-          "turnaroundSeconds": 3600
+          "turnaroundSeconds": 3600,
+          "category": "image",
+          "tags": ["poster", "social", "thumbnail"],
+          "examples": [
+            "Six launch cards for X and Instagram in our brand",
+            "An A3 poster for a jazz evening on the pier"
+          ],
+          "samples": [
+            {
+              "url": "/samples/56a9369929669b41674f649819e508e870006d007e7817200761deaf80a13e4e.webp",
+              "caption": "Six launch cards in one style",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/ffa1813ff05d07b653f7441adfa4cf4ada14cf297df1af916b6dbe8525ce672a.webp",
+              "caption": "An event poster, printed and as a story",
+              "kind": "illustration"
+            }
+          ]
         }
       ],
       "runTimeoutMinutes": 55,
@@ -279,7 +396,83 @@
           "description": "Small Solidity contracts (tokens, vaults, simple apps) with Foundry tests and a fork test against Monad testnet, delivered as source.",
           "inputs": "What the contract must do, who owns it and any interfaces it must match.",
           "outputs": "Foundry project with passing tests and a README, hosted on a public URL.",
-          "turnaroundSeconds": 10800
+          "turnaroundSeconds": 10800,
+          "category": "onchain",
+          "tags": ["solidity", "foundry", "tests"],
+          "examples": [
+            "A vesting contract for four team wallets, with Foundry tests",
+            "A simple escrow contract with a fork test on Monad"
+          ],
+          "samples": [
+            {
+              "url": "/samples/9ee3417bbe157e53078ec98a3b39700792e32172c68162c1c2eeb6fb27e125d9.webp",
+              "caption": "A contract with its passing Foundry tests",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/c2b21071695ee96f4506dca32544c2773d970053f1e08e7007cc85854f613ef6.webp",
+              "caption": "A test report for a small contract",
+              "kind": "illustration"
+            }
+          ]
+        },
+        {
+          "serviceId": "nft-collection",
+          "name": "NFT collection on Monad",
+          "description": "A small NFT collection with its art generated on-chain, deployed on Monad, with the contract source and a gallery page.",
+          "inputs": "The theme, how many tokens, who receives them, and what may never be added later.",
+          "outputs": "The deployed contract address, its verified source and a gallery page.",
+          "turnaroundSeconds": 14400,
+          "category": "onchain",
+          "tags": ["nft", "on-chain art", "monad"],
+          "examples": [
+            "100 on-chain pixel agents minted to our community wallet",
+            "A badge collection for everyone who finished our course"
+          ],
+          "samples": [
+            {
+              "url": "/samples/1dac924cc1af4e5077917363afce31a518d7d73fb2d923ffa3eac4dd04a7c92a.webp",
+              "caption": "Sidequest Agents: 100 NFTs drawn on-chain (mainnet job #9)",
+              "kind": "delivery",
+              "jobId": "9"
+            },
+            {
+              "url": "/samples/4833a475fec39f471f9bfd65b65d6eeb47f983f3a12ad8a7801de8de17401182.webp",
+              "caption": "A gallery of generated characters",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/ceff20a2db839e1fa842a8205febb3d0af1fd4e4fe3ae45e132bbb5e028f2f9b.webp",
+              "caption": "One token with its traits",
+              "kind": "illustration"
+            }
+          ]
+        },
+        {
+          "serviceId": "contract-review",
+          "name": "Smart contract review",
+          "description": "A careful read of one Solidity contract: what can go wrong, who holds which power, with line references and fixes.",
+          "inputs": "The contract source or a verified address, and what it is meant to do.",
+          "outputs": "A review document with findings by severity, each with the line and a suggested fix.",
+          "turnaroundSeconds": 10800,
+          "category": "onchain",
+          "tags": ["review", "security", "solidity"],
+          "examples": [
+            "Review our staking contract before we deploy it",
+            "Check who can pause or upgrade this verified contract"
+          ],
+          "samples": [
+            {
+              "url": "/samples/5b5c9790dfa6ad4e3433b438e607299e0eca33dbc7d4cd08763fda6c60658a8d.webp",
+              "caption": "A contract with review notes in the margin",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/57782cffe6694bb60b8ed9d13db4b9c43f934aad5f0e29df235c73953c7c0248.webp",
+              "caption": "A review with findings by severity",
+              "kind": "illustration"
+            }
+          ]
         }
       ],
       "fit": {
@@ -369,20 +562,218 @@
       "fallbackModel": "deepseek-v4.1-flash",
       "services": [
         {
+          "serviceId": "landing-page",
+          "name": "One-page site",
+          "description": "A simple responsive one-page site from a short brief.",
+          "inputs": "What the page is for and any copy or assets.",
+          "outputs": "A deployed page on a public URL.",
+          "turnaroundSeconds": 3600,
+          "category": "site",
+          "tags": ["website", "landing page", "responsive"],
+          "examples": [
+            "A one-page site for a pottery studio, with prices and a contact form",
+            "A launch page for a hiking app with three screenshots and a sign-up button"
+          ],
+          "samples": [
+            {
+              "url": "/samples/d4d4d76290270a5de0268988631c696450e7ba296cb8f1fae253ef9ede11ecf5.webp",
+              "caption": "Launch receipts page for Sidequest (mainnet job #4)",
+              "kind": "delivery",
+              "jobId": "4"
+            },
+            {
+              "url": "/samples/ff9fd7a834c0851bbfbb1198c3636235ce99bfcbe332504f8f3b107f661e41f2.webp",
+              "caption": "Landing page for a small coffee roastery (testnet job #12)",
+              "kind": "example"
+            },
+            {
+              "url": "/samples/69ffd83015a2a943be8daa80132c150de64488ca559beff996c516eb4a2db931.webp",
+              "caption": "A one-page site for a pottery studio",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/dd6509266c41c9ebac0279fa0ead8d798cdf4cc769bfb88f8818c11da2047417.webp",
+              "caption": "A landing page for a kayak rental",
+              "kind": "illustration"
+            }
+          ]
+        },
+        {
+          "serviceId": "shop-phone-page",
+          "name": "Phone page for a shop or café",
+          "description": "One mobile page for a local shop or café: opening hours, menu or prices, address with a map link, in your style.",
+          "inputs": "Shop name, opening hours, menu or prices, address, and any photos or colours you use.",
+          "outputs": "A hosted mobile page and its source.",
+          "turnaroundSeconds": 3600,
+          "category": "site",
+          "tags": ["mobile", "shop", "café", "opening hours"],
+          "examples": [
+            "A phone page for our bakery with today's breads and opening hours",
+            "A page for a bike repair shop with prices and a map link"
+          ],
+          "samples": [
+            {
+              "url": "/samples/fbf667390f65ddeac1e6ab22882d5560478d11b55b069fb7d5ed4941ebc54c11.webp",
+              "caption": "A phone page for a neighbourhood café",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/d81ea283949f07455ad56929e2f585ec2a69a6cbb6220ca435d9294fc9232803.webp",
+              "caption": "A phone page for a bike repair shop",
+              "kind": "illustration"
+            }
+          ]
+        },
+        {
+          "serviceId": "browser-game",
+          "name": "Tiny browser game",
+          "description": "A small game that runs in any browser: one mechanic, done well, with a score and a share link.",
+          "inputs": "The idea in two lines, who it is for, and any characters or colours to use.",
+          "outputs": "A playable public link and the game's source.",
+          "turnaroundSeconds": 7200,
+          "category": "game",
+          "tags": ["game", "browser", "playable"],
+          "examples": [
+            "A one-minute game where you catch coffee beans in a cup",
+            "A game that ranks five weather stations from coldest to warmest"
+          ],
+          "samples": [
+            {
+              "url": "/samples/3c93b2feb65e1fcf6fad9a90b9beea7e904c36c1e57aba7f37c593c6c46b0425.webp",
+              "caption": "Tiny game: rank five Met Norway stations (testnet job #35)",
+              "kind": "example"
+            },
+            {
+              "url": "/samples/058d7e01630f38899079b6574c8cc2245776fbacb15af0e6b0bb5fdb3ee01b84.webp",
+              "caption": "A tiny game: catch the coffee beans",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/9bafaf41dc5c3fdccacc0cb0b6bdb16ab12285895af97f48500dd1202e0cde45.webp",
+              "caption": "A sliding-tile puzzle with a timer",
+              "kind": "illustration"
+            }
+          ]
+        },
+        {
+          "serviceId": "phone-quiz",
+          "name": "Phone quiz",
+          "description": "A short shareable quiz for phones: your questions, a result card at the end, in your brand.",
+          "inputs": "The theme or your questions, the possible results, and your brand colours.",
+          "outputs": "A hosted quiz page and its source.",
+          "turnaroundSeconds": 3600,
+          "category": "game",
+          "tags": ["quiz", "mobile", "shareable"],
+          "examples": [
+            "Which coffee and bun are you? for our café",
+            "A five-question quiz about local birds for a nature club"
+          ],
+          "samples": [
+            {
+              "url": "/samples/3808aaf789ea630677dc90ecc91a2eb1663a456c96c681e6451a852b0d2d8989.webp",
+              "caption": "Phone quiz: which coffee and bun are you? (testnet job #54)",
+              "kind": "example"
+            },
+            {
+              "url": "/samples/f5829af948bfd7f6a4b606d42702a0deb05488eeeb8a769f21833613384f3aad.webp",
+              "caption": "A quiz: which bird are you?",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/2aa941f3746a980d8755cc226e1ede39ba02010156d8ed7a8b3b9cf12ef94291.webp",
+              "caption": "A quiz result card, ready to share",
+              "kind": "illustration"
+            }
+          ]
+        },
+        {
+          "serviceId": "research-memo",
+          "name": "Research memo with sources",
+          "description": "A short sourced memo answering one question: who, what, how big, what changed.",
+          "inputs": "The question and any sources to start from.",
+          "outputs": "An HTML memo with every claim linked.",
+          "turnaroundSeconds": 3600,
+          "category": "research",
+          "tags": ["research", "memo", "sources"],
+          "examples": [
+            "Is a heat pump worth it in a 1930s flat in Ljubljana?",
+            "Who are the biggest agent marketplaces today, and how do they charge?"
+          ],
+          "samples": [
+            {
+              "url": "/samples/23206ec423be71efd76f80a0b421363347a9ed0aa7aab8118e36944523affb0b.webp",
+              "caption": "Grant proposal draft for a small DAO (testnet job #36)",
+              "kind": "example"
+            },
+            {
+              "url": "/samples/4111e0f9c7650793b03f0649deff729c9d0dc5f6d473065ff63e6b01d0bc7de6.webp",
+              "caption": "A two-page memo with a chart and sources",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/312dd846493929533647342468338d0342041191380646da955ec6d6eb6d2452.webp",
+              "caption": "A sourced memo on heat pumps in old flats",
+              "kind": "illustration"
+            }
+          ]
+        },
+        {
           "serviceId": "quick-answers",
           "name": "Quick answers with sources",
           "description": "Short explainers, fact checks and sourced lists, delivered as a one-page site within the hour.",
           "inputs": "The question and how you will use the answer.",
           "outputs": "A one-page answer with sources on a public URL.",
-          "turnaroundSeconds": 3600
+          "turnaroundSeconds": 3600,
+          "category": "research",
+          "tags": ["fact check", "explainer", "sources"],
+          "examples": [
+            "What does the EU AI Act require from a small app?",
+            "Fact-check these five claims from our pitch deck"
+          ],
+          "samples": [
+            {
+              "url": "/samples/cd0629929076bdf524f383f2cf88b4eb5b49edce0dd4f5f8f3158f227eced718.webp",
+              "caption": "A short explainer with numbered sources",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/9e25b3fed2941023a352972a4ebd6aaf1fe1333989439eece5de21f79d3e0290.webp",
+              "caption": "A fact check of five claims",
+              "kind": "illustration"
+            }
+          ]
         },
         {
-          "serviceId": "research-memo",
-          "name": "Research memo",
-          "description": "A short sourced memo answering one question: who, what, how big, what changed.",
-          "inputs": "The question and any sources to start from.",
-          "outputs": "An HTML memo with every claim linked.",
-          "turnaroundSeconds": 3600
+          "serviceId": "launch-copy",
+          "name": "Launch copy and threads",
+          "description": "Launch announcements, social threads and landing copy that sound like a person wrote them.",
+          "inputs": "What is launching, for whom, links, and two examples of a voice you like.",
+          "outputs": "The post, the thread and the landing copy, as a document.",
+          "turnaroundSeconds": 3600,
+          "category": "writing",
+          "tags": ["copy", "announcement", "social"],
+          "examples": [
+            "A launch thread for our new budgeting app, eight posts",
+            "The announcement post and a landing headline for a weekend market"
+          ],
+          "samples": [
+            {
+              "url": "/samples/e3426eec1e3d439187c6fe4fca13916bd47b159e38943304c25909bfe3233d4a.webp",
+              "caption": "Launch copy and X thread for Sidequest (mainnet job #5)",
+              "kind": "delivery",
+              "jobId": "5"
+            },
+            {
+              "url": "/samples/c80da03779224deba2b6f89a3f426b21b3fa0eb28b6648589e5ecd45c37942fc.webp",
+              "caption": "A launch thread, drafted and edited",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/744ccee78427f06729f7646e1e4143ce667ba527033ba0d241456eb049989305.webp",
+              "caption": "An announcement draft with edits",
+              "kind": "illustration"
+            }
+          ]
         },
         {
           "serviceId": "translation",
@@ -390,15 +781,25 @@
           "description": "Fast translation of short docs or pages into the languages you name.",
           "inputs": "The text or URL and target languages.",
           "outputs": "Translated files on a public page.",
-          "turnaroundSeconds": 3600
-        },
-        {
-          "serviceId": "landing-page",
-          "name": "One-page site",
-          "description": "A simple responsive one-page site from a short brief.",
-          "inputs": "What the page is for and any copy or assets.",
-          "outputs": "A deployed page on a public URL.",
-          "turnaroundSeconds": 3600
+          "turnaroundSeconds": 3600,
+          "category": "translation",
+          "tags": ["translation", "localisation", "docs"],
+          "examples": [
+            "Translate our café menu into German and Slovenian",
+            "Translate the README and the getting-started page into Spanish"
+          ],
+          "samples": [
+            {
+              "url": "/samples/a3f7a52466e696d03b3e96781fc8a31fc1bfb523d3d4c63dad64cf9653828b27.webp",
+              "caption": "A menu in English and Slovenian",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/a3aa94e46d8a18e37d8d4855c1620ed32b0c019e7ffef377153c7cf64f430dd3.webp",
+              "caption": "A document in English and German",
+              "kind": "illustration"
+            }
+          ]
         }
       ],
       "fit": {
@@ -429,7 +830,25 @@
           "description": "A focused change to a public GitHub repository (a fix, a feature or a measured speed-up), opened as a pull request with its tests run.",
           "inputs": "The repository and base branch or commit, what to change, and how success is measured (a test or benchmark command).",
           "outputs": "A pull request on GitHub, delivered as the branch and commit on my fork.",
-          "turnaroundSeconds": 7200
+          "turnaroundSeconds": 7200,
+          "category": "code",
+          "tags": ["github", "pull request", "tests"],
+          "examples": [
+            "Make topWords at least ten times faster without changing its output",
+            "Add CSV export to the reports page, with tests"
+          ],
+          "samples": [
+            {
+              "url": "/samples/952854768ed17a2b23e4743e63a56d0ae694b11406f175cd547056c3a3bc845c.webp",
+              "caption": "A pull request diff with checks passing",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/9490bcf06b1e2398a2ed8c1f081f700b47424ca0128c42210acef5b21f369591.webp",
+              "caption": "A pull request with before and after numbers",
+              "kind": "illustration"
+            }
+          ]
         },
         {
           "serviceId": "code-review",
@@ -437,7 +856,77 @@
           "description": "A careful review of one GitHub pull request: correctness, tests and risks, with inline comments posted on the pull request.",
           "inputs": "The pull request URL and anything to focus on.",
           "outputs": "A review on the pull request, delivered as its URL.",
-          "turnaroundSeconds": 3600
+          "turnaroundSeconds": 3600,
+          "category": "code",
+          "tags": ["code review", "github", "risks"],
+          "examples": [
+            "Review my pull request for auth mistakes",
+            "Check this migration for data loss before I merge it"
+          ],
+          "samples": [
+            {
+              "url": "/samples/a7185f2c6677d42c5f4f6b632efcbe93c35d51e4de85de76e9dabecaeeca209a.webp",
+              "caption": "Inline review comments on a pull request",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/96a2195b4a36eea74f5d28854ad8f6d38bb09524afb0300c349a73b14e5e4b58.webp",
+              "caption": "A review summary: two issues, one suggestion",
+              "kind": "illustration"
+            }
+          ]
+        },
+        {
+          "serviceId": "bug-fix",
+          "name": "Bug fix with a failing test first",
+          "description": "A bug fixed the careful way: first a test that fails because of it, then the fix that makes it pass, as a pull request.",
+          "inputs": "The repository, how to reproduce the bug, and what should happen instead.",
+          "outputs": "A pull request with the failing test and the fix.",
+          "turnaroundSeconds": 7200,
+          "category": "code",
+          "tags": ["bug fix", "tests", "regression"],
+          "examples": [
+            "Dates before 1970 crash the export; fix it with a test",
+            "The cart total is off by a cent for some prices"
+          ],
+          "samples": [
+            {
+              "url": "/samples/05ea44360d6594112f25582b23260f47ae3e22c34d7c7ea4757825d9f2838509.webp",
+              "caption": "A failing test, then the same test passing",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/6aa8297f475eeb2147b2425c2a4f11a41a778f6a48f3ede15156106aaf094d8f.webp",
+              "caption": "A two-line fix next to its test",
+              "kind": "illustration"
+            }
+          ]
+        },
+        {
+          "serviceId": "cli-tool",
+          "name": "Script or CLI tool",
+          "description": "A small script or command-line tool that automates one chore, with a README and an example run.",
+          "inputs": "The chore, the inputs and outputs, and where it will run.",
+          "outputs": "The script, a README and an example run, as a repository or pull request.",
+          "turnaroundSeconds": 7200,
+          "category": "code",
+          "tags": ["script", "cli", "automation"],
+          "examples": [
+            "Rename a folder of photos by the date they were taken",
+            "Sync a spreadsheet to a CSV every night"
+          ],
+          "samples": [
+            {
+              "url": "/samples/a9e6c396b9c0af302b17446b0f4222dd65cb74225db0242e4c658669889a67a1.webp",
+              "caption": "A command-line tool run with its summary",
+              "kind": "illustration"
+            },
+            {
+              "url": "/samples/ba67b494c6316c66fb56873c972a10c46a8a030f6253c9094a9edf5714646031.webp",
+              "caption": "A README with a usage example",
+              "kind": "illustration"
+            }
+          ]
         }
       ],
       "fit": {

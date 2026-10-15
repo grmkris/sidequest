@@ -14,6 +14,7 @@
  *   bun crew/bin/crew.ts status
  */
 import { spawn, spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import {
   appendFileSync,
   chmodSync,
@@ -78,11 +79,13 @@ interface Member {
   env: string[]
   mcp: Record<string, string>
   /** Its directory listings (advertise_service, at most 10); `service` is the older single-listing form. */
-  services?: Record<string, unknown>[]
+  services?: Listing[]
   /** What public requests wake it: their tags, or words in their title or brief (none set: every request). */
   fit?: { tags: string[]; keywords: string[] }
-  service?: Record<string, unknown>
+  service?: Listing
 }
+/** One listing as crew.json writes it: a sample URL may be a path on the board's origin (`/samples/<sha256>.webp`). */
+type Listing = Record<string, unknown> & { samples?: Array<Record<string, unknown> & { url: string }> }
 interface CrewFile extends Omit<Crew, 'board'> {
   board: { stage: string; scopes: string; rpc: string }
 }
@@ -411,18 +414,14 @@ function busy(id: string): boolean {
 
 /** What a run is told: who it is, what to read, its listings, the operator's note for this run. */
 async function promptFor(id: string, m: Member, token: Token, note: string): Promise<string> {
-  const rewardToken = (await protocolInfo()).rewardTokens?.[0]
-  const services = (m.services ?? (m.service === undefined ? [] : [m.service])).map((service) => ({
-    ...service,
-    price: { model: 'quote', amountBaseUnits: '0', token: rewardToken },
-  }))
+  const { services, hash } = await listingsOf(m)
   return [
     // token.agent_id is the hosted agent's key; a member signs work with its ERC-8004 Agent ID, which whoami returns.
     `You are ${m.name}, the '${id}' member of the Sidequest crew and an autonomous hosted worker (hosted-agent key ${token.agent_id}; your public Agent ID is the agentId whoami returns).`,
     'You run in a sandbox container; your working directory is /crew/agent (scratch work in /crew/agent/work, your state in /crew/agent/state).',
     'Read, in this order: /crew/agent/AGENTS.md (your role), /crew/shared/COMMON.md (crew rules) and /crew/skill/worker/SKILL.md (your procedure).',
     'Do one routine pass as COMMON.md describes, then stop.',
-    `Your directory listings (one advertise_service call each): ${JSON.stringify(services)}`,
+    `Your directory listings (one advertise_service call each; listings hash ${hash}): ${JSON.stringify(services)}`,
     note === '' ? '' : `Operator note for this run: ${note}`,
     `Your git identity is ${m.name} <${m.email}>. Chain: ${crew.board.chain} (${crew.board.chainId}). Board: ${crew.board.origin}. Be concise.`,
   ]
@@ -489,16 +488,46 @@ function advertisedAt(state: string): number {
   return /^\d{13}$/.test(stamp) ? Number(stamp) : Date.parse(stamp)
 }
 
+/** How often a member confirms its listings that have not changed: they last until withdrawn (ADR-0025). */
+const LISTING_CONFIRM_MS = 7 * 24 * 3600_000
+
+/**
+ * A member's listings as it advertises them: its services, with sample paths on this stage's origin, priced as quotes.
+ * `hash` names this exact set, so a member re-advertises when it changes.
+ */
+async function listingsOf(m: Member): Promise<{ services: Record<string, unknown>[]; hash: string }> {
+  const rewardToken = (await protocolInfo()).rewardTokens?.[0]
+  const services = (m.services ?? (m.service === undefined ? [] : [m.service])).map((service) => ({
+    ...service,
+    ...(service.samples === undefined
+      ? {}
+      : {
+          samples: service.samples.map((sample) => ({
+            ...sample,
+            url: sample.url.startsWith('/') ? crew.board.origin + sample.url : sample.url,
+          })),
+        }),
+    price: { model: 'quote', amountBaseUnits: '0', token: rewardToken },
+  }))
+  return { services, hash: createHash('sha256').update(JSON.stringify(services)).digest('hex').slice(0, 16) }
+}
+
+/** Whether a member's listings are due: never advertised, changed since, or not confirmed for a week. */
+function listingDue(state: string, hash: string): boolean {
+  const saved = existsSync(join(state, 'listings')) ? readFileSync(join(state, 'listings'), 'utf8').trim() : ''
+  return saved !== hash || !(Date.now() - advertisedAt(state) < LISTING_CONFIRM_MS)
+}
+
 /**
  * Whether a member has anything to do, read without starting a model: new inbox events past its saved cursor, held
- * work that is not finished, its own jobs past a deadline, or a directory listing due for renewal (20 h). Idle members
- * cost no model tokens.
+ * work that is not finished, its own jobs past a deadline, or listings that changed or are due for their weekly
+ * confirmation. Idle members cost no model tokens.
  */
 async function wakeReason(id: string): Promise<string | null> {
   const state = join(home(id), 'agent', 'state')
   // A nudge (crew/bin/publish.ts) is an operator's word that this member should look at something now.
   if (existsSync(join(state, 'nudge'))) return 'nudged'
-  if (!(Date.now() - advertisedAt(state) < 20 * 3600_000)) return 'listing due'
+  if (listingDue(state, (await listingsOf(memberOf(id)[1])).hash)) return 'listing due'
   const token = (await freshToken(id)).access_token
   const inboxWake = await inboxReason(id, token, state)
   if (inboxWake !== null) return inboxWake
