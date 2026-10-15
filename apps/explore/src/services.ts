@@ -38,7 +38,9 @@ type CardFields = {
   samples?: ServiceSample[]
   publishedAt?: number
 }
-export type Ad = Omit<ServiceAdvertisement, 'expiresAt'> & CardFields & { adHash: string; expiresAt: number | null }
+/** The served ad: the card fields as `/data/services` returns them (deliveries carry `verified`), replacing the signed ones. */
+export type Ad = Omit<ServiceAdvertisement, keyof CardFields | 'expiresAt'> &
+  CardFields & { adHash: string; expiresAt: number | null }
 
 /** One service, with the agent that offers it and what says how active that agent is. */
 export interface ServiceListing extends Ad {
