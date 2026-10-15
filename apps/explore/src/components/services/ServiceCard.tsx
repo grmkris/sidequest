@@ -3,9 +3,12 @@
  * and what it costs, and the line that asks for it. Shown in the card a tile opens and on the service's own page. An ad
  * is a listing, not a contract: nothing is paid until a quote is picked.
  */
-import { Radio } from 'lucide-react'
+import { Check, Radio } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { directoryLiveness, presenceLabel } from '../../directory-presence.ts'
+import { sampleLabel } from '../../service-wall.ts'
+import { Button } from '../ui/button.tsx'
+import { Badge } from '../ui/badge.tsx'
 import { cn } from '../../lib/cn.ts'
 import {
   type Ad,
@@ -99,7 +102,17 @@ export function AskForThis({ listing }: { listing: ServiceListing }) {
 }
 
 /** The card a tile opens: the service in full, then its own page. */
-export function ServiceCard({ listing, now }: { listing: ServiceListing; now: number }) {
+export function ServiceCard({
+  listing,
+  now,
+  selected = false,
+  onToggle,
+}: {
+  listing: ServiceListing
+  now: number
+  selected?: boolean
+  onToggle?: () => void
+}) {
   // In a sheet the title already names the service.
   const { inSheet } = useCardFrame()
   return (
@@ -109,11 +122,79 @@ export function ServiceCard({ listing, now }: { listing: ServiceListing; now: nu
         <ServiceAgent listing={listing} now={now} />
         <p className="text-sm text-pretty text-muted-foreground">{listing.description}</p>
       </div>
+      <ServiceGallery listing={listing} />
       <ServiceFacts listing={listing} />
+      <ServiceExamples listing={listing} />
+      {onToggle !== undefined && (
+        <Button variant="outline" className="min-h-10 justify-self-start" aria-pressed={selected} onClick={onToggle}>
+          {selected && <Check aria-hidden data-icon="inline-start" />}Add to request
+        </Button>
+      )}
       <AskForThis listing={listing} />
       <div className="flex justify-end">
         <CardAction target={serviceTarget(listing.agentId, listing.serviceId)}>Open the service</CardAction>
       </div>
     </div>
+  )
+}
+
+/** Samples retain their provenance even when they cannot serve as the cover. */
+export function ServiceGallery({ listing }: { listing: ServiceListing }) {
+  if ((listing.samples?.length ?? 0) === 0) return null
+  return (
+    <ul aria-label="Service samples" className="flex snap-x gap-3 overflow-x-auto pb-2">
+      {listing.samples?.map((sample) => (
+        <li key={sample.url} className="w-48 shrink-0 snap-start">
+          <a
+            href={sample.url}
+            target="_blank"
+            rel="noreferrer"
+            className="grid min-h-10 gap-2 rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            <span className="aspect-4/3 overflow-clip rounded-lg bg-muted">
+              <img
+                src={sample.url}
+                alt={sample.caption}
+                loading="lazy"
+                decoding="async"
+                referrerPolicy="no-referrer"
+                className="size-full rounded-lg object-cover ring-1 ring-foreground/10"
+              />
+            </span>
+            <span className="text-xs font-medium">{sampleLabel(sample)}</span>
+            <span className="text-xs text-pretty text-muted-foreground">{sample.caption}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+export function ServiceExamples({ listing }: { listing: ServiceListing }) {
+  return (
+    <>
+      {(listing.examples?.length ?? 0) > 0 && (
+        <section className="grid gap-2">
+          <h3 className="text-sm font-medium text-balance">Briefs it takes</h3>
+          {listing.examples?.map((example) => (
+            <blockquote
+              key={example}
+              className="border-s-2 border-border ps-3 text-sm text-pretty text-muted-foreground"
+            >
+              “{example}”
+            </blockquote>
+          ))}
+        </section>
+      )}
+      {(listing.tags?.length ?? 0) > 0 && (
+        <ul aria-label="Service tags" className="flex flex-wrap gap-1.5">
+          {listing.tags?.map((tag) => (
+            <li key={tag}>
+              <Badge variant="secondary">{tag}</Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   )
 }

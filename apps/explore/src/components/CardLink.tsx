@@ -61,6 +61,7 @@ export function CardLink({
   label,
   decorative = false,
   alignOffset = 0,
+  mode = 'auto',
   children,
 }: {
   target: LinkTarget
@@ -73,9 +74,11 @@ export function CardLink({
   decorative?: boolean
   /** How far from the link's start edge the card lines up, in px. */
   alignOffset?: number
+  mode?: 'auto' | 'sheet'
   children?: ReactNode
 }) {
-  const wide = useWide()
+  const wideScreen = useWide()
+  const wide = mode !== 'sheet' && wideScreen
   const [open, setOpen] = useState(false)
   const [shown, setShown] = useState(false)
   const show = (next: boolean) => {

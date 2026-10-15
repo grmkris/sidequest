@@ -203,7 +203,7 @@ function SelectedPublisher({ publisher, agentId }: { publisher: ManagedAgent; ag
   )
 }
 
-function PromptInstruction({ prompt }: { prompt: string }) {
+export function PromptInstruction({ prompt }: { prompt: string }) {
   return (
     <div className="grid gap-3">
       <textarea
@@ -215,7 +215,7 @@ function PromptInstruction({ prompt }: { prompt: string }) {
       />
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-muted-foreground">Copying leaves the job uncreated.</span>
-        <CopyButton value={prompt} label="Copy instruction" />
+        <CopyButton value={prompt} label="Copy" />
       </div>
       <p className="text-xs leading-relaxed text-muted-foreground">
         Follow progress and approvals on your agent’s page. If the client stops, reconcile the original operation before
