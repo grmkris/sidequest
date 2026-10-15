@@ -1,0 +1,296 @@
+{
+  "conclusion": "success",
+  "headSha": "776855c82440a10c10f2b318be851a27de089797",
+  "jobs": [
+    {
+      "completedAt": "2026-10-15T18:36:18Z",
+      "conclusion": "success",
+      "databaseId": 116600617751,
+      "name": "verify",
+      "startedAt": "2026-10-15T18:34:38Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-15T18:34:41Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-15T18:34:39Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:35:06Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "startedAt": "2026-10-15T18:34:41Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:35:07Z",
+          "conclusion": "success",
+          "name": "Run oven-sh/setup-bun@v2",
+          "number": 3,
+          "startedAt": "2026-10-15T18:35:06Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:35:08Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v4",
+          "number": 4,
+          "startedAt": "2026-10-15T18:35:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:35:14Z",
+          "conclusion": "success",
+          "name": "Run foundry-rs/foundry-toolchain@v1",
+          "number": 5,
+          "startedAt": "2026-10-15T18:35:08Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:35:16Z",
+          "conclusion": "success",
+          "name": "Cache Foundry artifacts",
+          "number": 6,
+          "startedAt": "2026-10-15T18:35:14Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:35:38Z",
+          "conclusion": "success",
+          "name": "Run bun install --frozen-lockfile",
+          "number": 7,
+          "startedAt": "2026-10-15T18:35:16Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:11Z",
+          "conclusion": "success",
+          "name": "Run bun run check",
+          "number": 8,
+          "startedAt": "2026-10-15T18:35:38Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:13Z",
+          "conclusion": "success",
+          "name": "Run bun run build",
+          "number": 9,
+          "startedAt": "2026-10-15T18:36:11Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:13Z",
+          "conclusion": "success",
+          "name": "Working tree is clean after the gates",
+          "number": 10,
+          "startedAt": "2026-10-15T18:36:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:15Z",
+          "conclusion": "success",
+          "name": "Post Cache Foundry artifacts",
+          "number": 16,
+          "startedAt": "2026-10-15T18:36:13Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:15Z",
+          "conclusion": "success",
+          "name": "Post Run foundry-rs/foundry-toolchain@v1",
+          "number": 17,
+          "startedAt": "2026-10-15T18:36:15Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:15Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v4",
+          "number": 18,
+          "startedAt": "2026-10-15T18:36:15Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:15Z",
+          "conclusion": "success",
+          "name": "Post Run oven-sh/setup-bun@v2",
+          "number": 19,
+          "startedAt": "2026-10-15T18:36:15Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:15Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v4",
+          "number": 20,
+          "startedAt": "2026-10-15T18:36:15Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:15Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 21,
+          "startedAt": "2026-10-15T18:36:15Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/grmkris/sidequest/actions/runs/38786758745/job/116600617751"
+    },
+    {
+      "completedAt": "2026-10-15T18:38:55Z",
+      "conclusion": "success",
+      "databaseId": 116601445606,
+      "name": "deploy-prod",
+      "startedAt": "2026-10-15T18:36:22Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-15T18:36:25Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-15T18:36:23Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:55Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "startedAt": "2026-10-15T18:36:25Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:57Z",
+          "conclusion": "success",
+          "name": "Run oven-sh/setup-bun@v2",
+          "number": 3,
+          "startedAt": "2026-10-15T18:36:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:36:57Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v4",
+          "number": 4,
+          "startedAt": "2026-10-15T18:36:57Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:37:01Z",
+          "conclusion": "success",
+          "name": "Run foundry-rs/foundry-toolchain@v1",
+          "number": 5,
+          "startedAt": "2026-10-15T18:36:57Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:37:16Z",
+          "conclusion": "success",
+          "name": "Run bun install --frozen-lockfile",
+          "number": 6,
+          "startedAt": "2026-10-15T18:37:01Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:37:17Z",
+          "conclusion": "success",
+          "name": "Install Alchemy state-store credential",
+          "number": 7,
+          "startedAt": "2026-10-15T18:37:16Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:38:27Z",
+          "conclusion": "success",
+          "name": "Deploy prod",
+          "number": 8,
+          "startedAt": "2026-10-15T18:37:17Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:38:31Z",
+          "conclusion": "success",
+          "name": "Smoke prod",
+          "number": 9,
+          "startedAt": "2026-10-15T18:38:27Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:38:51Z",
+          "conclusion": "success",
+          "name": "Drift prod",
+          "number": 10,
+          "startedAt": "2026-10-15T18:38:31Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:38:51Z",
+          "conclusion": "success",
+          "name": "Post Install Alchemy state-store credential",
+          "number": 16,
+          "startedAt": "2026-10-15T18:38:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:38:51Z",
+          "conclusion": "success",
+          "name": "Post Run foundry-rs/foundry-toolchain@v1",
+          "number": 17,
+          "startedAt": "2026-10-15T18:38:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:38:51Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v4",
+          "number": 18,
+          "startedAt": "2026-10-15T18:38:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:38:52Z",
+          "conclusion": "success",
+          "name": "Post Run oven-sh/setup-bun@v2",
+          "number": 19,
+          "startedAt": "2026-10-15T18:38:51Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:38:52Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v4",
+          "number": 20,
+          "startedAt": "2026-10-15T18:38:52Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-15T18:38:52Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 21,
+          "startedAt": "2026-10-15T18:38:52Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/grmkris/sidequest/actions/runs/38786758745/job/116601445606"
+    },
+    {
+      "completedAt": "2026-10-15T18:36:18Z",
+      "conclusion": "skipped",
+      "databaseId": 116601446708,
+      "name": "deploy-dev",
+      "startedAt": "2026-10-15T18:36:19Z",
+      "status": "completed",
+      "steps": [],
+      "url": "https://github.com/grmkris/sidequest/actions/runs/38786758745/job/116601446708"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/grmkris/sidequest/actions/runs/38786758745"
+}

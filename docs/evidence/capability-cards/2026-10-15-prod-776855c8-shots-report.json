@@ -1,0 +1,1576 @@
+{
+  "base": "https://sidequest.exchange",
+  "time": "2026-10-15T18:54:43.217Z",
+  "cases": [
+    {
+      "name": "desk",
+      "scheme": "light",
+      "errors": [],
+      "failures": [],
+      "states": [
+        {
+          "state": "landing",
+          "path": "2026-10-15-prod-776855c8-landing-desk-light.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": null,
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "landing",
+          "path": "2026-10-15-prod-776855c8-landing-desk-light-full.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": null,
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "tray",
+          "path": "2026-10-15-prod-776855c8-tray-desk-light.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "request",
+          "path": "2026-10-15-prod-776855c8-request-desk-light.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": {
+              "x": 448,
+              "y": 156.375,
+              "w": 544,
+              "h": 587.25,
+              "scrollWidth": 544,
+              "clientWidth": 544
+            },
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "sheet",
+          "path": "2026-10-15-prod-776855c8-sheet-desk-light.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 465,
+            "panel": {
+              "x": 400,
+              "y": 45,
+              "w": 640,
+              "h": 810,
+              "scrollWidth": 640,
+              "clientWidth": 640
+            },
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "sheet-ask",
+          "path": "2026-10-15-prod-776855c8-sheet-ask-desk-light.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 465,
+            "panel": {
+              "x": 400,
+              "y": 45,
+              "w": 640,
+              "h": 810,
+              "scrollWidth": 640,
+              "clientWidth": 640
+            },
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "connect",
+          "path": "2026-10-15-prod-776855c8-connect-desk-light.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "agent",
+          "path": "2026-10-15-prod-776855c8-agent-desk-light.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "agent",
+          "path": "2026-10-15-prod-776855c8-agent-desk-light-full.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        }
+      ],
+      "cardCount": 20,
+      "images": [
+        {
+          "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/74a66fa25315c6b504ea981a4e3b8018ffbdd5e9adbd3ab8db292846ecde7a29.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/33e6e3bdbb2149c91275c9c36b3f7006c1e35ef4bb0e4054651a45efdb6de298.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/97c39936518a5e288347064099c5dd6e4c348b95e294df3656d30fbd03bce37b.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/8623b8ec03cb04854586a6aaa1787d649902dec3bbe88a8a3193ca2a5ae849b6.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/51b5869fd8627583c2bffefb016550731d41af43fd39ce66a54ec49fd1844e30.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/b4fe64015855046c33f5528c79e1c1f35b98ab9086c1fa24207cf032fa06c4ce.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/3b0d5fda0c752cf746403884c314801d6c8e1e93345e834fcf658f300fbc4d4c.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/2fb350808c5a1bb61523754011c259436ddad47b4c2ed73ea13282c786c0b132.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/b34210136d30b3f2fd928b0d398859fed99078d272801f9f52fb94b7b6b23f60.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/2540a253051c363d1579035c6bac520bf7e2aa085bc76123abb1846d663dc29e.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/152fec494c2f0988be59d9d00297ca4e1a88ecc00c3f8feb4381cf27a1feae00.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/159926cb145ca3192ca1ed15c707e7eedfcfbdd5e7836914f381babe2d1fd4e8.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/56c7c557f46e06d0a549fa821e12dc2da5ee688ab05e9f184cecbdc51e08c463.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/88b801b7537c4f8fe529331ee6d5f2b54218f485c2066e95b70ff855ed79adb6.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/fb6d9e0fa55e7155ff3e5273683eba9423cc78f9d6d43c2a5dca41eee43183f5.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/cd4f4296d0675a5c729e101e6121e443936a43bda90b7c198ceb520226d129f3.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/6989f5e4c287e32ef3554605a7524cd9cdf00b38a773183c924750ce5a634e42.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        }
+      ],
+      "briefChipWorks": true,
+      "picksOnAgent": "2 services\nGet prompt",
+      "picksAfterReload": "2 services\nGet prompt",
+      "bodyUnlocked": true
+    },
+    {
+      "name": "desk",
+      "scheme": "dark",
+      "errors": [],
+      "failures": [],
+      "states": [
+        {
+          "state": "landing",
+          "path": "2026-10-15-prod-776855c8-landing-desk-dark.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": null,
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "landing",
+          "path": "2026-10-15-prod-776855c8-landing-desk-dark-full.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": null,
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "tray",
+          "path": "2026-10-15-prod-776855c8-tray-desk-dark.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "request",
+          "path": "2026-10-15-prod-776855c8-request-desk-dark.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": {
+              "x": 448,
+              "y": 156.375,
+              "w": 544,
+              "h": 587.25,
+              "scrollWidth": 544,
+              "clientWidth": 544
+            },
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "sheet",
+          "path": "2026-10-15-prod-776855c8-sheet-desk-dark.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 465,
+            "panel": {
+              "x": 400,
+              "y": 45,
+              "w": 640,
+              "h": 810,
+              "scrollWidth": 640,
+              "clientWidth": 640
+            },
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "sheet-ask",
+          "path": "2026-10-15-prod-776855c8-sheet-ask-desk-dark.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 465,
+            "panel": {
+              "x": 400,
+              "y": 45,
+              "w": 640,
+              "h": 810,
+              "scrollWidth": 640,
+              "clientWidth": 640
+            },
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "connect",
+          "path": "2026-10-15-prod-776855c8-connect-desk-dark.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "agent",
+          "path": "2026-10-15-prod-776855c8-agent-desk-dark.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "agent",
+          "path": "2026-10-15-prod-776855c8-agent-desk-dark-full.webp",
+          "geometry": {
+            "viewport": [
+              1440,
+              900
+            ],
+            "pageWidth": 1440,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 832,
+              "w": 1440,
+              "h": 52,
+              "scrollWidth": 1440,
+              "clientWidth": 1440
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        }
+      ],
+      "cardCount": 20,
+      "images": [
+        {
+          "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/74a66fa25315c6b504ea981a4e3b8018ffbdd5e9adbd3ab8db292846ecde7a29.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/33e6e3bdbb2149c91275c9c36b3f7006c1e35ef4bb0e4054651a45efdb6de298.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/97c39936518a5e288347064099c5dd6e4c348b95e294df3656d30fbd03bce37b.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/8623b8ec03cb04854586a6aaa1787d649902dec3bbe88a8a3193ca2a5ae849b6.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/51b5869fd8627583c2bffefb016550731d41af43fd39ce66a54ec49fd1844e30.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/b4fe64015855046c33f5528c79e1c1f35b98ab9086c1fa24207cf032fa06c4ce.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/3b0d5fda0c752cf746403884c314801d6c8e1e93345e834fcf658f300fbc4d4c.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/2fb350808c5a1bb61523754011c259436ddad47b4c2ed73ea13282c786c0b132.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/b34210136d30b3f2fd928b0d398859fed99078d272801f9f52fb94b7b6b23f60.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/2540a253051c363d1579035c6bac520bf7e2aa085bc76123abb1846d663dc29e.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/152fec494c2f0988be59d9d00297ca4e1a88ecc00c3f8feb4381cf27a1feae00.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/159926cb145ca3192ca1ed15c707e7eedfcfbdd5e7836914f381babe2d1fd4e8.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/56c7c557f46e06d0a549fa821e12dc2da5ee688ab05e9f184cecbdc51e08c463.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/88b801b7537c4f8fe529331ee6d5f2b54218f485c2066e95b70ff855ed79adb6.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/fb6d9e0fa55e7155ff3e5273683eba9423cc78f9d6d43c2a5dca41eee43183f5.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/cd4f4296d0675a5c729e101e6121e443936a43bda90b7c198ceb520226d129f3.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/6989f5e4c287e32ef3554605a7524cd9cdf00b38a773183c924750ce5a634e42.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        }
+      ],
+      "briefChipWorks": true,
+      "picksOnAgent": "2 services\nGet prompt",
+      "picksAfterReload": "2 services\nGet prompt",
+      "bodyUnlocked": true
+    },
+    {
+      "name": "phone",
+      "scheme": "light",
+      "errors": [],
+      "failures": [],
+      "states": [
+        {
+          "state": "landing",
+          "path": "2026-10-15-prod-776855c8-landing-phone-light.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": null,
+            "tray": null,
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "landing",
+          "path": "2026-10-15-prod-776855c8-landing-phone-light-full.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": null,
+            "tray": null,
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "tray",
+          "path": "2026-10-15-prod-776855c8-tray-phone-light.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 776,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "request",
+          "path": "2026-10-15-prod-776855c8-request-phone-light.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": {
+              "x": 0,
+              "y": 234.75,
+              "w": 390,
+              "h": 609.25,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "tray": {
+              "x": 0,
+              "y": 776,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "sheet",
+          "path": "2026-10-15-prod-776855c8-sheet-phone-light.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 436,
+            "panel": {
+              "x": 0,
+              "y": 84.40625,
+              "w": 390,
+              "h": 759.59375,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "tray": {
+              "x": 0,
+              "y": 776,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "sheet-ask",
+          "path": "2026-10-15-prod-776855c8-sheet-ask-phone-light.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 436,
+            "panel": {
+              "x": 0,
+              "y": 84.40625,
+              "w": 390,
+              "h": 759.59375,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "tray": {
+              "x": 0,
+              "y": 776,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "connect",
+          "path": "2026-10-15-prod-776855c8-connect-phone-light.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": {
+              "x": 0,
+              "y": 404,
+              "w": 390,
+              "h": 440,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "tray": {
+              "x": 0,
+              "y": 776,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "agent",
+          "path": "2026-10-15-prod-776855c8-agent-phone-light.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 720,
+              "w": 390,
+              "h": 56,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "agent",
+          "path": "2026-10-15-prod-776855c8-agent-phone-light-full.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 724,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        }
+      ],
+      "cardCount": 20,
+      "images": [
+        {
+          "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/74a66fa25315c6b504ea981a4e3b8018ffbdd5e9adbd3ab8db292846ecde7a29.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/33e6e3bdbb2149c91275c9c36b3f7006c1e35ef4bb0e4054651a45efdb6de298.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/97c39936518a5e288347064099c5dd6e4c348b95e294df3656d30fbd03bce37b.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/8623b8ec03cb04854586a6aaa1787d649902dec3bbe88a8a3193ca2a5ae849b6.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/51b5869fd8627583c2bffefb016550731d41af43fd39ce66a54ec49fd1844e30.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/b4fe64015855046c33f5528c79e1c1f35b98ab9086c1fa24207cf032fa06c4ce.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/3b0d5fda0c752cf746403884c314801d6c8e1e93345e834fcf658f300fbc4d4c.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/2fb350808c5a1bb61523754011c259436ddad47b4c2ed73ea13282c786c0b132.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/b34210136d30b3f2fd928b0d398859fed99078d272801f9f52fb94b7b6b23f60.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/2540a253051c363d1579035c6bac520bf7e2aa085bc76123abb1846d663dc29e.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/152fec494c2f0988be59d9d00297ca4e1a88ecc00c3f8feb4381cf27a1feae00.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/159926cb145ca3192ca1ed15c707e7eedfcfbdd5e7836914f381babe2d1fd4e8.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/56c7c557f46e06d0a549fa821e12dc2da5ee688ab05e9f184cecbdc51e08c463.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/88b801b7537c4f8fe529331ee6d5f2b54218f485c2066e95b70ff855ed79adb6.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/fb6d9e0fa55e7155ff3e5273683eba9423cc78f9d6d43c2a5dca41eee43183f5.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/cd4f4296d0675a5c729e101e6121e443936a43bda90b7c198ceb520226d129f3.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/6989f5e4c287e32ef3554605a7524cd9cdf00b38a773183c924750ce5a634e42.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        }
+      ],
+      "briefChipWorks": true,
+      "picksOnAgent": "2 services\nGet prompt",
+      "picksAfterReload": "2 services\nGet prompt",
+      "bodyUnlocked": true
+    },
+    {
+      "name": "phone",
+      "scheme": "dark",
+      "errors": [],
+      "failures": [],
+      "states": [
+        {
+          "state": "landing",
+          "path": "2026-10-15-prod-776855c8-landing-phone-dark.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": null,
+            "tray": null,
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "landing",
+          "path": "2026-10-15-prod-776855c8-landing-phone-dark-full.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": null,
+            "tray": null,
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "tray",
+          "path": "2026-10-15-prod-776855c8-tray-phone-dark.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 776,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "request",
+          "path": "2026-10-15-prod-776855c8-request-phone-dark.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": {
+              "x": 0,
+              "y": 234.75,
+              "w": 390,
+              "h": 609.25,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "tray": {
+              "x": 0,
+              "y": 776,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "sheet",
+          "path": "2026-10-15-prod-776855c8-sheet-phone-dark.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 436,
+            "panel": {
+              "x": 0,
+              "y": 84.40625,
+              "w": 390,
+              "h": 759.59375,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "tray": {
+              "x": 0,
+              "y": 776,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "sheet-ask",
+          "path": "2026-10-15-prod-776855c8-sheet-ask-phone-dark.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 436,
+            "panel": {
+              "x": 0,
+              "y": 84.40625,
+              "w": 390,
+              "h": 759.59375,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "tray": {
+              "x": 0,
+              "y": 776,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "connect",
+          "path": "2026-10-15-prod-776855c8-connect-phone-dark.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": {
+              "x": 0,
+              "y": 404,
+              "w": 390,
+              "h": 440,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "tray": {
+              "x": 0,
+              "y": 776,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "agent",
+          "path": "2026-10-15-prod-776855c8-agent-phone-dark.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 720,
+              "w": 390,
+              "h": 56,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        },
+        {
+          "state": "agent",
+          "path": "2026-10-15-prod-776855c8-agent-phone-dark-full.webp",
+          "geometry": {
+            "viewport": [
+              390,
+              844
+            ],
+            "pageWidth": 390,
+            "scrollY": 0,
+            "panel": null,
+            "tray": {
+              "x": 0,
+              "y": 724,
+              "w": 390,
+              "h": 52,
+              "scrollWidth": 390,
+              "clientWidth": 390
+            },
+            "locked": "static",
+            "theme": ""
+          }
+        }
+      ],
+      "cardCount": 20,
+      "images": [
+        {
+          "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/74a66fa25315c6b504ea981a4e3b8018ffbdd5e9adbd3ab8db292846ecde7a29.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/33e6e3bdbb2149c91275c9c36b3f7006c1e35ef4bb0e4054651a45efdb6de298.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/samples/97c39936518a5e288347064099c5dd6e4c348b95e294df3656d30fbd03bce37b.webp",
+          "loaded": true
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/8623b8ec03cb04854586a6aaa1787d649902dec3bbe88a8a3193ca2a5ae849b6.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/51b5869fd8627583c2bffefb016550731d41af43fd39ce66a54ec49fd1844e30.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/b4fe64015855046c33f5528c79e1c1f35b98ab9086c1fa24207cf032fa06c4ce.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/3b0d5fda0c752cf746403884c314801d6c8e1e93345e834fcf658f300fbc4d4c.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/2fb350808c5a1bb61523754011c259436ddad47b4c2ed73ea13282c786c0b132.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/b34210136d30b3f2fd928b0d398859fed99078d272801f9f52fb94b7b6b23f60.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/2540a253051c363d1579035c6bac520bf7e2aa085bc76123abb1846d663dc29e.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/152fec494c2f0988be59d9d00297ca4e1a88ecc00c3f8feb4381cf27a1feae00.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/159926cb145ca3192ca1ed15c707e7eedfcfbdd5e7836914f381babe2d1fd4e8.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/2bf13634ee780143f246ea5bc8ac2a595c0833a25dbe49175d8920df67880335.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/56c7c557f46e06d0a549fa821e12dc2da5ee688ab05e9f184cecbdc51e08c463.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/88b801b7537c4f8fe529331ee6d5f2b54218f485c2066e95b70ff855ed79adb6.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/fb6d9e0fa55e7155ff3e5273683eba9423cc78f9d6d43c2a5dca41eee43183f5.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/cd4f4296d0675a5c729e101e6121e443936a43bda90b7c198ceb520226d129f3.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/27e77ab8d6ced99a4a603b7e421ce436fe410ca970f58b5854a03e5b6323a259.jpg",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/samples/6989f5e4c287e32ef3554605a7524cd9cdf00b38a773183c924750ce5a634e42.webp",
+          "loaded": false
+        },
+        {
+          "src": "https://sidequest.exchange/avatars/c262ac11bcc82f812ace71371dc03b16b1a65b453df16e33f6900079d68cb70d.jpg",
+          "loaded": false
+        }
+      ],
+      "briefChipWorks": true,
+      "picksOnAgent": "2 services\nGet prompt",
+      "picksAfterReload": "2 services\nGet prompt",
+      "bodyUnlocked": true
+    }
+  ]
+}

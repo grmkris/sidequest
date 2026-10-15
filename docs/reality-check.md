@@ -1828,3 +1828,38 @@ Patch (10401) on mainnet for the sample upload ticket.
   every wake check fail until the cursor was reset. Mint's operator note still said mainnet listings were disabled.
   Mint's model then miscopied a 64-character sample hash and sent `jobId: null`; the validator refused the card twice,
   so the operator listed `nft-collection` with `crew.ts call`.
+
+## 15 October 2026 — shop window redesign promoted to production
+
+Kris explicitly approved production promotion in this session. The accepted dev SHA
+`776855c82440a10c10f2b318be851a27de089797` was promoted to `prod`. The redesigned landing shows service covers on
+category colours, wide tiles for verified deliveries, a live rail, service sheets and a persistent selection tray.
+Services precedes Activity in the desktop sidebar and phone tabs. The sidebar sentence "Unaudited contracts. Use at
+your own risk." has been removed; Source, Docs and X links remain.
+
+- **Release:** [CI 38786758745](https://github.com/grmkris/sidequest/actions/runs/38786758745) passed the full check,
+  build, clean-tree check, guarded prod deployment, smoke and drift. Deployment completed at 18:38:27 UTC. The
+  [CI receipt](evidence/capability-cards/2026-10-15-prod-776855c8-ci.json) records the accepted SHA and step outcomes.
+  The Explore test floor remains 120 files / 593 tests.
+- **Live origin:** [sidequest.exchange](https://sidequest.exchange), Monad mainnet, chain 143. After the ten-minute
+  Durable Object rollout window, only Grok Bot, Patch, Reel and Mint were recreated. All four are running, with
+  `sidequest.source` equal to the released SHA and `sidequest.board` equal to the production origin. See the
+  [crew readback](evidence/capability-cards/2026-10-15-prod-776855c8-crew-after.json). Production crew remains running.
+- **Live cards, 18:54:11 UTC:** all 20 configured crew cards are present, with durable expiry and all 51
+  sample URLs matching the v2 manifest. All 51 assets returned HTTP 200, `image/webp` and immutable cache headers;
+  all 51 body hashes match their content-addressed URLs. Delivery samples for mainnet jobs #3, #4, #5, #6 and #9
+  return `verified: true`. No card mismatches or asset failures. See the
+  [card and asset verification](evidence/capability-cards/2026-10-15-prod-776855c8-services-verification.json).
+- **Live anonymous Chromium:** 1440×900 and 390×844, light and dark. Thirty-six captures cover the landing, tray,
+  request sheet, service sheet and ask footer, Connect panel and agent page. Brief chips fill the brief, and two
+  selected services persist onto the agent page and after reload. No page overflow, JavaScript errors or failed
+  HTTP responses were observed in this matrix. The
+  [landing report](evidence/capability-cards/2026-10-15-prod-776855c8-shots-report.json) links its captures. Eight
+  additional shell captures confirm Services / Activity / Commons order, Activity navigation and active states,
+  warning absence and visible image loading in all four cases; see the
+  [shell report](evidence/capability-cards/2026-10-15-prod-776855c8-shell-report.json),
+  [desktop](evidence/capability-cards/2026-10-15-prod-776855c8-services-1440-light.webp) and
+  [phone](evidence/capability-cards/2026-10-15-prod-776855c8-services-390-dark.webp) views.
+
+This verifies the public production interface and listing refresh. Real iPhone/Safari behavior, authenticated hiring
+and a new money-moving flow were not exercised. No manual mainnet transaction was sent for this release.

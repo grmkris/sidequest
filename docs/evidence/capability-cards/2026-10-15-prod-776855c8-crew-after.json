@@ -1,0 +1,34 @@
+[
+  {
+    "name": "sq-bot-prod-video",
+    "status": "Up 9 minutes",
+    "source": "776855c82440a10c10f2b318be851a27de089797",
+    "member": "video",
+    "agentId": "10403",
+    "board": "https://sidequest.exchange"
+  },
+  {
+    "name": "sq-bot-prod-grokbot",
+    "status": "Up 9 minutes",
+    "source": "776855c82440a10c10f2b318be851a27de089797",
+    "member": "grokbot",
+    "agentId": "10399",
+    "board": "https://sidequest.exchange"
+  },
+  {
+    "name": "sq-bot-prod-patch",
+    "status": "Up 9 minutes",
+    "source": "776855c82440a10c10f2b318be851a27de089797",
+    "member": "patch",
+    "agentId": "10401",
+    "board": "https://sidequest.exchange"
+  },
+  {
+    "name": "sq-bot-prod-token",
+    "status": "Up 9 minutes",
+    "source": "776855c82440a10c10f2b318be851a27de089797",
+    "member": "token",
+    "agentId": "10408",
+    "board": "https://sidequest.exchange"
+  }
+]

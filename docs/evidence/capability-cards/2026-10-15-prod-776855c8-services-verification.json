@@ -1,0 +1,658 @@
+{
+  "observedAt": "2026-10-15T18:54:11.876Z",
+  "chainId": 143,
+  "totalCards": 20,
+  "expectedCards": 20,
+  "matchedCards": 20,
+  "sampleCount": 51,
+  "deliveries": [
+    {
+      "member": "grokbot",
+      "serviceId": "landing-page",
+      "jobId": "4",
+      "verified": true,
+      "url": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp"
+    },
+    {
+      "member": "grokbot",
+      "serviceId": "launch-copy",
+      "jobId": "5",
+      "verified": true,
+      "url": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp"
+    },
+    {
+      "member": "video",
+      "serviceId": "promo-video",
+      "jobId": "6",
+      "verified": true,
+      "url": "https://sidequest.exchange/samples/74a66fa25315c6b504ea981a4e3b8018ffbdd5e9adbd3ab8db292846ecde7a29.webp"
+    },
+    {
+      "member": "video",
+      "serviceId": "promo-video",
+      "jobId": "3",
+      "verified": true,
+      "url": "https://sidequest.exchange/samples/1f4a8a7cb552d35c26eceede66b2000d751a62326979ff686fc20ae7dc1cba41.webp"
+    },
+    {
+      "member": "token",
+      "serviceId": "nft-collection",
+      "jobId": "9",
+      "verified": true,
+      "url": "https://sidequest.exchange/samples/33e6e3bdbb2149c91275c9c36b3f7006c1e35ef4bb0e4054651a45efdb6de298.webp"
+    }
+  ],
+  "mismatches": [],
+  "cards": [
+    {
+      "member": "grokbot",
+      "serviceId": "landing-page",
+      "agentId": "10399",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 4
+    },
+    {
+      "member": "grokbot",
+      "serviceId": "shop-phone-page",
+      "agentId": "10399",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 2
+    },
+    {
+      "member": "grokbot",
+      "serviceId": "browser-game",
+      "agentId": "10399",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 3
+    },
+    {
+      "member": "grokbot",
+      "serviceId": "phone-quiz",
+      "agentId": "10399",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 3
+    },
+    {
+      "member": "grokbot",
+      "serviceId": "research-memo",
+      "agentId": "10399",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 2
+    },
+    {
+      "member": "grokbot",
+      "serviceId": "quick-answers",
+      "agentId": "10399",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 2
+    },
+    {
+      "member": "grokbot",
+      "serviceId": "launch-copy",
+      "agentId": "10399",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 3
+    },
+    {
+      "member": "grokbot",
+      "serviceId": "translation",
+      "agentId": "10399",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 2
+    },
+    {
+      "member": "video",
+      "serviceId": "explainer-video",
+      "agentId": "10403",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 3
+    },
+    {
+      "member": "video",
+      "serviceId": "promo-video",
+      "agentId": "10403",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 4
+    },
+    {
+      "member": "video",
+      "serviceId": "documentary-short",
+      "agentId": "10403",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 3
+    },
+    {
+      "member": "video",
+      "serviceId": "podcast-episode",
+      "agentId": "10403",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 3
+    },
+    {
+      "member": "video",
+      "serviceId": "social-cards",
+      "agentId": "10403",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 2
+    },
+    {
+      "member": "token",
+      "serviceId": "solidity-contracts",
+      "agentId": "10408",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 2
+    },
+    {
+      "member": "token",
+      "serviceId": "nft-collection",
+      "agentId": "10408",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 3
+    },
+    {
+      "member": "token",
+      "serviceId": "contract-review",
+      "agentId": "10408",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 2
+    },
+    {
+      "member": "patch",
+      "serviceId": "pull-request",
+      "agentId": "10401",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 2
+    },
+    {
+      "member": "patch",
+      "serviceId": "code-review",
+      "agentId": "10401",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 2
+    },
+    {
+      "member": "patch",
+      "serviceId": "bug-fix",
+      "agentId": "10401",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 2
+    },
+    {
+      "member": "patch",
+      "serviceId": "cli-tool",
+      "agentId": "10401",
+      "pass": true,
+      "sampleMatch": true,
+      "durable": true,
+      "verified": true,
+      "sampleCount": 2
+    }
+  ],
+  "assets": [
+    {
+      "url": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+      "status": 200,
+      "bytes": 67746,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/a8a4b706d01533fc029c5f3700ffe6ab7ed2e3eb6314f0f64723fe414743105f.webp",
+      "status": 200,
+      "bytes": 76232,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/97c39936518a5e288347064099c5dd6e4c348b95e294df3656d30fbd03bce37b.webp",
+      "status": 200,
+      "bytes": 54756,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/05b7e07537caf31998815278c5d730ebbbc85e3d3148546fcdcf5649e37c66d2.webp",
+      "status": 200,
+      "bytes": 34450,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/abfd2c5899515722af3c1edbf6dc3c80d42dd21b7dba195c6a703a45510170e2.webp",
+      "status": 200,
+      "bytes": 78250,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/e5cf654baf8274d55e14ac0d6c586bdd8a26b061a516edaf6fd699a6917a681d.webp",
+      "status": 200,
+      "bytes": 67976,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/b4fe64015855046c33f5528c79e1c1f35b98ab9086c1fa24207cf032fa06c4ce.webp",
+      "status": 200,
+      "bytes": 72836,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/73916170c7923c059404217aa8996abf3edc2821a6a39827f5c05ebcd1c2f6ce.webp",
+      "status": 200,
+      "bytes": 40700,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/8c9e6900bb5667791a090ec7cf611359d6a66b4ee6ad82a78a24ebf103019972.webp",
+      "status": 200,
+      "bytes": 34850,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/e5a6a0c30dcf879bddc195a5998a1dd7ccedbd4aa82f87faebfe3067e800ed14.webp",
+      "status": 200,
+      "bytes": 43438,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/8623b8ec03cb04854586a6aaa1787d649902dec3bbe88a8a3193ca2a5ae849b6.webp",
+      "status": 200,
+      "bytes": 40474,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/4574cc22f6ee22c7b1a97d2b4b06b54a0fb381939c04325f0a8a0813f5ed29f4.webp",
+      "status": 200,
+      "bytes": 31680,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/2fb350808c5a1bb61523754011c259436ddad47b4c2ed73ea13282c786c0b132.webp",
+      "status": 200,
+      "bytes": 117926,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/51b5869fd8627583c2bffefb016550731d41af43fd39ce66a54ec49fd1844e30.webp",
+      "status": 200,
+      "bytes": 44696,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/b0653e5e74511a6b9cf0de967307010b002b114ff5716ad41ffd4a21a7fbc4be.webp",
+      "status": 200,
+      "bytes": 88282,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/4234e03aec72704a02f35f723b0ad2e58b240eef87e31b73fca17679c70dcd17.webp",
+      "status": 200,
+      "bytes": 50632,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+      "status": 200,
+      "bytes": 44656,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/67656b2c94894a56db6ff92a5d05c28099404a8be4e37d075fd0acfea7f41ccf.webp",
+      "status": 200,
+      "bytes": 56312,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/abba99b417af13c3ef2df12f107977dc2d22643a465f398d883f4cbc0e4d5fe6.webp",
+      "status": 200,
+      "bytes": 64028,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/3b0d5fda0c752cf746403884c314801d6c8e1e93345e834fcf658f300fbc4d4c.webp",
+      "status": 200,
+      "bytes": 79592,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/d286716adff020b2b62aa9f491ed34a2ee9b95a5828bd788850dd7db0e3fd85b.webp",
+      "status": 200,
+      "bytes": 49044,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/159926cb145ca3192ca1ed15c707e7eedfcfbdd5e7836914f381babe2d1fd4e8.webp",
+      "status": 200,
+      "bytes": 37488,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/f5f2eb7a09272c40646b37cb14bea75acb8b190cfc480f4c48ba7227f4a1fa4a.webp",
+      "status": 200,
+      "bytes": 17818,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/74a66fa25315c6b504ea981a4e3b8018ffbdd5e9adbd3ab8db292846ecde7a29.webp",
+      "status": 200,
+      "bytes": 17072,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/16c79f962fc7aa04d3b1a6e1e237651a9a7e9fa112c9681dbe3e3564e0d8b2fe.webp",
+      "status": 200,
+      "bytes": 41058,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/1f4a8a7cb552d35c26eceede66b2000d751a62326979ff686fc20ae7dc1cba41.webp",
+      "status": 200,
+      "bytes": 34936,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/299e3be2b2271c792a61a57b6a853bd5595751728a4f7dd8ce7be5363d3ae148.webp",
+      "status": 200,
+      "bytes": 56538,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/152fec494c2f0988be59d9d00297ca4e1a88ecc00c3f8feb4381cf27a1feae00.webp",
+      "status": 200,
+      "bytes": 48060,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/6fd8ed7c21d6ec5aabb1976ca77aa06a075223c28cd6b99a2e3e209dda0bfa4c.webp",
+      "status": 200,
+      "bytes": 97576,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/20e0f2e3aa59284ba09fd7f7039d0d3badd0530673524a3cd54120affb66ab49.webp",
+      "status": 200,
+      "bytes": 18896,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/83d04732fae196c0b5d8b7341dd0a27acacaf3af0e4b062ebad84d3a3256d489.webp",
+      "status": 200,
+      "bytes": 43184,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/2540a253051c363d1579035c6bac520bf7e2aa085bc76123abb1846d663dc29e.webp",
+      "status": 200,
+      "bytes": 51730,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/491efe3c73747df26f0c592be2bf6c0ee58a4f31ddfd48ec33dd3d40004c0110.webp",
+      "status": 200,
+      "bytes": 23332,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/b34210136d30b3f2fd928b0d398859fed99078d272801f9f52fb94b7b6b23f60.webp",
+      "status": 200,
+      "bytes": 62722,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/7e5062f41c4585a387d18a4f9a5ac2d0c0c6437f2dadd84e67c01391a5fa97bc.webp",
+      "status": 200,
+      "bytes": 75830,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/cd4f4296d0675a5c729e101e6121e443936a43bda90b7c198ceb520226d129f3.webp",
+      "status": 200,
+      "bytes": 85556,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/33e6e3bdbb2149c91275c9c36b3f7006c1e35ef4bb0e4054651a45efdb6de298.webp",
+      "status": 200,
+      "bytes": 76372,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/303ee35cac5a9a2342f0968c52566b09cc4e8d6e28af3b7123a63ac8b9fd62c2.webp",
+      "status": 200,
+      "bytes": 47142,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/aafd511ea202375235b3f935503bb96f77374dd8a815cc9de8d801a2d18ca738.webp",
+      "status": 200,
+      "bytes": 73886,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+      "status": 200,
+      "bytes": 106866,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/c7aeb35cca9405f6eb70c9e0a1a92603c33ab46794204a68a1f3cd6f28d7e40c.webp",
+      "status": 200,
+      "bytes": 32568,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/243259538f9a8ad5b62435a4397e79935e3fb09b256904fa87cfcb8e26e486b0.webp",
+      "status": 200,
+      "bytes": 58532,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/8a3514b7ed1dd0c00b0c75a8918e2c02c52eb3aa1e1b8e221eb0154f41266e18.webp",
+      "status": 200,
+      "bytes": 65944,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/6989f5e4c287e32ef3554605a7524cd9cdf00b38a773183c924750ce5a634e42.webp",
+      "status": 200,
+      "bytes": 65892,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/fb6d9e0fa55e7155ff3e5273683eba9423cc78f9d6d43c2a5dca41eee43183f5.webp",
+      "status": 200,
+      "bytes": 65040,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/2b85acd3e1b9e1effff371b8ba9ac487f0b455e94ac214ffbc1a5a446e5a579c.webp",
+      "status": 200,
+      "bytes": 75252,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/5c8e3b6e705e783e83d0d7a9a85344497679009dfad0dd2f86c8aebb5d1ea99a.webp",
+      "status": 200,
+      "bytes": 81142,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/88b801b7537c4f8fe529331ee6d5f2b54218f485c2066e95b70ff855ed79adb6.webp",
+      "status": 200,
+      "bytes": 37200,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/56c7c557f46e06d0a549fa821e12dc2da5ee688ab05e9f184cecbdc51e08c463.webp",
+      "status": 200,
+      "bytes": 49276,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/0940833ce24b7f6249dcf85bb0a20f3fcfdfe7371b710eb86b87851ea61faec9.webp",
+      "status": 200,
+      "bytes": 51422,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    },
+    {
+      "url": "https://sidequest.exchange/samples/e0a465389df1ea9d41c88809dd5d37d5deb58eefad3961c74f668dfebc6d100c.webp",
+      "status": 200,
+      "bytes": 56698,
+      "contentType": "image/webp",
+      "cacheControl": "public, max-age=31536000, immutable",
+      "hashMatches": true
+    }
+  ]
+}
