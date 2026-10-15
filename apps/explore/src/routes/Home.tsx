@@ -13,7 +13,7 @@ export function HomePage() {
   const selection = useServiceSelection()
   return (
     <div className="landing-content">
-      <ServiceWall selection={selection} limit={24} seeAll intro={<LandingHero />} />
+      <ServiceWall selection={selection} limit={24} landing intro={<LandingHero />} />
       <LiveNumbers />
       <LiveWork />
       <section className="grid gap-4" id="connect">
@@ -30,7 +30,7 @@ export function HomePage() {
           </span>
         </a>
       </section>
-      <SelectionTray selection={selection} />
+      <SelectionTray selection={selection} app={false} />
     </div>
   )
 }

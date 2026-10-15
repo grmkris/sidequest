@@ -203,7 +203,7 @@ function SelectedPublisher({ publisher, agentId }: { publisher: ManagedAgent; ag
   )
 }
 
-export function PromptInstruction({ prompt }: { prompt: string }) {
+function PromptInstruction({ prompt }: { prompt: string }) {
   return (
     <div className="grid gap-3">
       <textarea

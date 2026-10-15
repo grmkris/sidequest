@@ -47,6 +47,23 @@ export const useCardFrame = () => useContext(Frame)
 export const followsLink = (e: Pick<MouseEvent, 'metaKey' | 'ctrlKey' | 'shiftKey' | 'altKey' | 'button'>): boolean =>
   e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0
 
+interface CardLinkProps {
+  target: LinkTarget
+  /** The sheet's title on a phone: the name the card is about. */
+  title: ReactNode
+  card: ReactNode
+  className?: string
+  /** The link's accessible name, when its content does not say it. */
+  label?: string
+  decorative?: boolean
+  /** How far from the link's start edge the card lines up, in px. */
+  alignOffset?: number
+  mode?: 'auto' | 'sheet'
+  /** The sheet's own classes, for a card that needs more room than a contact's (a service with its pictures). */
+  sheetClassName?: string
+  children?: ReactNode
+}
+
 /**
  * A link that opens a card about where it goes. A press opens the card: anchored to the link on a wide screen, a bottom
  * sheet on a phone. The card's main link (`CardAction`) goes to the page; a modified or middle click goes straight
@@ -62,21 +79,9 @@ export function CardLink({
   decorative = false,
   alignOffset = 0,
   mode = 'auto',
+  sheetClassName,
   children,
-}: {
-  target: LinkTarget
-  /** The sheet's title on a phone: the name the card is about. */
-  title: ReactNode
-  card: ReactNode
-  className?: string
-  /** The link's accessible name, when its content does not say it. */
-  label?: string
-  decorative?: boolean
-  /** How far from the link's start edge the card lines up, in px. */
-  alignOffset?: number
-  mode?: 'auto' | 'sheet'
-  children?: ReactNode
-}) {
+}: CardLinkProps) {
   const wideScreen = useWide()
   const wide = mode !== 'sheet' && wideScreen
   const [open, setOpen] = useState(false)
@@ -111,7 +116,7 @@ export function CardLink({
         {/* The sheet lives at the page's root: a link inside a sentence cannot hold a dialog. */}
         {shown &&
           createPortal(
-            <Sheet open={open} onClose={() => setOpen(false)} title={title} className="gap-3">
+            <Sheet open={open} onClose={() => setOpen(false)} title={title} className={cn('gap-3', sheetClassName)}>
               {body}
             </Sheet>,
             document.body,

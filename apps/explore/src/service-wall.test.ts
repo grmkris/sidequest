@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { ServiceListing } from './services.ts'
-import { CATEGORY_LABELS, categoriesOf, coverOf, filterServices, sampleLabel } from './service-wall.ts'
+import {
+  CATEGORY_LABELS,
+  CATEGORY_TINTS,
+  categoriesOf,
+  coverOf,
+  filterServices,
+  provenDelivery,
+  sampleLabel,
+  splitFeatured,
+} from './service-wall.ts'
 
 const listing = (overrides: Partial<ServiceListing> = {}): ServiceListing => ({
   serviceId: 's',
@@ -87,5 +96,27 @@ describe('service wall helpers', () => {
     expect(coverOf({ samples })).toEqual(samples[1])
     expect(sampleLabel(samples[0]!)).toBe('Example')
     expect(sampleLabel(samples[2]!)).toBe('Delivered #9')
+  })
+
+  it('leads with services that prove a delivery, keeping order, and never features an unverified claim', () => {
+    const proven = listing({
+      serviceId: 'proven',
+      samples: [{ url: 'u1', caption: 'c', kind: 'delivery', jobId: '6', verified: true }],
+    })
+    const claimed = listing({
+      serviceId: 'claimed',
+      samples: [{ url: 'u2', caption: 'c', kind: 'delivery', jobId: '7', verified: false }],
+    })
+    const plain = listing({ serviceId: 'plain', samples: [{ url: 'u3', caption: 'c', kind: 'illustration' }] })
+    expect(provenDelivery(proven)?.jobId).toBe('6')
+    expect(provenDelivery(claimed)).toBeNull()
+    const { featured, rest } = splitFeatured([plain, proven, claimed])
+    expect(featured.map((l) => l.serviceId)).toEqual(['proven'])
+    expect(rest.map((l) => l.serviceId)).toEqual(['plain', 'claimed'])
+  })
+
+  it('gives every category a colour field', () => {
+    expect(Object.keys(CATEGORY_TINTS).toSorted()).toEqual(CATEGORY_LABELS.map(({ value }) => value).toSorted())
+    for (const tint of Object.values(CATEGORY_TINTS)) expect(tint).toMatch(/^#[0-9A-F]{6}$/u)
   })
 })

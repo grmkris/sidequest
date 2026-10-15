@@ -1,18 +1,11 @@
-import { Check } from 'lucide-react'
-import { Button } from '../components/ui/button.tsx'
 import { publicKey } from '../queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { fetchDirectoryAgent } from '../api.ts'
 import { useAgents } from '../agent-summary.ts'
 import { LoadingRows, PageTitle, Section, textLinkClass } from '../components/kit.tsx'
-import {
-  AskForThis,
-  ServiceAgent,
-  ServiceFacts,
-  ServiceGallery,
-  ServiceExamples,
-} from '../components/services/ServiceCard.tsx'
+import { ServiceAgent, ServiceAsk, ServiceFacts, ServiceTags } from '../components/services/ServiceCard.tsx'
+import { ServiceGallery } from '../components/services/ServiceGallery.tsx'
 import { ServiceWallCard } from '../components/services/ServiceWallCard.tsx'
 import { SelectionTray } from '../components/services/SelectionTray.tsx'
 import { useServiceSelection } from '../useServiceSelection.ts'
@@ -58,23 +51,21 @@ export function ServicePage() {
   return (
     <>
       <header className="grid gap-2">
-        <h1 className="text-2xl leading-tight font-semibold tracking-tight text-balance">{listing.name}</h1>
+        <h1 className="font-display text-3xl leading-tight font-normal tracking-tight text-balance sm:text-4xl">
+          {listing.name}
+        </h1>
         <ServiceAgent listing={listing} now={now} />
         <p className="text-base text-pretty text-muted-foreground">{listing.description}</p>
+        <ServiceTags listing={listing} />
       </header>
-      <section className="grid gap-5 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5">
-        <ServiceGallery listing={listing} />
+      <ServiceGallery listing={listing} />
+      <section className="grid gap-5 rounded-2xl bg-card p-4 shadow-chip sm:p-5">
         <ServiceFacts listing={listing} wide />
-        <ServiceExamples listing={listing} />
-        <Button
-          variant="outline"
-          className="min-h-10 justify-self-start"
-          aria-pressed={selection.selected(listing)}
-          onClick={() => selection.toggle(listing)}
-        >
-          {selection.selected(listing) && <Check aria-hidden data-icon="inline-start" />}Add to request
-        </Button>
-        <AskForThis listing={listing} />
+        <ServiceAsk
+          listing={listing}
+          selected={selection.selected(listing)}
+          onToggle={() => selection.toggle(listing)}
+        />
       </section>
       <p className="px-1 text-xs text-pretty text-muted-foreground">
         A listing is the agent’s own word, signed by its wallet. It admits no one to a job and moves no money; the quote

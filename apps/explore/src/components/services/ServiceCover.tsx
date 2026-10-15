@@ -14,8 +14,9 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { useState } from 'react'
-import { CATEGORY_LABELS, coverOf } from '../../service-wall.ts'
-import type { ServiceListing, ServiceCategory } from '../../services.ts'
+import { cn } from '../../lib/cn.ts'
+import { CATEGORY_TINTS, coverOf } from '../../service-wall.ts'
+import type { ServiceCategory, ServiceListing, ServiceSample } from '../../services.ts'
 
 const ICONS = {
   video: Clapperboard,
@@ -32,14 +33,34 @@ const ICONS = {
   onchain: Link,
 } satisfies Record<ServiceCategory, typeof Box>
 
-/** A stable cover box, including when a remote sample cannot load. */
-export function ServiceCover({ listing }: { listing: ServiceListing }) {
-  const sample = coverOf(listing)
+/**
+ * A service's picture on its category's colour field, the seamless ground its covers are shot on. With no sample, or
+ * one that cannot load, the field shows the category's mark, so the wall keeps its rhythm. The field is a picture
+ * colour, the same in both themes; a hairline edge keeps it off the page in either.
+ */
+export function ServiceCover({
+  listing,
+  sample = coverOf(listing),
+  className,
+  imageClassName,
+}: {
+  listing: Pick<ServiceListing, 'samples' | 'category'>
+  sample?: ServiceSample | null
+  className?: string
+  imageClassName?: string
+}) {
   const [failed, setFailed] = useState<string | null>(null)
   const Icon = listing.category === undefined ? Sparkles : ICONS[listing.category]
+  const shown = sample !== null && failed !== sample.url
   return (
-    <div className="aspect-4/3 overflow-clip rounded-lg bg-muted">
-      {sample !== null && failed !== sample.url ? (
+    <div
+      className={cn(
+        'relative overflow-clip rounded-2xl bg-muted after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:ring-1 after:ring-black/10 after:ring-inset dark:after:ring-white/10',
+        className,
+      )}
+      style={listing.category === undefined ? undefined : { backgroundColor: CATEGORY_TINTS[listing.category] }}
+    >
+      {shown ? (
         <img
           src={sample.url}
           alt={sample.caption}
@@ -47,18 +68,12 @@ export function ServiceCover({ listing }: { listing: ServiceListing }) {
           decoding="async"
           referrerPolicy="no-referrer"
           onError={() => setFailed(sample.url)}
-          className="size-full rounded-lg object-cover ring-1 ring-foreground/10"
+          className={cn('absolute inset-0 size-full object-cover', imageClassName)}
         />
       ) : (
-        <div className="flex h-full flex-col justify-between gap-4 p-6 text-muted-foreground">
-          <span className="flex items-center gap-2 text-xs">
-            <Icon aria-hidden className="size-7" strokeWidth={1.25} />
-            {CATEGORY_LABELS.find((item) => item.value === listing.category)?.label ?? 'Service'}
-          </span>
-          <span className="line-clamp-2 font-display text-3xl leading-tight text-balance text-foreground [overflow-wrap:anywhere]">
-            {listing.name}
-          </span>
-        </div>
+        <span className="absolute inset-0 grid place-items-center text-black/40">
+          <Icon aria-hidden className="size-12" strokeWidth={1.25} />
+        </span>
       )}
     </div>
   )
