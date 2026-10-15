@@ -206,11 +206,6 @@
           ],
           "samples": [
             {
-              "url": "/samples/50d7e48eb86914fc525ab06cbd2eee359e621979748114533843fd8a81ed7c61.webp",
-              "caption": "45-second explainer video for Sidequest (testnet job #11)",
-              "kind": "example"
-            },
-            {
               "url": "/samples/b1824fab8388b8a7ef561437486916e9ffe2067785399dc1e8ca035090db57d3.webp",
               "caption": "An explainer in the edit, with its timeline",
               "kind": "illustration"
@@ -219,6 +214,11 @@
               "url": "/samples/8c4ea754186f2d6bd93db1631d65845c5a7902f361f72dd99d99cf3f81179967.webp",
               "caption": "A captioned explainer on a phone",
               "kind": "illustration"
+            },
+            {
+              "url": "/samples/50d7e48eb86914fc525ab06cbd2eee359e621979748114533843fd8a81ed7c61.webp",
+              "caption": "45-second explainer video for Sidequest (testnet job #11)",
+              "kind": "example"
             }
           ]
         },
@@ -275,11 +275,6 @@
           ],
           "samples": [
             {
-              "url": "/samples/86268caa44250b7ee3d50f7c5ae7e23d693d383da7f3d6938de1e293ff61bc2c.webp",
-              "caption": "Two-minute documentary: who pays for open source? (testnet job #9)",
-              "kind": "example"
-            },
-            {
               "url": "/samples/374b43ee24f7b4e9208edf5159bd56a0fcbd5ca403c4791bd3d1129c190e2b22.webp",
               "caption": "A documentary frame with subtitles",
               "kind": "illustration"
@@ -288,6 +283,11 @@
               "url": "/samples/7489422672b7dd2dd119c9bb80dfa7c1c7eee827ab58881254057c1d1e4ae7d5.webp",
               "caption": "A documentary edit with narration",
               "kind": "illustration"
+            },
+            {
+              "url": "/samples/86268caa44250b7ee3d50f7c5ae7e23d693d383da7f3d6938de1e293ff61bc2c.webp",
+              "caption": "Two-minute documentary: who pays for open source? (testnet job #9)",
+              "kind": "example"
             }
           ]
         },
@@ -306,11 +306,6 @@
           ],
           "samples": [
             {
-              "url": "/samples/c356904cefa4b93039f2aca20e1477a8f54896ba4045130a61eeeef5f6388582.webp",
-              "caption": "Four-minute podcast on onchain agent identity (testnet job #8)",
-              "kind": "example"
-            },
-            {
               "url": "/samples/160bd8c462bb0870a25ea5e88af5a806d173c3a8154e221e5c2ebec343c1caa4.webp",
               "caption": "A two-voice episode being recorded",
               "kind": "illustration"
@@ -319,6 +314,11 @@
               "url": "/samples/8ebc956249e2f8dfdcb68acad5f65198030acd5c5e8f69bbbd135238146505a5.webp",
               "caption": "A podcast episode in a player",
               "kind": "illustration"
+            },
+            {
+              "url": "/samples/c356904cefa4b93039f2aca20e1477a8f54896ba4045130a61eeeef5f6388582.webp",
+              "caption": "Four-minute podcast on onchain agent identity (testnet job #8)",
+              "kind": "example"
             }
           ]
         },
@@ -582,11 +582,6 @@
               "jobId": "4"
             },
             {
-              "url": "/samples/ff9fd7a834c0851bbfbb1198c3636235ce99bfcbe332504f8f3b107f661e41f2.webp",
-              "caption": "Landing page for a small coffee roastery (testnet job #12)",
-              "kind": "example"
-            },
-            {
               "url": "/samples/69ffd83015a2a943be8daa80132c150de64488ca559beff996c516eb4a2db931.webp",
               "caption": "A one-page site for a pottery studio",
               "kind": "illustration"
@@ -595,6 +590,11 @@
               "url": "/samples/dd6509266c41c9ebac0279fa0ead8d798cdf4cc769bfb88f8818c11da2047417.webp",
               "caption": "A landing page for a kayak rental",
               "kind": "illustration"
+            },
+            {
+              "url": "/samples/ff9fd7a834c0851bbfbb1198c3636235ce99bfcbe332504f8f3b107f661e41f2.webp",
+              "caption": "Landing page for a small coffee roastery (testnet job #12)",
+              "kind": "example"
             }
           ]
         },
@@ -639,11 +639,6 @@
           ],
           "samples": [
             {
-              "url": "/samples/3c93b2feb65e1fcf6fad9a90b9beea7e904c36c1e57aba7f37c593c6c46b0425.webp",
-              "caption": "Tiny game: rank five Met Norway stations (testnet job #35)",
-              "kind": "example"
-            },
-            {
               "url": "/samples/058d7e01630f38899079b6574c8cc2245776fbacb15af0e6b0bb5fdb3ee01b84.webp",
               "caption": "A tiny game: catch the coffee beans",
               "kind": "illustration"
@@ -652,6 +647,11 @@
               "url": "/samples/9bafaf41dc5c3fdccacc0cb0b6bdb16ab12285895af97f48500dd1202e0cde45.webp",
               "caption": "A sliding-tile puzzle with a timer",
               "kind": "illustration"
+            },
+            {
+              "url": "/samples/3c93b2feb65e1fcf6fad9a90b9beea7e904c36c1e57aba7f37c593c6c46b0425.webp",
+              "caption": "Tiny game: rank five Met Norway stations (testnet job #35)",
+              "kind": "example"
             }
           ]
         },
@@ -670,11 +670,6 @@
           ],
           "samples": [
             {
-              "url": "/samples/3808aaf789ea630677dc90ecc91a2eb1663a456c96c681e6451a852b0d2d8989.webp",
-              "caption": "Phone quiz: which coffee and bun are you? (testnet job #54)",
-              "kind": "example"
-            },
-            {
               "url": "/samples/f5829af948bfd7f6a4b606d42702a0deb05488eeeb8a769f21833613384f3aad.webp",
               "caption": "A quiz: which bird are you?",
               "kind": "illustration"
@@ -683,6 +678,11 @@
               "url": "/samples/2aa941f3746a980d8755cc226e1ede39ba02010156d8ed7a8b3b9cf12ef94291.webp",
               "caption": "A quiz result card, ready to share",
               "kind": "illustration"
+            },
+            {
+              "url": "/samples/3808aaf789ea630677dc90ecc91a2eb1663a456c96c681e6451a852b0d2d8989.webp",
+              "caption": "Phone quiz: which coffee and bun are you? (testnet job #54)",
+              "kind": "example"
             }
           ]
         },
@@ -701,11 +701,6 @@
           ],
           "samples": [
             {
-              "url": "/samples/23206ec423be71efd76f80a0b421363347a9ed0aa7aab8118e36944523affb0b.webp",
-              "caption": "Grant proposal draft for a small DAO (testnet job #36)",
-              "kind": "example"
-            },
-            {
               "url": "/samples/4111e0f9c7650793b03f0649deff729c9d0dc5f6d473065ff63e6b01d0bc7de6.webp",
               "caption": "A two-page memo with a chart and sources",
               "kind": "illustration"
@@ -714,6 +709,11 @@
               "url": "/samples/312dd846493929533647342468338d0342041191380646da955ec6d6eb6d2452.webp",
               "caption": "A sourced memo on heat pumps in old flats",
               "kind": "illustration"
+            },
+            {
+              "url": "/samples/23206ec423be71efd76f80a0b421363347a9ed0aa7aab8118e36944523affb0b.webp",
+              "caption": "Grant proposal draft for a small DAO (testnet job #36)",
+              "kind": "example"
             }
           ]
         },
