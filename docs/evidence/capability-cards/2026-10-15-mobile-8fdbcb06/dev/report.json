@@ -1,0 +1,439 @@
+{
+  "base": "https://dev.sidequest.exchange",
+  "engine": "WebKit 26.6",
+  "time": "2026-10-15T19:59:44.348Z",
+  "cases": [
+    {
+      "width": 390,
+      "colorScheme": "light",
+      "errors": [],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 350,
+            "gridColumns": "350px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 350,
+            "gridColumns": "350px"
+          },
+          "cards": 23,
+          "images": [
+            {
+              "src": "https://dev.sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/1ac8e3b0bda82af31890957b2285c7167d908d54f7e833493537527dc4162ad5.jpg",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-390-light.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 358,
+            "gridColumns": "358px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 358,
+            "gridColumns": "358px"
+          },
+          "cards": 23,
+          "images": [
+            {
+              "src": "https://dev.sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/1ac8e3b0bda82af31890957b2285c7167d908d54f7e833493537527dc4162ad5.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/aafd511ea202375235b3f935503bb96f77374dd8a815cc9de8d801a2d18ca738.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-390-light.webp"
+        }
+      ],
+      "sheet": {
+        "width": 390,
+        "clientWidth": 390,
+        "scrollWidth": 390,
+        "screenshot": "sheet-390-light.webp"
+      }
+    },
+    {
+      "width": 390,
+      "colorScheme": "dark",
+      "errors": [],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 350,
+            "gridColumns": "350px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 350,
+            "gridColumns": "350px"
+          },
+          "cards": 23,
+          "images": [
+            {
+              "src": "https://dev.sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/1ac8e3b0bda82af31890957b2285c7167d908d54f7e833493537527dc4162ad5.jpg",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-390-dark.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 358,
+            "gridColumns": "358px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 358,
+            "gridColumns": "358px"
+          },
+          "cards": 23,
+          "images": [
+            {
+              "src": "https://dev.sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/1ac8e3b0bda82af31890957b2285c7167d908d54f7e833493537527dc4162ad5.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/aafd511ea202375235b3f935503bb96f77374dd8a815cc9de8d801a2d18ca738.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-390-dark.webp"
+        }
+      ],
+      "sheet": {
+        "width": 390,
+        "clientWidth": 390,
+        "scrollWidth": 390,
+        "screenshot": "sheet-390-dark.webp"
+      }
+    },
+    {
+      "width": 1440,
+      "colorScheme": "light",
+      "errors": [
+        "/auth.privy.io'.",
+        "/auth.privy.io'."
+      ],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 1112,
+            "gridColumns": "1112px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 1112,
+            "gridColumns": "1112px"
+          },
+          "cards": 23,
+          "images": [
+            {
+              "src": "https://dev.sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/aafd511ea202375235b3f935503bb96f77374dd8a815cc9de8d801a2d18ca738.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/cd4f4296d0675a5c729e101e6121e443936a43bda90b7c198ceb520226d129f3.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-1440-light.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 944,
+            "gridColumns": "944px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 944,
+            "gridColumns": "944px"
+          },
+          "cards": 23,
+          "images": [
+            {
+              "src": "https://dev.sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/1ac8e3b0bda82af31890957b2285c7167d908d54f7e833493537527dc4162ad5.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/aafd511ea202375235b3f935503bb96f77374dd8a815cc9de8d801a2d18ca738.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/1ac8e3b0bda82af31890957b2285c7167d908d54f7e833493537527dc4162ad5.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/cd4f4296d0675a5c729e101e6121e443936a43bda90b7c198ceb520226d129f3.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/1ac8e3b0bda82af31890957b2285c7167d908d54f7e833493537527dc4162ad5.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/b34210136d30b3f2fd928b0d398859fed99078d272801f9f52fb94b7b6b23f60.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/56b2eeb77b06b6a6d4319ca13ba4495ade01fc33577cec3df74da3eb21a713f1.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/2540a253051c363d1579035c6bac520bf7e2aa085bc76123abb1846d663dc29e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/56b2eeb77b06b6a6d4319ca13ba4495ade01fc33577cec3df74da3eb21a713f1.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/152fec494c2f0988be59d9d00297ca4e1a88ecc00c3f8feb4381cf27a1feae00.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/56b2eeb77b06b6a6d4319ca13ba4495ade01fc33577cec3df74da3eb21a713f1.jpg",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-1440-light.webp"
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "colorScheme": "dark",
+      "errors": [
+        "/auth.privy.io'.",
+        "/auth.privy.io'."
+      ],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 1112,
+            "gridColumns": "1112px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 1112,
+            "gridColumns": "1112px"
+          },
+          "cards": 23,
+          "images": [
+            {
+              "src": "https://dev.sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/aafd511ea202375235b3f935503bb96f77374dd8a815cc9de8d801a2d18ca738.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/cd4f4296d0675a5c729e101e6121e443936a43bda90b7c198ceb520226d129f3.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-1440-dark.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 944,
+            "gridColumns": "944px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 944,
+            "gridColumns": "944px"
+          },
+          "cards": 23,
+          "images": [
+            {
+              "src": "https://dev.sidequest.exchange/samples/34525fa87599a39472bf594958cf683310313b76a0c81f6b52089ac81af3e016.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/1ac8e3b0bda82af31890957b2285c7167d908d54f7e833493537527dc4162ad5.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/aafd511ea202375235b3f935503bb96f77374dd8a815cc9de8d801a2d18ca738.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/1ac8e3b0bda82af31890957b2285c7167d908d54f7e833493537527dc4162ad5.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/cd4f4296d0675a5c729e101e6121e443936a43bda90b7c198ceb520226d129f3.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/1ac8e3b0bda82af31890957b2285c7167d908d54f7e833493537527dc4162ad5.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/b34210136d30b3f2fd928b0d398859fed99078d272801f9f52fb94b7b6b23f60.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/56b2eeb77b06b6a6d4319ca13ba4495ade01fc33577cec3df74da3eb21a713f1.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/2540a253051c363d1579035c6bac520bf7e2aa085bc76123abb1846d663dc29e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/56b2eeb77b06b6a6d4319ca13ba4495ade01fc33577cec3df74da3eb21a713f1.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/samples/152fec494c2f0988be59d9d00297ca4e1a88ecc00c3f8feb4381cf27a1feae00.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://dev.sidequest.exchange/avatars/56b2eeb77b06b6a6d4319ca13ba4495ade01fc33577cec3df74da3eb21a713f1.jpg",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-1440-dark.webp"
+        }
+      ]
+    }
+  ],
+  "sourceSha": "8fdbcb06415d404d971bfe1b79ffe446c1136082",
+  "evidenceBoundary": "Public anonymous WebKit browser. Desktop Privy cross-origin page errors recorded; no authenticated acceptance."
+}

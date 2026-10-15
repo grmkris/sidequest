@@ -1,0 +1,701 @@
+{
+  "base": "https://sidequest.exchange",
+  "engine": "WebKit 26.6",
+  "time": "2026-10-15T20:06:12.177Z",
+  "cases": [
+    {
+      "width": 320,
+      "colorScheme": "light",
+      "errors": [],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "scrollX": 0,
+            "serviceWidth": 280,
+            "gridColumns": "280px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "scrollX": 0,
+            "serviceWidth": 280,
+            "gridColumns": "280px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-320-light.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "scrollX": 0,
+            "serviceWidth": 288,
+            "gridColumns": "288px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "scrollX": 0,
+            "serviceWidth": 288,
+            "gridColumns": "288px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-320-light.webp"
+        }
+      ]
+    },
+    {
+      "width": 320,
+      "colorScheme": "dark",
+      "errors": [],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "scrollX": 0,
+            "serviceWidth": 280,
+            "gridColumns": "280px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "scrollX": 0,
+            "serviceWidth": 280,
+            "gridColumns": "280px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-320-dark.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "scrollX": 0,
+            "serviceWidth": 288,
+            "gridColumns": "288px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 320,
+            "documentWidth": 320,
+            "bodyWidth": 320,
+            "scrollX": 0,
+            "serviceWidth": 288,
+            "gridColumns": "288px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-320-dark.webp"
+        }
+      ]
+    },
+    {
+      "width": 390,
+      "colorScheme": "light",
+      "errors": [],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 350,
+            "gridColumns": "350px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 350,
+            "gridColumns": "350px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-390-light.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 358,
+            "gridColumns": "358px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 358,
+            "gridColumns": "358px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-390-light.webp"
+        }
+      ],
+      "sheet": {
+        "width": 390,
+        "clientWidth": 390,
+        "scrollWidth": 390,
+        "screenshot": "sheet-390-light.webp"
+      }
+    },
+    {
+      "width": 390,
+      "colorScheme": "dark",
+      "errors": [],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 350,
+            "gridColumns": "350px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 350,
+            "gridColumns": "350px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-390-dark.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 358,
+            "gridColumns": "358px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 390,
+            "documentWidth": 390,
+            "bodyWidth": 390,
+            "scrollX": 0,
+            "serviceWidth": 358,
+            "gridColumns": "358px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-390-dark.webp"
+        }
+      ],
+      "sheet": {
+        "width": 390,
+        "clientWidth": 390,
+        "scrollWidth": 390,
+        "screenshot": "sheet-390-dark.webp"
+      }
+    },
+    {
+      "width": 430,
+      "colorScheme": "light",
+      "errors": [],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "scrollX": 0,
+            "serviceWidth": 390,
+            "gridColumns": "390px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "scrollX": 0,
+            "serviceWidth": 390,
+            "gridColumns": "390px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-430-light.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "scrollX": 0,
+            "serviceWidth": 398,
+            "gridColumns": "398px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "scrollX": 0,
+            "serviceWidth": 398,
+            "gridColumns": "398px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-430-light.webp"
+        }
+      ]
+    },
+    {
+      "width": 430,
+      "colorScheme": "dark",
+      "errors": [],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "scrollX": 0,
+            "serviceWidth": 390,
+            "gridColumns": "390px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "scrollX": 0,
+            "serviceWidth": 390,
+            "gridColumns": "390px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-430-dark.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "scrollX": 0,
+            "serviceWidth": 398,
+            "gridColumns": "398px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 430,
+            "documentWidth": 430,
+            "bodyWidth": 430,
+            "scrollX": 0,
+            "serviceWidth": 398,
+            "gridColumns": "398px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-430-dark.webp"
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "colorScheme": "light",
+      "errors": [
+        "/auth.privy.io'.",
+        "/auth.privy.io'."
+      ],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 1112,
+            "gridColumns": "1112px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 1112,
+            "gridColumns": "1112px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/97c39936518a5e288347064099c5dd6e4c348b95e294df3656d30fbd03bce37b.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-1440-light.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 944,
+            "gridColumns": "944px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 944,
+            "gridColumns": "944px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/97c39936518a5e288347064099c5dd6e4c348b95e294df3656d30fbd03bce37b.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/8623b8ec03cb04854586a6aaa1787d649902dec3bbe88a8a3193ca2a5ae849b6.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-1440-light.webp"
+        }
+      ]
+    },
+    {
+      "width": 1440,
+      "colorScheme": "dark",
+      "errors": [
+        "/auth.privy.io'.",
+        "/auth.privy.io'."
+      ],
+      "pages": [
+        {
+          "route": "/",
+          "before": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 1112,
+            "gridColumns": "1112px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 1112,
+            "gridColumns": "1112px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/97c39936518a5e288347064099c5dd6e4c348b95e294df3656d30fbd03bce37b.webp",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "home-1440-dark.webp"
+        },
+        {
+          "route": "/services",
+          "before": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 944,
+            "gridColumns": "944px"
+          },
+          "afterCategoryScroll": {
+            "viewport": 1440,
+            "documentWidth": 1440,
+            "bodyWidth": 1440,
+            "scrollX": 0,
+            "serviceWidth": 944,
+            "gridColumns": "944px"
+          },
+          "cards": 20,
+          "images": [
+            {
+              "src": "https://sidequest.exchange/samples/41395e7b96f3e62686649031452c51766f3784bc82a118a80db73ca50027c74e.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/a145336ef0284d9b40aa0e19061fe307e50e4ba93b5e1fefa4d26dae91e3589c.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/97c39936518a5e288347064099c5dd6e4c348b95e294df3656d30fbd03bce37b.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/samples/8623b8ec03cb04854586a6aaa1787d649902dec3bbe88a8a3193ca2a5ae849b6.webp",
+              "complete": true,
+              "loaded": true
+            },
+            {
+              "src": "https://sidequest.exchange/avatars/f4294c8552106fb108c67bf0abe27606bed7c1a93692f33a6c48cfc0276633e4.jpg",
+              "complete": true,
+              "loaded": true
+            }
+          ],
+          "screenshot": "services-1440-dark.webp"
+        }
+      ]
+    }
+  ],
+  "sourceSha": "8fdbcb06415d404d971bfe1b79ffe446c1136082",
+  "evidenceBoundary": "Public anonymous WebKit browser. Desktop Privy cross-origin page errors recorded; no authenticated or physical iPhone acceptance."
+}

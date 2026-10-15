@@ -1863,3 +1863,35 @@ your own risk." has been removed; Source, Docs and X links remain.
 
 This verifies the public production interface and listing refresh. Real iPhone/Safari behavior, authenticated hiring
 and a new money-moving flow were not exercised. No manual mainnet transaction was sent for this release.
+
+## 15 October 2026 — mobile WebKit service-wall overflow corrected
+
+Kris reported horizontal overflow on the homepage/service cards after the release above. WebKit 26.6 reproduced a
+1,026px document inside a 390px viewport. The earlier Chromium matrix did not catch this browser-specific failure.
+The service wall's implicit grid column expanded to the category fieldset's intrinsic width. Commit
+`8fdbcb06415d404d971bfe1b79ffe446c1136082` gives that grid an explicit `minmax(0, 1fr)` column, keeping category
+scrolling inside the available width. The [before probe](evidence/capability-cards/2026-10-15-mobile-8fdbcb06/before-probe.json)
+and [before capture](evidence/capability-cards/2026-10-15-mobile-8fdbcb06/before-390.webp) record the failure and isolation.
+
+- **Release:** [dev CI 38797485680](https://github.com/grmkris/sidequest/actions/runs/38797485680) passed before the
+  same SHA was promoted under Kris's existing production approval.
+  [Prod CI 38798616092](https://github.com/grmkris/sidequest/actions/runs/38798616092) passed full verification, build,
+  guarded deployment, smoke and drift. Saved [dev](evidence/capability-cards/2026-10-15-mobile-8fdbcb06/dev-ci.json)
+  and [prod](evidence/capability-cards/2026-10-15-mobile-8fdbcb06/prod-ci.json) receipts identify the exact source.
+  Scoped format/lint/typecheck passed; Explore remains 120 files / 593 tests passed.
+- **Live public WebKit, production:** homepage and `/services`, 320/390/430/1440px wide, 900px high, light and dark:
+  all 16 page checks kept document width equal to viewport width, before and after category scrolling/filtering.
+  The window could not scroll horizontally. Both 390px service-sheet checks fit their panel width. All pages rendered
+  20 cards, and all visible images loaded. The
+  [production report](evidence/capability-cards/2026-10-15-mobile-8fdbcb06/prod/report.json) links the captures, including
+  the [phone homepage](evidence/capability-cards/2026-10-15-mobile-8fdbcb06/prod/home-390-light.webp) and
+  [phone service sheet](evidence/capability-cards/2026-10-15-mobile-8fdbcb06/prod/sheet-390-dark.webp).
+- **Live public WebKit, dev:** the same checks passed at 390px and 1440px in both themes; see the
+  [dev report](evidence/capability-cards/2026-10-15-mobile-8fdbcb06/dev/report.json). Local source checks also passed at
+  320/390/430px. Some local proxy reads stalled before cards loaded; direct live checks completed.
+- **Browser limits:** mobile cases recorded no page errors. Desktop WebKit on both stages recorded two Privy
+  cross-origin errors per theme (`/auth.privy.io'.`); they remain in the reports. Width assertions passed independently.
+  Authentication and physical iPhone/Safari acceptance were not exercised.
+
+This CSS-only release required no crew restart or listing refresh. No manual mainnet transaction was sent. The
+temporary Vite server was stopped after local verification.

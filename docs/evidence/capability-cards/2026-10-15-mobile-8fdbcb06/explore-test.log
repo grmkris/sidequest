@@ -1,0 +1,15 @@
+$ vitest run
+
+ RUN  v5.0.3 /home/kristjan/code/agent-jobs/apps/explore
+
+(node:2517436) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  120 passed (120)
+      Tests  593 passed (593)
+   Start at  21:47:08
+   Duration  26.09s (import 70%, transform 27%, tests 3%, worker 1%)
+
+     Import  754 modules were evaluated 3275 times · 207.25s total, 70% of tracked time
+             ~3.15s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation

@@ -1,0 +1,212 @@
+[
+  {
+    "name": "base",
+    "viewport": 390,
+    "doc": 1026,
+    "boxes": [
+      {
+        "tag": "MAIN",
+        "classes": "mx-auto grid max-w-6xl gap-16 pt-12 pr-[max(1.25rem,var(--safe-right))] pb-[max(3rem,var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] outline-none sm:pt-24",
+        "width": 390,
+        "scroll": 1026,
+        "cols": "350px"
+      },
+      {
+        "tag": "DIV",
+        "classes": "landing-content",
+        "width": 350,
+        "scroll": 1006,
+        "cols": "350px"
+      },
+      {
+        "tag": "SECTION",
+        "classes": "grid min-w-0 gap-6",
+        "width": 350,
+        "scroll": 1006,
+        "cols": "1005.671875px"
+      },
+      {
+        "tag": "FIELDSET",
+        "classes": "min-w-0 sticky top-[calc(4rem+var(--safe-top))] z-20 w-fit max-w-full rounded-full p-1 shadow-chip material-chrome",
+        "width": 1005.671875,
+        "scroll": 1006,
+        "cols": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "flex snap-x gap-1 overflow-x-auto rounded-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "width": 997.671875,
+        "scroll": 998,
+        "cols": "none"
+      }
+    ]
+  },
+  {
+    "name": "landing-grid",
+    "viewport": 390,
+    "doc": 1026,
+    "boxes": [
+      {
+        "tag": "MAIN",
+        "classes": "mx-auto grid max-w-6xl gap-16 pt-12 pr-[max(1.25rem,var(--safe-right))] pb-[max(3rem,var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] outline-none sm:pt-24",
+        "width": 390,
+        "scroll": 1026,
+        "cols": "350px"
+      },
+      {
+        "tag": "DIV",
+        "classes": "landing-content",
+        "width": 350,
+        "scroll": 1006,
+        "cols": "350px"
+      },
+      {
+        "tag": "SECTION",
+        "classes": "grid min-w-0 gap-6",
+        "width": 350,
+        "scroll": 1006,
+        "cols": "1005.671875px"
+      },
+      {
+        "tag": "FIELDSET",
+        "classes": "min-w-0 sticky top-[calc(4rem+var(--safe-top))] z-20 w-fit max-w-full rounded-full p-1 shadow-chip material-chrome",
+        "width": 1005.671875,
+        "scroll": 1006,
+        "cols": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "flex snap-x gap-1 overflow-x-auto rounded-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "width": 997.671875,
+        "scroll": 998,
+        "cols": "none"
+      }
+    ]
+  },
+  {
+    "name": "wall-grid",
+    "viewport": 390,
+    "doc": 390,
+    "boxes": [
+      {
+        "tag": "MAIN",
+        "classes": "mx-auto grid max-w-6xl gap-16 pt-12 pr-[max(1.25rem,var(--safe-right))] pb-[max(3rem,var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] outline-none sm:pt-24",
+        "width": 390,
+        "scroll": 390,
+        "cols": "350px"
+      },
+      {
+        "tag": "DIV",
+        "classes": "landing-content",
+        "width": 350,
+        "scroll": 350,
+        "cols": "350px"
+      },
+      {
+        "tag": "SECTION",
+        "classes": "grid min-w-0 gap-6",
+        "width": 350,
+        "scroll": 350,
+        "cols": "350px"
+      },
+      {
+        "tag": "FIELDSET",
+        "classes": "min-w-0 sticky top-[calc(4rem+var(--safe-top))] z-20 w-fit max-w-full rounded-full p-1 shadow-chip material-chrome",
+        "width": 350,
+        "scroll": 350,
+        "cols": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "flex snap-x gap-1 overflow-x-auto rounded-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "width": 342,
+        "scroll": 998,
+        "cols": "none"
+      }
+    ]
+  },
+  {
+    "name": "category-width",
+    "viewport": 390,
+    "doc": 390,
+    "boxes": [
+      {
+        "tag": "MAIN",
+        "classes": "mx-auto grid max-w-6xl gap-16 pt-12 pr-[max(1.25rem,var(--safe-right))] pb-[max(3rem,var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] outline-none sm:pt-24",
+        "width": 390,
+        "scroll": 390,
+        "cols": "350px"
+      },
+      {
+        "tag": "DIV",
+        "classes": "landing-content",
+        "width": 350,
+        "scroll": 350,
+        "cols": "350px"
+      },
+      {
+        "tag": "SECTION",
+        "classes": "grid min-w-0 gap-6",
+        "width": 350,
+        "scroll": 350,
+        "cols": "350px"
+      },
+      {
+        "tag": "FIELDSET",
+        "classes": "min-w-0 sticky top-[calc(4rem+var(--safe-top))] z-20 w-fit max-w-full rounded-full p-1 shadow-chip material-chrome",
+        "width": 350,
+        "scroll": 350,
+        "cols": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "flex snap-x gap-1 overflow-x-auto rounded-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "width": 342,
+        "scroll": 998,
+        "cols": "none"
+      }
+    ]
+  },
+  {
+    "name": "both-grids",
+    "viewport": 390,
+    "doc": 390,
+    "boxes": [
+      {
+        "tag": "MAIN",
+        "classes": "mx-auto grid max-w-6xl gap-16 pt-12 pr-[max(1.25rem,var(--safe-right))] pb-[max(3rem,var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] outline-none sm:pt-24",
+        "width": 390,
+        "scroll": 390,
+        "cols": "350px"
+      },
+      {
+        "tag": "DIV",
+        "classes": "landing-content",
+        "width": 350,
+        "scroll": 350,
+        "cols": "350px"
+      },
+      {
+        "tag": "SECTION",
+        "classes": "grid min-w-0 gap-6",
+        "width": 350,
+        "scroll": 350,
+        "cols": "350px"
+      },
+      {
+        "tag": "FIELDSET",
+        "classes": "min-w-0 sticky top-[calc(4rem+var(--safe-top))] z-20 w-fit max-w-full rounded-full p-1 shadow-chip material-chrome",
+        "width": 350,
+        "scroll": 350,
+        "cols": "none"
+      },
+      {
+        "tag": "DIV",
+        "classes": "flex snap-x gap-1 overflow-x-auto rounded-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "width": 342,
+        "scroll": 998,
+        "cols": "none"
+      }
+    ]
+  }
+]

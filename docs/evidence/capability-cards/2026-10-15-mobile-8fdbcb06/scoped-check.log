@@ -1,0 +1,29 @@
+$ bun scripts/check-files.ts apps/explore/src/components/services/ServiceWall.tsx
+
+$ node_modules/.bin/oxfmt -c oxfmt.config.ts --check --no-error-on-unmatched-pattern apps/explore/src/components/services/ServiceWall.tsx
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 439ms on 1 files using 16 threads.
+
+$ node_modules/.bin/oxlint -c oxlint.config.ts apps/explore/src/components/services/ServiceWall.tsx
+
+$ node_modules/.bin/turbo run typecheck --output-logs=errors-only --filter=@sidequest/explore
+
+   • turbo 2.11.7
+   • Packages in scope: @sidequest/explore
+   • Running typecheck in 1 package
+   • Remote caching enabled
+
+
+ Tasks:    3 successful, 3 total
+Cached:    2 cached, 3 total
+  Time:    19.987s
+
+
+check:files: 1 files
+| Step | Result | Detail |
+| :-- | :-- | :-- |
+| format | pass | 1 files |
+| lint | pass | 1 files |
+| typecheck | pass | @sidequest/explore |
