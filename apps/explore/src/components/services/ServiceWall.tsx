@@ -39,7 +39,7 @@ export function ServiceWall({
   const matching = filterServices(read.services, query, category)
   const services = matching.slice(0, limit)
   return (
-    <section aria-label="Services" className="grid min-w-0 gap-6">
+    <section aria-label="Services" className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
       {intro}
       <ServiceSearch value={q} onChange={setQ} />
       {rail}
