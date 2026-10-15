@@ -210,14 +210,7 @@ export async function eventStart(
   if (params.cursor === null) return { seq: last?.seq ?? 0, truncated: false }
   const page = await eventPage(sql, network, principal, params, now, 1)
   const after = eventCursor(params.cursor)
-  if (after !== undefined) {
-    if (!page.gap) return { seq: after, truncated: false }
-    const [retained] = await sql.all<{ seq: number | null }>(
-      'SELECT min(seq) AS seq FROM feed_events WHERE chain_id = ?',
-      telegramChainId(network),
-    )
-    return { seq: retained?.seq === null || retained === undefined ? after : retained.seq - 1, truncated: true }
-  }
+  if (after !== undefined) return { seq: after, truncated: page.gap }
   const first = page.events[0]
   if (first !== undefined) return { seq: eventCursor(first.cursor)! - 1, truncated: false }
   return { seq: last?.seq ?? 0, truncated: false }
