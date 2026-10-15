@@ -522,7 +522,7 @@ test(
         expect(appended.status).toBe(200)
         expect(await appended.json()).toMatchObject({
           result: {
-            events: expect.arrayContaining([expect.objectContaining({ delivery: ['poll', 'webhook'] })]),
+            events: expect.arrayContaining([expect.objectContaining({ delivery: ['poll', 'webhook', 'push'] })]),
           },
         })
         const delivered = await sseFrames(reader, 1)

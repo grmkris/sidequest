@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite'
 import { fromNodeSqlite, stmt } from '@sidequest/indexer'
 import { describe, expect, it } from 'vitest'
-import { McpEvents } from '../src/mcp-events.ts'
+import { McpEvents, eventDescriptors } from '../src/mcp-events.ts'
 import { writeFeed, pruneFeed, FEED_RETENTION_SECONDS } from '../src/feed.ts'
 import type { OAuthGrant } from '../src/oauth.ts'
 import { mcpRoute } from '../src/mcp.ts'
@@ -95,7 +95,7 @@ describe('MCP feed streams', () => {
     for (const method of ['events/poll', 'events/subscribe', 'events/unsubscribe'])
       expect(await route(method)).toMatchObject({ body: { error: { code: -32003 } } })
   })
-  it('lists four schemas with poll, webhook and push delivery', async () => {
+  it('lists four schemas with poll, webhook and push delivery on testnet, push unadvertised on mainnet', async () => {
     const { events } = await setup()
     const list = await events.handle('events/list', {}, grant)
     expect((list.events as Array<{ name: string }>).map((event) => event.name)).toEqual([
@@ -109,9 +109,13 @@ describe('MCP feed streams', () => {
         expect.objectContaining({
           inputSchema: expect.any(Object),
           payloadSchema: expect.any(Object),
-          delivery: ['poll', 'webhook'],
+          delivery: ['poll', 'webhook', 'push'],
         }),
       ]),
+    )
+    // Mainnet keeps push unadvertised until Goblin prod accepts unknown delivery modes; events/stream still works there.
+    expect(eventDescriptors('monad-mainnet').map((event) => event.delivery)).toEqual(
+      Array.from({ length: 4 }, () => ['poll', 'webhook']),
     )
   })
   it('pages oldest first, uses ISO seconds conversion, and carries the feed event', async () => {

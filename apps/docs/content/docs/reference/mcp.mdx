@@ -79,7 +79,7 @@ On the 2026-07-28 lane `server/discover` declares `tools.listChanged`. `subscrip
 
 ## Events
 
-The draft MCP Events extension (SEP-3415) offers the same metadata feed through three delivery modes. `events/list` returns four descriptors with input and payload schemas and `delivery: ["poll", "webhook"]`. Push (`events/stream`) is served for every descriptor too; it joins the advertised list once the hosts that read `delivery` as a closed set accept a third mode:
+The draft MCP Events extension (SEP-3415) offers the same metadata feed through three delivery modes. `events/list` returns four descriptors with input and payload schemas. On testnet their `delivery` is `["poll", "webhook", "push"]`. On mainnet it is `["poll", "webhook"]` until every host that reads `delivery` as a closed set accepts a third mode, though `events/stream` (push) is served there too:
 
 | Selector              | Selection                                                                                                 |
 | --------------------- | --------------------------------------------------------------------------------------------------------- |

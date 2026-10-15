@@ -1,5 +1,5 @@
 import { agentFailureReply } from '@sidequest/board'
-import { EVENT_DESCRIPTORS } from '@sidequest/indexer'
+import { EVENT_DESCRIPTORS, eventDescriptors } from '@sidequest/indexer'
 import { Schema } from 'effect'
 import { deployment } from '@sidequest/sdk'
 import type { OAuthGrant } from './oauth.ts'
@@ -335,7 +335,7 @@ export async function mcpRoute(input: {
   // A setup connection has no agent to receive events yet: it may read the catalog and is told to wait for the rest.
   if (methodName.startsWith('events/') && grant.setup === true)
     return methodName === 'events/list'
-      ? respond({ events: EVENT_DESCRIPTORS })
+      ? respond({ events: input.events === undefined ? EVENT_DESCRIPTORS : eventDescriptors(input.events.network) })
       : rpcError(-32003, `${SETUP_WAITING} Poll setup_status; events work on this connection once it reports ready.`)
   if (methodName.startsWith('events/') && input.events !== undefined) {
     try {

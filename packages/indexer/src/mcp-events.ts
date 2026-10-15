@@ -44,10 +44,7 @@ const payloadSchema = {
   },
 }
 /** The events a connection may subscribe to: what events/list answers, also before a setup connection has an agent. */
-/**
- * The delivery modes `events/list` advertises. `events/stream` (push) is served, but not advertised until clients that
- * decode `delivery` as a closed set (Goblin, 15 Oct 2026) accept unknown modes; add 'push' here then.
- */
+/** The delivery modes every host understands; also what a descriptor carries before its network is known. */
 export const EVENT_DELIVERY: readonly string[] = ['poll', 'webhook']
 
 export const EVENT_DESCRIPTORS = [
@@ -68,6 +65,16 @@ export const EVENT_DESCRIPTORS = [
   { name: 'sidequest.approvals', description: 'Your approval decisions and permissions.', inputSchema: objectSchema() },
   { name: 'sidequest.requests', description: 'Public quote requests and published jobs.', inputSchema: objectSchema() },
 ].map((event) => ({ ...event, payloadSchema, delivery: EVENT_DELIVERY }))
+
+/**
+ * What `events/list` answers on a network. `events/stream` (push) is served everywhere, but mainnet advertises it only
+ * once Goblin prod accepts unknown delivery modes: it decoded `delivery` as a closed set until goblin dev 4b88b4b2
+ * (15 Oct 2026), and one unknown mode failed its whole events/list.
+ */
+export function eventDescriptors(network: Network) {
+  const delivery = network === 'monad-mainnet' ? EVENT_DELIVERY : [...EVENT_DELIVERY, 'push']
+  return EVENT_DESCRIPTORS.map((event) => ({ ...event, delivery }))
+}
 
 export function eventArguments(name: unknown, value: unknown): { name: string; args: Record<string, unknown> } {
   if (name === undefined) throw new EventRpcError(-32602, 'name is required: one of the events events/list returns')
@@ -264,7 +271,7 @@ export class McpEvents {
     // Whole seconds, like the feed and the subscription table's INTEGER columns.
     const now = this.options.now?.() ?? Math.floor(Date.now() / 1000)
     const principal = grant.address.toLowerCase()
-    if (method === 'events/list') return { events: EVENT_DESCRIPTORS }
+    if (method === 'events/list') return { events: eventDescriptors(this.network) }
     if (method === 'events/poll') return pollEvents(this.sql, this.network, principal, params, now)
     if (method === 'events/subscribe')
       return subscribeWebhook(this.sql, this.network, principal, params, now, this.options.fetch, grant.grantId)
