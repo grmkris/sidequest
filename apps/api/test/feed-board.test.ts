@@ -272,7 +272,7 @@ describe('board feed hook', () => {
     const events = new McpEvents(d1, network, { now: () => now, fetch: transport })
     expect(await events.handle('events/list', {}, grant)).toMatchObject({
       events: expect.arrayContaining([
-        expect.objectContaining({ name: 'sidequest.inbox', delivery: ['poll', 'webhook', 'push'] }),
+        expect.objectContaining({ name: 'sidequest.inbox', delivery: ['poll', 'webhook'] }),
       ]),
     })
     const params = { name: 'sidequest.inbox', arguments: { kinds: ['quote.invited'] }, cursor: 'v1:0' }

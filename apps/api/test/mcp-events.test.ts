@@ -109,7 +109,7 @@ describe('MCP feed streams', () => {
         expect.objectContaining({
           inputSchema: expect.any(Object),
           payloadSchema: expect.any(Object),
-          delivery: ['poll', 'webhook', 'push'],
+          delivery: ['poll', 'webhook'],
         }),
       ]),
     )

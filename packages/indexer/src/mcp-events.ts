@@ -44,6 +44,12 @@ const payloadSchema = {
   },
 }
 /** The events a connection may subscribe to: what events/list answers, also before a setup connection has an agent. */
+/**
+ * The delivery modes `events/list` advertises. `events/stream` (push) is served, but not advertised until clients that
+ * decode `delivery` as a closed set (Goblin, 15 Oct 2026) accept unknown modes; add 'push' here then.
+ */
+export const EVENT_DELIVERY: readonly string[] = ['poll', 'webhook']
+
 export const EVENT_DESCRIPTORS = [
   {
     name: 'sidequest.inbox',
@@ -61,7 +67,7 @@ export const EVENT_DESCRIPTORS = [
   },
   { name: 'sidequest.approvals', description: 'Your approval decisions and permissions.', inputSchema: objectSchema() },
   { name: 'sidequest.requests', description: 'Public quote requests and published jobs.', inputSchema: objectSchema() },
-].map((event) => ({ ...event, payloadSchema, delivery: ['poll', 'webhook', 'push'] }))
+].map((event) => ({ ...event, payloadSchema, delivery: EVENT_DELIVERY }))
 
 export function eventArguments(name: unknown, value: unknown): { name: string; args: Record<string, unknown> } {
   if (name === undefined) throw new EventRpcError(-32602, 'name is required: one of the events events/list returns')
