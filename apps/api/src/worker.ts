@@ -685,6 +685,23 @@ export default class Api extends Cloudflare.Worker<Api>()(
                   headers: { ...reply.headers, location: reply.redirect },
                 })
         }
+        if (path === '/mcp/directory') {
+          const reply = yield* Effect.promise(() =>
+            mcpRoute({
+              method: request.method,
+              pathname: url.pathname,
+              body: oauthBody,
+              origin: url.origin,
+              headers: request.headers,
+              publicDirectory: true,
+              tools: directoryTools,
+              call: directoryEdgeCall,
+            }),
+          )
+          return reply.status === 204 || reply.status === 202
+            ? HttpServerResponse.empty({ status: reply.status, headers: { ...cors, ...reply.headers } })
+            : json(reply.body, reply.status, { ...cors, ...reply.headers })
+        }
         if (path === '/mcp') {
           const runMcp = Effect.runPromiseWith(yield* Effect.context<RuntimeContext>())
           const resource = `${url.origin}${url.pathname}`

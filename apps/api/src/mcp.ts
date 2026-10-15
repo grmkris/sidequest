@@ -10,6 +10,7 @@ import {
   toolAnnotations,
   toolRefusal,
 } from './mcp-policy.ts'
+import { publicDirectoryProtocol, PUBLIC_DIRECTORY_INSTRUCTIONS } from './mcp-public-directory.ts'
 import { toolWireMetadata } from './mcp-tool-metadata.ts'
 import { approvalRound, settledCreation } from './mcp-mrtr.ts'
 import type { ListenRequest } from './mcp-listen.ts'
@@ -89,11 +90,13 @@ export async function mcpRoute(input: {
   readonly tools: Record<string, McpTool>
   readonly call: (tool: string, args: Record<string, unknown>, agentId: string) => Promise<unknown>
   readonly origin: string
+  readonly publicDirectory?: boolean
 }): Promise<McpReply> {
   const { method, pathname, body, grant, call, origin } = input
+  const publicDirectory = input.publicDirectory === true
   const tools = { ...input.tools, ...hiringTools }
-  const skillManifests = await renderedSkillManifests(origin)
-  if (grant === undefined)
+  const skillManifests = publicDirectory ? [] : await renderedSkillManifests(origin)
+  if (grant === undefined && !publicDirectory)
     return json(
       { ok: false, code: 'unauthenticated', message: 'A resource-scoped OAuth bearer token is required' },
       401,
@@ -144,21 +147,23 @@ export async function mcpRoute(input: {
   // Either is accepted with nothing to answer.
   const response = body.method === undefined && ('result' in body || 'error' in body)
   if (id === undefined || response) return { status: 202, headers: { 'cache-control': 'no-store' } }
-  const capabilities = {
-    tools: { listChanged: false },
-    prompts: {},
-    resources: {},
-    events: {},
-    // SEP-3415 names Events as an extension; the top-level `events` stays for the clients that already read it.
-    extensions: { 'io.modelcontextprotocol/skills': {}, 'io.modelcontextprotocol/events': {} },
-  }
+  const capabilities = publicDirectory
+    ? { tools: { listChanged: false } }
+    : {
+        tools: { listChanged: false },
+        prompts: {},
+        resources: {},
+        events: {},
+        // SEP-3415 names Events as an extension; the top-level `events` stays for the clients that already read it.
+        extensions: { 'io.modelcontextprotocol/skills': {}, 'io.modelcontextprotocol/events': {} },
+      }
   if (modern && methodName === 'server/discover')
     return respond({
       resultType: 'complete',
       supportedVersions: [MODERN_VERSION],
       // ADR-0021: tool changes reach 2026 clients over subscriptions/listen; the legacy lane never hears them.
-      capabilities: { ...capabilities, tools: { listChanged: true } },
-      instructions: connectorInstructions(origin),
+      capabilities: { ...capabilities, tools: { listChanged: !publicDirectory } },
+      instructions: publicDirectory ? PUBLIC_DIRECTORY_INSTRUCTIONS : connectorInstructions(origin),
       ttlMs: 0,
       cacheScope: 'private',
       _meta: { 'io.modelcontextprotocol/serverInfo': MCP_SERVER_INFO },
@@ -173,11 +178,14 @@ export async function mcpRoute(input: {
           : PROTOCOLS[0],
       capabilities,
       serverInfo: MCP_SERVER_INFO,
-      instructions: connectorInstructions(origin),
+      instructions: publicDirectory ? PUBLIC_DIRECTORY_INSTRUCTIONS : connectorInstructions(origin),
     })
   }
   // A notification sent with an id is answered leniently rather than as an unknown method.
   if (methodName === 'ping' || methodName.startsWith('notifications/')) return respond({})
+  if (publicDirectory)
+    return publicDirectoryProtocol({ methodName, params, tools: input.tools, call, respond, rpcError })
+  if (grant === undefined) return rpcError(-32603, 'OAuth grant unavailable')
   if (modern && methodName === 'subscriptions/listen') {
     if (!Schema.is(Listen)(body)) return rpcError(-32602, 'subscriptions/listen needs a request id and notifications')
     const hearsTools = body.params.notifications?.toolsListChanged === true

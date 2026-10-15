@@ -46,6 +46,19 @@ const get = (path: string, e: ReturnType<typeof env>) =>
   worker.fetch(new Request(`https://dev.sidequest.exchange${path}`), e.env)
 
 describe('explore worker routing', () => {
+  it('proxies anonymous public and tenant directory MCP requests', async () => {
+    const context = env()
+    for (const path of ['/mcp/directory', '/b/monad-pet/mcp/directory']) {
+      expect(isApiPath(path)).toBe(true)
+      await worker.fetch(
+        new Request(`https://dev.sidequest.exchange${path}`, { method: 'POST', body: '{}' }),
+        context.env,
+      )
+    }
+    expect(context.api).toEqual(['/mcp/directory', '/b/monad-pet/mcp/directory'])
+    expect(isApiPath('/mcp/directory-extra')).toBe(false)
+    expect(isApiPath('/b/monad-pet/mcp/directory-extra')).toBe(false)
+  })
   it('sends the board API to the API, under a board prefix too', () => {
     for (const p of ['/api/get_task', '/data/jobs', '/offers/0xab.json', '/mcp', '/health']) {
       expect(isApiPath(p), p).toBe(true)

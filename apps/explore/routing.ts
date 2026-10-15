@@ -15,11 +15,12 @@ const PROXIED = [
   '/.well-known/',
   '/mcp',
   '/mcp/server-card',
+  '/mcp/directory',
   '/health',
   '/x402/',
   '/aa/rpc',
 ]
-const BOARD_API = /^\/b\/[a-z0-9-]{3,32}(?:\/api\/|\/data\/|\/offers\/|\/mcp(?:\/server-card)?$|\/health$)/
+const BOARD_API = /^\/b\/[a-z0-9-]{3,32}(?:\/api\/|\/data\/|\/offers\/|\/mcp(?:\/server-card|\/directory)?$|\/health$)/
 
 export function isApiPath(pathname: string): boolean {
   return PROXIED.some((p) => pathname === p || (p.endsWith('/') && pathname.startsWith(p))) || BOARD_API.test(pathname)

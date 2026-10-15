@@ -30,6 +30,12 @@ describe('public MCP metadata', () => {
           url: `${origin}/mcp`,
           supportedProtocolVersions: [MCP_PROTOCOL_VERSION, ...MCP_LEGACY_PROTOCOL_VERSIONS],
         },
+        {
+          type: 'streamable-http',
+          url: `${origin}/mcp/directory`,
+          supportedProtocolVersions: [MCP_PROTOCOL_VERSION, ...MCP_LEGACY_PROTOCOL_VERSIONS],
+          authentication: { type: 'none' },
+        },
       ],
     })
     expect(card.description.length).toBeLessThanOrEqual(100)
@@ -39,7 +45,10 @@ describe('public MCP metadata', () => {
   })
 
   it('uses the exact tenant resource while keeping stage-specific URLs out of the production manifest', () => {
-    expect(serverCard(origin, '/b/my-team').remotes[0]?.url).toBe(`${origin}/b/my-team/mcp`)
+    expect(serverCard(origin, '/b/my-team').remotes.map((remote) => remote.url)).toEqual([
+      `${origin}/b/my-team/mcp`,
+      `${origin}/b/my-team/mcp/directory`,
+    ])
     expect(JSON.stringify(registryManifest('https://sidequest.exchange'))).not.toContain('dev.sidequest.exchange')
   })
 

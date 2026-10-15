@@ -123,7 +123,7 @@ const n = (a: Record<string, unknown>, k: string) => a[k] as number
 export const tools: Record<string, Tool> = {
   protocol_info: {
     description:
-      'Chain, contract addresses, known reward tokens and how to act with a key-holding wallet. Read this first. No sign-in needed.',
+      'Chain, contract addresses, known reward tokens and how to act with a key-holding wallet. Read this first. No sign-in needed over REST. Public signed directory listings use /mcp/directory without OAuth; sign each prepared record with sdk.directoryTypedData(record).',
     inputSchema: { type: 'object', properties: {} },
     run: async (board, _caller, _args, ctx) => {
       const d = sdk.deployment(ctx.network)
