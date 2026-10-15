@@ -754,17 +754,31 @@ export default class Api extends Cloudflare.Worker<Api>()(
           )
           console.log(JSON.stringify(mcpLogLine({ request: oauthBody, reply, grant, ms: Date.now() - started })))
           // ADR-0021: a 2026 listen is answered by the management object's stream for this connection.
+          // Right after a deploy the management object can still run the previous version for a few minutes (Cloudflare
+          // rolls Durable Objects out eventually), and a stream RPC it lacks answers nothing: say so, retryably.
+          const streamed = (stream: Response | undefined, id: string | number) =>
+            stream instanceof Response
+              ? HttpServerResponse.setHeaders(HttpServerResponse.fromWeb(stream), cors)
+              : json(
+                  {
+                    jsonrpc: '2.0',
+                    id,
+                    error: { code: -32603, message: 'Streams are restarting after a deploy; retry in a minute' },
+                  },
+                  503,
+                  { ...cors, 'retry-after': '60' },
+                )
           if (reply.listen !== undefined) {
             const stream = yield* boards
               .getByName(SPONSOR_OBJECT_NAME)
               .mcpListen({ resource, listen: reply.listen, ...(bearer === undefined ? {} : { bearer }) })
-            return HttpServerResponse.setHeaders(HttpServerResponse.fromWeb(stream), cors)
+            return streamed(stream, reply.listen.subscriptionId)
           }
           if (reply.eventStream !== undefined) {
             const stream = yield* boards
               .getByName(SPONSOR_OBJECT_NAME)
               .mcpEventStream({ resource, request: reply.eventStream, ...(bearer === undefined ? {} : { bearer }) })
-            return HttpServerResponse.setHeaders(HttpServerResponse.fromWeb(stream), cors)
+            return streamed(stream, reply.eventStream.subscriptionId)
           }
           return reply.status === 204 || reply.status === 202
             ? HttpServerResponse.empty({ status: reply.status, headers: { ...cors, ...reply.headers } })
