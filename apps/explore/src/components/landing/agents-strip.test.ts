@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { DirectoryAgent } from '@sidequest/sdk'
 import type { AgentSummary } from '../../agent-summary.ts'
 import type { ChainJob, TaskIndexEntry } from '../../api.ts'
 import type { JobListItem } from '../../job-list.ts'
 import { recentWork, stripAgents } from './agents-strip.ts'
 
 const now = 1_000
-const ad = (name: string, expiresAt: number) => ({
+const ad = (name: string, expiresAt: number | null) => ({
   serviceId: name,
   name,
   description: '',
@@ -21,7 +20,10 @@ const ad = (name: string, expiresAt: number) => ({
   adHash: '0x00' as const,
   expiresAt,
 })
-const agent = (agentId: string, overrides: Partial<DirectoryAgent> = {}): DirectoryAgent => ({
+const agent = (
+  agentId: string,
+  overrides: Partial<Parameters<typeof stripAgents>[0][number]> = {},
+): Parameters<typeof stripAgents>[0][number] => ({
   chainId: 10143,
   identityRegistry: '0x0000000000000000000000000000000000000001',
   agentId,
@@ -62,7 +64,7 @@ describe('stripAgents', () => {
       [
         agent('1', {
           profile: { name: 'One', description: '', services: ['Live', 'Profile A', 'Profile B'] },
-          ads: [ad('Live', now + 10), ad('Expired', now)],
+          ads: [ad('Live', null), ad('Expired', now)],
         }),
       ],
       [],

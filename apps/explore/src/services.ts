@@ -9,7 +9,36 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { data } from './api.ts'
 import type { LinkTarget } from './components/BoardLink.tsx'
 
-export type Ad = ServiceAdvertisement & { adHash: string; expiresAt: number }
+const SERVICE_CATEGORIES = [
+  'video',
+  'audio',
+  'image',
+  '3d',
+  'site',
+  'game',
+  'research',
+  'writing',
+  'translation',
+  'data',
+  'code',
+  'onchain',
+] as const
+export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number]
+export type ServiceSample = {
+  url: string
+  caption: string
+  kind: 'illustration' | 'example' | 'delivery'
+  jobId?: string
+  verified?: boolean
+}
+type CardFields = {
+  category?: ServiceCategory
+  tags?: string[]
+  examples?: string[]
+  samples?: ServiceSample[]
+  publishedAt?: number
+}
+export type Ad = Omit<ServiceAdvertisement, 'expiresAt'> & CardFields & { adHash: string; expiresAt: number | null }
 
 /** One service, with the agent that offers it and what says how active that agent is. */
 export interface ServiceListing extends Ad {
@@ -37,9 +66,13 @@ export const presenceOf = (listing: Pick<ServiceListing, 'presence' | 'lastMcpCa
 })
 
 /** A directory agent's live ads as listings, for a page that already holds the agent. */
-export function agentListings(agent: DirectoryAgent, now: number, delivered = 0): ServiceListing[] {
+export function agentListings(
+  agent: Omit<DirectoryAgent, 'ads'> & { ads: Ad[] },
+  now: number,
+  delivered = 0,
+): ServiceListing[] {
   return agent.ads
-    .filter((ad) => ad.expiresAt > now)
+    .filter((ad) => ad.expiresAt === null || ad.expiresAt > now)
     .map((ad) => ({
       ...ad,
       agentId: agent.agentId,

@@ -10,6 +10,7 @@ const PROXIED = [
   '/data/',
   '/offers/',
   '/avatars/',
+  '/samples/',
   '/profiles/',
   '/oauth/',
   '/.well-known/',

@@ -1,4 +1,5 @@
 import type { DirectoryAgent } from '@sidequest/sdk'
+import type { Ad } from '../../services.ts'
 import type { AgentSummary } from '../../agent-summary.ts'
 import { type JobListItem, titleOf } from '../../job-list.ts'
 
@@ -37,7 +38,7 @@ export interface StripAgent {
  * is in seconds, like a listing's `expiresAt`.
  */
 export function stripAgents(
-  directory: readonly DirectoryAgent[],
+  directory: readonly (Omit<DirectoryAgent, 'ads'> & { ads: Ad[] })[],
   summaries: readonly AgentSummary[],
   now: number,
   limit = 8,
@@ -46,7 +47,7 @@ export function stripAgents(
   return directory
     .filter((agent) => agent.enrolled && agent.ownership === 'verified' && agent.profile.name.trim() !== '')
     .map((agent) => {
-      const live = agent.ads.filter((ad) => ad.expiresAt > now).map((ad) => ad.name)
+      const live = agent.ads.filter((ad) => ad.expiresAt === null || ad.expiresAt > now).map((ad) => ad.name)
       const services = [...new Set([...live, ...agent.profile.services])]
       const record = records.get(agent.agentId)
       return {
