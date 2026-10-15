@@ -24,7 +24,7 @@ function subscribe(change: () => void) {
 }
 
 /** Whether the screen is wide; true where nothing can measure it (server rendering, tests). */
-function useWide(): boolean {
+export function useWide(): boolean {
   return useSyncExternalStore(
     subscribe,
     () => window.matchMedia(WIDE).matches,

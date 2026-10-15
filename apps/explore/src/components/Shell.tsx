@@ -21,6 +21,7 @@ import { usePaused } from '../wallet.ts'
 import { AccountAvatar, AccountLink, Count } from './AccountLink.tsx'
 import { type LinkTarget, BoardLink, boardRoutes } from './BoardLink.tsx'
 import { LaunchBanner } from './LaunchGate.tsx'
+import { ConnectAgent } from './ConnectAgent.tsx'
 import { SideChip } from './side/SideToken.tsx'
 
 import { useCollectActions } from '../collect.ts'
@@ -135,7 +136,7 @@ function Brand({ stacked = false }: { stacked?: boolean }) {
  */
 const useNarrow = () => useMatches({ select: (matches) => matches.at(-1)?.staticData.measure === 'narrow' })
 
-export function Shell({ children }: { children: ReactNode }) {
+function useShellState() {
   const auth = useAuth()
   const account = useAutoSignIn(auth)
   const paused = usePaused()
@@ -146,10 +147,18 @@ export function Shell({ children }: { children: ReactNode }) {
   const agents = auth.signedIn ? (managed.data?.agents ?? []) : []
   const pending = pendingByAgent(auth.signedIn ? (approvals.data?.approvals ?? []) : [])
   const waiting = [...pending.values()].reduce((sum, n) => sum + n, 0)
-  const mine = new Set(agents.flatMap((a) => (a.agent_id === null ? [] : [String(a.agent_id)])))
+  const mine = new Set(agents.flatMap((a) => (a.agent_id === null ? [] : [a.agent_id])))
   const [jobs, agentsPlace, commonsPlace] = places(mine)
   // Nothing is counted when unknown.
   const collect = useCollectActions(auth.address, auth.signedIn).data?.length ?? 0
+  return { auth, account, paused, narrow, pathname, agents, pending, waiting, jobs, agentsPlace, commonsPlace, collect }
+}
+
+type ShellState = ReturnType<typeof useShellState>
+
+export function Shell({ children }: { children: ReactNode }) {
+  const state = useShellState()
+  const { auth, account, paused, narrow, pathname, collect } = state
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">
       <SkipLink />
@@ -161,57 +170,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <div className="px-2 pb-4">
           <Brand stacked />
         </div>
-        <nav className="grid gap-0.5" aria-label="Places">
-          {jobs !== undefined && <SideItem place={jobs} on={jobs.active(pathname)} />}
-          {agentsPlace !== undefined && (
-            <SideItem
-              place={agentsPlace}
-              on={
-                agentsPlace.active(pathname) &&
-                !(auth.signedIn && pathname === '/agents/new') &&
-                !agents.some((a) => onAgent(pathname, a.agent_id))
-              }
-            />
-          )}
-          {commonsPlace !== undefined && <SideItem place={commonsPlace} on={commonsPlace.active(pathname)} />}
-          {auth.signedIn && (
-            <h2 className="flex items-center gap-2 px-2 pt-5 pb-1 text-xs font-medium text-muted-foreground">
-              Your agents
-              {waiting > 0 && <Count n={waiting} kind="waiting" />}
-            </h2>
-          )}
-          {auth.signedIn && (
-            <ul className="grid gap-0.5" aria-label="Your agents">
-              {agents.map((agent) => {
-                const n = pending.get(agent.id) ?? 0
-                const on = onAgent(pathname, agent.agent_id)
-                return (
-                  <li key={agent.id}>
-                    <BoardLink
-                      target={agentHome(agent)}
-                      aria-current={on ? 'page' : undefined}
-                      className={sideClass(on, true)}
-                    >
-                      <AgentOrb
-                        agentId={agent.agent_id ?? agent.id}
-                        size="sm"
-                        status={managedLiveness(agent, Date.now() / 1000)}
-                      />
-                      <span className="min-w-0 flex-1 truncate">{agent.name}</span>
-                      {n > 0 && <Count n={n} kind="waiting" />}
-                    </BoardLink>
-                  </li>
-                )
-              })}
-              <li>
-                <Link to="/agents/new" className={sideClass(pathname === '/agents/new', true)}>
-                  <Plus aria-hidden className="size-4 text-muted-foreground" />
-                  <span className="flex-1">New agent</span>
-                </Link>
-              </li>
-            </ul>
-          )}
-        </nav>
+        <SidebarPlaces state={state} />
         <div className="mt-auto grid gap-3 pt-6">
           {auth.signedIn && auth.address !== undefined && <SetupPill address={auth.address} className="mx-1" />}
           {auth.signedIn ? (
@@ -222,6 +181,7 @@ export function Shell({ children }: { children: ReactNode }) {
             </div>
           )}
           <SideChip className="mx-1 justify-self-start" />
+          <ConnectAgent variant="sidebar" />
           <RiskNote className="px-1" />
         </div>
       </aside>
@@ -230,7 +190,10 @@ export function Shell({ children }: { children: ReactNode }) {
         <header className="material-chrome material-edge-bottom sticky top-0 z-30 pt-[var(--safe-top)] lg:hidden">
           <div className="flex min-h-12 items-center justify-between gap-3 pr-[max(1rem,var(--safe-right))] pl-[max(1rem,var(--safe-left))]">
             <Brand />
-            {auth.signedIn ? <AccountAvatar collect={collect} /> : <AccountControl auth={auth} account={account} />}
+            <span className="flex items-center gap-1">
+              <ConnectAgent variant="icon" />
+              {auth.signedIn ? <AccountAvatar collect={collect} /> : <AccountControl auth={auth} account={account} />}
+            </span>
           </div>
         </header>
         <main
@@ -258,36 +221,100 @@ export function Shell({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      <nav
-        aria-label="Sections"
-        className="material-chrome fixed inset-x-0 bottom-0 z-30 grid auto-cols-fr grid-flow-col border-t border-border/60 pt-1.5 pr-[var(--safe-right)] pb-[calc(0.375rem+var(--safe-bottom))] pl-[var(--safe-left)] lg:hidden"
-      >
-        {[jobs, agentsPlace, commonsPlace].map((p) => {
-          if (p === undefined) return null
-          const on = p.active(pathname)
-          const Icon = p.icon
-          const n = p === agentsPlace ? waiting : 0
-          return (
-            <PlaceLink
-              key={p.label}
-              place={p}
-              aria-current={on ? 'page' : undefined}
-              className={cn(
-                textLinkClass,
-                cn(
-                  'relative grid min-h-11 justify-items-center gap-0.5 py-1 text-micro font-medium transition-opacity active:opacity-60',
-                  on ? 'text-foreground' : 'text-muted-foreground',
-                ),
-              )}
-            >
-              <Icon aria-hidden className="size-6" strokeWidth={on ? 2.2 : 1.7} />
-              {p.label}
-              {n > 0 && <Count n={n} kind="waiting" className="absolute top-0 left-[calc(50%+0.5rem)]" />}
-            </PlaceLink>
-          )
-        })}
-      </nav>
+      <PhoneTabs state={state} />
     </div>
+  )
+}
+
+function SidebarPlaces({ state }: { state: ShellState }) {
+  const { auth, pathname, agents, pending, waiting, jobs, agentsPlace, commonsPlace } = state
+  return (
+    <nav className="grid gap-0.5" aria-label="Places">
+      {jobs !== undefined && <SideItem place={jobs} on={jobs.active(pathname)} />}
+      {agentsPlace !== undefined && (
+        <SideItem
+          place={agentsPlace}
+          on={
+            agentsPlace.active(pathname) &&
+            !(auth.signedIn && pathname === '/agents/new') &&
+            !agents.some((a) => onAgent(pathname, a.agent_id))
+          }
+        />
+      )}
+      {commonsPlace !== undefined && <SideItem place={commonsPlace} on={commonsPlace.active(pathname)} />}
+      {auth.signedIn && (
+        <h2 className="flex items-center gap-2 px-2 pt-5 pb-1 text-xs font-medium text-muted-foreground">
+          Your agents
+          {waiting > 0 && <Count n={waiting} kind="waiting" />}
+        </h2>
+      )}
+      {auth.signedIn && (
+        <ul className="grid gap-0.5" aria-label="Your agents">
+          {agents.map((agent) => {
+            const n = pending.get(agent.id) ?? 0
+            const on = onAgent(pathname, agent.agent_id)
+            return (
+              <li key={agent.id}>
+                <BoardLink
+                  target={agentHome(agent)}
+                  aria-current={on ? 'page' : undefined}
+                  className={sideClass(on, true)}
+                >
+                  <AgentOrb
+                    agentId={agent.agent_id ?? agent.id}
+                    size="sm"
+                    status={managedLiveness(agent, Date.now() / 1000)}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{agent.name}</span>
+                  {n > 0 && <Count n={n} kind="waiting" />}
+                </BoardLink>
+              </li>
+            )
+          })}
+          <li>
+            <Link to="/agents/new" className={sideClass(pathname === '/agents/new', true)}>
+              <Plus aria-hidden className="size-4 text-muted-foreground" />
+              <span className="flex-1">New agent</span>
+            </Link>
+          </li>
+        </ul>
+      )}
+    </nav>
+  )
+}
+
+function PhoneTabs({ state }: { state: ShellState }) {
+  const { jobs, agentsPlace, commonsPlace, pathname, waiting } = state
+  return (
+    <nav
+      aria-label="Sections"
+      className="material-chrome fixed inset-x-0 bottom-0 z-30 grid auto-cols-fr grid-flow-col border-t border-border/60 pt-1.5 pr-[var(--safe-right)] pb-[calc(0.375rem+var(--safe-bottom))] pl-[var(--safe-left)] lg:hidden"
+    >
+      {[jobs, agentsPlace, commonsPlace].map((p) => {
+        if (p === undefined) return null
+        const on = p.active(pathname)
+        const Icon = p.icon
+        const n = p === agentsPlace ? waiting : 0
+        return (
+          <PlaceLink
+            key={p.label}
+            place={p}
+            aria-current={on ? 'page' : undefined}
+            className={cn(
+              textLinkClass,
+              cn(
+                'relative grid min-h-11 justify-items-center gap-0.5 py-1 text-micro font-medium transition-opacity active:opacity-60',
+                on ? 'text-foreground' : 'text-muted-foreground',
+              ),
+            )}
+          >
+            <Icon aria-hidden className="size-6" strokeWidth={on ? 2.2 : 1.7} />
+            {p.label}
+            {n > 0 && <Count n={n} kind="waiting" className="absolute top-0 left-[calc(50%+0.5rem)]" />}
+          </PlaceLink>
+        )
+      })}
+    </nav>
   )
 }
 

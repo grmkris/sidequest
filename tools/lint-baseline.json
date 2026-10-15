@@ -513,10 +513,6 @@
     "jsx-a11y(no-noninteractive-element-interactions)": 1,
     "jsx-a11y(prefer-tag-over-role)": 1
   },
-  "apps/explore/src/components/Shell.tsx": {
-    "eslint(max-lines-per-function)": 1,
-    "typescript(no-unnecessary-type-conversion)": 1
-  },
   "apps/explore/src/components/SignIn.tsx": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
     "typescript(no-misused-promises)": 1
