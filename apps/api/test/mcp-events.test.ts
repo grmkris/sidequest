@@ -95,7 +95,7 @@ describe('MCP feed streams', () => {
     for (const method of ['events/poll', 'events/subscribe', 'events/unsubscribe'])
       expect(await route(method)).toMatchObject({ body: { error: { code: -32003 } } })
   })
-  it('lists four schemas with poll and webhook delivery', async () => {
+  it('lists four schemas with poll, webhook and push delivery', async () => {
     const { events } = await setup()
     const list = await events.handle('events/list', {}, grant)
     expect((list.events as Array<{ name: string }>).map((event) => event.name)).toEqual([
@@ -109,7 +109,7 @@ describe('MCP feed streams', () => {
         expect.objectContaining({
           inputSchema: expect.any(Object),
           payloadSchema: expect.any(Object),
-          delivery: ['poll', 'webhook'],
+          delivery: ['poll', 'webhook', 'push'],
         }),
       ]),
     )
@@ -297,4 +297,95 @@ describe('MCP feed streams', () => {
       await expect(events.handle(method, {}, { ...grant, chainId: 143 })).rejects.toMatchObject({ code: -32003 })
     },
   )
+})
+
+it.each([false, true])('routes event streams on both protocol lanes (modern=%s)', async (modern) => {
+  const { events } = await setup()
+  const reply = await mcpRoute({
+    method: 'POST',
+    pathname: '/mcp',
+    origin: 'https://sidequest.test',
+    headers: {},
+    body: {
+      jsonrpc: '2.0',
+      id: 'events-1',
+      method: 'events/stream',
+      params: {
+        name: 'sidequest.jobs',
+        arguments: { taskId: 't1' },
+        cursor: null,
+        maxAgeMs: 1000,
+        ...(modern ? { _meta: { 'io.modelcontextprotocol/protocolVersion': '2026-07-28' } } : {}),
+      },
+    },
+    grant,
+    events,
+    tools: {},
+    call: async () => ({}),
+  })
+  expect(reply).toEqual({
+    status: 200,
+    eventStream: {
+      subscriptionId: 'events-1',
+      name: 'sidequest.jobs',
+      arguments: { taskId: 't1' },
+      cursor: null,
+      maxAgeMs: 1000,
+    },
+  })
+})
+
+it.each([
+  { name: 'unknown' },
+  { name: 'sidequest.jobs', arguments: { address: wallet } },
+  { name: 'sidequest.inbox', cursor: 'bad' },
+  { name: 'sidequest.inbox', maxAgeMs: -1 },
+])('refuses an invalid stream before opening it: %j', async (params) => {
+  const { events } = await setup()
+  const reply = await mcpRoute({
+    method: 'POST',
+    pathname: '/mcp',
+    origin: 'https://sidequest.test',
+    headers: {},
+    body: { jsonrpc: '2.0', id: 1, method: 'events/stream', params },
+    grant,
+    events,
+    tools: {},
+    call: async () => ({}),
+  })
+  expect(reply.eventStream).toBeUndefined()
+  expect(reply.body).toMatchObject({ error: { code: -32602 } })
+})
+
+it('refuses stream notifications, grants without read scope, setup connections, and cross-chain grants', async () => {
+  const { events } = await setup()
+  const route = (connection: OAuthGrant, id?: number) =>
+    mcpRoute({
+      method: 'POST',
+      pathname: '/mcp',
+      origin: 'https://sidequest.test',
+      headers: {},
+      body: {
+        jsonrpc: '2.0',
+        ...(id === undefined ? {} : { id }),
+        method: 'events/stream',
+        params: { name: 'sidequest.inbox' },
+      },
+      grant: connection,
+      events,
+      tools: {},
+      call: async () => ({}),
+    })
+  expect(await route(grant)).toMatchObject({ status: 202 })
+  expect((await route(grant)).eventStream).toBeUndefined()
+  for (const connection of [
+    { ...grant, scopes: [] },
+    { ...grant, chainId: 143 },
+    { ...grant, setup: true },
+    { ...grant, setup: true, chainId: 0, scopes: ['sidequest:setup'] },
+  ]) {
+    const reply = await route(connection, 1)
+    expect(reply.body).toMatchObject({ error: { code: -32003 } })
+    expect(reply.eventStream).toBeUndefined()
+  }
 })
