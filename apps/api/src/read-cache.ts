@@ -39,7 +39,7 @@ export function responseCacheControl(request: CacheRequest, response: HttpServer
   if (seconds !== undefined && response.status === 200) return `public, max-age=0, s-maxage=${seconds}`
   // Preserve established immutable asset/offer and verified preview policies.
   if (
-    /^\/(?:avatars|offers|profiles)\//.test(path) ||
+    /^\/(?:avatars|samples|offers|profiles)\//.test(path) ||
     path.startsWith('/data/deliverables/') ||
     path === '/mcp/server-card' ||
     path.startsWith('/.well-known/')

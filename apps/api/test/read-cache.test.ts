@@ -72,6 +72,8 @@ it('preserves content-addressed asset policies only for anonymous successful rea
     headers: { 'cache-control': 'public, max-age=31536000, immutable' },
   })
   expect(read('/offers/0x123.json', {}, 'GET', immutable)).toContain('immutable')
+  expect(read(`/samples/${'a'.repeat(64)}.webp`, {}, 'GET', immutable)).toContain('immutable')
+  expect(read(`/samples/${'a'.repeat(64)}.webp`, { cookie: 'session=private' }, 'GET', immutable)).toBe('no-store')
   expect(read('/offers/0x123.json', { authorization: 'Bearer private' }, 'GET', immutable)).toBe('no-store')
   expect(read('/api/agents', {}, 'GET', immutable)).toBe('no-store')
 })
