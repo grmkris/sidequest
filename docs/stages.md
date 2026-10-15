@@ -185,9 +185,7 @@ migration), a redacted secret scan of the pushed range, the guarded update, the 
 readback (health, release and OAuth metadata 200; every anonymous MCP method 401) and an
 anonymous browser smoke (light/dark, 1440/390, no page or console errors). It carries
 quotes-first (one Jobs list with quote requests, a public budget maximum, rolling
-countdowns, the request page at `/request/$id`, the Workers page removed) and the testnet
-marker (a TESTNET tag and amber top edge instead of the network switch; mainnet's
-pre-launch testnet link now comes from `links.testnet` in the network config) with the
+countdowns, the request page at `/request/$id`, the Workers page removed) and the
 sidebar wallet card (balances, staked SIDE, dollar estimates from `usdPegged` and the SIDE
 pool). Host acceptance and authenticated MCP calls remain unverified.
 
