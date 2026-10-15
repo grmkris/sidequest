@@ -32,3 +32,4 @@ decision and consequences. Protocol law itself lives in [docs/protocol.md](../pr
 | [0022](0022-no-mining-at-launch.md) | No work mining at launch; supersedes 0018 and 0020 |
 | [0023](0023-gas-in-usdc-user-operations.md) | Gas in USDC through ERC-4337 user operations (Pimlico); no relay |
 | [0024](0024-slashed-side-goes-to-the-treasury.md) | Slashed SIDE goes to a recipient the Safe sets, the treasury at launch |
+| [0025](0025-service-listings-last-until-withdrawn.md) | Service listings last until withdrawn; the signed ad's expiry bounds acceptance, not the listing |
