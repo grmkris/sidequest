@@ -61,7 +61,7 @@ export const EVENT_DESCRIPTORS = [
   },
   { name: 'sidequest.approvals', description: 'Your approval decisions and permissions.', inputSchema: objectSchema() },
   { name: 'sidequest.requests', description: 'Public quote requests and published jobs.', inputSchema: objectSchema() },
-].map((event) => ({ ...event, payloadSchema, delivery: ['poll', 'webhook'] }))
+].map((event) => ({ ...event, payloadSchema, delivery: ['poll', 'webhook', 'push'] }))
 
 export function eventArguments(name: unknown, value: unknown): { name: string; args: Record<string, unknown> } {
   if (name === undefined) throw new EventRpcError(-32602, 'name is required: one of the events events/list returns')
@@ -135,6 +135,9 @@ const TITLES: Readonly<Record<string, string>> = {
   'permission.granted': 'Permission granted',
   'settlement.deferred': 'Settlement waiting',
   'payout.owed': 'Payout owed',
+  'job.overdue': 'Delivery overdue',
+  'job.settleable': 'Job ready to settle',
+  'listing.expiring': 'Listing expiring',
 }
 
 function eventTitle(kind: string): string {
@@ -207,7 +210,14 @@ export async function eventStart(
   if (params.cursor === null) return { seq: last?.seq ?? 0, truncated: false }
   const page = await eventPage(sql, network, principal, params, now, 1)
   const after = eventCursor(params.cursor)
-  if (after !== undefined) return { seq: after, truncated: page.gap }
+  if (after !== undefined) {
+    if (!page.gap) return { seq: after, truncated: false }
+    const [retained] = await sql.all<{ seq: number | null }>(
+      'SELECT min(seq) AS seq FROM feed_events WHERE chain_id = ?',
+      telegramChainId(network),
+    )
+    return { seq: retained?.seq === null || retained === undefined ? after : retained.seq - 1, truncated: true }
+  }
   const first = page.events[0]
   if (first !== undefined) return { seq: eventCursor(first.cursor)! - 1, truncated: false }
   return { seq: last?.seq ?? 0, truncated: false }
