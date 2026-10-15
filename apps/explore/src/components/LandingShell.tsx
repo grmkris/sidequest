@@ -3,21 +3,14 @@ import { Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
 import { xLink } from '../wallet.ts'
 import { LaunchBanner } from './LaunchGate.tsx'
-import { NetworkSwitch, TestnetEdge, TestnetTag } from './NetworkCue.tsx'
 import { Mark } from './Shell.tsx'
 import { SideChip } from './side/SideToken.tsx'
 import { buttonVariants } from './ui/button.tsx'
 
-/**
- * The public front door: a translucent bar with the brand, the SIDE control (its address, copy, and the sheet that
- * buys, sells and links it; SIDE alone on a phone) and "Open app"; the page; and a footer of links (the documentation,
- * the protocol and its risks, the source, X) and the network switch.
- */
 export function LandingShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh">
       <SkipLink />
-      <TestnetEdge />
       <header className="material-chrome material-edge-bottom sticky top-0 z-30 pt-[var(--safe-top)]">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 pr-[max(1.25rem,var(--safe-right))] pl-[max(1.25rem,var(--safe-left))]">
           <span className="flex min-w-0 items-center gap-2">
@@ -25,7 +18,6 @@ export function LandingShell({ children }: { children: ReactNode }) {
               <Mark />
               Sidequest
             </Link>
-            <TestnetTag />
           </span>
           <span className="flex items-center gap-2">
             <SideChip className="hidden md:inline-flex" />
@@ -70,7 +62,6 @@ export function LandingShell({ children }: { children: ReactNode }) {
               </a>
             )}
           </nav>
-          <NetworkSwitch />
         </footer>
       </main>
     </div>

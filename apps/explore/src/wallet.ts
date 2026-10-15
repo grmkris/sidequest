@@ -21,17 +21,6 @@ if (typeof __SIDEQUEST_RELAY__ === 'string' && (__SIDEQUEST_RELAY__ as string) !
 export const isMainnet = network === 'monad-mainnet'
 
 const links = sdk.networkMeta(network).links
-/**
- * The other network's Explore, which the network switch opens: testnet from mainnet (`links.testnet`), and mainnet from
- * testnet (`links.mainnet`, which the testnet config names only once mainnet is live). Null without a link: no switch.
- */
-export const otherNetwork: { readonly label: 'Mainnet' | 'Testnet'; readonly href: string } | null = isMainnet
-  ? links.testnet === undefined
-    ? null
-    : { label: 'Testnet', href: links.testnet }
-  : links.mainnet === undefined
-    ? null
-    : { label: 'Mainnet', href: links.mainnet }
 /** Testnet's Explore origin on mainnet, where the "launching soon" notices send people before launch; else null. */
 export const testnetLink: string | null = isMainnet ? (links.testnet ?? null) : null
 /** The project's X profile (`links.x`), or null. */

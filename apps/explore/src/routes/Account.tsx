@@ -21,7 +21,7 @@ import { TelegramSection } from './Telegram.tsx'
 
 import { Monogram, useAuth, useSignOut } from '../components/Wallet.tsx'
 import { useCollectActions } from '../collect.ts'
-import { isMainnet, otherNetwork, writesOpen } from '../wallet.ts'
+import { writesOpen } from '../wallet.ts'
 import { useSafeOwner } from './Admin.tsx'
 import { useReplaceSearch } from '../page-search.ts'
 
@@ -191,21 +191,6 @@ function AccountSettings() {
               <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
             </ItemActions>
           </Item>
-          {otherNetwork !== null && (
-            <Item render={<a href={otherNetwork.href} aria-label={otherNetwork.label} />}>
-              <ItemContent className="flex-1">
-                {otherNetwork.label}
-                <ItemDescription className="block text-xs text-muted-foreground">
-                  {isMainnet
-                    ? 'Try Sidequest with test tokens, on its own site'
-                    : 'Sidequest with real SIDE, on its own site'}
-                </ItemDescription>
-              </ItemContent>
-              <ItemActions>
-                <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
-              </ItemActions>
-            </Item>
-          )}
         </ItemGroup>
       </Section>
 
