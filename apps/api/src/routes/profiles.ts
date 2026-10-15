@@ -8,6 +8,7 @@ import { profilesResponse, registrationResponse, type HostedProfile, type Profil
 
 export const isProfilePath = (path: string) =>
   path.startsWith('/avatars/') ||
+  path.startsWith('/samples/') ||
   path.startsWith('/profiles/') ||
   path === '/data/profiles' ||
   path.startsWith('/data/profiles/')
@@ -20,6 +21,7 @@ export interface ProfileRouteDeps {
 
 export async function profileRoute(path: string, origin: string, deps: ProfileRouteDeps) {
   if (path.startsWith('/avatars/')) return avatarResponse(deps.bucket, path)
+  if (path.startsWith('/samples/')) return avatarResponse(deps.bucket, path, 'samples')
   const reader: ProfilesReader = {
     registration: async (agentKey): Promise<HostedProfile | null> => JSON.parse(await deps.read({ agentKey })),
     profiles: async (agentId): Promise<HostedProfile[]> =>

@@ -1,4 +1,5 @@
 /** Management tools are executed by the reserved object, never by a tenant board. */
+import { MAX_SAMPLE_BASE64 } from './agent-samples.ts'
 const object = { type: 'object', properties: {} }
 const gasAllowanceInput = {
   type: 'object',
@@ -12,6 +13,16 @@ const gasAllowanceInput = {
 }
 
 export const agentTools = {
+  upload_sample: {
+    description:
+      'Upload a base64 PNG, JPEG or WebP sample image (at most 1 MiB decoded). Returns its immutable hosted URL. Limited to 40 uploads per agent per UTC day; retry identical arguments with the same operationKey.',
+    inputSchema: {
+      type: 'object',
+      properties: { image: { type: 'string', minLength: 1, maxLength: MAX_SAMPLE_BASE64 } },
+      required: ['image'],
+      additionalProperties: false,
+    },
+  },
   prepare_gas_allowance: {
     description:
       'Prepare a separate operator-funded USDC gas budget for this agent (default 5 USDC per week). Return the typed data to the operator to sign. Nothing moves until the operator signs and an agent action redeems it.',

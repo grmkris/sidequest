@@ -32,6 +32,8 @@ import { reportRelayWatchFailure, watchRelay } from './relay-watch.ts'
 import { agentFeedEvents, approvalUrl, recordAgentEvents } from './feed-agent.ts'
 import { directoryAudience, directoryPort } from './directory-object.ts'
 import { managedProfileUpdates, profileOperationKey } from './agent-profiles.ts'
+import { uploadSample } from './agent-samples.ts'
+import type { AvatarBucket } from './avatars.ts'
 import { runSetupTool } from './agent-setup.ts'
 import { BackingRequestInput, chainBackingReads, requestBacking } from './agent-backing-request.ts'
 import { publicOrigin } from './telegram.ts'
@@ -221,6 +223,23 @@ export async function runAgent(runtime: {
         ? ((await submitter?.operation(operation.id)) ?? operation)
         : await sponsor.operation(agent.address!, operation.sponsor_operation_id)
     return toJson({ ok: true, result })
+  }
+  if (req.tool === 'upload_sample') {
+    // SAFETY: Manifests is this Worker's R2 binding (manifests.ts); its raw form stores and serves sample bytes.
+    const bucket = bindings.Manifests as AvatarBucket | undefined
+    return toJson({
+      ok: true,
+      result: await uploadSample({
+        sql,
+        now: () => Math.floor(Date.now() / 1000),
+        origin: new URL(req.resource).origin,
+        boardId: req.env.boardId,
+        bucket,
+        agentId: agent.id,
+        key: profileOperationKey(operationKey),
+        args,
+      }),
+    })
   }
   const prepare = (tool: string, input: Record<string, unknown>): BoardCall =>
     tenantAgentRequest(req, agent.address!, tool, input)
