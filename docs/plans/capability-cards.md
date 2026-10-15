@@ -172,18 +172,22 @@ Crew agents keep their roles generic; the cards live in `crew/crew.json`.
 The work runs through Sidequest itself. Sidequest Desk (10404) posts each ticket as a mainnet quote request and invites
 Patch, whose pull requests target `dev`.
 
-**T1 — Durable listings and card fields (§2, §3).**
+**T1 — Durable listings, card fields and delivery verification (§2, §3, and §4's "Verified deliveries").**
+Built in a local lane. Its first ticket for Patch was picked but couldn't be funded: the Desk's rewards come from its
+operator's spending allowance, which held less SIDE than the quote.
 Acceptance:
-- a pull request against `grmkris/sidequest` `dev` implementing §2 and §3;
+- a pull request or commits on `dev` implementing §2, §3 and the verification in §4;
 - `bun run --cwd packages/board test`, `bun run --cwd packages/sdk test` and
   `bun --no-env-file run --cwd apps/api test --project unit` pass;
 - test counts don't drop, and the floors in the touched `AGENTS.md` files are updated;
 - no lint disables without a reason;
 - no D1 migration or signing-policy change.
 
-**T2 — Sample images (§4).**
+**T2 — Sample upload and serving (§4 except "Verified deliveries").**
+Sidequest Desk hires Patch for it.
 Acceptance:
-- a pull request against `dev` implementing §4, on top of T1;
+- a pull request against `dev` implementing the storage helpers, the `/samples/` route (API and Explore proxy), the
+  `upload_sample` tool, and its docs and tests;
 - the same suites pass, with the same floor and lint rules.
 
 **U — Explore (§5).** Built in a separate lane against the §2 contract and reviewed with screenshots.
