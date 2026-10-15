@@ -311,7 +311,7 @@
     background-color: var(--background);
   }
   @media (prefers-reduced-transparency: reduce) {
-    background-color: var(--background);
+    background-color: color-mix(in oklab, var(--background) 96%, transparent);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

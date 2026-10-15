@@ -1,5 +1,6 @@
 import { Button } from './ui/button.tsx'
 import { cn } from '../lib/cn.ts'
+import { lockPageScroll } from './sheet-scroll-lock.ts'
 /**
  * Sheets and toasts. A sheet is a native modal <dialog> (top layer, focus trapped, Escape closes, the page behind
  * is inert): a bottom sheet on a phone that follows the finger and is flicked away with momentum, a centred panel on
@@ -22,71 +23,25 @@ import {
 const project = (velocity: number, decelerationRate = 0.998) =>
   ((velocity / 1000) * decelerationRate) / (1 - decelerationRate)
 
-/**
- * `walletPrompt`: a wallet request started from the sheet is pending. An embedded wallet (Privy) draws its own prompt in
- * the page, which sits below the top layer and is inert behind a modal dialog, so its Sign button could not be pressed.
- * While one is pending the sheet stays on screen as a non-modal dialog, and nothing in it dismisses it: closing the sheet
- * would not cancel the request, which could still be confirmed after the review had gone.
- */
-export function Sheet({
-  open,
-  onClose,
-  title,
-  children,
-  className,
-  walletPrompt = false,
-}: {
+interface SheetProps {
   open: boolean
   onClose: () => void
   title: ReactNode
   children: ReactNode
   className?: string
   walletPrompt?: boolean
-}) {
-  const ref = useRef<HTMLDialogElement>(null)
+}
+
+function useSheetDrag(walletPrompt: boolean, onClose: () => void) {
   const panel = useRef<HTMLDivElement>(null)
   const drag = useRef<{ start: number; y: number; t: number; v: number } | null>(null)
   const [dy, setDy] = useState(0)
-  const titleId = useId()
-  const dismiss = () => {
-    if (!walletPrompt) onClose()
-  }
-
-  const modal = useRef(false)
-  // Closing plays the panel's exit (down off a phone, a fade on a wider screen); the dialog closes when it ends.
-  const [leaving, setLeaving] = useState(false)
-  const finish = useCallback(() => {
-    setLeaving(false)
-    if (ref.current?.open === true) ref.current.close()
-  }, [])
-
-  useEffect(() => {
-    const d = ref.current
-    if (d === null) return
-    if (!open) {
-      if (d.open) setLeaving(true)
-      return
-    }
-    setLeaving(false)
-    const wantModal = !walletPrompt
-    if (d.open && modal.current === wantModal) return
-    if (d.open) d.close()
-    else setDy(0)
-    modal.current = wantModal
-    if (wantModal) d.showModal()
-    else d.show()
-  }, [open, walletPrompt])
-
-  // If the exit never reports its end (the tab hid, the panel never painted), close anyway.
-  useEffect(() => {
-    if (!leaving) return
-    const t = setTimeout(finish, 400)
-    return () => clearTimeout(t)
-  }, [leaving, finish])
-
+  const reset = useCallback(() => setDy(0), [])
   const onPointerDown = (e: React.PointerEvent) => {
     if (window.matchMedia('(min-width: 640px)').matches) return
-    ;(e.target as Element).setPointerCapture(e.pointerId)
+    // SAFETY: the drag handle and its only child are elements, so the pointer target supports capture.
+    const target = e.target as Element
+    target.setPointerCapture(e.pointerId)
     drag.current = { start: e.clientY, y: e.clientY, t: e.timeStamp, v: 0 }
   }
   const onPointerMove = (e: React.PointerEvent) => {
@@ -110,37 +65,137 @@ export function Sheet({
     if (rest > height * 0.45 && !walletPrompt) onClose()
     else setDy(0)
   }
+  return {
+    panel,
+    reset,
+    style: {
+      transform: dy === 0 ? undefined : `translateY(${dy}px)`,
+      transition: drag.current === null ? undefined : 'none',
+    },
+    handle: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp },
+  }
+}
 
+function useSheetDialog(open: boolean, walletPrompt: boolean, onClose: () => void, reset: () => void) {
+  const ref = useRef<HTMLDialogElement>(null)
+  const modal = useRef(false)
+  const unlock = useRef<(() => void) | undefined>(undefined)
+  const release = useCallback(() => {
+    unlock.current?.()
+    unlock.current = undefined
+  }, [])
+  // Keep the page locked until the exit finishes, including when another sheet has opened in the meantime.
+  const [leaving, setLeaving] = useState(false)
+  const finish = useCallback(() => {
+    setLeaving(false)
+    if (ref.current?.open === true) ref.current.close()
+    release()
+  }, [release])
+  useEffect(() => release, [release])
+  useEffect(() => {
+    const d = ref.current
+    if (d === null) return
+    if (!open) {
+      if (d.open) setLeaving(true)
+      return
+    }
+    unlock.current ??= lockPageScroll()
+    setLeaving(false)
+    const wantModal = !walletPrompt
+    if (d.open && modal.current === wantModal) return
+    if (d.open) d.close()
+    else reset()
+    modal.current = wantModal
+    if (wantModal) d.showModal()
+    else d.show()
+  }, [open, walletPrompt, reset])
+  // If the exit never reports its end (the tab hid, the panel never painted), close anyway.
+  useEffect(() => {
+    if (!leaving) return
+    const t = setTimeout(finish, 400)
+    return () => clearTimeout(t)
+  }, [leaving, finish])
+  useEffect(() => {
+    const d = ref.current
+    if (d === null) return
+    // Only the native backdrop dismisses on click. Escape is handled by the dialog's cancel event.
+    const onBackdrop = (e: MouseEvent) => {
+      if (e.target === d && !walletPrompt) onClose()
+    }
+    d.addEventListener('click', onBackdrop)
+    return () => d.removeEventListener('click', onBackdrop)
+  }, [walletPrompt, onClose])
+  const onDialogClose = () => {
+    // Modal changes queue a close event; an already reopened dialog is not a dismissal.
+    if (ref.current?.open === true) return
+    release()
+    onClose()
+  }
+  return { ref, leaving, finish, onDialogClose }
+}
+
+function SheetHeading({
+  title,
+  titleId,
+  walletPrompt,
+  dismiss,
+}: {
+  title: ReactNode
+  titleId: string
+  walletPrompt: boolean
+  dismiss: () => void
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <h2 id={titleId} className="pt-1 text-base leading-snug font-semibold tracking-tight">
+        {title}
+      </h2>
+      <button
+        type="button"
+        aria-label="Close"
+        disabled={walletPrompt}
+        onClick={dismiss}
+        className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground transition-colors duration-(--dur-fast) hover:text-foreground disabled:opacity-40 pointer-coarse:size-11"
+      >
+        <X className="size-4" />
+      </button>
+    </div>
+  )
+}
+
+/**
+ * `walletPrompt`: a wallet request started from the sheet is pending. An embedded wallet (Privy) draws its own prompt in
+ * the page, which sits below the top layer and is inert behind a modal dialog, so its Sign button could not be pressed.
+ * While one is pending the sheet stays on screen as a non-modal dialog, and nothing in it dismisses it: closing the sheet
+ * would not cancel the request, which could still be confirmed after the review had gone.
+ */
+export function Sheet({ open, onClose, title, children, className, walletPrompt = false }: SheetProps) {
+  const motion = useSheetDrag(walletPrompt, onClose)
+  const { ref, leaving, finish, onDialogClose } = useSheetDialog(open, walletPrompt, onClose, motion.reset)
+  const titleId = useId()
+  const dismiss = () => {
+    if (!walletPrompt) onClose()
+  }
   return (
     <dialog
       ref={ref}
       aria-labelledby={titleId}
-      onClose={() => {
-        // Switching between modal and non-modal closes and reopens the dialog; its queued close event is not a dismissal.
-        if (ref.current?.open !== true) onClose()
-      }}
+      onClose={onDialogClose}
       onCancel={(e) => {
         e.preventDefault()
         dismiss()
-      }}
-      onClick={(e) => {
-        // A click on the dialog itself (not its panel) is a click on the backdrop.
-        if (e.target === ref.current) dismiss()
       }}
       data-leaving={leaving ? '' : undefined}
       className="fixed inset-0 z-40 m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-overlay backdrop:transition-opacity backdrop:duration-(--dur-slow) data-leaving:backdrop:opacity-0 sm:open:grid sm:open:place-items-center"
     >
       <div
-        ref={panel}
+        ref={motion.panel}
         onAnimationEnd={(e) => {
           if (leaving && e.target === e.currentTarget) finish()
         }}
-        style={{
-          transform: dy === 0 ? undefined : `translateY(${dy}px)`,
-          transition: drag.current === null ? undefined : 'none',
-        }}
+        style={motion.style}
         className={cn(
-          'absolute inset-x-0 bottom-0 grid max-h-[90vh] gap-4 overflow-y-auto rounded-t-xl bg-popover px-5 pt-2 pb-[calc(1.25rem+var(--safe-bottom))] text-sm text-popover-foreground shadow-popover',
+          'absolute inset-x-0 bottom-0 grid max-h-[90dvh] gap-4 overscroll-contain overflow-y-auto rounded-t-xl bg-popover pr-[max(1.25rem,var(--safe-right))] pt-2 pb-[calc(1.25rem+var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] text-sm text-popover-foreground shadow-popover',
           // A grouped block inside the sheet sits one step down, not white on white.
           '[&_.bg-card]:bg-muted/50',
           'animate-[sheet-in_0.42s_var(--ease-sheet)] transition-transform duration-300 ease-(--ease-sheet)',
@@ -151,29 +206,10 @@ export function Sheet({
           className,
         )}
       >
-        <div
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          className="-mx-5 cursor-grab touch-none px-5 pt-1 pb-1 sm:hidden"
-        >
+        <div {...motion.handle} className="-mx-5 cursor-grab touch-none px-5 pt-1 pb-1 sm:hidden">
           <div className="mx-auto h-1 w-9 rounded-full bg-foreground/15" />
         </div>
-        <div className="flex items-start justify-between gap-3">
-          <h2 id={titleId} className="pt-1 text-base leading-snug font-semibold tracking-tight">
-            {title}
-          </h2>
-          <button
-            type="button"
-            aria-label="Close"
-            disabled={walletPrompt}
-            onClick={dismiss}
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground transition-colors duration-(--dur-fast) hover:text-foreground disabled:opacity-40 pointer-coarse:size-11"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
+        <SheetHeading title={title} titleId={titleId} walletPrompt={walletPrompt} dismiss={dismiss} />
         {children}
       </div>
     </dialog>
@@ -304,9 +340,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={push}>
       {children}
-      <div
+      <output
         aria-live="polite"
-        role="status"
         className="pointer-events-none fixed inset-x-0 top-[calc(0.75rem+var(--safe-top))] z-50 grid justify-items-center gap-2 px-4"
       >
         {toasts.map((t) => (
@@ -328,7 +363,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             {t.text}
           </div>
         ))}
-      </div>
+      </output>
     </ToastContext.Provider>
   )
 }
