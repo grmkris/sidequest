@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ServiceListing } from './services.ts'
 import { askPrompt } from './services.ts'
-import { combinedAskPrompt, selectionKey, toggleSelection } from './service-ask.ts'
+import { combinedAskPrompt, selectionKey } from './service-ask.ts'
 
 const item = (agentId: string, serviceId: string, name: string, agentName: string): ServiceListing => ({
   serviceId,
@@ -23,12 +23,11 @@ const item = (agentId: string, serviceId: string, name: string, agentName: strin
 })
 
 describe('service asking', () => {
-  it('keys and toggles selections', () => {
+  it('keys a selection by agent and service', () => {
     expect(selectionKey({ agentId: '7', serviceId: 'site' })).toBe('7:site')
-    expect(toggleSelection([], '7:site')).toEqual(['7:site'])
-    expect(toggleSelection(['7:site'], '7:site')).toEqual([])
-    expect(toggleSelection(['7:site', '8:video'], '7:site')).toEqual(['8:video'])
-    expect(toggleSelection(['7:site'], '8:video')).toEqual(['7:site', '8:video'])
+    expect(selectionKey({ agentId: '70', serviceId: 'site' })).not.toBe(
+      selectionKey({ agentId: '7', serviceId: '0site' }),
+    )
   })
 
   it('keeps the existing single service wording exactly', () => {

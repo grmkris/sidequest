@@ -5,10 +5,6 @@ import { askPrompt } from './services.ts'
 export const selectionKey = (listing: Pick<ServiceListing, 'agentId' | 'serviceId'>) =>
   `${listing.agentId}:${listing.serviceId}`
 
-export function toggleSelection(keys: readonly string[], key: string): string[] {
-  return keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key]
-}
-
 export function combinedAskPrompt(origin: string, listings: readonly ServiceListing[], brief?: string): string {
   if (listings.length === 1) return appendQuoteBrief(askPrompt(origin, listings[0]!), brief)
   const picks = listings
