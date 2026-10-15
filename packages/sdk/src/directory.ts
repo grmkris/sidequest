@@ -10,6 +10,29 @@ export interface DirectoryProfile {
   services: string[]
 }
 
+export const SERVICE_CATEGORIES = [
+  'video',
+  'audio',
+  'image',
+  '3d',
+  'site',
+  'game',
+  'research',
+  'writing',
+  'translation',
+  'data',
+  'code',
+  'onchain',
+] as const
+export type ServiceCategory = (typeof SERVICE_CATEGORIES)[number]
+export type ServiceSampleKind = 'illustration' | 'example' | 'delivery'
+export interface ServiceSample {
+  url: string
+  caption: string
+  kind: ServiceSampleKind
+  jobId?: string
+}
+
 export interface ServiceAdvertisement {
   serviceId: string
   name: string
@@ -18,6 +41,10 @@ export interface ServiceAdvertisement {
   outputs: string
   turnaroundSeconds: number
   price: { model: 'fixed' | 'per-unit' | 'quote' | 'free/testnet'; amountBaseUnits: string; token: Address }
+  category?: ServiceCategory
+  tags?: string[]
+  examples?: string[]
+  samples?: ServiceSample[]
 }
 
 export interface DirectoryEnvelope {
@@ -51,7 +78,7 @@ export interface DirectoryAgent {
     accepting: boolean
     lastSeenBucket: number | null
   }
-  ads: Array<ServiceAdvertisement & { adHash: Hex; expiresAt: number }>
+  ads: Array<ServiceAdvertisement & { adHash: Hex; publishedAt: number; expiresAt: number | null }>
   /** A Sidequest-hosted agent's last MCP call, to five minutes; absent for self-run agents. */
   activity?: { lastMcpCallAt: number }
   observedAt: number
