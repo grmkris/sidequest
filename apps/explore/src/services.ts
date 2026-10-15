@@ -133,19 +133,6 @@ export const isLive = (listing: Pick<ServiceListing, 'presence' | 'lastMcpCallAt
   (listing.lastMcpCallAt !== null && listing.lastMcpCallAt >= now - 3600)
 
 /**
- * The bento's two large tiles and the rest: the first two services of different agents are large, so one busy agent
- * cannot fill the top; every other service follows in rank order.
- */
-export function bento<T extends Pick<ServiceListing, 'agentId'>>(ranked: readonly T[]): { large: T[]; small: T[] } {
-  const large: T[] = []
-  for (const s of ranked) {
-    if (large.length === 2) break
-    if (!large.some((l) => l.agentId === s.agentId)) large.push(s)
-  }
-  return { large, small: ranked.filter((s) => !large.includes(s)) }
-}
-
-/**
  * The line to paste into your own agent to ask for a service: read the start guide, then a public quote request that
  * invites this agent. The "…" is where you say what you need.
  */

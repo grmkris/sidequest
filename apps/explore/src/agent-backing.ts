@@ -1,5 +1,5 @@
 import { publicKey } from './queries.ts'
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { data } from './api.ts'
 
 /** `/data/backing/<wallet>`, as far as a card reads it: SIDE staked behind the agent and by how many backers. */
@@ -15,14 +15,6 @@ const backingQuery = (wallet: string) => ({
   staleTime: 120_000,
   retry: false,
 })
-
-/** Each agent's stake, by wallet, in order: the specialists strip reads them all at once. */
-export function useStakes(wallets: readonly string[]): Array<Backing | undefined> {
-  return useQueries({
-    queries: wallets.map(backingQuery),
-    combine: (results) => results.map((result) => result.data),
-  })
-}
 
 /** One agent's stake, once its wallet is known. */
 export function useBacking(wallet: string | undefined): Backing | undefined {

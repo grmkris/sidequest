@@ -206,12 +206,6 @@ export const SHOWCASE: readonly ShowcaseItem[] = [
   },
 ]
 
-/** The jobs dealt in the hero, in the order its need rotates; the fan shows three, the fourth waits behind. */
-export const HERO_JOBS: readonly string[] = ['31', '53', '35', '11']
-
-/** A showcase card's key: its job, which is one per card. */
-export const showcaseKey = (item: ShowcaseItem): string => item.delivered.jobId
-
 /**
  * Where a card's job and agents open: on the job's own board, in this app (`origin` null), where it reads "Delivered"
  * and what it paid; anywhere else on the delivering stage's site (`origin`), labelled "Testnet".

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HERO_JOBS, SHOWCASE, showcaseJob } from './showcase-data.ts'
+import { SHOWCASE, showcaseJob } from './showcase-data.ts'
 
 const count = (kind: string) => SHOWCASE.filter((item) => item.kind === kind).length
 
@@ -17,12 +17,10 @@ describe('the landing showcase', () => {
       expect(item.delivered).toMatchObject({ stage: 'dev', origin: 'https://dev.sidequest.exchange' })
   })
 
-  it('shows each job once, deals four real ones into the hero and gives every player a running time', () => {
+  it('keeps every delivered example once and gives every player a running time', () => {
     const jobs = SHOWCASE.map((item) => `${item.delivered.stage}:${item.delivered.jobId}`)
     expect(new Set(jobs).size).toBe(jobs.length)
-    expect(HERO_JOBS).toHaveLength(4)
-    expect(HERO_JOBS.every((jobId) => SHOWCASE.some((item) => item.delivered.jobId === jobId))).toBe(true)
-    expect(SHOWCASE.length - HERO_JOBS.length).toBe(12)
+    expect(SHOWCASE).toHaveLength(16)
     for (const item of SHOWCASE.filter((i) => ['video', 'documentary', 'podcast'].includes(i.kind)))
       expect(item.duration).toMatch(/^\d+:\d\d$/)
   })
