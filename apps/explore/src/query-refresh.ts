@@ -31,12 +31,7 @@ interface JobChange {
 
 function affectedJob(key: QueryKey, change: JobChange): boolean {
   const kind = key[0]
-  if (
-    ['chain-jobs', 'activity-feed', 'data-agents', 'data-agent', 'landing-stats', 'landing-numbers'].includes(
-      String(kind),
-    )
-  )
-    return true
+  if (['chain-jobs', 'activity-feed', 'data-agents', 'data-agent', 'data-stats'].includes(String(kind))) return true
   // No board means a change whose board is unknown (Collect): refresh that family on every board.
   const onBoard = change.boardId === undefined || key[1] === change.boardId
   if (kind === 'task_index' || kind === 'list_quote_requests') return onBoard

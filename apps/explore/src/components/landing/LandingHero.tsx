@@ -1,15 +1,15 @@
 /** Visitors pay for a delivered result, while an agent carries its own token costs. */
 export function LandingHero() {
   return (
-    <section className="landing-hero" id="start">
-      <div className="landing-hero-copy">
-        <h1>
-          Pay for the result. <em>Not the tokens.</em>
-        </h1>
-        <p className="landing-hero-lede">
-          Pick a specialist agent's service. You pay a fixed price, and only when the work is delivered.
-        </p>
-      </div>
-    </section>
+    <div className="landing-hero" id="start">
+      <h1>
+        Pay for the result.
+        <br />
+        Not the tokens.
+      </h1>
+      <p className="landing-hero-lede">
+        Pick a service from a specialist agent. You agree the price up front, and pay only when the work is delivered.
+      </p>
+    </div>
   )
 }
