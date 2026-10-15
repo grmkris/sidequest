@@ -3,8 +3,8 @@ import { xLink } from '../wallet.ts'
 import { textLinkClass } from './kit.tsx'
 import { cn } from '../lib/cn.ts'
 /**
- * The app's frame, around its places: Jobs (every board’s work and quote requests), Services (what agents here offer,
- * and the agents) and Commons. On a wide screen: a sidebar with the places, then the operator's agents as their own
+ * The app's frame, around its places: Services (what agents here offer, and the agents), Jobs (every board’s work and
+ * quote requests) and Commons. On a wide screen: a sidebar with the places, then the operator's agents as their own
  * group with what each waits on, and the account link and the SIDE control at its foot. On a phone: a translucent top
  * bar with Sign in, or the account's mark, at its right, and a tab bar of the places, clear of the notch and the home
  * indicator. Content scrolls under the translucent chrome.
@@ -42,7 +42,7 @@ const AGENT_PATHS = ['/services', '/agents', '/connect']
 const onAccount = (p: string) => ACCOUNT_PATHS.some((a) => p.startsWith(a))
 
 /**
- * Jobs, Services and Commons. An agent's page belongs to Services when it is one of the operator's own (`mine`), and
+ * Services, Jobs and Commons. An agent's page belongs to Services when it is one of the operator's own (`mine`), and
  * to Jobs otherwise: a worker reached from a job. Account pages belong to neither; the account is reached from the sidebar's foot
  * or the phone header.
  */
@@ -54,26 +54,21 @@ function places(mine: ReadonlySet<string>): Place[] {
   }
   const agents = (p: string) => AGENT_PATHS.some((a) => p.startsWith(a)) || ownAgent(p)
   return [
+    { label: 'Services', icon: LayoutGrid, target: { to: '/services' }, active: agents },
     {
       label: JOBS_LABEL,
       icon: BriefcaseBusiness,
       target: r.boardId === 'public' ? { to: '/jobs' } : r.jobs(),
       active: (p) => p !== '/' && !agents(p) && !onAccount(p) && !onCommons(p),
     },
-    { label: 'Services', icon: LayoutGrid, target: { to: '/services' }, active: agents },
     { label: 'Commons', icon: MessagesSquare, target: { to: '/commons' }, active: onCommons },
   ]
 }
 
-/** The brand mark (src/brand/mark.svg), in the tint so it follows light, dark and a tint change. */
-/**
- * The one disclosure Sidequest shows: unaudited contracts, at the user's own risk, with the source a click away. The
- * docs link sits here too, now that the docs are no longer a place in the nav.
- */
-function RiskNote({ className }: { className?: string }) {
+/** Site links kept in the sidebar, now that the docs are no longer a place in the nav. */
+function SiteLinks({ className }: { className?: string }) {
   return (
     <p className={cn('text-xs text-muted-foreground', className)}>
-      Unaudited contracts. Use at your own risk.{' '}
       <a className="underline" href="https://github.com/grmkris/sidequest" target="_blank" rel="noreferrer">
         Source
       </a>{' '}
@@ -94,6 +89,7 @@ function RiskNote({ className }: { className?: string }) {
   )
 }
 
+/** The brand mark (src/brand/mark.svg), in the tint so it follows light, dark and a tint change. */
 export function Mark() {
   return (
     <svg aria-hidden viewBox="0 0 32 32" className="size-6 shrink-0">
@@ -148,7 +144,7 @@ function useShellState() {
   const pending = pendingByAgent(auth.signedIn ? (approvals.data?.approvals ?? []) : [])
   const waiting = [...pending.values()].reduce((sum, n) => sum + n, 0)
   const mine = new Set(agents.flatMap((a) => (a.agent_id === null ? [] : [a.agent_id])))
-  const [jobs, agentsPlace, commonsPlace] = places(mine)
+  const [agentsPlace, jobs, commonsPlace] = places(mine)
   // Nothing is counted when unknown.
   const collect = useCollectActions(auth.address, auth.signedIn).data?.length ?? 0
   return { auth, account, paused, narrow, pathname, agents, pending, waiting, jobs, agentsPlace, commonsPlace, collect }
@@ -182,7 +178,7 @@ export function Shell({ children }: { children: ReactNode }) {
           )}
           <SideChip className="mx-1 justify-self-start" />
           <ConnectAgent variant="sidebar" />
-          <RiskNote className="px-1" />
+          <SiteLinks className="px-1" />
         </div>
       </aside>
 
@@ -230,7 +226,6 @@ function SidebarPlaces({ state }: { state: ShellState }) {
   const { auth, pathname, agents, pending, waiting, jobs, agentsPlace, commonsPlace } = state
   return (
     <nav className="grid gap-0.5" aria-label="Places">
-      {jobs !== undefined && <SideItem place={jobs} on={jobs.active(pathname)} />}
       {agentsPlace !== undefined && (
         <SideItem
           place={agentsPlace}
@@ -241,6 +236,7 @@ function SidebarPlaces({ state }: { state: ShellState }) {
           }
         />
       )}
+      {jobs !== undefined && <SideItem place={jobs} on={jobs.active(pathname)} />}
       {commonsPlace !== undefined && <SideItem place={commonsPlace} on={commonsPlace.active(pathname)} />}
       {auth.signedIn && (
         <h2 className="flex items-center gap-2 px-2 pt-5 pb-1 text-xs font-medium text-muted-foreground">
@@ -290,7 +286,7 @@ function PhoneTabs({ state }: { state: ShellState }) {
       aria-label="Sections"
       className="material-chrome fixed inset-x-0 bottom-0 z-30 grid auto-cols-fr grid-flow-col border-t border-border/60 pt-1.5 pr-[var(--safe-right)] pb-[calc(0.375rem+var(--safe-bottom))] pl-[var(--safe-left)] lg:hidden"
     >
-      {[jobs, agentsPlace, commonsPlace].map((p) => {
+      {[agentsPlace, jobs, commonsPlace].map((p) => {
         if (p === undefined) return null
         const on = p.active(pathname)
         const Icon = p.icon
