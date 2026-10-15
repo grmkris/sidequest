@@ -1,22 +1,33 @@
+import { Check } from 'lucide-react'
+import { Button } from '../components/ui/button.tsx'
 import { publicKey } from '../queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from '@tanstack/react-router'
 import { fetchDirectoryAgent } from '../api.ts'
 import { useAgents } from '../agent-summary.ts'
 import { LoadingRows, PageTitle, Section, textLinkClass } from '../components/kit.tsx'
-import { AskForThis, ServiceAgent, ServiceFacts } from '../components/services/ServiceCard.tsx'
-import { AgentServiceTiles } from '../components/services/ServiceTile.tsx'
+import {
+  AskForThis,
+  ServiceAgent,
+  ServiceFacts,
+  ServiceGallery,
+  ServiceExamples,
+} from '../components/services/ServiceCard.tsx'
+import { ServiceWallCard } from '../components/services/ServiceWallCard.tsx'
+import { SelectionTray } from '../components/services/SelectionTray.tsx'
+import { useServiceSelection } from '../useServiceSelection.ts'
 import { useNow } from '../components/Time.tsx'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../components/ui/empty.tsx'
 import { agentListings } from '../services.ts'
 
 /**
  * One service's page: what the card says, at a link someone can share, then the rest of what its agent offers. An ad
- * lasts a day unless its agent renews it, so an old link can find it gone.
+ * stays listed until its agent withdraws it, unless it is a legacy expiring record.
  */
 export function ServicePage() {
   const { agentId, serviceId } = useParams({ from: '/services/$agentId/$serviceId' })
   const now = useNow()
+  const selection = useServiceSelection()
   const read = useQuery({
     queryKey: publicKey('directory-agent', agentId),
     queryFn: () => fetchDirectoryAgent(agentId),
@@ -34,7 +45,7 @@ export function ServicePage() {
           <EmptyHeader>
             <EmptyTitle>This service is not listed now</EmptyTitle>
             <EmptyDescription>
-              A listing lasts a day unless its agent renews it.{' '}
+              This listing is no longer live.{' '}
               <Link to="/services" className={textLinkClass}>
                 See what is listed
               </Link>
@@ -52,7 +63,17 @@ export function ServicePage() {
         <p className="text-base text-pretty text-muted-foreground">{listing.description}</p>
       </header>
       <section className="grid gap-5 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5">
+        <ServiceGallery listing={listing} />
         <ServiceFacts listing={listing} wide />
+        <ServiceExamples listing={listing} />
+        <Button
+          variant="outline"
+          className="min-h-10 justify-self-start"
+          aria-pressed={selection.selected(listing)}
+          onClick={() => selection.toggle(listing)}
+        >
+          {selection.selected(listing) && <Check aria-hidden data-icon="inline-start" />}Add to request
+        </Button>
         <AskForThis listing={listing} />
       </section>
       <p className="px-1 text-xs text-pretty text-muted-foreground">
@@ -61,9 +82,24 @@ export function ServicePage() {
       </p>
       {others.length > 0 && (
         <Section title={`More from ${listing.agentName}`}>
-          <AgentServiceTiles services={others} now={now} />
+          <ul
+            className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,15rem),1fr))] gap-4 sm:gap-5"
+            aria-label="More services"
+          >
+            {others.map((item) => (
+              <li key={item.serviceId}>
+                <ServiceWallCard
+                  listing={item}
+                  showAgent={false}
+                  selected={selection.selected(item)}
+                  onToggle={() => selection.toggle(item)}
+                />
+              </li>
+            ))}
+          </ul>
         </Section>
       )}
+      <SelectionTray selection={selection} />
     </>
   )
 }

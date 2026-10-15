@@ -1,9 +1,11 @@
+import type { DirectoryAgent } from '@sidequest/sdk'
 import { publicKey } from '../../queries.ts'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { agentAction } from '../../agent-api.ts'
-import { type ManagedAgent, directoryListing } from '../../api.ts'
+import { ApiError, type ManagedAgent, directoryListing } from '../../api.ts'
 import { presenceLabel } from '../../directory-presence.ts'
+import type { Ad } from '../../services.ts'
 import { relative } from '../../format.ts'
 import { finishListingOperation, listingOperationKey } from '../../listing.ts'
 import { Button } from '../ui/button.tsx'
@@ -38,7 +40,7 @@ export function ListingCard({ agent }: { agent: ManagedAgent }) {
           operationKey,
         })
       } catch (failure) {
-        if (NEW_KEY.has((failure as { code?: string }).code ?? ''))
+        if (failure instanceof ApiError && NEW_KEY.has(failure.code))
           finishListingOperation(localStorage, agentId!, serviceId)
         throw failure
       }
@@ -61,44 +63,12 @@ export function ListingCard({ agent }: { agent: ManagedAgent }) {
       <h2 className="px-1 text-ui font-medium text-muted-foreground">Directory listing</h2>
       <div className="flex flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
         <p className="text-sm">
-          {listing.isLoading
-            ? 'Checking the worker directory…'
-            : listing.isError
-              ? 'The worker directory cannot be read right now.'
-              : listed === null
-                ? 'Not listed. Your agent lists its services itself with advertise_service.'
-                : `Listed · ${presenceLabel(listed, now)}`}
+          <ListingStatus loading={listing.isLoading} failed={listing.isError} listed={listed} now={now} />
         </p>
         {listing.isLoading && <Skeleton className="h-12 w-full" />}
-        {listed !== null &&
-          (listed.ads.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No live service ads. Each ad lasts 24 hours unless the agent renews it.
-            </p>
-          ) : (
-            <ItemGroup>
-              {listed.ads.map((ad) => (
-                <Item key={ad.serviceId} variant="outline" size="sm">
-                  <ItemContent>
-                    <ItemTitle>{ad.name}</ItemTitle>
-                    <ItemDescription>
-                      {ad.serviceId} · expires {relative(ad.expiresAt, now)}
-                    </ItemDescription>
-                  </ItemContent>
-                  <ItemActions>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={takeDown.isPending}
-                      onClick={() => takeDown.mutate(ad.serviceId)}
-                    >
-                      Take down
-                    </Button>
-                  </ItemActions>
-                </Item>
-              ))}
-            </ItemGroup>
-          ))}
+        {listed !== null && (
+          <ListedAds ads={listed.ads} now={now} busy={takeDown.isPending} onTakeDown={takeDown.mutate} />
+        )}
         {takeDown.isError && (
           <p role="alert" className="text-sm text-destructive-text">
             {takeDown.error instanceof Error ? takeDown.error.message : 'The take-down failed.'} Nothing else changed;
@@ -129,4 +99,60 @@ export function ListingCard({ agent }: { agent: ManagedAgent }) {
       </p>
     </div>
   )
+}
+
+function ListingStatus({
+  loading,
+  failed,
+  listed,
+  now,
+}: {
+  loading: boolean
+  failed: boolean
+  listed: DirectoryAgent | null
+  now: number
+}) {
+  if (loading) return 'Checking the worker directory…'
+  if (failed) return 'The worker directory cannot be read right now.'
+  if (listed === null) return 'Not listed. Your agent lists its services itself with advertise_service.'
+  return `Listed · ${presenceLabel(listed, now)}`
+}
+
+function ListedAds({
+  ads,
+  now,
+  busy,
+  onTakeDown,
+}: {
+  ads: Ad[]
+  now: number
+  busy: boolean
+  onTakeDown: (serviceId: string) => void
+}) {
+  if (ads.length === 0)
+    return <p className="text-sm text-muted-foreground">No live service ads. Listed until you withdraw it.</p>
+  return (
+    <ItemGroup>
+      {ads.map((ad) => (
+        <Item key={ad.serviceId} variant="outline" size="sm">
+          <ItemContent>
+            <ItemTitle>{ad.name}</ItemTitle>
+            <ItemDescription>
+              {ad.serviceId} · {listingAge(ad, now)}
+            </ItemDescription>
+          </ItemContent>
+          <ItemActions>
+            <Button variant="outline" size="sm" disabled={busy} onClick={() => onTakeDown(ad.serviceId)}>
+              Take down
+            </Button>
+          </ItemActions>
+        </Item>
+      ))}
+    </ItemGroup>
+  )
+}
+
+function listingAge(ad: Ad, now: number): string {
+  if (ad.expiresAt !== null) return `expires ${relative(ad.expiresAt, now)}`
+  return ad.publishedAt === undefined ? 'Listed until withdrawn' : `Listed ${relative(ad.publishedAt, now)}`
 }
