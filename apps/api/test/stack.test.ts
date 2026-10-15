@@ -101,7 +101,10 @@ test(
       expect(yield* response.json).toMatchObject({
         name: 'exchange.sidequest/sidequest',
         version: '2.0.0',
-        remotes: [{ url: `${apiUrl}${path.slice(0, -'/server-card'.length)}` }],
+        remotes: [
+          { url: `${apiUrl}${path.slice(0, -'/server-card'.length)}` },
+          { url: `${apiUrl}${path.slice(0, -'/server-card'.length)}/directory`, authentication: { type: 'none' } },
+        ],
       })
       const cached = yield* HttpClient.get(`${apiUrl}${path}`, { headers: { 'if-none-match': response.headers.etag! } })
       expect(cached.status).toBe(304)
