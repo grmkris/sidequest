@@ -79,15 +79,6 @@ describe('explore worker routing', () => {
     expect(e.api).toEqual(['/x402/demo'])
   })
 
-  it('proxies sample images to the API and leaves similarly named app paths alone', async () => {
-    const path = `/samples/${'a'.repeat(64)}.png`
-    const e = env()
-    expect(isApiPath(path)).toBe(true)
-    expect(isApiPath('/samples-extra/page')).toBe(false)
-    await get(path, e)
-    expect(e.api).toEqual([path])
-  })
-
   it('proxies the public AA endpoint and leaves similarly named pages to the SPA', async () => {
     const e = env()
     expect(isApiPath('/aa/rpc')).toBe(true)
@@ -195,6 +186,17 @@ describe('explore worker routing', () => {
       expect(head.status).toBe(200)
       expect(await head.text()).toBe('')
     }
+  })
+})
+
+describe('explore worker sample images', () => {
+  it('proxies sample images to the API and leaves similarly named app paths alone', async () => {
+    const path = `/samples/${'a'.repeat(64)}.png`
+    const e = env()
+    expect(isApiPath(path)).toBe(true)
+    expect(isApiPath('/samples-extra/page')).toBe(false)
+    await get(path, e)
+    expect(e.api).toEqual([path])
   })
 })
 

@@ -35,7 +35,7 @@ export async function uploadSample(input: {
   if (input.sql.atomic === undefined) throw new Error('Sample uploads require atomic storage')
   const operation = input.sql.atomic(() => {
     const started = agents.begin(input.agentId, input.key, input.boardId, 'upload_sample', { key: stored.key })
-    const day = Math.floor(input.now() / 86400) * 86400
+    const day = Math.floor(started.created_at / 86400) * 86400
     const count = input.sql.all<{ total: number }>(
       "SELECT COUNT(*) AS total FROM agent_operations WHERE agent_id=? AND tool='upload_sample' AND created_at>=? AND created_at<?",
       input.agentId,

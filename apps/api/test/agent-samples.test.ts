@@ -11,10 +11,11 @@ const encode = (bytes: Uint8Array) => Buffer.from(bytes).toString('base64')
 function samples() {
   const f = fixture()
   const put = vi.fn(f.bindings.Manifests.put)
+  const now = vi.fn(f.now)
   const upload = (key: string, image: unknown = encode(png), boardId = 'public', agentId = 'one') =>
     uploadSample({
       sql: f.sql,
-      now: f.now,
+      now,
       origin,
       boardId,
       bucket: { ...f.bindings.Manifests, put },
@@ -22,7 +23,7 @@ function samples() {
       key,
       args: { image },
     })
-  return { ...f, put, upload }
+  return { ...f, now, put, upload }
 }
 
 it('journals only the content key and returns the original URL after restart without storing again', async () => {
@@ -71,7 +72,10 @@ it('enforces both the encoded and decoded size limits while accepting exactly 1 
   const tooLarge = new Uint8Array(MAX_AVATAR_BYTES + 1)
   tooLarge.set(png)
   expect(encode(tooLarge).length).toBe(MAX_SAMPLE_BASE64)
-  await expect(f.upload('decoded-over', encode(tooLarge))).rejects.toMatchObject({ code: 'invalid' })
+  await expect(f.upload('decoded-over', encode(tooLarge))).rejects.toMatchObject({
+    code: 'invalid',
+    message: 'Sample image must be at most 1 MiB',
+  })
   await expect(f.upload('encoded-over', 'A'.repeat(MAX_SAMPLE_BASE64 + 1))).rejects.toMatchObject({ code: 'invalid' })
   expect(f.put).toHaveBeenCalledTimes(1)
 })
@@ -88,7 +92,10 @@ it('refuses empty, malformed, non-image, spoofed and truncated input before jour
     encode(new TextEncoder().encode('<svg/>')),
     encode(new Uint8Array([0x89, 0x50])),
   ])
-    await expect(f.upload('invalid', image)).rejects.toMatchObject({ code: 'invalid' })
+    await expect(f.upload('invalid', image)).rejects.toMatchObject({
+      code: 'invalid',
+      message: expect.stringContaining('Sample image must'),
+    })
   expect(f.sql.all('SELECT * FROM agent_operations')).toEqual([])
   expect(f.put).not.toHaveBeenCalled()
 })
@@ -102,6 +109,23 @@ it('counts at most 40 new operations per UTC day across boards, leaving retries 
   expect(f.put).toHaveBeenCalledTimes(40)
   f.advance()
   await f.upload('sample-40')
+  expect(f.put).toHaveBeenCalledTimes(41)
+})
+
+it('uses the journal creation day when an upload straddles UTC midnight and preserves retries', async () => {
+  const f = samples()
+  const midnight = (Math.floor(f.now() / 86400) + 1) * 86400
+  f.now.mockReturnValue(midnight - 1)
+  for (let i = 0; i < 40; i++) await f.upload(`sample-${i}`)
+  const original = await f.upload('sample-0')
+  // begin() reads created_at before midnight and updated_at after midnight.
+  f.now.mockReturnValue(midnight).mockReturnValueOnce(midnight - 1)
+  await expect(f.upload('straddling')).rejects.toMatchObject({ code: 'conflict' })
+  expect(f.sql.all("SELECT * FROM agent_operations WHERE tool='upload_sample'")).toHaveLength(40)
+  expect(f.put).toHaveBeenCalledTimes(40)
+  await f.upload('next-day')
+  expect(f.agents.operation(agentOperationId('one', 'next-day')).created_at).toBe(midnight)
+  expect(await f.upload('sample-0')).toEqual(original)
   expect(f.put).toHaveBeenCalledTimes(41)
 })
 
