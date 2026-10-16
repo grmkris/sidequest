@@ -113,12 +113,16 @@ it('never treats a failed or malformed task list as an empty successful list', a
   expect(malformed).toMatchObject({ message: expect.stringContaining('invalid read result') })
 })
 
-it('recovers a rejected server cursor with a cursorless read', async () => {
+it('reports a rejected server cursor after a cursorless diagnostic', async () => {
   fetchSpy.mockResolvedValueOnce(
     new Response(
       JSON.stringify({
         result: {
-          content: [{ text: JSON.stringify({ ok: false, code: 'invalid', message: 'invalid cursor' }) }],
+          content: [
+            {
+              text: JSON.stringify({ ok: false, code: 'invalid', message: 'cursor must be a value returned by inbox' }),
+            },
+          ],
           isError: true,
         },
       }),
@@ -133,10 +137,27 @@ it('recovers a rejected server cursor with a cursorless read', async () => {
       }),
     ),
   )
-  expect(await inboxAfter('https://board.test/mcp', 'token', 'v1:9672026-10-15T00:48:08Z')).toEqual({
-    events: [],
-    cursor: 'v1:968',
-  })
+  const failure = await inboxAfter('https://board.test/mcp', 'token', 'v1:9672026-10-15T00:48:08Z').catch(
+    (error: unknown) => error,
+  )
+  expect(failure).toMatchObject({ message: expect.stringContaining('recovery required') })
   const args = fetchSpy.mock.calls.map(([, init]) => requestBody(init).params.arguments)
   expect(args).toEqual([{ cursor: 'v1:9672026-10-15T00:48:08Z' }, {}])
+})
+
+it.each(['requestId must be a nonempty string', 'invalid cursor', 'cursor service unavailable'])(
+  'does not discard the cursor on unrelated invalid error: %s',
+  async (message) => {
+    board(JSON.stringify({ ok: false, code: 'invalid', message }), true)
+    const failure = await inboxAfter('https://board.test/mcp', 'token', 'v1:7').catch((error: unknown) => error)
+    expect(failure).toBeInstanceOf(McpToolError)
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+  },
+)
+
+it('reports gap before the wake checker can promote the returned cursor', async () => {
+  board(JSON.stringify({ ok: true, result: { events: [], cursor: 'v1:99', gap: true } }))
+  const failure = await inboxAfter('https://board.test/mcp', 'token', 'v1:7').catch((error: unknown) => error)
+  expect(failure).toMatchObject({ message: expect.stringContaining('retention gap') })
+  expect(fetchSpy).toHaveBeenCalledTimes(1)
 })

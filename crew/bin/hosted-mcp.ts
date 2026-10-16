@@ -44,6 +44,7 @@ const Registration = Schema.Struct({
   error_description: Schema.optionalKey(Schema.String),
 })
 const Refusal = Schema.Struct({
+  message: Schema.optionalKey(Schema.String),
   code: Schema.optionalKey(Schema.String),
   retry: Schema.optionalKey(Schema.String),
   retryAfter: Schema.optionalKey(Schema.Number),
@@ -228,6 +229,7 @@ export class McpToolError extends Error {
     readonly code: string | undefined,
     readonly retry: string | undefined,
     readonly retryAfter: number | undefined,
+    readonly serverMessage?: string,
   ) {
     super(message)
   }
@@ -242,7 +244,13 @@ function refusal(name: string, text: string, status: number): McpToolError {
   }
   const none: typeof Refusal.Type = {}
   const reply = Option.getOrElse(Schema.decodeUnknownOption(Refusal)(parsed), () => none)
-  return new McpToolError(`${name}: ${text.slice(0, 200) || status}`, reply.code, reply.retry, reply.retryAfter)
+  return new McpToolError(
+    `${name}: ${text.slice(0, 200) || status}`,
+    reply.code,
+    reply.retry,
+    reply.retryAfter,
+    reply.message,
+  )
 }
 
 /** One MCP tool call as the connection's agent (JSON-RPC over the board's /mcp; no session needed). */
@@ -300,12 +308,25 @@ export async function readTaskList<T>(mcp: string, token: string, args: Record<s
   throw last
 }
 
-/** A cursor rejection retries cursorless without changing local progress until the replacement batch completes. */
+/** A cursor rejection permits a diagnostic read, never an acknowledgement of a shortened history window. */
 export async function inboxAfter<T>(mcp: string, token: string, cursor?: string): Promise<T> {
   try {
-    return await mcpCall<T>(mcp, token, 'inbox', cursor === undefined ? {} : { cursor })
+    const page = await mcpCall<T>(mcp, token, 'inbox', cursor === undefined ? {} : { cursor })
+    if (Schema.is(Schema.Struct({ gap: Schema.Literal(true) }))(page))
+      throw new Error('inbox recovery required: retention gap; checkpoint unchanged')
+    return page
   } catch (error) {
-    if (!(error instanceof McpToolError) || error.code !== 'invalid' || !/cursor/iu.test(error.message)) throw error
-    return mcpCall<T>(mcp, token, 'inbox', {})
+    if (
+      cursor === undefined ||
+      !(error instanceof McpToolError) ||
+      error.code !== 'invalid' ||
+      error.serverMessage !== 'cursor must be a value returned by inbox'
+    )
+      throw error
+    await mcpCall<T>(mcp, token, 'inbox', {})
+    throw new Error(
+      'inbox recovery required: cursor rejected; seven-day diagnostic cannot acknowledge retained events; checkpoint unchanged',
+      { cause: error },
+    )
   }
 }

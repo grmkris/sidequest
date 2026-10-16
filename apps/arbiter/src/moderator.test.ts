@@ -116,7 +116,7 @@ describe('moderator polling', () => {
       const hides: unknown[] = []
       const f = fake((tool, args) => {
         if (tool === 'inbox') {
-          expect(args.cursor).toBe(mode === 'resync' ? undefined : 'v1:0')
+          expect(args.cursor).toBe('v1:0')
           return { events: [event(), event(60)], cursor: 'v1:60' }
         }
         if (tool === 'list_messages') {
@@ -200,7 +200,7 @@ describe('moderator polling', () => {
     expect(await readFile(file, 'utf8')).toContain('"third":"v1:1"')
   })
 
-  it('resyncs an expired server cursor without losing the previous state', async () => {
+  it('reports a genuine server cursor rejection without replacing checkpoints', async () => {
     const file = await cursorFile()
     await writeFile(file, '{"default":"v1:1"}\n')
     const calls: Record<string, unknown>[] = []
@@ -208,17 +208,17 @@ describe('moderator polling', () => {
       async call<T>(tool: string, args: Record<string, unknown> = {}): Promise<T> {
         if (tool === 'inbox') {
           calls.push(args)
-          if (args.cursor !== undefined) throw new BoardApiError('invalid', 'cursor expired')
+          if (args.cursor !== undefined) throw new BoardApiError('invalid', 'cursor must be a value returned by inbox')
           // SAFETY: this fixture returns the decoded inbox page shape for the fake board.
           return { events: [], cursor: 'v1:2' } as T
         }
         throw new Error(`unexpected ${tool}`)
       },
     }
-    await moderateOnce({ board, endpoint, cursorFile: file })
+    await expect(moderateOnce({ board, endpoint, cursorFile: file })).rejects.toThrow('recovery required')
     expect(calls).toHaveLength(2)
     expect(calls[1]).not.toHaveProperty('cursor')
-    expect(await readFile(file, 'utf8')).toContain('v1:2')
+    expect(await readFile(file, 'utf8')).toBe('{"default":"v1:1"}\n')
   })
 
   it.each([
@@ -281,9 +281,10 @@ it('resyncs cursorlessly when both state copies are malformed', async () => {
   await writeFile(file, '{')
   await writeFile(`${file}.bak`, '{')
   const f = fake(() => ({ events: [], cursor: 'opaque:recovered' }))
-  await moderateOnce({ board: f.board, endpoint, cursorFile: file })
+  await expect(moderateOnce({ board: f.board, endpoint, cursorFile: file })).rejects.toThrow('recovery required')
   expect(f.calls[0]?.args).not.toHaveProperty('cursor')
-  expect(await readFile(file, 'utf8')).toBe('{"default":"opaque:recovered"}\n')
+  expect(await readFile(file, 'utf8')).toBe('{')
+  expect(await readFile(`${file}.bak`, 'utf8')).toBe('{')
 })
 
 it('keeps last valid cursors through corrupt state and a failed replacement model run', async () => {
@@ -302,7 +303,7 @@ it('keeps last valid cursors through corrupt state and a failed replacement mode
       },
     }),
   ).rejects.toThrow('batch incomplete')
-  expect(f.calls[0]?.args).not.toHaveProperty('cursor')
+  expect(f.calls[0]?.args.cursor).toBe('v1:7')
   expect(await readFile(`${file}.bak`, 'utf8')).toBe('{"default":"v1:7"}\n')
   expect(await readFile(file, 'utf8')).toBe('{"default":"v1:7"')
   await moderateOnce({ board: f.board, endpoint, cursorFile: file, classify: hideVerdict })
@@ -349,7 +350,7 @@ it('replays a partially processed batch after restart without repeating a comple
   modelFails = false
   await moderateOnce({ board, endpoint, cursorFile: file, classify })
   expect(hides).toBe(2) // first hide was observed on replay, only the second is sent
-  expect(await readFile(file, 'utf8')).toContain('v1:2')
+  expect(await readFile(file, 'utf8')).toBe('{"default":"v1:2"}\n')
 })
 
 it('a real model HTTP failure keeps the cursor instead of acknowledging fallback keep', async () => {
@@ -365,3 +366,52 @@ it('a real model HTTP failure keeps the cursor instead of acknowledging fallback
     request.mockRestore()
   }
 })
+
+it.each(['corrupt', 'missing'])('resumes a %s primary from backup for a ten-day-old retained event', async (mode) => {
+  const file = await cursorFile()
+  const saved = '{"default":"v1:7"}\n'
+  if (mode === 'corrupt') await writeFile(file, '{')
+  await writeFile(`${file}.bak`, saved)
+  const now = 1_800_000_000
+  const retained = { ...event(8), occurredAt: now - 10 * 86400 }
+  const f = fake((tool, args) => {
+    if (tool === 'inbox') {
+      const events =
+        args.cursor === undefined ? [retained].filter((row) => row.occurredAt >= now - 7 * 86400) : [retained]
+      return { events, cursor: 'v1:8', gap: false }
+    }
+    return { messages: [{ id: 8, body: 'retained', hidden: null }] }
+  })
+  const classify = vi.fn(async (): Promise<ModerationVerdict> => ({ verdict: 'keep', category: 'ok', reason: 'Fine.' }))
+  await moderateOnce({ board: f.board, endpoint, cursorFile: file, classify })
+  expect(f.calls[0]?.args.cursor).toBe('v1:7')
+  expect(classify).toHaveBeenCalledOnce()
+  expect(await readFile(file, 'utf8')).toBe('{"default":"v1:8"}\n')
+})
+
+it('preserves primary and backup and does no moderation when inbox reports a retention gap', async () => {
+  const file = await cursorFile()
+  const saved = '{"default":"v1:7"}\n'
+  await writeFile(file, saved)
+  await writeFile(`${file}.bak`, saved)
+  const f = fake(() => ({ events: [event(8)], cursor: 'v1:8', gap: true }))
+  await expect(moderateOnce({ board: f.board, endpoint, cursorFile: file })).rejects.toThrow('retention gap')
+  expect(f.calls).toHaveLength(1)
+  expect(await readFile(file, 'utf8')).toBe(saved)
+  expect(await readFile(`${file}.bak`, 'utf8')).toBe(saved)
+})
+
+it.each(['requestId must be a nonempty string', 'invalid cursor', 'unrelated cursor failure'])(
+  'does not reset on unrelated invalid error: %s',
+  async (message) => {
+    const file = await cursorFile()
+    const saved = '{"default":"v1:7"}\n'
+    await writeFile(file, saved)
+    const f = fake(() => {
+      throw new BoardApiError('invalid', message)
+    })
+    await expect(moderateOnce({ board: f.board, endpoint, cursorFile: file })).rejects.toThrow(message)
+    expect(f.calls).toHaveLength(1)
+    expect(await readFile(file, 'utf8')).toBe(saved)
+  },
+)

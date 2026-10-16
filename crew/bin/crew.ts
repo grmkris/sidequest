@@ -585,10 +585,12 @@ function fits(m: Member, request: { title?: string; brief?: string; tags?: strin
  */
 async function inboxReason(id: string, token: string, state: string): Promise<string | null> {
   const [, m] = memberOf(id)
+  wakeCursors.delete(id)
   const saved = [join(state, 'wake-cursor'), join(state, 'cursor')].find((path) => existsSync(path))
   const loaded = saved === undefined ? undefined : readCheckpoint(saved)
-  const cursor = loaded?.resync === true ? undefined : loaded?.checkpoint?.cursor
+  const cursor = loaded?.checkpoint?.cursor
   const inbox = await hosted.inboxAfter<{ events?: InboxEvent[]; cursor?: string }>(crew.board.mcp, token, cursor)
+  if (loaded?.resync === true) return 'inbox recovery required: no usable checkpoint; seven-day diagnostic only'
   const events = inbox.events ?? []
   if (inbox.cursor !== undefined) wakeCursors.set(id, inbox.cursor)
   const mine = events.filter((event) => event.public !== true)

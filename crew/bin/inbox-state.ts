@@ -17,16 +17,14 @@ function decode(text: string): Checkpoint {
 }
 
 export function readCheckpoint(path: string): { checkpoint?: Checkpoint; resync: boolean } {
-  if (!existsSync(path)) return { resync: false }
   try {
     return { checkpoint: decode(readFileSync(path, 'utf8')), resync: false }
   } catch {
-    // A malformed state file triggers a cursorless resync. Keep the last valid cursor available, but do not
-    // substitute it for the resync request or overwrite it until the replacement batch is processed.
+    // Resume the last acknowledged backup, including retained events older than the cursorless lookback.
     try {
-      return { checkpoint: decode(readFileSync(`${path}.bak`, 'utf8')), resync: true }
+      return { checkpoint: decode(readFileSync(`${path}.bak`, 'utf8')), resync: false }
     } catch {
-      return { resync: true }
+      return { resync: existsSync(path) || existsSync(`${path}.bak`) }
     }
   }
 }

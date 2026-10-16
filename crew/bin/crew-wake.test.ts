@@ -40,13 +40,13 @@ test('migrates a legacy cursor and keeps timestamp and note fields separate acro
   }
 })
 
-test('malformed local state requests cursorless resync and keeps the last valid cursor until replacement', () => {
+test('malformed local state resumes the last valid backup until replacement', () => {
   const dir = mkdtempSync(join(tmpdir(), 'crew-cursor-'))
   try {
     const file = join(dir, 'cursor')
     saveCheckpoint(file, { cursor: 'v1:967' })
     writeFileSync(file, 'v1:9672026-10-15T00:48:08Z')
-    expect(readCheckpoint(file)).toEqual({ checkpoint: { cursor: 'v1:967' }, resync: true })
+    expect(readCheckpoint(file)).toEqual({ checkpoint: { cursor: 'v1:967' }, resync: false })
     expect(readFileSync(`${file}.bak`, 'utf8')).toContain('v1:967')
     // An interrupted replacement is not a checkpoint.
     writeFileSync(`${file}.123.tmp`, '{"cursor":"v1:999"')

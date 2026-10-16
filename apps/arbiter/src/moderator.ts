@@ -13,7 +13,11 @@ const Event = Schema.Struct({
   cursor: Cursor,
   next: Schema.optionalKey(Schema.Struct({ tool: Schema.String, args: Schema.Record(Schema.String, Schema.Unknown) })),
 })
-const Page = Schema.Struct({ events: Schema.Array(Event), cursor: Schema.NullOr(Cursor) })
+const Page = Schema.Struct({
+  events: Schema.Array(Event),
+  cursor: Schema.NullOr(Cursor),
+  gap: Schema.optionalKey(Schema.Boolean),
+})
 const CursorState = Schema.Record(Schema.String, Cursor)
 const MissingFile = Schema.Struct({ code: Schema.Literal('ENOENT') })
 export type ModeratorEvent = typeof Event.Type
@@ -37,13 +41,12 @@ async function loadCursors(path: string): Promise<{ cursors: Record<string, stri
   try {
     return { cursors: decodeCursors(await readFile(path, 'utf8')), resync: false }
   } catch (error) {
-    if (Schema.is(MissingFile)(error)) return { cursors: {}, resync: false }
     // A failed replacement can leave a corrupt current file. The previous atomic snapshot is the last
     // acknowledged cursor; if it is also unavailable, a cursorless read is the documented resync path.
     try {
-      return { cursors: decodeCursors(await readFile(`${path}.bak`, 'utf8')), resync: true }
-    } catch {
-      return { cursors: {}, resync: true }
+      return { cursors: decodeCursors(await readFile(`${path}.bak`, 'utf8')), resync: false }
+    } catch (backupError) {
+      return { cursors: {}, resync: !Schema.is(MissingFile)(error) || !Schema.is(MissingFile)(backupError) }
     }
   }
 }
@@ -126,12 +129,19 @@ async function inbox(options: ModeratorOptions, previous: string | undefined) {
   try {
     return Schema.decodeUnknownSync(Page)(await options.board.call<unknown>('inbox', args))
   } catch (error) {
-    // Expired or malformed server cursors are recoverable. Re-read from the newest cursorless page and only
-    // replace the saved cursor after that replacement batch has been processed.
-    if (previous !== undefined && error instanceof BoardApiError && error.code === 'invalid') {
+    // Only the server cursor refusal permits a cursorless diagnostic. Its seven-day window cannot
+    // prove all retained events were processed, so it never replaces an existing checkpoint.
+    if (
+      previous !== undefined &&
+      error instanceof BoardApiError &&
+      error.code === 'invalid' &&
+      error.message === 'invalid: cursor must be a value returned by inbox'
+    ) {
       options.log?.('inbox cursor rejected; resyncing cursorless')
-      return Schema.decodeUnknownSync(Page)(
-        await options.board.call<unknown>('inbox', { kinds: [...MODERATION_KINDS], includePublic: false }),
+      await options.board.call<unknown>('inbox', { kinds: [...MODERATION_KINDS], includePublic: false })
+      throw new Error(
+        'inbox recovery required: cursor rejected; seven-day diagnostic cannot acknowledge retained events; cursor unchanged',
+        { cause: error },
       )
     }
     throw error
@@ -141,8 +151,10 @@ async function inbox(options: ModeratorOptions, previous: string | undefined) {
 export async function moderateOnce(options: ModeratorOptions): Promise<number> {
   const { cursors, resync } = await loadCursors(options.cursorFile)
   const key = options.cursorKey ?? 'default'
-  const previous = resync ? undefined : cursors[key]
-  const page = await inbox(options, previous)
+  const page = await inbox(options, cursors[key])
+  if (resync || page.gap === true) {
+    throw new Error('inbox recovery required: missing checkpoints or retention gap; cursor unchanged')
+  }
   for (const event of page.events) {
     // Replayed completed hides are skipped by targetText or accepted as already-hidden conflicts.
     if (!(await retryEvent(options, event))) throw new Error('moderator batch incomplete; cursor unchanged')
