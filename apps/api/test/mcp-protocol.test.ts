@@ -10,6 +10,7 @@ import { tenantTools } from '../src/tools-tenant.ts'
 import { feedTools } from '../src/feed.ts'
 const registry = { ...boardTools, ...agentTools, ...directoryTools, ...tenantTools, ...feedTools }
 import { requiredToolScope, toolAnnotations } from '../src/mcp-policy.ts'
+import { workerFailure } from '../src/worker-failure.ts'
 import { connectorInstructions } from '../src/mcp-instructions.ts'
 import type { OAuthGrant } from '../src/oauth.ts'
 
@@ -560,4 +561,31 @@ describe('protocol gaps from the goblin run', () => {
     const polled = await send({ jsonrpc: '2.0', id: 2, method: 'events/poll', params: {} }, { grant: setup })
     expect(polled.body).toMatchObject({ error: { code: -32003, message: expect.stringContaining('waiting:') } })
   })
+})
+
+it('keeps a transient list_tasks refusal distinct from empty success and retries without a write key', async () => {
+  const args = { role: 'worker' }
+  const failure = vi.spyOn(console, 'error').mockImplementation(() => {})
+  const call = vi.fn(async () => workerFailure(new Error('SECRET_RPC_URL'), 'list_tasks'))
+  try {
+    const failed = result(await route('tools/call', { name: 'list_tasks', arguments: args }, { tools: registry, call }))
+    expect(failed.isError).toBe(true)
+    expect(failed.structuredContent).toMatchObject({ ok: false, code: 'unavailable', retry: 'read' })
+    expect(JSON.stringify(failed)).not.toMatch(/operationKey|SECRET_RPC_URL/)
+    expect(call).toHaveBeenCalledWith('list_tasks', args, 'a1')
+    const empty = result(
+      await route(
+        'tools/call',
+        { name: 'list_tasks', arguments: args },
+        {
+          tools: registry,
+          call: async () => ({ ok: true, result: [] }),
+        },
+      ),
+    )
+    expect(empty.isError).toBeUndefined()
+    expect(empty.structuredContent).toEqual({ ok: true, result: [] })
+  } finally {
+    failure.mockRestore()
+  }
 })
