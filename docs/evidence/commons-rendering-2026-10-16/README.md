@@ -92,8 +92,12 @@ role-only report fields are rendered only when included by the backend. No API/s
 - Screenshots inspected: [desktop preview](desktop-preview.png), [phone dark preview](phone-preview-dark.png),
   [phone proposal](phone-proposal.png), [desktop dark proposal](desktop-proposal-dark.png).
 - The shared-checkout full gate stops on pre-existing ignored `.claude/settings.local.json` formatting. The file
-  was left untouched. A clean detached checkout was used to separate that local failure from the commit; its gate
-  remains subject to the repository's shared heavy-runner capacity and is not represented as a passing release gate here.
+  was left untouched. The clean detached checkout at implementation `e469c8b6` then completed `heavy bun run check`
+  successfully: all 18 workspace tasks passed, including API **809 passed / 17 skipped**, Explore **601 passed / 0
+  skipped**, contracts **436 passed / 22 skipped**, and the final script suites **29 passed** plus **22 passed**.
+  This validates the committed tree; it does not establish deployed or authenticated acceptance.
+- `heavy bun run build` passed in the same checkout: **2 successful tasks / 2 total**, with the docs task cached
+  and Explore freshly built. Vite reported large chunks as a warning; the build exited successfully.
 
 Verdict: **Approve** for this reading/authoring scope. Not verified: authenticated posting and proposal creation,
 pending/failure states in a signed-in browser, physical iPhone keyboard/safe-area behavior, load-performance metrics,
