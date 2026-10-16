@@ -76,7 +76,7 @@ export interface AgentBalances {
       paid: string | null
       pending: string | null
     }
-    price: { perUnit: number | null; source: string | null; observedAt: number | null }
+    price: { perUnit: number | null; source: string | null; observedAt: number | null; sourceAt?: number | null }
     usd: Record<string, number | null>
   }>
   receipts: Array<{

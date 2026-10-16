@@ -5,7 +5,7 @@ import { Schema } from 'effect'
 import { fromNodeSqlite, migrate, stmt } from '@sidequest/indexer'
 import { SPONSOR_OBJECT_NAME } from '@sidequest/board'
 import * as sdk from '@sidequest/sdk'
-import { erc20Abi, encodeFunctionResult, toFunctionSelector, numberToHex, type Address } from 'viem'
+import { erc20Abi, encodeFunctionResult, toFunctionSelector, numberToHex, parseAbi, type Address } from 'viem'
 import { afterEach, expect, it } from 'vitest'
 import { agentBalances, balanceHistory, balanceUsd } from '../src/agent-balances.ts'
 import { runAgent, type AgentExecuteRequest } from '../src/agent-runtime.ts'
@@ -110,25 +110,27 @@ it('keeps failed pushes out of paid earnings and counts an attributable pooled w
 })
 
 it('never invents USD for missing, stale or invalid prices, including zero balances', () => {
-  const price = { perUnit: 2, source: 'fixture pool', observedAt: now }
+  const price = { perUnit: 2, source: 'fixture pool', observedAt: now, sourceAt: now }
   expect(balanceUsd('1500000', 6, price, now)).toBe(3)
   expect(balanceUsd('0', 6, price, now)).toBe(0)
   expect(balanceUsd('0', 6, { ...price, perUnit: null }, now)).toBeNull()
   expect(balanceUsd('1500000', 6, price, now + 121)).toBeNull()
+  expect(balanceUsd('1500000', 6, { ...price, observedAt: now, sourceAt: now - 121 }, now)).toBeNull()
   expect(balanceUsd('1500000', null, price, now)).toBeNull()
   expect(balanceUsd('1500000', 6, { ...price, perUnit: Infinity }, now)).toBeNull()
 })
 
 /** A local JSON-RPC transport: real viem encoding/decoding, no hosted network or signing service. */
-async function rpc(balance = 1_500_000n, owed = 90n) {
+async function rpc(balance = 1_500_000n, owed = 90n, sourceAt = now, successfulQuotes = false) {
   const methods: string[] = []
-  const reply = (call: { id: number; method: string; params: [{ data?: string }] }) => {
+  const priceBlocks: unknown[] = []
+  const reply = (call: { id: number; method: string; params: [{ data?: string }, unknown?] }) => {
     methods.push(call.method)
     let result: unknown
     if (call.method === 'eth_getBlockByNumber')
       result = {
         number: '0x64',
-        timestamp: numberToHex(now),
+        timestamp: numberToHex(sourceAt),
         hash: sdk.hashText('block'),
         parentHash: sdk.hashText('parent'),
         nonce: '0x0000000000000000',
@@ -143,7 +145,17 @@ async function rpc(balance = 1_500_000n, owed = 90n) {
     else if (call.method === 'eth_getBalance') result = numberToHex(balance)
     else if (call.method === 'eth_call') {
       const data = call.params[0].data ?? ''
-      if (data.startsWith(toFunctionSelector('balanceOf(address)')))
+      if (successfulQuotes && data.startsWith(toFunctionSelector('getSlot0(bytes32)'))) {
+        priceBlocks.push(call.params[1])
+        result = encodeFunctionResult({
+          abi: parseAbi(['function getSlot0(bytes32) view returns (uint160, int24, uint24, uint24)']),
+          functionName: 'getSlot0',
+          result: [2n ** 96n, 0, 0, 0],
+        })
+      } else if (successfulQuotes && data.startsWith(toFunctionSelector('getAmountOut(address,uint256,bool)'))) {
+        priceBlocks.push(call.params[1])
+        result = encodeFunctionResult({ abi: sdk.nadRouterAbi, functionName: 'getAmountOut', result: 10n ** 18n })
+      } else if (data.startsWith(toFunctionSelector('balanceOf(address)')))
         result = encodeFunctionResult({ abi: erc20Abi, functionName: 'balanceOf', result: balance })
       else if (data.startsWith(toFunctionSelector('decimals()')))
         result = encodeFunctionResult({ abi: erc20Abi, functionName: 'decimals', result: 6 })
@@ -173,7 +185,7 @@ async function rpc(balance = 1_500_000n, owed = 90n) {
   open.push(() => new Promise<void>((resolve) => server.close(() => resolve())))
   const address = server.address()
   const bound = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }))(address)
-  return { url: `http://127.0.0.1:${bound.port}`, methods }
+  return { url: `http://127.0.0.1:${bound.port}`, methods, priceBlocks }
 }
 
 it.each([0n, 1_500_000n])(
@@ -280,3 +292,28 @@ it('uses real OAuth agent binding for MCP and SIWE ownership for the matching ac
   expect(requiredToolScope('get_balances')).toBe('sidequest:read')
   expect(toolAnnotations('get_balances')).toMatchObject({ readOnlyHint: true, destructiveHint: false })
 })
+
+it.each([0, 121])(
+  'pins successful market quotes to their source block and rejects stale USD on repeated reads (age %s)',
+  async (age) => {
+    const server = await rpc(1_500_000n, 90n, now - age, true)
+    const context = sdk.context('monad-mainnet', 'main', server.url)
+    for (let poll = 0; poll < 2; poll += 1) {
+      const snapshot = await agentBalances(context, undefined, wallet)
+      expect(snapshot.observedAt).toBeGreaterThanOrEqual(now)
+      expect(snapshot.blockTimestamp).toBe(now - age)
+      const native = snapshot.currencies.find((c) => c.token === null)!
+      const side = snapshot.currencies.find((c) => c.token === deployment.factory.toLowerCase())!
+      expect(native.price.perUnit).toBeGreaterThan(0)
+      expect(side.price.perUnit).toBeGreaterThan(0)
+      for (const currency of snapshot.currencies) {
+        expect(currency.amounts.wallet).toBe('1500000')
+        expect(currency.price.sourceAt).toBe(now - age)
+        if (age > 120) expect(currency.usd.wallet).toBeNull()
+        else expect(currency.usd.wallet).toBeGreaterThan(0)
+      }
+    }
+    expect(server.priceBlocks.length).toBeGreaterThanOrEqual(4)
+    expect(server.priceBlocks.every((block) => block === '0x64')).toBe(true)
+  },
+)

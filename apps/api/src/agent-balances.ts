@@ -141,6 +141,8 @@ interface BalancePrice {
   perUnit: number | null
   source: string | null
   observedAt: number | null
+  /** Source block timestamp used for freshness; response observation remains separate. */
+  sourceAt: number | null
 }
 const PRICE_MAX_AGE_SECONDS = 120
 
@@ -157,7 +159,9 @@ export function balanceUsd(
     price.perUnit === null ||
     price.observedAt === null ||
     price.observedAt > now ||
-    now - price.observedAt > PRICE_MAX_AGE_SECONDS ||
+    price.sourceAt === null ||
+    price.sourceAt > now ||
+    now - price.sourceAt > PRICE_MAX_AGE_SECONDS ||
     !Number.isFinite(price.perUnit) ||
     price.perUnit <= 0
   )
@@ -165,31 +169,39 @@ export function balanceUsd(
   const value = Number(formatUnits(BigInt(raw), decimals)) * price.perUnit
   return Number.isFinite(value) ? value : null
 }
-const unavailablePrice = (): BalancePrice => ({ perUnit: null, source: null, observedAt: null })
+const unavailablePrice = (): BalancePrice => ({ perUnit: null, source: null, observedAt: null, sourceAt: null })
 
 async function nativePrice(
   context: sdk.Ctx,
   decimals: ReadonlyMap<string, number | null>,
   pegged: ReadonlySet<string>,
-  now: number,
+  observedAt: number,
+  sourceAt: number,
+  blockNumber: bigint,
 ): Promise<BalancePrice> {
   const p = context.deployment.nativePrice
   if (p === null || !pegged.has(p.quote.toLowerCase())) return unavailablePrice()
   const quoteDecimals = decimals.get(p.quote.toLowerCase())
   if (quoteDecimals == null) return unavailablePrice()
-  const value = await sdk.nativeUsdPrice(context, p, quoteDecimals).catch(() => null)
+  const value = await sdk.nativeUsdPrice(context, p, quoteDecimals, blockNumber).catch(() => null)
   return value === null
     ? unavailablePrice()
-    : { perUnit: value, source: `Uniswap v4 pool ${p.poolId}`, observedAt: now }
+    : { perUnit: value, source: `Uniswap v4 pool ${p.poolId}`, observedAt, sourceAt }
 }
 
-async function prices(context: sdk.Ctx, decimals: ReadonlyMap<string, number | null>, now: number) {
+async function prices(
+  context: sdk.Ctx,
+  decimals: ReadonlyMap<string, number | null>,
+  observedAt: number,
+  sourceAt: number,
+  blockNumber: bigint,
+) {
   const d = context.deployment
   const pegged = new Set(sdk.networkMeta(d.network).usdPegged.map((t) => t.toLowerCase()))
   const quotes = new Map<string, BalancePrice>()
   for (const token of pegged)
-    quotes.set(token, { perUnit: 1, source: 'Configured USD peg (estimate)', observedAt: now })
-  const native = await nativePrice(context, decimals, pegged, now)
+    quotes.set(token, { perUnit: 1, source: 'Configured USD peg (estimate)', observedAt, sourceAt })
+  const native = await nativePrice(context, decimals, pegged, observedAt, sourceAt, blockNumber)
   quotes.set('native', native)
   const mon = native.perUnit
   const m = d.market
@@ -197,14 +209,14 @@ async function prices(context: sdk.Ctx, decimals: ReadonlyMap<string, number | n
   let side: number | null = null
   let source: string | null = null
   if (m !== null && quoteDecimals != null && pegged.has(m.quote.toLowerCase())) {
-    side = await sdk.sidePrice(context, m, quoteDecimals).catch(() => null)
+    side = await sdk.sidePrice(context, m, quoteDecimals, blockNumber).catch(() => null)
     source = `Uniswap v4 pool ${m.poolId}`
   } else if (d.launcher !== null && mon !== null) {
-    const out = await sdk.launcherQuote(context, d.launcher, 'sell', 10n ** 21n).catch(() => null)
+    const out = await sdk.launcherQuote(context, d.launcher, 'sell', 10n ** 21n, blockNumber).catch(() => null)
     side = out === null ? null : (Number(formatUnits(out, 18)) / 1000) * mon
     source = 'nad.fun 1,000 SIDE sale quote × native USD pool price'
   }
-  if (side !== null) quotes.set(d.factory.toLowerCase(), { perUnit: side, source, observedAt: now })
+  if (side !== null) quotes.set(d.factory.toLowerCase(), { perUnit: side, source, observedAt, sourceAt })
   return quotes
 }
 
@@ -277,7 +289,14 @@ export async function agentBalances(context: sdk.Ctx, sql: AsyncSql | undefined,
       owed: '0',
     },
   ]
-  const quotes = await prices(context, new Map(tokens.map((t) => [t.token, t.decimals])), observedAt)
+  const sourceAt = Number(block.timestamp)
+  const quotes = await prices(
+    context,
+    new Map(tokens.map((t) => [t.token, t.decimals])),
+    observedAt,
+    sourceAt,
+    block.number,
+  )
   const indexed = sql === undefined ? null : await balanceHistory(sql, d.chainId, wallet).catch(() => null)
   const history = indexed?.index == null ? null : indexed
   return {
@@ -311,7 +330,7 @@ export async function agentBalances(context: sdk.Ctx, sql: AsyncSql | undefined,
     receipts: history?.receipts ?? null,
     notes: [
       'Wallet quantities alone are spendable; escrow, paid history, pending and owed are separate and are never added to wallet funds.',
-      'Escrow is creator-funded gross rewards. Pending is unsettled worker net rewards, contingent on outcome. Owed is the live pooled Holding balance, which can include refunds.',
+      'Escrow is the remaining creator-funded gross amount still held until Holding settlement, including unpaid fees. Pending is unsettled worker net rewards, contingent on outcome. Owed is the live pooled Holding balance, which can include refunds.',
       'Paid earnings include direct worker payment receipts and attributable owed withdrawals. Mixed refund/earnings withdrawals remain separate receipts, without guessed job allocation.',
     ],
   }

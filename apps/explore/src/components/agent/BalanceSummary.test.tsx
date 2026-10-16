@@ -27,7 +27,7 @@ const snapshot: AgentBalances = {
         paid: '2000000000000000000',
         pending: '90000000000000000000',
       },
-      price: { perUnit: 2, source: 'Local test pool', observedAt: now },
+      price: { perUnit: 2, source: 'Local test pool', observedAt: now, sourceAt: now },
       usd: { wallet: 3, owed: 0, escrow: 0, paid: 4, pending: 180 },
     },
   ],
@@ -71,7 +71,7 @@ describe('balance and earnings view', () => {
           ...snapshot.currencies[0]!,
           wallet: '0',
           amounts: { wallet: '0', paid: '0', pending: '0', owed: '0', escrow: '0' },
-          price: { perUnit: null, source: null, observedAt: null },
+          price: { perUnit: null, source: null, observedAt: null, sourceAt: null },
           usd: { wallet: null },
         },
       ],
@@ -81,4 +81,19 @@ describe('balance and earnings view', () => {
     expect(html).toContain('USD estimate unavailable')
     expect(html).not.toContain('$0.00')
   })
+})
+
+it('keeps stale source USD unavailable even when the API observation is fresh', () => {
+  const stale = {
+    ...snapshot,
+    currencies: snapshot.currencies.map((currency) => ({
+      ...currency,
+      price: { ...currency.price, observedAt: now, sourceAt: now - 121 },
+    })),
+  }
+  const html = renderToStaticMarkup(<BalanceView snapshot={stale} now={now} />)
+  expect(html).toContain('1.5 MON')
+  expect(html).toContain('source block')
+  expect(html).toContain('USD estimate unavailable')
+  expect(html).not.toContain('≈ $3.00')
 })

@@ -9,7 +9,7 @@ import { useNow } from '../Time.tsx'
 
 const labels = {
   wallet: 'Spendable wallet',
-  escrow: 'Active hiring escrow',
+  escrow: 'Gross escrow still held',
   paid: 'Confirmed paid earnings',
   pending: 'Pending worker rewards',
   owed: 'Owed · withdrawable',
@@ -32,11 +32,8 @@ function CurrencyBalances({
   now: number
   maxAge: number
 }) {
-  const priced =
-    !stale &&
-    currency.price.observedAt !== null &&
-    now >= currency.price.observedAt &&
-    now - currency.price.observedAt <= maxAge
+  const sourceAt = currency.price.sourceAt ?? null
+  const priced = !stale && sourceAt !== null && now >= sourceAt && now - sourceAt <= maxAge
   return (
     <section
       className="grid min-w-0 gap-2 border-t border-border/70 pt-3"
@@ -68,7 +65,8 @@ function CurrencyBalances({
       </dl>
       <p className="break-words text-xs text-muted-foreground">
         Price: {currency.price.source ?? 'unavailable'}
-        {currency.price.observedAt !== null && ` · ${new Date(currency.price.observedAt * 1000).toISOString()}`}
+        {sourceAt !== null && ` · source block ${new Date(sourceAt * 1000).toISOString()}`}
+        {currency.price.observedAt !== null && ` · read ${new Date(currency.price.observedAt * 1000).toISOString()}`}
         {!priced && currency.price.observedAt !== null && ' · unavailable or stale'}
       </p>
     </section>
@@ -107,7 +105,8 @@ export function BalanceView({ snapshot, now }: { snapshot: AgentBalances; now: n
 
       <p className="text-xs text-muted-foreground">
         Only wallet funds are spendable. Escrow, paid history, pending rewards and owed payouts are separate; they are
-        never added to wallet funds. Pending rewards depend on the job outcome. Owed can include refunds.
+        never added to wallet funds. Gross escrow includes fees still held until settlement. Pending rewards depend on
+        the job outcome. Owed can include refunds.
       </p>
       {snapshot.receipts !== null && snapshot.receipts.length > 0 && (
         <details className="min-w-0">

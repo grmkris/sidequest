@@ -60,12 +60,13 @@ function direction(m: Market, tokenIn: Address): boolean {
 }
 
 /** A pool's mid price from slot0: raw units of currency1 per raw unit of currency0, or 0 for an unseeded pool. */
-async function raw1Per0(ctx: Ctx, stateView: Address, poolId: Hex): Promise<number> {
+async function raw1Per0(ctx: Ctx, stateView: Address, poolId: Hex, blockNumber?: bigint): Promise<number> {
   const [sqrtPriceX96] = await ctx.publicClient.readContract({
     address: stateView,
     abi: stateViewAbi,
     functionName: 'getSlot0',
     args: [poolId],
+    ...(blockNumber === undefined ? {} : { blockNumber }),
   })
   if (sqrtPriceX96 === 0n) return 0
   const ratio = Number(sqrtPriceX96) / 2 ** 96
@@ -76,13 +77,18 @@ async function raw1Per0(ctx: Ctx, stateView: Address, poolId: Hex): Promise<numb
  * The chain's coin in dollars: the native/pegged pool's mid price (`deployment.nativePrice`), with the native coin's
  * 18 decimals and the pegged token's `quoteDecimals` applied. 0 for an unseeded pool.
  */
-export async function nativeUsdPrice(ctx: Ctx, p: NativePrice, quoteDecimals: number): Promise<number> {
-  return (await raw1Per0(ctx, p.stateView, p.poolId)) * 10 ** (18 - quoteDecimals)
+export async function nativeUsdPrice(
+  ctx: Ctx,
+  p: NativePrice,
+  quoteDecimals: number,
+  blockNumber?: bigint,
+): Promise<number> {
+  return (await raw1Per0(ctx, p.stateView, p.poolId, blockNumber)) * 10 ** (18 - quoteDecimals)
 }
 
 /** The pool's mid price: quote tokens per whole SIDE, from slot0 (decimals of both tokens applied). */
-export async function sidePrice(ctx: Ctx, m: Market, quoteDecimals: number): Promise<number> {
-  const mid = await raw1Per0(ctx, m.stateView, m.poolId)
+export async function sidePrice(ctx: Ctx, m: Market, quoteDecimals: number, blockNumber?: bigint): Promise<number> {
+  const mid = await raw1Per0(ctx, m.stateView, m.poolId, blockNumber)
   if (mid === 0) return 0
   const sideIs0 = m.side.toLowerCase() === m.key.currency0.toLowerCase()
   const rawQuotePerSide = sideIs0 ? mid : 1 / mid
