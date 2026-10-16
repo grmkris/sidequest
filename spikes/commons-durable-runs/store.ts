@@ -92,13 +92,16 @@ export class MissionStore {
           .get(command.id)
         if (prior) {
           if (prior.input !== input) throw new Conflict('Command ID reused with different input.')
+          const state = this.snapshot()
+          if (command.action === 'new_run' && state.mission.id === command.id) return
+          if (project(state.journal.slice(0, command.revision)).id !== state.mission.id)
+            throw new Conflict('This command belongs to an earlier run. Refresh the saved state.')
           return
         }
         const state = this.snapshot()
         if (command.revision !== state.revision)
           throw new Conflict('Another tab changed this mission. Refresh and try again.')
-        const event = decide(state.mission, command)
-        if (event) this.append(event)
+        for (const event of decide(state.mission, command)) this.append(event)
         this.db.query('INSERT INTO commands VALUES (?, ?)').run(command.id, input)
       })
       .immediate()
@@ -119,7 +122,9 @@ export class MissionStore {
     if (loseReply) return this.snapshot()
     this.db
       .transaction(() => {
-        if (findTicket(this.snapshot().mission, ticketId).payment === 'confirmed') return
+        const current = this.snapshot().mission
+        if (current.id !== mission.id) throw new Conflict('This settlement belongs to an earlier run.')
+        if (findTicket(current, ticketId).payment === 'confirmed') return
         this.append({
           type: 'payment_confirmed',
           ticketId,

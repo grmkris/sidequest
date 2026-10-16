@@ -105,15 +105,18 @@ describe('durable mission journal', () => {
     step(store, 'start', '01')
     step(store, 'submit', '01')
     step(store, 'revise', '01')
-    expect(() => step(store, 'start', '02')).toThrow('prerequisites')
+    expect(() => step(store, 'start', '03')).toThrow('prerequisites')
     step(store, 'start', '01')
     step(store, 'submit', '01')
     step(store, 'accept', '01')
     step(store, 'start', '02')
+    step(store, 'submit', '02')
+    step(store, 'accept', '02')
+    step(store, 'start', '03')
     const mission = store.snapshot().mission
     expect(findTicket(mission, '01').attempt).toBe(2)
     expect(findTicket(mission, '01').payment).toBe('none')
-    expect(ready(mission, findTicket(mission, '03'))).toBe(false)
+    expect(ready(mission, findTicket(mission, '04'))).toBe(false)
     expect(provider.all()).toHaveLength(0)
     store.close()
     provider.close()
@@ -162,10 +165,10 @@ describe('durable mission journal', () => {
     restored.close()
   })
 
-  it('settles all three independent rewards without exceeding the approved cap', () => {
+  it('settles all four independent rewards without exceeding the approved cap', () => {
     const { store, provider } = open()
     step(store, 'approve')
-    for (const id of ['01', '02', '03']) {
+    for (const id of ['01', '02', '03', '04']) {
       step(store, 'start', id)
       step(store, 'submit', id)
       step(store, 'accept', id)
@@ -173,9 +176,9 @@ describe('durable mission journal', () => {
       store.settle(id, provider)
     }
     expect(provider.all().reduce((sum, receipt) => sum + receipt.amount, 0)).toBe(300)
-    expect(new Set(provider.all().map((r) => r.worker)).size).toBe(3)
+    expect(new Set(provider.all().map((r) => r.worker)).size).toBe(4)
     expect(() => step(store, 'pay', '01')).toThrow('unpaid')
-    expect(provider.all()).toHaveLength(3)
+    expect(provider.all()).toHaveLength(4)
     store.close()
     provider.close()
   })
