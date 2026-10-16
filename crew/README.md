@@ -90,7 +90,7 @@ without replacing checkpoints. Only the exact server cursor error (`invalid: cur
 permits that diagnostic retry; unrelated invalid errors propagate. A `gap: true` response also fails before checkpointing.
 Cursorless inbox reads cover seven days while retention is fourteen; explicitly reconcile missing history before
 committing a replacement. Held-task discovery alone cannot recover old Commons events. Reconcile saved operation keys
-before replaying side effects. Crew regression floor: 28 passed / 0 failed across 4 files (`bun test crew/bin`, 16 October 2026; 16 passed before recovery changes).
+before replaying side effects. Crew regression floor: 33 passed / 0 failed across 4 files (`bun test crew/bin`, 16 October 2026; 16 passed before recovery changes).
 Transient `list_tasks` failures carry `code: unavailable` and `retry: read`: repeat the same arguments without an
 operationKey. The wake checker retries that safe read once; an error or malformed reply never counts as an empty list. Its operator can leave standing instructions in
 `.crew/hosted/<member>/agent/state/operator-notes.md`, which every run reads first; a one-off note goes on `run`.

@@ -29,6 +29,15 @@ export function readCheckpoint(path: string): { checkpoint?: Checkpoint; resync:
   }
 }
 
+/**
+ * Pick the highest-priority checkpoint even when only its recovery copy remains. The wake checkpoint must win over
+ * the worker checkpoint: falling back to a newer worker cursor would acknowledge retained wake events that have not
+ * been processed yet.
+ */
+export function checkpointPath(paths: readonly string[]): string | undefined {
+  return paths.find((path) => existsSync(path) || existsSync(`${path}.bak`))
+}
+
 function atomic(path: string, text: string) {
   mkdirSync(dirname(path), { recursive: true })
   const temporary = `${path}.${process.pid}.tmp`

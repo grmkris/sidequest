@@ -35,8 +35,8 @@ import { parseEnv } from 'node:util'
 import { stageProfile } from '../../infra/stage.ts'
 import * as hosted from './hosted-mcp.ts'
 import { type ConnectionFiles, type Token, readToken } from './hosted-mcp.ts'
-import { type HeldTask, openHeld } from './crew-wake.ts'
-import { finishWake, readCheckpoint } from './inbox-state.ts'
+import { type HeldTask, openHeld, wakeInbox } from './crew-wake.ts'
+import { finishWake } from './inbox-state.ts'
 
 const crewDir = resolve(import.meta.dir, '..')
 const repo = resolve(crewDir, '..')
@@ -551,11 +551,6 @@ async function wakeReason(id: string): Promise<string | null> {
   return null
 }
 
-interface InboxEvent {
-  public?: boolean
-  requestId?: string | null
-}
-
 /** The wake cursor each member's last check read up to, written once the events behind it are dealt with. */
 const wakeCursors = new Map<string, string>()
 
@@ -586,26 +581,20 @@ function fits(m: Member, request: { title?: string; brief?: string; tags?: strin
 async function inboxReason(id: string, token: string, state: string): Promise<string | null> {
   const [, m] = memberOf(id)
   wakeCursors.delete(id)
-  const saved = [join(state, 'wake-cursor'), join(state, 'cursor')].find((path) => existsSync(path))
-  const loaded = saved === undefined ? undefined : readCheckpoint(saved)
-  const cursor = loaded?.checkpoint?.cursor
-  const inbox = await hosted.inboxAfter<{ events?: InboxEvent[]; cursor?: string }>(crew.board.mcp, token, cursor)
-  if (loaded?.resync === true) return 'inbox recovery required: no usable checkpoint; seven-day diagnostic only'
-  const events = inbox.events ?? []
-  if (inbox.cursor !== undefined) wakeCursors.set(id, inbox.cursor)
-  const mine = events.filter((event) => event.public !== true)
-  if (mine.length > 0) return `${mine.length} inbox event(s)`
-  const requests = new Set(
-    events.flatMap((event) => (event.public === true && event.requestId ? [event.requestId] : [])),
+  const result = await wakeInbox(
+    state,
+    (cursor) => hosted.inboxAfter(crew.board.mcp, token, cursor),
+    async (requests) => {
+      const open = await mcpCall<Array<{ requestId: string; title?: string; brief?: string; tags?: string[] }>>(
+        token,
+        'list_quote_requests',
+        {},
+      )
+      return (Array.isArray(open) ? open : []).filter((r) => requests.has(r.requestId) && fits(m, r)).length
+    },
   )
-  if (requests.size === 0) return loaded?.resync === true ? 'inbox cursor resync' : null
-  const open = await mcpCall<Array<{ requestId: string; title?: string; brief?: string; tags?: string[] }>>(
-    token,
-    'list_quote_requests',
-    {},
-  )
-  const fitting = (Array.isArray(open) ? open : []).filter((r) => requests.has(r.requestId) && fits(m, r))
-  return fitting.length > 0 ? `${fitting.length} fitting request(s)` : null
+  if (result.cursor !== undefined) wakeCursors.set(id, result.cursor)
+  return result.reason
 }
 
 let info: { rewardTokens?: string[] } | undefined
