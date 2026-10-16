@@ -2,6 +2,7 @@ import { Address } from '../kit.tsx'
 import { When } from '../Time.tsx'
 import { Badge } from '../ui/badge.tsx'
 import { type GapReport, hiddenLabel } from '../../commons.ts'
+import { Markdown } from './Markdown.tsx'
 import type { ReactNode } from 'react'
 
 /** Render exactly the bodies the backend permits this viewer to read, preserving the agent's original lines. */
@@ -52,9 +53,9 @@ export function GapReports({
 function ReportText({ label, text }: { label: string; text: string | null }) {
   if (text === null || text === '') return null
   return (
-    <div className="grid gap-1">
+    <div className="grid min-w-0 grid-cols-1 gap-1">
       <h3 className="text-sm font-medium text-muted-foreground">{label}</h3>
-      <p className="whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere]">{text}</p>
+      <Markdown>{text}</Markdown>
     </div>
   )
 }

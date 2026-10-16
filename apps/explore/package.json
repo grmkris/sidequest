@@ -27,6 +27,8 @@
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "catalog:",
     "three": "catalog:",
     "tw-animate-css": "catalog:",
     "viem": "catalog:",

@@ -2,9 +2,9 @@ import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
-import { Field, FieldDescription, FieldLabel } from '../ui/field.tsx'
+import { Field, FieldLabel } from '../ui/field.tsx'
 import { Input } from '../ui/input.tsx'
-import { Textarea } from '../ui/textarea.tsx'
+import { MarkdownEditor } from './MarkdownEditor.tsx'
 import { usePropose } from '../../commons-query.ts'
 import { SideChip } from '../side/SideToken.tsx'
 import { isMainnet } from '../../wallet.ts'
@@ -22,18 +22,30 @@ export function ProposeForm({ canPropose, onDone }: { canPropose: boolean; onDon
   const [title, setTitle] = useState('')
   const [problem, setProblem] = useState('')
   const [proposal, setProposal] = useState('')
-  const ready = title.trim().length >= 3 && problem.trim() !== '' && proposal.trim() !== ''
-  const submit = async () => {
-    const out = await propose.mutateAsync({ title: title.trim(), problem: problem.trim(), proposal: proposal.trim() })
-    onDone()
-    void navigate({ to: '/commons/roadmap/$itemId', params: { itemId: String(out.item.id) } })
+  const ready =
+    title.trim().length >= 3 &&
+    problem.trim() !== '' &&
+    problem.length <= 2000 &&
+    proposal.trim() !== '' &&
+    proposal.length <= 4000
+  const submit = () => {
+    if (!ready || propose.isPending) return
+    propose.mutate(
+      { title: title.trim(), problem: problem.trim(), proposal: proposal.trim() },
+      {
+        onSuccess: (out) => {
+          onDone()
+          void navigate({ to: '/commons/roadmap/$itemId', params: { itemId: String(out.item.id) } })
+        },
+      },
+    )
   }
   return (
     <form
-      className="grid gap-4 rounded-2xl bg-card p-5 shadow-popover"
+      className="grid min-w-0 grid-cols-1 gap-4 rounded-2xl bg-card p-5 shadow-popover"
       onSubmit={(event) => {
         event.preventDefault()
-        void submit()
+        submit()
       }}
     >
       {!canPropose && (
@@ -42,34 +54,37 @@ export function ProposeForm({ canPropose, onDone }: { canPropose: boolean; onDon
           <SideChip variant="link">Get SIDE</SideChip>
         </p>
       )}
-      <Field>
-        <FieldLabel htmlFor="item-title">Title</FieldLabel>
-        <Input id="item-title" value={title} maxLength={120} onChange={(event) => setTitle(event.target.value)} />
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="item-problem">Problem</FieldLabel>
-        <FieldDescription>What you or your agent could not do, and what you tried.</FieldDescription>
-        <Textarea
-          id="item-problem"
-          rows={3}
-          maxLength={2000}
+      <div className="grid min-w-0 grid-cols-1 gap-4">
+        <Field>
+          <FieldLabel htmlFor="item-title">Title</FieldLabel>
+          <Input
+            id="item-title"
+            value={title}
+            maxLength={120}
+            disabled={propose.isPending}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </Field>
+        <MarkdownEditor
+          label="Problem"
+          description="What you or your agent could not do, and what you tried."
           value={problem}
-          onChange={(event) => setProblem(event.target.value)}
+          onChange={setProblem}
+          limit={2000}
+          disabled={propose.isPending}
         />
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="item-proposal">Proposal</FieldLabel>
-        <FieldDescription>What Sidequest should build: a tool, a page, a rule.</FieldDescription>
-        <Textarea
-          id="item-proposal"
-          rows={4}
-          maxLength={4000}
+        <MarkdownEditor
+          label="Proposal"
+          description="Describe the change. Break it into steps with a checklist."
+          placeholder="What should change, and how will we know it worked?"
           value={proposal}
-          onChange={(event) => setProposal(event.target.value)}
+          onChange={setProposal}
+          limit={4000}
+          disabled={propose.isPending}
         />
-      </Field>
+      </div>
       <div className="flex justify-end">
-        <Button type="submit" busy={propose.isPending} disabled={!ready}>
+        <Button type="submit" className="min-h-11" busy={propose.isPending} disabled={!ready}>
           Propose
         </Button>
       </div>

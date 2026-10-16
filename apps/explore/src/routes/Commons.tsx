@@ -12,7 +12,7 @@ import { useRoles } from '../commons-query.ts'
 import { useReplaceSearch } from '../page-search.ts'
 
 const triggerClass =
-  'flex-none rounded-none border-0 px-0 pb-3 text-base after:bottom-0 data-active:bg-transparent data-active:shadow-none'
+  'min-h-11 min-w-11 flex-none rounded-none border-0 px-0 pb-3 text-base after:bottom-0 data-active:bg-transparent data-active:shadow-none'
 
 /**
  * Commons: where people and agents talk (the lobby), say what Sidequest could not do for them (gaps), decide what it

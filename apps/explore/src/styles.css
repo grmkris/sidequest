@@ -8,6 +8,143 @@
 @import '@fontsource-variable/newsreader/opsz-italic.css';
 @source '.';
 
+/* Commons documents: the content supplies the hierarchy, with quiet chrome around it. */
+@layer components {
+  .commons-markdown {
+    min-inline-size: 0;
+    max-inline-size: 72ch;
+    font-size: 1rem;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+  .commons-markdown > * + * {
+    margin-block-start: 1em;
+  }
+  .commons-markdown :where(h3, h4, h5, h6) {
+    margin-block: 1.5em 0.5em;
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  .commons-markdown h3 {
+    font-size: 1.375em;
+  }
+  .commons-markdown h4 {
+    font-size: 1.125em;
+  }
+  .commons-markdown :where(h5, h6) {
+    font-size: 1em;
+  }
+  .commons-markdown > :first-child {
+    margin-block-start: 0;
+  }
+  .commons-markdown :where(p) {
+    white-space: pre-line;
+  }
+  .commons-markdown :where(ul, ol) {
+    padding-inline-start: 1.5em;
+  }
+  .commons-markdown ul {
+    list-style-type: disc;
+  }
+  .commons-markdown ol {
+    list-style-type: decimal;
+  }
+  .commons-markdown li + li {
+    margin-block-start: 0.35em;
+  }
+  .commons-markdown li > :where(p, ul, ol) + * {
+    margin-block-start: 0.5em;
+  }
+  .commons-markdown li::marker {
+    color: var(--muted-foreground);
+  }
+  .commons-markdown .task-list-item {
+    list-style: none;
+    position: relative;
+  }
+  .commons-markdown .task-list-item > input,
+  .commons-markdown .task-list-item > p > input {
+    position: absolute;
+    inset-inline-start: -1.5em;
+    inset-block-start: 0.4em;
+    inline-size: 1em;
+    block-size: 1em;
+    accent-color: var(--primary);
+    opacity: 1;
+  }
+  .commons-markdown blockquote {
+    border-inline-start: 3px solid var(--border);
+    padding-inline-start: 1em;
+    color: var(--muted-foreground);
+  }
+  .commons-markdown a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklch, var(--primary) 45%, transparent);
+    text-underline-offset: 0.2em;
+  }
+  .commons-markdown a:active {
+    text-decoration-color: currentColor;
+  }
+  .commons-markdown :where(a, pre, .commons-table):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .commons-markdown a:hover {
+      text-decoration-color: currentColor;
+    }
+  }
+  .commons-markdown code {
+    border-radius: 0.25rem;
+    background: var(--muted);
+    padding: 0.15em 0.3em;
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    box-decoration-break: clone;
+  }
+  .commons-markdown pre {
+    max-inline-size: 100%;
+    overflow-x: auto;
+    border-radius: 0.75rem;
+    background: var(--muted);
+    padding: 1rem;
+    line-height: 1.6;
+    white-space: pre;
+    overflow-wrap: normal;
+  }
+  .commons-markdown pre code {
+    background: transparent;
+    padding: 0;
+  }
+  .commons-table {
+    max-inline-size: 100%;
+    overflow-x: auto;
+  }
+  .commons-markdown table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: 0.875em;
+  }
+  .commons-markdown :where(th, td) {
+    border-block-end: 1px solid var(--border);
+    padding: 0.65em 0.85em;
+    text-align: start;
+    vertical-align: top;
+    min-inline-size: 8rem;
+  }
+  .commons-markdown th {
+    background: var(--muted);
+    font-weight: 600;
+  }
+  .commons-markdown hr {
+    border-color: var(--border);
+    margin-block: 1.5em;
+  }
+}
+
 /*
  * Sidequest's design tokens: shadcn's base-nova vocabulary (background, card, primary, muted, border, ring…) in oklch,
  * with warm paper, evergreen ink and a pale mint primary in dark mode.

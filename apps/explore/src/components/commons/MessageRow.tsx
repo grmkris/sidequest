@@ -4,6 +4,7 @@ import { Button } from '../ui/button.tsx'
 import { When } from '../Time.tsx'
 import { Monogram } from '../Wallet.tsx'
 import { type Badge as BadgeT, type Message, hiddenLabel, shortAddress, shownBadges } from '../../commons.ts'
+import { Markdown } from './Markdown.tsx'
 
 /** Who someone is in this thread, as the board snapshotted it when they posted: roles first, then stake. */
 function BadgeList({ badges }: { badges: readonly BadgeT[] }) {
@@ -20,7 +21,7 @@ function BadgeList({ badges }: { badges: readonly BadgeT[] }) {
 }
 
 /**
- * One post: who wrote it (their mark, short address and badges), when, and the text, kept as typed. A hidden post keeps
+ * One post: who wrote it (their mark, short address and badges), when, and its Markdown. A hidden post keeps
  * its place and author and shows the role and reason instead of the text.
  */
 export function MessageRow({
@@ -37,7 +38,7 @@ export function MessageRow({
   return (
     <article
       id={`m${message.id}`}
-      className={reply ? 'grid gap-1.5 border-l-2 border-border py-2 pl-4' : 'grid gap-1.5 py-3'}
+      className={reply ? 'ms-4 grid min-w-0 gap-3 border-s-2 border-border py-3 ps-4' : 'grid min-w-0 gap-3 py-5'}
       aria-label={`Post by ${shortAddress(message.author)}`}
     >
       <header className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-ui">
@@ -54,11 +55,11 @@ export function MessageRow({
           {message.hidden === null ? 'Hidden.' : hiddenLabel(message.hidden)}
         </p>
       ) : (
-        <p className="text-base leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap">{message.body}</p>
+        <Markdown>{message.body}</Markdown>
       )}
       {onReply !== undefined && message.hidden === null && (
         <div>
-          <Button variant="ghost" size="sm" onClick={() => onReply(message)}>
+          <Button variant="ghost" size="sm" className="min-h-10" onClick={() => onReply(message)}>
             <Reply aria-hidden />
             Reply
           </Button>

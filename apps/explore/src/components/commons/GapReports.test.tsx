@@ -17,14 +17,16 @@ const detail = response.result as GapDetail
 
 it('shows all three original public reports from the dev API, including suggestions and merge provenance', () => {
   const html = renderToStaticMarkup(<GapReports reports={detail.reports} />)
-  const text = textOf(parseFragment(html))
+  const text = textOf(parseFragment(html)).replace(/\s+/g, ' ')
   for (const report of detail.reports) {
     expect(text).toContain(`Report #${report.id}`)
-    expect(text).toContain(report.whatINeeded)
-    expect(text).toContain(report.whatITried)
+    // Markdown turns the captured backticks and leading "1)" into code and an ordered-list marker.
+    expect(text).toContain(report.whatINeeded?.replaceAll('`', '').replace(/\s+/g, ' '))
+    expect(text).toContain(report.whatITried?.replaceAll('`', '').replace(/^1\) /, '').replace(/\s+/g, ' '))
     expect(text).toContain(report.suggestion)
   }
   expect(text).toContain('Originally gap #7')
+  expect(html).toContain('<ol>')
   expect(text).toContain('Originally gap #10')
   expect(text).not.toContain('Private goal')
 })

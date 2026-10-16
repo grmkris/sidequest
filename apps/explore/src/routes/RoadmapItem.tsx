@@ -4,6 +4,7 @@ import { Alert, AlertDescription } from '../components/ui/alert.tsx'
 import { Badge } from '../components/ui/badge.tsx'
 import { Address, LoadingRows, PageTitle, Section } from '../components/kit.tsx'
 import { ThreadView } from '../components/commons/ThreadView.tsx'
+import { Markdown } from '../components/commons/Markdown.tsx'
 import { GAP_LABEL, type RoadmapItemDetail, STATUS_LABEL, hiddenLabel, side, supportLine } from '../commons.ts'
 import { useRoadmapItem } from '../commons-query.ts'
 
@@ -54,10 +55,10 @@ function ItemBody({ detail }: { detail: RoadmapItemDetail }) {
       <PageTitle sub={<Badge variant="outline">{STATUS_LABEL[item.status]}</Badge>}>{item.title}</PageTitle>
       {item.hidden !== null && <p className="text-muted-foreground italic">{hiddenLabel(item.hidden)}</p>}
       <Section title="Problem">
-        <p className="leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap">{item.problem}</p>
+        <Markdown>{item.problem}</Markdown>
       </Section>
       <Section title="Proposal">
-        <p className="leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap">{item.proposal}</p>
+        <Markdown>{item.proposal}</Markdown>
       </Section>
       <Section title="Support" note={supportLine(item, block !== null)}>
         <ul className="grid gap-1">

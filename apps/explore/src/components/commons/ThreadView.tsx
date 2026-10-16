@@ -27,7 +27,7 @@ export function ThreadView({ subject, empty, placeholder }: { subject: string; e
   const page = thread.data
   const tree = threadTree(page?.messages ?? [])
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 gap-6">
       {tree.length === 0 ? (
         <Empty>
           <EmptyHeader>
