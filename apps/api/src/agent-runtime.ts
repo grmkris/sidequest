@@ -40,6 +40,7 @@ import { publicOrigin } from './telegram.ts'
 import { objectFor } from './commons/route.ts'
 import { hostedUserOpDesk } from './agent-userop.ts'
 import { agentGasAllowance } from './agent-gas-allowance.ts'
+import { agentBalances } from './agent-balances.ts'
 
 const key32 = (key: string) => /^0x[0-9a-fA-F]{64}$/.test(key)
 
@@ -141,6 +142,18 @@ export async function runAgent(runtime: {
     args.agentId = agent.agent_id
   }
   const ctx = sdk.context(req.env.network, 'main', req.env.rpcUrl)
+  if (req.tool === 'get_balances') {
+    if (agent.address === null) throw new BoardError('unavailable', 'This agent wallet is not ready')
+    return toJson({
+      ok: true,
+      result: await agentBalances(
+        ctx,
+        // SAFETY: Database is the Cloudflare D1 binding configured by this Worker.
+        bindings.Database === undefined ? undefined : fromD1(bindings.Database as never),
+        agent.address,
+      ),
+    })
+  }
   const sponsor = new SponsorDesk({
     sql,
     ctx,

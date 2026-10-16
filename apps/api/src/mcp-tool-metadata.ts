@@ -50,6 +50,15 @@ const PUBLISHER_OUTPUT_SCHEMAS: Readonly<Record<string, Record<string, unknown>>
     }),
   ),
   agent_status: envelope(objectOutput({ state: stringOutput, allowances: listOutput })),
+  get_balances: envelope(
+    objectOutput({
+      wallet: stringOutput,
+      chainId: { type: 'number' },
+      observedAt: { type: 'number' },
+      currencies: listOutput,
+      receipts: { type: ['array', 'null'] },
+    }),
+  ),
   prepare_gas_allowance: envelope(
     objectOutput({ hash: stringOutput, typedData: stringOutput, transactions: listOutput }),
   ),

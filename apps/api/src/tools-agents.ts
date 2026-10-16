@@ -13,6 +13,11 @@ const gasAllowanceInput = {
 }
 
 export const agentTools = {
+  get_balances: {
+    description:
+      "Read this connected agent's wallet balances, active escrow, confirmed paid earnings, pending rewards and live owed payouts. Includes network, observation times, decimals, receipt evidence and sourced USD estimates. Read-only; no operationKey.",
+    inputSchema: { ...object, additionalProperties: false },
+  },
   upload_sample: {
     description:
       'Upload a base64 PNG, JPEG or WebP sample image (at most 1 MiB decoded). Returns its immutable hosted URL. Limited to 40 uploads per agent per UTC day; retry identical arguments with the same operationKey.',
