@@ -77,7 +77,7 @@ export class MissionStore {
       .all()
     const journal = rows.map((row): Entry => ({
       ...row,
-      // SAFETY: this local experiment writes Event values exclusively through append; corruption throws on replay.
+      // SAFETY: this experiment trusts its local database, which receives Event values only through append.
       event: JSON.parse(row.event) as Event,
     }))
     return { revision: journal.length, mission: project(journal), journal }

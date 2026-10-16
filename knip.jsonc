@@ -49,6 +49,8 @@
         // Live probes and outside-agent examples, run by hand: bun scripts/probes/<name>.ts.
         "scripts/probes/*.ts!",
         "crew/bin/*.ts!",
+        // Isolated preview CLI, manual browser check and Bun.build browser entry; not imported by shipped apps.
+        "spikes/commons-durable-runs/{server,browser-check,ui}.ts!",
       ],
     },
     "tools": {
