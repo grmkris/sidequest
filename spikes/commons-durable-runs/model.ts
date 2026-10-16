@@ -17,7 +17,7 @@ export interface Ticket {
 }
 
 export type RunMode = 'parallel' | 'sequential'
-export interface Simulation {
+interface Simulation {
   mode: RunMode
   elapsed: number
   status: 'running' | 'interrupted' | 'complete'
