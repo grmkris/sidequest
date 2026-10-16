@@ -63,7 +63,7 @@ node_modules/.bin/tsc -p spikes/commons-durable-runs/tsconfig.json
 bun spikes/commons-durable-runs/browser-check.ts
 ```
 
-The browser check uses Explore's installed `playwright-core` and a matching local Chromium installation. It opens only
+The browser check uses the repository's pinned `playwright-core` and a matching local Chromium installation. It opens only
 a loopback server, creates disposable databases, kills the server with **SIGKILL**, restarts a fresh process against the
 same files, and verifies that the original receipt is recovered. No keys or network providers are needed.
 

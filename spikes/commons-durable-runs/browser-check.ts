@@ -1,10 +1,10 @@
-/** Local browser and real process-restart proof. Reuses Explore's installed Playwright. */
+/** Local browser and real process-restart proof. Uses the repository's pinned Playwright. */
 import { strict as assert } from 'node:assert'
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { chromium } from '../../apps/explore/node_modules/playwright-core'
-import type { Page } from '../../apps/explore/node_modules/playwright-core'
+import { chromium } from 'playwright-core'
+import type { Page } from 'playwright-core'
 import type { Snapshot, SimulatedReceipt } from './store.ts'
 
 const directory = mkdtempSync(join(tmpdir(), 'commons-browser-'))
