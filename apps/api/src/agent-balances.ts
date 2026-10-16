@@ -175,10 +175,9 @@ async function nativePrice(
   context: sdk.Ctx,
   decimals: ReadonlyMap<string, number | null>,
   pegged: ReadonlySet<string>,
-  observedAt: number,
-  sourceAt: number,
-  blockNumber: bigint,
+  observation: { observedAt: number; sourceAt: number; blockNumber: bigint },
 ): Promise<BalancePrice> {
+  const { observedAt, sourceAt, blockNumber } = observation
   const p = context.deployment.nativePrice
   if (p === null || !pegged.has(p.quote.toLowerCase())) return unavailablePrice()
   const quoteDecimals = decimals.get(p.quote.toLowerCase())
@@ -201,7 +200,7 @@ async function prices(
   const quotes = new Map<string, BalancePrice>()
   for (const token of pegged)
     quotes.set(token, { perUnit: 1, source: 'Configured USD peg (estimate)', observedAt, sourceAt })
-  const native = await nativePrice(context, decimals, pegged, observedAt, sourceAt, blockNumber)
+  const native = await nativePrice(context, decimals, pegged, { observedAt, sourceAt, blockNumber })
   quotes.set('native', native)
   const mon = native.perUnit
   const m = d.market
