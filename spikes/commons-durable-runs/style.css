@@ -1,4 +1,4 @@
-/* Sidequest's quiet Commons palette; one vertical thread connects the dependent tickets. */
+/* Sidequest's quiet Commons palette; the graph keeps independent research beside its downstream work. */
 :root {
   color-scheme: light;
   --paper: oklch(0.985 0.002 90);
@@ -42,9 +42,9 @@ p {
   max-inline-size: 72ch;
 }
 h1 {
-  font-size: clamp(2rem, 1.6rem + 2vw, 3.3rem);
+  font-size: clamp(1.8rem, 1.5rem + 1vw, 2.5rem);
   font-weight: 500;
-  max-inline-size: 19ch;
+  max-inline-size: 32ch;
 }
 h2 {
   font-size: 1.4rem;
@@ -100,7 +100,8 @@ summary:active {
   color: var(--amber);
 }
 :focus-visible,
-.ticket:focus {
+.ticket:focus,
+#simulator:focus {
   outline: 2px solid var(--green);
   outline-offset: 4px;
 }
@@ -158,17 +159,17 @@ main {
   padding-block-end: 3rem;
 }
 .intro {
-  padding-block: clamp(2rem, 5vw, 4rem) 1.5rem;
+  padding-block: 1.5rem 1rem;
   display: grid;
   gap: 1rem;
 }
 .intro > p {
   color: var(--muted);
-  max-inline-size: 58ch;
-  font-size: 1.1rem;
+  max-inline-size: 72ch;
+  font-size: 1rem;
 }
 .notice {
-  padding: 1rem 1.15rem;
+  padding: 0.75rem 1rem;
   background: var(--tint);
   border-radius: 0.75rem;
   max-inline-size: none;
@@ -181,20 +182,17 @@ main {
   font-size: 0.875rem;
 }
 .mission-layout {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2rem 3rem;
-  align-items: start;
+  display: grid;
+  gap: 2rem;
 }
 .plan {
-  flex: 999 1 0;
-  min-inline-size: min(100%, 36rem);
+  container-type: inline-size;
 }
 .plan-heading {
   display: grid;
   justify-items: start;
-  gap: 0.75rem;
-  padding-block: 0.75rem 1.5rem;
+  gap: 0.5rem;
+  padding-block: 0.5rem 1rem;
 }
 .plan-label {
   color: var(--green);
@@ -205,34 +203,142 @@ main {
   color: var(--muted);
   font-size: 0.925rem;
 }
-.ticket {
+.workflow-graph {
   display: grid;
-  grid-template-columns: 2.25rem 1fr;
-  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2.5rem;
   position: relative;
-  padding-block: 1.5rem;
-  border-block-start: 1px solid var(--line);
+  padding-block: 0.5rem;
+}
+.ticket {
+  position: relative;
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: var(--paper);
+  align-self: center;
+}
+#ticket-01 {
+  grid-column: 1;
+  grid-row: 1;
+}
+#ticket-02 {
+  grid-column: 1;
+  grid-row: 2;
+}
+#ticket-03 {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+#ticket-04 {
+  grid-column: 3;
+  grid-row: 1 / span 2;
 }
 .ticket-number {
-  display: grid;
+  display: inline-grid;
   place-items: center;
-  align-self: start;
-  block-size: 2.25rem;
+  inline-size: 2rem;
+  block-size: 2rem;
+  margin-block-end: 0.75rem;
   border: 1px solid var(--line);
   border-radius: 50%;
   color: var(--muted);
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
-  background: var(--paper);
-  z-index: 1;
 }
-.ticket:not(:last-child)::before {
-  content: '';
+.ticket[data-status='running'] {
+  border-color: oklch(0.52 0.12 250);
+}
+.ticket[data-status='review'] {
+  border-color: var(--amber);
+}
+.ticket[data-status='accepted'] {
+  border-color: var(--green);
+}
+.wires {
   position: absolute;
-  inset-inline-start: 1.1rem;
-  inset-block: 2rem -1.5rem;
-  inline-size: 1px;
-  background: var(--line);
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  pointer-events: none;
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 1.5;
+}
+.queue-wire {
+  stroke-dasharray: 5 5;
+  stroke: var(--amber);
+}
+.simulator {
+  display: grid;
+  gap: 0.7rem;
+  padding-block: 0.5rem 1.75rem;
+}
+.mode-choices {
+  display: flex;
+  gap: 0.4rem;
+}
+.mode-choices button[aria-pressed='true'] {
+  background: var(--tint);
+  border-color: var(--green);
+}
+.mode-choices button:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.forecast {
+  font-variant-numeric: tabular-nums;
+}
+.forecast strong {
+  font-size: 1.6rem;
+  font-weight: 500;
+}
+.simulation-controls {
+  margin-block-start: 0.5rem;
+}
+.run-status {
+  color: var(--green);
+  font-size: 0.925rem;
+}
+.graph-legend {
+  color: var(--muted);
+  font-size: 0.775rem;
+}
+progress {
+  inline-size: 100%;
+  block-size: 0.45rem;
+  accent-color: var(--green);
+}
+.ticket-brief {
+  font-size: 0.875rem;
+}
+@container (inline-size < 54rem) {
+  .workflow-graph {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem 1rem;
+  }
+  #ticket-01 {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  #ticket-02 {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  #ticket-03 {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  #ticket-04 {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+  .ticket {
+    padding: 0.8rem;
+  }
+  .ticket .actions {
+    flex-direction: column;
+  }
 }
 .ticket[data-status='accepted'] .ticket-number {
   color: var(--paper);
@@ -285,7 +391,6 @@ blockquote {
   display: none;
 }
 .summary {
-  flex: 1 1 16rem;
   background: var(--tint);
   border-radius: 1.25rem;
   padding: 1.5rem;
@@ -297,8 +402,8 @@ blockquote {
 }
 dl {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.15rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 0.5rem 1rem;
   margin: 0;
 }
 dt {
@@ -312,7 +417,7 @@ dd {
   font-variant-numeric: tabular-nums;
 }
 dd + dt {
-  margin-block-start: 0.8rem;
+  margin-block-start: 0;
 }
 .agreement-note,
 .proof {

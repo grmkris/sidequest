@@ -21,21 +21,46 @@ bun spikes/commons-durable-runs/server.ts
 Open <http://127.0.0.1:4318>. The default data directory is `spikes/commons-durable-runs/.data`; set
 `COMMONS_PREVIEW_DATA=/tmp/commons-preview` to use another one.
 
-The first ticket unlocks the second, and the second unlocks the third. Use **Pay & lose reply** to commit a simulated
-provider receipt while leaving the coordinator's payment state pending. **Reload from disk** closes and reopens the
-coordinator database, replays its journal, and **Reconcile payment** finds the original operation before confirming it.
-The `operationId` is stable and this simulated provider enforces idempotency, so retrying cannot create a second receipt.
-To start a new example, point `COMMONS_PREVIEW_DATA` at a new empty directory. No reset button deletes an existing journal.
+Approve the plan, choose **Parallel** or **Sequential**, and click **Run simulation**. Playback advances one synthetic
+work minute every 650 ms. **Pause playback** stops the browser clock; **Next minute** advances one checkpoint. Work
+stops for explicit delivery review. Accept both research deliveries to unlock synthesis, then accept synthesis to
+unlock verification. Requesting changes repeats that ticket's work and keeps its dependents waiting.
 
-The plan and example deliveries are fixed. Clicking the controls plays the coordinator, worker and reviewer roles;
-there are no background agents, automatic wakeups, editable plans or real role permissions.
+```text
+01 Scout: map onboarding gaps (8 min) ──────┐
+                                          ├─ 03 Scribe: guide (10 min) ── 04 Verifier: check (6 min)
+02 Listener: worker/approver needs (12 min) ┘
+```
 
-![Desktop plan preview](screenshots/desktop-plan.png)
+Parallel work takes **28 simulated work minutes**, with a critical path of **02 → 03 → 04**. Sequential work takes
+**36 minutes** and runs one ticket at a time, including its review gate. Both allocate **300 demo credits**. These
+forecasts use fixed example durations, instant acceptance and no rework. Actual time spent waiting for reviews or a
+power outage does not advance the synthetic clock. Rewards exclude model costs, fees, bonds and gas.
 
-[Phone preview with a lost payment reply](screenshots/phone-pending.png)
+**Cut power** persists an interruption. **Reload from disk** closes and reopens the coordinator database and replays
+its journal. **Resume saved run** continues from the saved minute with the same attempts and accepted work. The power
+button is fault injection; the browser check also kills the actual server with SIGKILL and starts a new process.
+Playback is driven by the browser and stops when it closes; reopening never automatically dispatches work.
+
+Use **Pay & lose reply** on an accepted ticket to commit a simulated provider receipt while leaving the coordinator's
+payment state pending. **Reconcile payment** finds the original operation before confirming it. The `operationId` is
+stable within a run, and this simulated provider enforces idempotency. Payments remain separate from work acceptance.
+After all four rewards are confirmed, **New simulation** creates a fresh plan so you can try the other mode. Previous
+runs and receipts remain in the append-only journal; each new run has a separate payment namespace. Commands from an
+older run cannot settle the current run. The UI shows the latest run; the download includes the whole history.
+
+You can also work through tickets manually using their start, submit and review controls. The plan and deliveries are
+fixed; clicking controls plays the coordinator, worker and reviewer roles. There are no actual agents or role permissions.
+Mode is fixed once simulation starts. Older three-ticket journals remain readable with one-minute synthetic durations
+where no duration was stored; a fresh run uses the four-ticket example above.
+
+![Parallel workflow](screenshots/desktop-parallel.png)
+
+[Sequential workflow](screenshots/desktop-sequential.png) · [Phone workflow](screenshots/phone-parallel.png)
 
 ## What this proves
 
+- A fork/join workflow can run concurrently or queue independent tickets under a sequential policy.
 - Plans and ticket dependencies can be separate from bilateral paid hires.
 - Every state transition is an append-only fact that can be replayed after a restart.
 - Payment intent is saved before the provider call.
@@ -47,7 +72,7 @@ there are no background agents, automatic wakeups, editable plans or real role p
 There is no authentication, agent execution, wallet, escrow, contract, live board write, or real payment. This is a
 local state-machine experiment, not a production durable execution engine. The browser calls the same loopback server
 for all roles. It has no migrations/version upgrades, timer recovery, worker leases, cancellation, dispute handling,
-arbitrary graph validation or data-tampering protection. The journal is append-only through this API, not tamper-evident.
+editable graphs or data-tampering protection. The journal is append-only through this API, not tamper-evident.
 
 In particular, the fake provider's immediate, authoritative receipt lookup and idempotent write are stronger than a
 network timeout. A real missing chain receipt does **not** establish that a transaction failed or is safe to resend.
@@ -67,12 +92,16 @@ The browser check uses the repository's pinned `playwright-core` and a matching 
 a loopback server, creates disposable databases, kills the server with **SIGKILL**, restarts a fresh process against the
 same files, and verifies that the original receipt is recovered. No keys or network providers are needed.
 
-Local results on 16 October 2026: **14 tests passing, 0 failing, across 2 files**; scoped format/lint and strict typecheck
-passing. Browser walkthrough passing at **1440px and 390px**, including rework, blocked dependencies, database reopen,
-actual process restart, lost-response reconciliation, visible keyboard focus and 44px buttons. Three accepted tickets
-end with exactly three simulated receipts totaling 300 demo credits. No horizontal overflow or browser page errors.
-Screenshots and machine-readable results are regenerated into ignored `evidence/`; the two images above are review
-artifacts, not snapshot-test baselines. Existing workspace test floors are unchanged. These are local results only.
+Scheduler results on 16 October 2026: **22 tests passing, 0 failing, across 3 files**; scoped core format/lint and strict
+typecheck passing. This adds forecast, review-gated scheduling, rework, interrupted-progress recovery, repeated-run
+history and stale-command checks to the previous 14-test floor. Existing workspace test floors are unchanged.
+
+The browser walkthrough covers both modes at **1440px and 390px**, manual rework, blocked dependencies, database reopen,
+real process restart, lost-response reconciliation, keyboard focus and 44px buttons. It settles three separate runs
+(manual, parallel, sequential), with 12 unique simulated receipts totaling 900 demo credits. Screenshots and results
+are generated into ignored `evidence/`; the committed images are review artifacts, not snapshot baselines.
+The full browser walkthrough passed locally on 16 October 2026 with no horizontal overflow or browser page errors.
+These are local results only.
 
 ## Why this shape fits the other projects
 
@@ -123,9 +152,27 @@ Keep work acceptance and payment separate in the UI. Accepted output can unlock 
 settlement is still reconciling. Real payment should distinguish earned, settled/withdrawable and withdrawn. The
 simulator's single “Paid” receipt collapses those states intentionally.
 
-The first real integration could be one Commons mission with one approved plan and three existing v1 hire references,
+The first real integration could be one Commons mission with one approved plan and existing v1 hire references,
 a real saved coordinator, and workers in external runtimes. Add automated dispatch after those authority and recovery
 boundaries are demonstrated. A new swarm contract is a separate experiment.
+
+## The workflow display in Commons
+
+Vrials' `packages/core/src/simulator/engine.ts` separates start, advance, approval, forecast and power-cut actions. Its
+browser view turns those transitions into a story of which work can proceed and why other work waits. That interaction
+is the inspiration here. This preview uses a deliberately simpler deterministic scheduler and a real local journal,
+not Vrials' probabilistic costs, seeded retries or runtime. The comparison keeps the same plan and rewards in both modes.
+
+For Commons, put the workflow beside the discussion that proposed it: **plan → simulate → approve → run**. A member should
+be able to inspect prerequisites, workers, acceptance criteria, rewards and estimated critical path before authorizing
+anything. Show reviews and funding waits as first-class steps. Link each paid ticket to its actual hire and settlement;
+a simulation should never silently become an authorization. One accepted plan revision can have multiple simulation
+runs before a separately authorized real run. Public run history can show where a plan was revised and what was recovered.
+
+The useful first controls are concurrency, review policy and failure injection. Concurrency is more than a speed knob:
+it changes how many workers and their execution budgets are active at once. A next experiment could compare a reviewer
+checking every delivery against a delegated reviewer under fixed criteria, with explicit human escalation. Preserve the
+same coordination and payment authority boundaries in both cases.
 
 ## Brainstorming from the preview
 
