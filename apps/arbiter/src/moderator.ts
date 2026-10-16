@@ -58,6 +58,22 @@ async function saveCursors(path: string, cursors: Record<string, string>): Promi
   await rename(temporary, `${path}.bak`)
 }
 
+async function readEventText(
+  options: ModeratorOptions,
+  next: NonNullable<ModeratorEvent['next']>,
+  target: ReturnType<typeof eventTarget>,
+): Promise<string | null> {
+  // Thread message ids are sequence ids. A subject-only read returns the newest 50,
+  // so anchor an ascending one-message page immediately before this exact event target.
+  // targetText still rejects a missing/mismatched target, leaving the cursor unchanged.
+  const args =
+    target.kind === 'message' && next.tool === 'list_messages'
+      ? { ...next.args, after: `c:${target.id - 1}`, limit: 1 }
+      : next.args
+  const content = await options.board.call<unknown>(next.tool, args)
+  return targetText(target, content)
+}
+
 async function handleEvent(options: ModeratorOptions, event: ModeratorEvent): Promise<void> {
   const log = options.log ?? (() => {})
   if (!MODERATION_KINDS.has(event.kind)) return
@@ -66,8 +82,7 @@ async function handleEvent(options: ModeratorOptions, event: ModeratorEvent): Pr
     return
   }
   const target = eventTarget(event.id, event.kind)
-  const content = await options.board.call<unknown>(event.next.tool, event.next.args)
-  const text = targetText(target, content)
+  const text = await readEventText(options, event.next, target)
   if (text === null) return
   let modelFailed = false
   const classify =

@@ -96,6 +96,69 @@ describe('moderator polling', () => {
     expect(f.calls.at(-1)?.args).toEqual({ kind: 'message', id: 1, reason: 'prompt_injection: Agent instructions.' })
   })
 
+  it.each(['queued', 'resync'])(
+    'recovers %s backlog beyond 50 messages without losing failures or repeating hides',
+    async (mode) => {
+      const file = await cursorFile()
+      const previous = '{"default":"v1:0"}\n'
+      await writeFile(file, mode === 'resync' ? '{' : previous)
+      await writeFile(`${file}.bak`, previous)
+      const rows: Array<{ id: number; body: string; hidden: null | { at: number } }> = Array.from(
+        { length: 60 },
+        (_, index) => ({
+          id: index + 1,
+          body: `message ${index + 1}`,
+          hidden: null,
+        }),
+      )
+      let readFails = true
+      let modelFails = true
+      const hides: unknown[] = []
+      const f = fake((tool, args) => {
+        if (tool === 'inbox') {
+          expect(args.cursor).toBe(mode === 'resync' ? undefined : 'v1:0')
+          return { events: [event(), event(60)], cursor: 'v1:60' }
+        }
+        if (tool === 'list_messages') {
+          if (readFails) throw new Error('thread read unavailable')
+          // Match Commons list_messages: a subject-only read returns the newest 50; after pages ascend.
+          const page =
+            args.after === undefined
+              ? rows.slice(-50)
+              : rows.filter((row) => row.id > Number(String(args.after).slice(2))).slice(0, Number(args.limit ?? 50))
+          return { subject: 'lobby', messages: page }
+        }
+        if (tool === 'hide_content') {
+          hides.push(args.id)
+          const row = rows.find((entry) => entry.id === args.id)
+          if (row === undefined) throw new Error('missing hide target')
+          row.hidden = { at: 1 }
+          return {}
+        }
+        throw new Error(`unexpected ${tool}`)
+      })
+      const classify = vi.fn(async (text: string) => {
+        if (text.includes('message 60') && modelFails) throw new Error('model unavailable')
+        return hideVerdict()
+      })
+      const run = () => moderateOnce({ board: f.board, endpoint, cursorFile: file, classify })
+      await expect(run()).rejects.toThrow('batch incomplete')
+      expect(classify).not.toHaveBeenCalled()
+      expect(await readFile(file, 'utf8')).toBe(mode === 'resync' ? '{' : previous)
+      expect(await readFile(`${file}.bak`, 'utf8')).toBe(previous)
+      readFails = false
+      await expect(run()).rejects.toThrow('batch incomplete')
+      expect(hides).toEqual([1])
+      expect(await readFile(file, 'utf8')).toBe(mode === 'resync' ? '{' : previous)
+      expect(await readFile(`${file}.bak`, 'utf8')).toBe(previous)
+      modelFails = false
+      await run()
+      expect(hides).toEqual([1, 60])
+      expect(classify).toHaveBeenCalledWith(JSON.stringify({ where: 'the lobby', author: [], text: 'message 1' }))
+      expect(await readFile(file, 'utf8')).toBe('{"default":"v1:60"}\n')
+    },
+  )
+
   it('caps failed reads at three and leaves the failed event for the next pass', async () => {
     let attempts = 0
     const f = fake((tool, args) => {
