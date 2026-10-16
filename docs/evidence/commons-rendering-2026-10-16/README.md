@@ -92,7 +92,8 @@ role-only report fields are rendered only when included by the backend. No API/s
 - Screenshots inspected: [desktop preview](desktop-preview.png), [phone dark preview](phone-preview-dark.png),
   [phone proposal](phone-proposal.png), [desktop dark proposal](desktop-proposal-dark.png).
 - The shared-checkout full gate stops on pre-existing ignored `.claude/settings.local.json` formatting. The file
-  was left untouched. A clean detached checkout of the commit is used for the separate full-gate receipt.
+  was left untouched. A clean detached checkout was used to separate that local failure from the commit; its gate
+  remains subject to the repository's shared heavy-runner capacity and is not represented as a passing release gate here.
 
 Verdict: **Approve** for this reading/authoring scope. Not verified: authenticated posting and proposal creation,
 pending/failure states in a signed-in browser, physical iPhone keyboard/safe-area behavior, load-performance metrics,
