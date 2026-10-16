@@ -13,6 +13,7 @@ process.env.MONAD_RPC_URL ??= 'https://testnet-rpc.monad.xyz'
 process.env.ACTIVITY_STATE = join(root, 'state')
 process.env.HOSTED_ROOT = join(root, 'hosted')
 
+const { readCheckpoint, saveCheckpoint } = await import('./inbox-state.ts')
 const { secretFile } = await import('./hosted-mcp.ts')
 const { act, HostedHirer } = await import('./hosted-hirer.ts')
 const { personas } = await import('./hirer-mind.ts')
@@ -126,4 +127,23 @@ describe('hosted hirer writes', () => {
     await act(h, job, 'select', 'select_worker', { taskId: 'x', operationKey: 'hq1-x-4-pick-sel' })
     expect(keys).toEqual(['hq1-x-4-pick-sel'])
   })
+})
+
+it('replays a batch after model failure and restart without repeating a confirmed write', async () => {
+  const h = new HostedHirer(persona)
+  const job = freshJob(h, 5)
+  const checkpoint = join(root, 'inbox-cursor')
+  saveCheckpoint(checkpoint, { cursor: 'v1:1' })
+  board({ text: '{"status":"confirmed","result":{"ok":1}}' })
+  await act(h, job, 'reply', 'post_message', { subject: 'job:public:fixture', body: 'done' })
+  // Simulate model failure after the side effect and before acknowledging the batch. Restart from disk.
+  const restarted = new HostedHirer(persona)
+  const replay = restarted.data.jobs.find((candidate) => candidate.key === job.key)!
+  expect(readCheckpoint(checkpoint).checkpoint?.cursor).toBe('v1:1')
+  expect(await act(restarted, replay, 'reply', 'post_message', { body: 'must not replace saved args' })).toEqual({
+    ok: 1,
+  })
+  expect(keys).toEqual([`hq1-${persona.id}-5-reply`])
+  saveCheckpoint(checkpoint, { cursor: 'v1:2' })
+  expect(readCheckpoint(checkpoint).checkpoint?.cursor).toBe('v1:2')
 })

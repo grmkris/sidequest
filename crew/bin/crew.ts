@@ -36,6 +36,7 @@ import { stageProfile } from '../../infra/stage.ts'
 import * as hosted from './hosted-mcp.ts'
 import { type ConnectionFiles, type Token, readToken } from './hosted-mcp.ts'
 import { type HeldTask, openHeld } from './crew-wake.ts'
+import { finishWake, readCheckpoint } from './inbox-state.ts'
 
 const crewDir = resolve(import.meta.dir, '..')
 const repo = resolve(crewDir, '..')
@@ -532,16 +533,16 @@ async function wakeReason(id: string): Promise<string | null> {
   const inboxWake = await inboxReason(id, token, state)
   if (inboxWake !== null) return inboxWake
   // Held work: jobs this member activated and holds on chain (role holder), whose chain status is not final.
-  const held = await mcpCall<HeldTask[]>(token, 'list_tasks', { role: 'holder', limit: 20 })
-  const open = openHeld(Array.isArray(held) ? held : [])
+  const held = await hosted.readTaskList<HeldTask>(crew.board.mcp, token, { role: 'holder', limit: 20 })
+  const open = openHeld(held)
   if (open.length > 0) return `${open.length} held task(s)`
   // A deadline passing writes nothing on chain, so no event wakes a creator to close a no-show or an undisputed
   // rejection: look for its own jobs whose window has run out.
   const now = Date.now() / 1000
-  const created = await mcpCall<
-    Array<{ chain?: { status?: string; deliveryDeadline?: number; disputeEndsAt?: number | null } }>
-  >(token, 'list_tasks', { role: 'creator', limit: 20 })
-  const due = (Array.isArray(created) ? created : []).filter(
+  const created = await hosted.readTaskList<{
+    chain?: { status?: string; deliveryDeadline?: number; disputeEndsAt?: number | null }
+  }>(crew.board.mcp, token, { role: 'creator', limit: 20 })
+  const due = created.filter(
     ({ chain: c }) =>
       (c?.status === 'active' && (c.deliveryDeadline ?? Infinity) < now) ||
       (c?.status === 'rejected-pending' && (c.disputeEndsAt ?? Infinity) < now),
@@ -558,13 +559,13 @@ interface InboxEvent {
 /** The wake cursor each member's last check read up to, written once the events behind it are dealt with. */
 const wakeCursors = new Map<string, string>()
 
-/** Moves a member's wake cursor past what its last check saw: after a run started, or when nothing woke it. */
-function commitWakeCursor(id: string) {
+/** Idle checks acknowledge filtered events; successful model runs copy only the worker's processed checkpoint. */
+function commitWakeCursor(id: string, code?: number | null) {
   const cursor = wakeCursors.get(id)
   if (cursor === undefined) return
   const path = join(home(id), 'agent', 'state', 'wake-cursor')
-  writeFileSync(path, cursor)
-  own(path)
+  finishWake(path, cursor, code)
+  own(path, `${path}.bak`)
   wakeCursors.delete(id)
 }
 
@@ -585,12 +586,9 @@ function fits(m: Member, request: { title?: string; brief?: string; tags?: strin
 async function inboxReason(id: string, token: string, state: string): Promise<string | null> {
   const [, m] = memberOf(id)
   const saved = [join(state, 'wake-cursor'), join(state, 'cursor')].find((path) => existsSync(path))
-  const cursor = saved === undefined ? '' : readFileSync(saved, 'utf8').trim()
-  const inbox = await mcpCall<{ events?: InboxEvent[]; cursor?: string }>(
-    token,
-    'inbox',
-    cursor === '' ? {} : { cursor },
-  )
+  const loaded = saved === undefined ? undefined : readCheckpoint(saved)
+  const cursor = loaded?.resync === true ? undefined : loaded?.checkpoint?.cursor
+  const inbox = await hosted.inboxAfter<{ events?: InboxEvent[]; cursor?: string }>(crew.board.mcp, token, cursor)
   const events = inbox.events ?? []
   if (inbox.cursor !== undefined) wakeCursors.set(id, inbox.cursor)
   const mine = events.filter((event) => event.public !== true)
@@ -598,7 +596,7 @@ async function inboxReason(id: string, token: string, state: string): Promise<st
   const requests = new Set(
     events.flatMap((event) => (event.public === true && event.requestId ? [event.requestId] : [])),
   )
-  if (requests.size === 0) return null
+  if (requests.size === 0) return loaded?.resync === true ? 'inbox cursor resync' : null
   const open = await mcpCall<Array<{ requestId: string; title?: string; brief?: string; tags?: string[] }>>(
     token,
     'list_quote_requests',
@@ -759,6 +757,7 @@ async function memberLoop(id: string, m: Member, minutes: number, slot: Slot) {
   for (;;) {
     let reason: string | null = null
     try {
+      wakeCursors.delete(id)
       reason = await wakeReason(id)
       if (reason === null) {
         console.log(`${m.name}: idle`)
@@ -776,7 +775,7 @@ async function memberLoop(id: string, m: Member, minutes: number, slot: Slot) {
         const code = await wake(id, reason, failures >= crew.harness.fallbackAfter ? m.fallbackModel : undefined)
         if (code !== null) {
           failures = code === 0 ? 0 : failures + 1
-          commitWakeCursor(id)
+          commitWakeCursor(id, code)
         }
       } catch (error) {
         failures++

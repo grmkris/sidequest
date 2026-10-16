@@ -57,7 +57,7 @@ describe('moderator polling', () => {
     const file = await cursorFile()
     const f = fake((tool, args) => {
       expect(tool).toBe('inbox')
-      return { events: args.cursor === undefined ? [event(1, 'job.completed')] : [], cursor: 'v1:1' }
+      return { events: args.cursor === undefined ? [event(1, 'job.completed')] : [], cursor: null }
     })
     await moderateOnce({ board: f.board, endpoint, cursorFile: file })
     await moderateOnce({ board: f.board, endpoint, cursorFile: file })
@@ -79,7 +79,9 @@ describe('moderator polling', () => {
 
   it('classifies the exact target and tolerates an already-hidden conflict', async () => {
     const f = fake((tool) => {
+      // SAFETY: the fixture returns exactly the requested tool response shape.
       if (tool === 'inbox') return { events: [event()], cursor: 'v1:1' }
+      // SAFETY: the fixture returns the list_messages response expected by the production decoder.
       if (tool === 'list_messages') return messages
       throw new BoardApiError('conflict', 'content is already hidden')
     })
@@ -94,7 +96,7 @@ describe('moderator polling', () => {
     expect(f.calls.at(-1)?.args).toEqual({ kind: 'message', id: 1, reason: 'prompt_injection: Agent instructions.' })
   })
 
-  it('caps failed reads at three, skips them, and processes the next event', async () => {
+  it('caps failed reads at three and leaves the failed event for the next pass', async () => {
     let attempts = 0
     const f = fake((tool, args) => {
       if (tool === 'inbox')
@@ -115,21 +117,45 @@ describe('moderator polling', () => {
     }))
     const log = vi.fn()
     const file = await cursorFile()
-    await moderateOnce({ board: f.board, endpoint, cursorFile: file, classify, log })
+    await expect(moderateOnce({ board: f.board, endpoint, cursorFile: file, classify, log })).rejects.toThrow(
+      'batch incomplete',
+    )
     expect(attempts).toBe(3)
-    expect(classify).toHaveBeenCalledOnce()
-    expect(await readFile(file, 'utf8')).toContain('v1:2')
-    expect(log).toHaveBeenCalledWith('skipped commons:m1:mod:address after 3 attempts')
+    expect(classify).not.toHaveBeenCalled()
+    expect(await readFile(file, 'utf8').catch(() => '')).not.toContain('v1:2')
+    expect(log).toHaveBeenCalledWith('retry commons:m1:mod:address next pass after 3 attempts')
   })
 
-  it('keeps separate board cursors and refuses corrupt state', async () => {
+  it('keeps separate board cursors and resyncs corrupt state cursorlessly', async () => {
     const file = await cursorFile()
-    const f = fake(() => ({ events: [event()], cursor: 'v1:1' }))
+    const f = fake(() => ({ events: [event(1, 'job.completed')], cursor: 'v1:1' }))
     await moderateOnce({ board: f.board, endpoint, cursorFile: file, cursorKey: 'first', classify: hideVerdict })
     await moderateOnce({ board: f.board, endpoint, cursorFile: file, cursorKey: 'second', classify: hideVerdict })
     expect(await readFile(file, 'utf8')).toContain('"first":"v1:1","second":"v1:1"')
     await writeFile(file, 'corrupt')
-    await expect(moderateOnce({ board: f.board, endpoint, cursorFile: file })).rejects.toThrow('cursor state')
+    await moderateOnce({ board: f.board, endpoint, cursorFile: file, cursorKey: 'third' })
+    expect(await readFile(file, 'utf8')).toContain('"third":"v1:1"')
+  })
+
+  it('resyncs an expired server cursor without losing the previous state', async () => {
+    const file = await cursorFile()
+    await writeFile(file, '{"default":"v1:1"}\n')
+    const calls: Record<string, unknown>[] = []
+    const board = {
+      async call<T>(tool: string, args: Record<string, unknown> = {}): Promise<T> {
+        if (tool === 'inbox') {
+          calls.push(args)
+          if (args.cursor !== undefined) throw new BoardApiError('invalid', 'cursor expired')
+          // SAFETY: this fixture returns the decoded inbox page shape for the fake board.
+          return { events: [], cursor: 'v1:2' } as T
+        }
+        throw new Error(`unexpected ${tool}`)
+      },
+    }
+    await moderateOnce({ board, endpoint, cursorFile: file })
+    expect(calls).toHaveLength(2)
+    expect(calls[1]).not.toHaveProperty('cursor')
+    expect(await readFile(file, 'utf8')).toContain('v1:2')
   })
 
   it.each([
@@ -185,4 +211,94 @@ describe('moderator polling', () => {
     expect(classify).not.toHaveBeenCalled()
     expect(f.calls.map((call) => call.tool)).toEqual(['inbox', 'list_messages'])
   })
+})
+
+it('resyncs cursorlessly when both state copies are malformed', async () => {
+  const file = await cursorFile()
+  await writeFile(file, '{')
+  await writeFile(`${file}.bak`, '{')
+  const f = fake(() => ({ events: [], cursor: 'opaque:recovered' }))
+  await moderateOnce({ board: f.board, endpoint, cursorFile: file })
+  expect(f.calls[0]?.args).not.toHaveProperty('cursor')
+  expect(await readFile(file, 'utf8')).toBe('{"default":"opaque:recovered"}\n')
+})
+
+it('keeps last valid cursors through corrupt state and a failed replacement model run', async () => {
+  const file = await cursorFile()
+  const seed = fake(() => ({ events: [], cursor: 'v1:7' }))
+  await moderateOnce({ board: seed.board, endpoint, cursorFile: file })
+  await writeFile(file, '{"default":"v1:7"')
+  const f = fake((tool) => (tool === 'inbox' ? { events: [event()], cursor: 'v1:8' } : messages))
+  await expect(
+    moderateOnce({
+      board: f.board,
+      endpoint,
+      cursorFile: file,
+      classify: async () => {
+        throw new Error('model unavailable')
+      },
+    }),
+  ).rejects.toThrow('batch incomplete')
+  expect(f.calls[0]?.args).not.toHaveProperty('cursor')
+  expect(await readFile(`${file}.bak`, 'utf8')).toBe('{"default":"v1:7"}\n')
+  expect(await readFile(file, 'utf8')).toBe('{"default":"v1:7"')
+  await moderateOnce({ board: f.board, endpoint, cursorFile: file, classify: hideVerdict })
+  expect(await readFile(file, 'utf8')).toBe('{"default":"v1:8"}\n')
+})
+
+it('replays a partially processed batch after restart without repeating a completed hide', async () => {
+  const file = await cursorFile()
+  await writeFile(file, '{"default":"v1:0"}\n')
+  let hidden = false
+  let modelFails = true
+  let hides = 0
+  const board = {
+    async call<T>(tool: string, args: Record<string, unknown> = {}): Promise<T> {
+      if (tool === 'inbox') {
+        // SAFETY: the fixture returns exactly the requested inbox response shape.
+        return { events: [event(), event(2)], cursor: 'v1:2' } as T
+      }
+      if (tool === 'list_messages') {
+        // SAFETY: the fixture returns the response shape expected by the production decoder.
+        return {
+          messages: [
+            { id: 1, body: hidden ? null : 'first', hidden: hidden ? { at: 1 } : null },
+            { id: 2, body: 'second', hidden: null },
+          ],
+        } as T
+      }
+      if (tool === 'hide_content') {
+        hides += 1
+        if (args.id === 1) hidden = true
+        // SAFETY: hide_content has no fields used by this fixture.
+        return {} as T
+      }
+      throw new Error(`unexpected ${tool}`)
+    },
+  }
+  const classify = async (text: string) => {
+    if (text.includes('second') && modelFails) throw new Error('model failed')
+    return hideVerdict()
+  }
+  await expect(moderateOnce({ board, endpoint, cursorFile: file, classify })).rejects.toThrow('batch incomplete')
+  expect(await readFile(file, 'utf8')).toBe('{"default":"v1:0"}\n')
+  expect(hides).toBe(1)
+  modelFails = false
+  await moderateOnce({ board, endpoint, cursorFile: file, classify })
+  expect(hides).toBe(2) // first hide was observed on replay, only the second is sent
+  expect(await readFile(file, 'utf8')).toContain('v1:2')
+})
+
+it('a real model HTTP failure keeps the cursor instead of acknowledging fallback keep', async () => {
+  const file = await cursorFile()
+  await writeFile(file, '{"default":"v1:0"}\n')
+  const f = fake((tool) => (tool === 'inbox' ? { events: [event()], cursor: 'v1:1' } : messages))
+  const request = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('', { status: 503 }))
+  try {
+    await expect(moderateOnce({ board: f.board, endpoint, cursorFile: file })).rejects.toThrow('batch incomplete')
+    expect(await readFile(file, 'utf8')).toBe('{"default":"v1:0"}\n')
+    expect(f.calls.some((call) => call.tool === 'hide_content')).toBe(false)
+  } finally {
+    request.mockRestore()
+  }
 })

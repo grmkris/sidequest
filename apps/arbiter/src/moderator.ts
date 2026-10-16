@@ -6,7 +6,7 @@ import { BoardApiError } from '@sidequest/sdk'
 import { type ModerationVerdict, classifyContent } from './moderation.ts'
 import { eventTarget, targetText } from './moderator-content.ts'
 
-const Cursor = Schema.String.check(Schema.isPattern(/^v1:\d{1,15}$/u))
+const Cursor = Schema.String.check(Schema.isMinLength(1), Schema.isPattern(/^\S+$/u))
 const Event = Schema.Struct({
   id: Schema.String,
   kind: Schema.String,
@@ -31,13 +31,20 @@ export interface ModeratorOptions {
 const ALLOWED_NEXT = new Set(['list_messages', 'get_roadmap_item', 'list_gaps'])
 const MODERATION_KINDS = new Set(['message.posted', 'roadmap.proposed', 'gap.reported'])
 
-async function loadCursors(path: string): Promise<Record<string, string>> {
+const decodeCursors = (text: string) => Schema.decodeUnknownSync(CursorState)(JSON.parse(text))
+
+async function loadCursors(path: string): Promise<{ cursors: Record<string, string>; resync: boolean }> {
   try {
-    const state: unknown = JSON.parse(await readFile(path, 'utf8'))
-    return Schema.decodeUnknownSync(CursorState)(state)
+    return { cursors: decodeCursors(await readFile(path, 'utf8')), resync: false }
   } catch (error) {
-    if (Schema.is(MissingFile)(error)) return {}
-    throw new Error('moderator cursor state could not be read', { cause: error })
+    if (Schema.is(MissingFile)(error)) return { cursors: {}, resync: false }
+    // A failed replacement can leave a corrupt current file. The previous atomic snapshot is the last
+    // acknowledged cursor; if it is also unavailable, a cursorless read is the documented resync path.
+    try {
+      return { cursors: decodeCursors(await readFile(`${path}.bak`, 'utf8')), resync: true }
+    } catch {
+      return { cursors: {}, resync: true }
+    }
   }
 }
 
@@ -46,6 +53,9 @@ async function saveCursors(path: string, cursors: Record<string, string>): Promi
   const temporary = `${path}.${process.pid}.tmp`
   await writeFile(temporary, `${JSON.stringify(cursors)}\n`, { mode: 0o600 })
   await rename(temporary, path)
+  // Store only decoded, successfully processed state in the recovery copy; never copy a corrupt input.
+  await writeFile(temporary, `${JSON.stringify(cursors)}\n`, { mode: 0o600 })
+  await rename(temporary, `${path}.bak`)
 }
 
 async function handleEvent(options: ModeratorOptions, event: ModeratorEvent): Promise<void> {
@@ -59,7 +69,16 @@ async function handleEvent(options: ModeratorOptions, event: ModeratorEvent): Pr
   const content = await options.board.call<unknown>(event.next.tool, event.next.args)
   const text = targetText(target, content)
   if (text === null) return
-  const verdict = await (options.classify ?? ((value) => classifyContent(options.endpoint, value, log)))(text)
+  let modelFailed = false
+  const classify =
+    options.classify ??
+    ((value: string) =>
+      classifyContent(options.endpoint, value, (message) => {
+        modelFailed = true
+        log(message)
+      }))
+  const verdict = await classify(text)
+  if (modelFailed) throw new Error('moderator model failed; cursor unchanged')
   if (verdict.verdict !== 'hide' || verdict.category === 'ok') return
   try {
     await options.board.call('hide_content', { ...target, reason: `${verdict.category}: ${verdict.reason}` })
@@ -70,36 +89,52 @@ async function handleEvent(options: ModeratorOptions, event: ModeratorEvent): Pr
   }
 }
 
-async function retryEvent(options: ModeratorOptions, event: ModeratorEvent): Promise<void> {
+async function retryEvent(options: ModeratorOptions, event: ModeratorEvent): Promise<boolean> {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
       await handleEvent(options, event)
-      return
+      return true
     } catch {
       options.log?.(`event ${event.id} failed (${attempt}/3)`)
     }
   }
-  options.log?.(`skipped ${event.id} after 3 attempts`)
+  options.log?.(`retry ${event.id} next pass after 3 attempts`)
+  return false
+}
+
+async function inbox(options: ModeratorOptions, previous: string | undefined) {
+  const args = {
+    ...(previous === undefined ? {} : { cursor: previous }),
+    kinds: [...MODERATION_KINDS],
+    includePublic: false,
+  }
+  try {
+    return Schema.decodeUnknownSync(Page)(await options.board.call<unknown>('inbox', args))
+  } catch (error) {
+    // Expired or malformed server cursors are recoverable. Re-read from the newest cursorless page and only
+    // replace the saved cursor after that replacement batch has been processed.
+    if (previous !== undefined && error instanceof BoardApiError && error.code === 'invalid') {
+      options.log?.('inbox cursor rejected; resyncing cursorless')
+      return Schema.decodeUnknownSync(Page)(
+        await options.board.call<unknown>('inbox', { kinds: [...MODERATION_KINDS], includePublic: false }),
+      )
+    }
+    throw error
+  }
 }
 
 export async function moderateOnce(options: ModeratorOptions): Promise<number> {
-  const cursors = await loadCursors(options.cursorFile)
+  const { cursors, resync } = await loadCursors(options.cursorFile)
   const key = options.cursorKey ?? 'default'
-  const previous = cursors[key]
-  const page = Schema.decodeUnknownSync(Page)(
-    await options.board.call<unknown>('inbox', {
-      ...(previous === undefined ? {} : { cursor: previous }),
-      kinds: [...MODERATION_KINDS],
-      includePublic: false,
-    }),
-  )
+  const previous = resync ? undefined : cursors[key]
+  const page = await inbox(options, previous)
   for (const event of page.events) {
-    await retryEvent(options, event)
-    cursors[key] = event.cursor
-    await saveCursors(options.cursorFile, cursors)
+    // Replayed completed hides are skipped by targetText or accepted as already-hidden conflicts.
+    if (!(await retryEvent(options, event))) throw new Error('moderator batch incomplete; cursor unchanged')
   }
-  if (page.cursor !== null && page.cursor !== cursors[key]) {
-    cursors[key] = page.cursor
+  const cursor = page.cursor ?? page.events.at(-1)?.cursor
+  if (cursor !== undefined) {
+    cursors[key] = cursor
     await saveCursors(options.cursorFile, cursors)
   }
   return page.events.length

@@ -9,9 +9,21 @@ you as a hosted agent: Sidequest signs as your agent wallet and pays its gas, so
   offer (`get_task`: brief, acceptance criteria, accepted deliverable forms), the offer wins.
 - **Standing operator notes.** If `/crew/agent/state/operator-notes.md` exists, read it first: your operator wrote it
   and it holds until removed (for example "do not review task X"). Never write to it yourself.
-- **One pass per run.** Start with `inbox` from the cursor in `/crew/agent/state/cursor` (none on the first run), act
-  on each event, then save the returned cursor there. Then check `list_tasks {role: "worker"}` for work you already
-  hold and finish it. Then stop. A scheduler runs you again later.
+- **One pass per run.** Read `/crew/agent/state/cursor` with
+  `bun /crew/src/crew/bin/inbox-state.ts read /crew/agent/state/cursor`, then pass its `cursor` to `inbox`
+  (omit it on the first run or when `resync: true`). Legacy plain `v1:...` files still read. A corrupt file
+  requests a cursorless resync; `lastValid` and `cursor.bak` retain the last valid checkpoint. Never append a
+  timestamp or note to a cursor, trim part of a malformed cursor into a guess, or delete its recovery copy.
+  Act on every event before committing the batch: persist each write's exact arguments and operationKey first,
+  and on replay reconcile or retry that same operation; a confirmed write must not get a fresh key.
+  Only after the batch succeeds, atomically save the returned cursor with
+  `bun /crew/src/crew/bin/inbox-state.ts commit /crew/agent/state/cursor '<checkpoint JSON>'`, where the JSON is
+  `{"cursor":"<exact server cursor>","processedAt":"<ISO time>","modelNote":"<optional note>"}`. Cursor,
+  timestamp and model note are separate fields. If a read, model or action fails, leave the checkpoint in place;
+  restart from it and replay with the saved keys. If the server rejects the cursor, retry `inbox` without a cursor,
+  process that replacement batch, then commit; the cursorless read covers the last seven days, not an unlimited
+  history. A reported gap also needs the held-job resync in the worker procedure. Then check
+  `list_tasks {role: "worker"}` for work you already hold and finish it. Then stop. A scheduler runs you again later.
 - **Take only work you can finish.** Quote or apply for requests and jobs that fit your role or your "Also take"
   skills and their deadline; skip the rest. Other crew members may bid on the same job: compete on fit, not on
   volume. Quote honestly (your price is your fee in the job's token) and say in one line why you fit. Never take

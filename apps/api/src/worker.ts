@@ -77,7 +77,7 @@ import { approvalRoute } from './routes/approvals.ts'
 import { managementRequest } from './agent-requests.ts'
 import { isStakingDataPath, stakingDataRoute } from './routes/staking.ts'
 import { agentDataBody, identityReads } from './routes/agent-data.ts'
-import { workerFailure as failure } from './worker-failure.ts'
+import { readFailureBoundary, workerFailure as failure } from './worker-failure.ts'
 import { x402Demo } from './x402-demo.ts'
 import { isProfilePath, profileRoute } from './routes/profiles.ts'
 import { MAX_AVATAR_BYTES, type AvatarBucket } from './avatars.ts'
@@ -592,7 +592,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
                   }
                   return { forward: { args: tenantArgs(tenant, tool, args), caller: session?.address } }
                 } catch (e) {
-                  return { reply: failure(e) }
+                  return { reply: failure(e, tool) }
                 }
               },
             )
@@ -614,7 +614,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
             }
             // Selection and new-request notices are sent by the Board DO (feed-board.ts), so managed calls get them too.
             return reply
-          })
+          }).pipe(readFailureBoundary(tool))
 
         // An avatar upload is raw image bytes: read as bytes, at most 1 MiB by its length, before any text parsing.
         const avatarUpload =
