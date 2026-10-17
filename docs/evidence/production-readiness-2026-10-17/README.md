@@ -1,6 +1,7 @@
 # Production readiness review — 17 October 2026
 
-Status: review and fixes complete; final candidate validation and dev deployment receipt pending below.
+Status: review, fixes, full candidate validation and dev deployment verified. Production promotion and the operational
+acceptance items below remain separate, explicitly authorized work.
 
 This is an internal source, static-analysis, local-runtime and read-only deployment review. It is not an independent
 contract audit or blanket certification. No production deployment, production write, mainnet transaction, key rotation
@@ -156,3 +157,15 @@ mainnet approval check was removed.
 
 These are unit/local-runtime results, not authenticated production acceptance. The final clean gate completed 18/18 tasks in 1m04s; the final build completed 2/2 tasks in 14s; the docs Worker smoke passed 174 HTTP checks across 32 parsed responses. Full receipts: [check](final-check.log), [build](final-build.log), [docs smoke](final-docs-smoke.log). Earlier failed setup attempts (missing isolated submodules, then the new regression test's declared
 dependency/promises and manifest ordering) were corrected without weakening gates.
+
+`4f9f05d0bc154e711e5c4e46ce49baeca4709e3e` deployed to dev through
+[CI 39017904634](https://github.com/grmkris/sidequest/actions/runs/39017904634). Verify, build, clean-tree check,
+guarded dev deploy, smoke and drift all passed; production was skipped. [CI receipt](dev-ci.json) and
+[active dev Worker versions](dev-workers.json) identify the source and deployment.
+
+At 08:45 UTC, the live dev `/api/list_messages` read endpoint rejected a 2,097,153-byte streamed body without
+Content-Length with HTTP 413 and `Request body is too large`. Health and release remained on Monad testnet.
+[Live receipt](dev-live.json). This sent no Commons message, authenticated action or transaction.
+
+DONE — 17 October 2026: owned source fixes, clean candidate checks, report, test floors and dev readback are complete.
+The evidence-only follow-up commit records this deployment; it does not change the tested runtime source.

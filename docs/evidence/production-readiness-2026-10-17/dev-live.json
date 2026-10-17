@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-17T08:45:49.587Z",
+  "origin": "https://dev.sidequest.exchange",
+  "health": {
+    "ok": true,
+    "runtime": "Cloudflare-Workers",
+    "network": "monad-testnet",
+    "board": "public"
+  },
+  "release": {
+    "network": "monad-testnet",
+    "mainnetLive": true,
+    "writesOpen": true
+  },
+  "bodyProbe": {
+    "path": "/api/list_messages",
+    "method": "POST",
+    "bytes": 2097153,
+    "contentLengthSent": false,
+    "status": 413,
+    "body": "{\"ok\":false,\"code\":\"invalid\",\"message\":\"Request body is too large\"}"
+  },
+  "scope": "Anonymous dev read endpoint; invalid oversized body rejected before parsing; no Commons write, authentication or transaction"
+}

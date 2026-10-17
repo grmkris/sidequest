@@ -1,0 +1,191 @@
+{
+  "databaseId": 39017904634,
+  "headSha": "4f9f05d0bc154e711e5c4e46ce49baeca4709e3e",
+  "status": "completed",
+  "conclusion": "success",
+  "url": "https://github.com/grmkris/sidequest/actions/runs/39017904634",
+  "createdAt": "2026-10-17T08:34:59Z",
+  "updatedAt": "2026-10-17T08:45:16Z",
+  "jobs": [
+    {
+      "name": "verify",
+      "status": "completed",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run oven-sh/setup-bun@v2",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run foundry-rs/foundry-toolchain@v1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Cache Foundry artifacts",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run bun run check",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run bun run build",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Working tree is clean after the gates",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Cache Foundry artifacts",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run foundry-rs/foundry-toolchain@v1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run oven-sh/setup-bun@v2",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "deploy-dev",
+      "status": "completed",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run oven-sh/setup-bun@v2",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run foundry-rs/foundry-toolchain@v1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run bun install --frozen-lockfile",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Alchemy state-store credential",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Deploy dev",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Smoke dev",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Drift dev",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Alchemy state-store credential",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run foundry-rs/foundry-toolchain@v1",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run oven-sh/setup-bun@v2",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "name": "deploy-prod",
+      "status": "completed",
+      "conclusion": "skipped",
+      "steps": []
+    }
+  ]
+}

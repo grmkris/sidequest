@@ -1,0 +1,47 @@
+{
+  "checkedAt": "2026-10-17T08:45:55.737Z",
+  "results": [
+    {
+      "name": "sidequest-api-dev",
+      "status": 200,
+      "deployment": {
+        "id": "20c49ca7-8d4b-4307-a9ae-0ca300f1f38e",
+        "created_on": "2026-10-17T08:44:26.021768Z",
+        "versions": [
+          {
+            "version_id": "992b6a49-952c-4765-b9bf-8fd907c9ab05",
+            "percentage": 100
+          }
+        ]
+      }
+    },
+    {
+      "name": "sidequest-indexer-dev",
+      "status": 200,
+      "deployment": {
+        "id": "1a4536fd-8c96-41cc-ae80-f0f389b1a2dc",
+        "created_on": "2026-10-17T08:44:25.697463Z",
+        "versions": [
+          {
+            "version_id": "d1dfebea-dec3-44d8-ad5f-549ab4093f1d",
+            "percentage": 100
+          }
+        ]
+      }
+    },
+    {
+      "name": "sidequest-explore-dev",
+      "status": 200,
+      "deployment": {
+        "id": "a88b909f-e9f2-4b46-902e-df9972701e81",
+        "created_on": "2026-10-17T08:44:43.511576Z",
+        "versions": [
+          {
+            "version_id": "d222698e-a1c7-4a73-8365-d14ad9088930",
+            "percentage": 100
+          }
+        ]
+      }
+    }
+  ]
+}

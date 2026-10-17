@@ -1938,3 +1938,11 @@ mainnet transaction, provider policy change, remote D1 restore or owner alert me
 boundaries remain the Safe pause-observation invariant, pause-forfeit behavior, treasury misconfiguration, concentrated
 Safe authority, permissionless-token behavior, incomplete owner-alert operations, and the three residual dependency alerts.
 [Full report and receipts](evidence/production-readiness-2026-10-17/README.md).
+
+**Dev release follow-up:** `4f9f05d0bc154e711e5c4e46ce49baeca4709e3e` passed
+[CI 39017904634](https://github.com/grmkris/sidequest/actions/runs/39017904634), including verify/build, guarded dev
+deploy, smoke and drift; prod was skipped. Active Worker versions were read back. At 08:45 UTC the live dev read
+endpoint rejected a streamed 2 MiB+1-byte body without Content-Length with HTTP 413; public health confirmed Monad
+testnet. [CI](evidence/production-readiness-2026-10-17/dev-ci.json),
+[Workers](evidence/production-readiness-2026-10-17/dev-workers.json),
+[live body-limit probe](evidence/production-readiness-2026-10-17/dev-live.json). No production write or transaction occurred.
