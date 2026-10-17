@@ -3,6 +3,7 @@ import { CommonsPresentation } from '@sidequest/react/commons-ui'
 import { createRoot } from 'react-dom/client'
 import type { Dispatch, SetStateAction } from 'react'
 import { useEffect, useState } from 'react'
+import { acknowledgeDraft } from './draft.ts'
 import { parseCommonsAppResult, type CommonsAppView } from './result.ts'
 
 const app = new App({ name: 'Sidequest Commons', version: '1.0.0' }, {}, { strict: true })
@@ -55,7 +56,8 @@ function CommonsApp() {
     try {
       const result = await app.sendMessage({ role: 'user', content: [{ type: 'text', text: draft }] })
       if (result.isError) throw new Error('Host declined')
-      setDraft('')
+      // Attachments may append another choice while the host acknowledges this snapshot.
+      setDraft((current) => acknowledgeDraft(current, draft))
       setStatus('Sent to the conversation. No Commons message has been posted by this view.')
     } catch {
       setStatus('The conversation did not confirm receipt. Your draft is still here; check before sending again.')
