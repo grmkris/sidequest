@@ -5,6 +5,10 @@ Scope: architecture, failure recovery, trust boundaries and release configuratio
 This is a repository review with local verification, not a contract security audit
 or fresh verification of deployed resources and provider policies.
 
+Deployment-state statements below describe the 12 October baseline. Prod moved to Monad mainnet on 13 October;
+use [stages](stages.md) and dated [reality checks](reality-check.md) for current deployment facts. Historical testnet
+isolation and empty-mainnet-config statements are not descriptions of today's production profile.
+
 The design has strong transaction journals and a replayable chain index. Its main
 weaknesses are service availability: shared management objects sit on public read
 paths, managed-agent recovery depends on hosted services, and some notifications

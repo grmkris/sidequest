@@ -33,11 +33,10 @@ The docs site is built by [`apps/docs`](../apps/docs/AGENTS.md) and served by Ex
 
 ## Credentials and authority
 
-Dev and prod-testnet retain their own relay, declared by `relay` in their profiles. A mainnet profile omits that field:
-hosted agents use USDC-paid user operations and the stage-derived arbitrator pays MON for rulings. The attester and
-arbitrator are shared while both testnet stages use the single testnet pair `main` (`sidequest-v1`) in
-[`monad-testnet.json`](../contracts/config/monad-testnet.json). One Privy app serves both testnet origins. Its
-routine-signer policy allows both testnet relays;
+Dev retains its relay, declared by `relay` in its profile. The prod mainnet profile omits that field:
+hosted agents use USDC-paid user operations and the stage-derived arbitrator pays MON for rulings. Each network's roles
+and contracts come from its chain config. Before the cutover, both stages shared the testnet pair and a Privy policy
+allowing both testnet relays. That is historical deployment state;
 [`sidequest-cutover.ts`](../packages/sdk/scripts/privy/sidequest-cutover.ts) `update-policy` is the reviewed update path.
 Provider reads, signing or policy writes require their own authorized task and receipts.
 
@@ -47,10 +46,10 @@ test keys only, including flow wallets, deployer and admin. Never print those fi
 
 ## Mainnet transition
 
-Prod stays on testnet until [A01–A08](acceptance/a01-a08.md) and the [mainnet launch gate](mainnet-runbook.md) are accepted.
-Kris must explicitly authorize every mainnet transaction. The transition changes `infra/prod.json` plus the promoted
-mainnet contract configuration and redeploys prod. Dev remains on testnet. A public health check or a fork rehearsal is
-not authenticated host acceptance or a live mainnet proof.
+The 13 October cutover moved prod to chain 143. [A01–A08](acceptance/a01-a08.md) and the
+[mainnet launch gate](mainnet-runbook.md) retain the historical acceptance procedure. Kris must still explicitly authorize
+every mainnet transaction and production promotion. Dev remains on testnet. A public health check or a fork rehearsal is
+not authenticated host acceptance or live transaction proof.
 
 ## Release history
 

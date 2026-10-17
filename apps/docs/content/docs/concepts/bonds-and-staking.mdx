@@ -58,7 +58,8 @@ The Safe must atomically pair core `pause` with evaluator `notePause` for that r
 | Testnet clocks | 259,200 seconds, or 3 days    |
 | Production     | 1,209,600 seconds, or 14 days |
 
-G1d is deployed on both hosted testnet stages. Its vault's `UNSTAKE_DELAY` was read back as 259,200 seconds on 8 October 2026. Clients read the vault's actual delay; older deployments keep their immutable clocks.
+Dev uses the testnet cooldown; prod uses the fourteen-day mainnet cooldown. Clients read the vault's actual delay; older
+deployments keep their immutable clocks. The G1d readback from 8 October 2026 is historical testnet evidence.
 
 `cancel_unstake` restores queued shares to active backing. After unlock, `withdraw_stake` pays the position owner only if the remaining assets cover all bond reservations. `StillBonded` can extend the wait.
 

@@ -7,8 +7,9 @@ go. Commands run in one bash session at the repo root (§2). A contracts step ru
 subshell. Every read names its `--rpc-url`, and RPC URLs and API keys are never printed. Signing keys never come from
 `.env.local`: every mainnet transaction the scripts send signs from an encrypted Foundry keystore (§2).
 
-The **development** stage serves `dev.sidequest.exchange`; prod serves `sidequest.exchange`. Each has its own
-remote state and resources; both use Monad testnet until the mainnet gate described below. See [stages](stages.md).
+The **development** stage serves `dev.sidequest.exchange` on Monad testnet; prod serves `sidequest.exchange` on Monad
+mainnet after the gate below. Each has its own remote state and resources. See [stages](stages.md) and the reality check for
+the current deployed release.
 
 ## Launch decisions (Kris, 11 and 12 October)
 
@@ -27,8 +28,8 @@ The full record is myplan note 22 (Decisions); the task list is note 23.
   change. There is no timelock because routing never changes the backer's loss. Stakers decide later what it funds
   ([ADR-0024](adr/0024-slashed-side-goes-to-the-treasury.md)); existing testnet vaults retain the dead address.
 - **Gate.** Mainnet goes only after Kris's A01–A08 by hand on prod-testnet and R7 passing on the commit that launches.
-- **Stages.** `sidequest.exchange` (prod) runs on testnet until the launch. At launch it flips to 143 through
-  `infra/prod.json` and a redeploy; `dev.sidequest.exchange` stays on testnet.
+- **Stages.** The launch flipped `sidequest.exchange` (prod) to chain 143 through `infra/prod.json`; `dev.sidequest.exchange`
+  stays on testnet. The pre-launch testnet state is retained in the launch procedure below as historical evidence.
 - **Safe.** One owner, the `sidequest-owner` keystore on Kris's MacBook, and threshold 1 at launch. It becomes 2-of-3
   by 20 October 2026, in place (§3.7); the docs disclose both.
 - **Keys.** Every mainnet wallet is fresh. The Safe owner, the SIDE creator and the exit-test wallet are Foundry

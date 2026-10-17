@@ -57,13 +57,13 @@ CI stores `GITHUB_*` variables/secrets as `SQ_GITHUB_*`; the workflow and runner
 release keys are declared by `REQUIRED_SECRETS` in `release.ts`. `.env.local` contains local and test keys only.
 
 `PIMLICO_API_KEY` is required in both stage environments and bound to the API as `secret_text`.
-`TESTNET_PAYMASTER_SIGNER_KEY` is a hex secp256k1 key required only for a `monad-testnet` profile (currently dev and
-prod-testnet). Release assembly removes it on a mainnet profile, and the API binds it only on testnet. The signer must
+`TESTNET_PAYMASTER_SIGNER_KEY` is a hex secp256k1 key required only for a `monad-testnet` profile (currently dev).
+Release assembly removes it on a mainnet profile; the API retains an inert `unset` binding to avoid a guarded binding deletion. The signer must
 match the deployed testnet paymaster's immutable signer; the coordinator verifies that before enabling charged ops.
 Missing or invalid AA secrets return an unavailable-service error; they do not crash unrelated Worker routes.
 
 Mainnet requires no `RELAY_PRIVATE_KEY` or profile `relay`; the runner removes the unused key from its environment and
-Workers omit relay bindings. `HOSTED_SEND` defaults to `userop` on mainnet and refuses an explicit `relay`. Testnet keeps
+Workers retain inert legacy relay bindings to avoid a guarded binding deletion. `HOSTED_SEND` defaults to `userop` on mainnet and refuses an explicit `relay`. Testnet keeps
 its relay default until its separate cutover. All hosted stages require nonempty `PRIVY_SIGNER_ID` and `PRIVY_POLICY_ID`.
 After mainnet promotion, create and read back the chain-143 routine policy with the explicit-network commands in the
 [mainnet runbook](mainnet-runbook.md#34a-hosted-signing-on-chain-143-coordinator-only).
@@ -75,9 +75,9 @@ non-regular file on 7 October. Never print either env file or secret values whil
 
 ## Telegram webhooks and keys
 
-Testnet stages retain a relay and bot: dev `@sidequest_excange_dev_bot`, prod `@sidequest_exchange_bot`. Mainnet has no
-relay; hosted agents use USDC-paid user operations and the arbitrator pays MON for rulings. The attester and arbitrator
-are shared on testnet. One Privy app's routine policy permits both testnet relays; use the reviewed
+Dev uses its testnet relay and `@sidequest_excange_dev_bot`; mainnet prod uses `@sidequest_exchange_bot`. Mainnet has no
+active relay; hosted agents use USDC-paid user operations and the arbitrator pays MON for rulings. The historical testnet
+policy permitted both testnet relays; use the reviewed
 [`sidequest-cutover.ts`](../packages/sdk/scripts/privy/sidequest-cutover.ts) `update-policy` path for an authorized change.
 
 The API accepts Telegram at `<stage origin>/telegram/webhook` and requires `X-Telegram-Bot-Api-Secret-Token` matching

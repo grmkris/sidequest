@@ -48,12 +48,12 @@ new code and prose.
 
 - **Stage** — a named deployment profile (`local`, `dev` or `prod`) selecting origin, network, relay, bot and resources. See [stages](docs/stages.md). _Avoid: environment (when naming a deployment)._
 - **Dev** — the Monad testnet stage at `dev.sidequest.exchange`. See [stages](docs/stages.md). _Avoid: staging (the retired release system)._
-- **Prod** — the public stage at `sidequest.exchange`, currently still on Monad testnet. See [stages](docs/stages.md). _Avoid: mainnet._
+- **Prod** — the public stage at `sidequest.exchange` on Monad mainnet (chain 143). See [stages](docs/stages.md). _Avoid: production testnet._
 - **Release guard** — the CI check that refuses destructive, replacement, orphan and unexpected create plans. See [deploy](docs/deploy.md). _Avoid: deploy preview._
 - **Remote state store** — the shared Alchemy state service used by dev and prod with a version guard. See [deploy](docs/deploy.md). _Avoid: local `.alchemy` state._
 - **First deploy** — a release whose remote state and Cloudflare census prove that named resources do not exist yet. See [deploy](docs/deploy.md). _Avoid: recreate._
 - **Adopt move** — the one-time operation that moves an existing named resource into remote state after a deferred adoption plan. See [deploy](docs/deploy.md). _Avoid: create._
-- **Mainnet gate** — the Kris-approved A01–A08 and launch evidence required before switching prod to chain 143. See [mainnet runbook](docs/mainnet-runbook.md). _Avoid: automatic promotion._
+- **Mainnet gate** — the Kris-approved A01–A08 and launch evidence required before switching prod to chain 143; the gate is retained as the historical launch procedure. See [mainnet runbook](docs/mainnet-runbook.md). _Avoid: automatic promotion._
 
 ## Tests and gates
 

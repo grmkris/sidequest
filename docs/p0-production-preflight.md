@@ -1,10 +1,11 @@
 # Mainnet production preflight
 
-Prod currently runs on Monad testnet (10143), as declared in [stages](stages.md). This document covers the future
-chain-143 artifact gate. Kris must complete custody, deployment, provider, Privy and launch approvals before it can pass.
+Prod runs on Monad mainnet (143) since 13 October 2026, as declared in [stages](stages.md). The populated artifact is checked
+against that deployment. The gate remains a repeatable preflight for production candidates; it does not authorize a
+production deployment, custody change or mainnet transaction.
 
-Run `bun scripts/preflight-prod.ts docs/p0-prod-artifact.json` for a no-secret-value structural check. Failure is
-expected while provider chain proofs, Privy approval, and freshly deployed contract addresses are missing.
+Run `bun scripts/preflight-prod.ts docs/p0-prod-artifact.json` for a no-secret-value structural check. The current artifact
+passes this check; missing provider chain proofs, Privy approval or contract addresses fail it.
 Malformed input produces a generic diagnostic rather than echoing JSON. A synthetic passing fixture proves
 validation logic only; it is not live deployment proof or approval.
 
@@ -12,7 +13,7 @@ The same script has three modes:
 
 - **No flag (structural).** Validates the artifact against `contracts/config/monad-mainnet.json`. It also checks
   Explore's launch flag (PROD-GATE-006): the artifact's `explore.mainnetLive` must equal `MAINNET_LIVE` in
-  `apps/explore/src/release.ts` (that line is the only source). It must be false while `admission.drain` is true,
+  `packages/sdk/src/release.ts` (re-exported by Explore). It must be false while `admission.drain` is true,
   and true before the artifact may open admission.
 - **`--live`.** Additionally runs the D16 launch gate, read-only through the artifact's public RPC:
   - the Safe has code;
