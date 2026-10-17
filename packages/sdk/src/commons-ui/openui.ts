@@ -1,6 +1,6 @@
 import { autoClose, parseExpression, split, tokenize, type ASTNode } from '@openuidev/lang-core'
 import { componentProps, elementId, openuiInputSchema, type Presentation } from './catalog.ts'
-import { assertSize, parsePresentation, PRESENTATION_MAX_NODES } from './validate.ts'
+import { assertSize, parsePresentation, PRESENTATION_MAX_BYTES, PRESENTATION_MAX_NODES } from './validate.ts'
 
 /** Strict lexical envelope around the streaming-tolerant upstream parser. Comments and executable expressions are not v1. */
 function lex(source: string): string[] {
@@ -70,6 +70,14 @@ export function normalizeOpenUI(source: string): Presentation {
   const elements: Record<string, unknown> = {}
   let nodes = 0
   let evaluations = 0
+  // A reference re-expands its statement each time, so a small source can name the same text thousands of times.
+  // Every evaluated string and object key lands in the document: their sum bounds its size before it is built.
+  let bytes = 0
+  const encoder = new TextEncoder()
+  const spend = (text: string) => {
+    bytes += encoder.encode(text).length
+    if (bytes > PRESENTATION_MAX_BYTES) throw new Error('OpenUI expands beyond the 32 KiB presentation limit')
+  }
   const reference = (id: string): OpenValue => {
     const ast = asts.get(id)
     if (ast === undefined || resolving.has(id) || resolving.size >= 12)
@@ -85,6 +93,7 @@ export function normalizeOpenUI(source: string): Presentation {
     if (++evaluations > 4096) throw new Error('OpenUI expansion exceeds the document limit')
     switch (ast.k) {
       case 'Str':
+        spend(ast.v)
         return ast.v
       case 'Ref':
         return reference(ast.n)
@@ -97,6 +106,7 @@ export function normalizeOpenUI(source: string): Presentation {
           new Set(keys).size !== keys.length
         )
           throw new Error('OpenUI object keys must be safe and unique')
+        for (const key of keys) spend(key)
         return Object.fromEntries(ast.entries.map(([key, value]) => [key, evaluate(value)]))
       }
       case 'Comp': {

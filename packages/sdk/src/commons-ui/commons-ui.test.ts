@@ -123,6 +123,25 @@ describe('Commons presentation contract', () => {
     expect(() => normalizeOpenUI(`root = Plan("A", "B", [DataTable("T", ["C"], p)])\n${values.join('\n')}`)).toThrow()
   })
 
+  it('stops reference expansion at the size budget before building the document', () => {
+    const table = 'root = Plan("A", "B", [DataTable("T", ["C"], c)])'
+    const strings = `${table}\nc = [${Array(21).fill('b').join(',')}]\nb = [${Array(95).fill('a').join(',')}]\na = s\ns = "${'x'.repeat(30000)}"`
+    const keys = `${table}\nc = [${Array(21).fill('b').join(',')}]\nb = [${Array(48).fill('a').join(',')}]\na = {k${'x'.repeat(29000)}: s}\ns = "v"`
+    for (const source of [strings, keys]) expect(() => normalizeOpenUI(source)).toThrow('expands beyond the 32 KiB')
+  })
+
+  it('accepts a document that reuses one statement within the size budget', () => {
+    const detail = 'd'.repeat(1800)
+    const source = [
+      'root = Plan("Plan", "Summary", [steps])',
+      `steps = StepList("Steps", [${Array(10).fill('step').join(',')}])`,
+      'step = {title: "Same step", detail: text, status: "planned"}',
+      `text = "${detail}"`,
+    ].join('\n')
+    const document = normalizeOpenUI(source)
+    expect(Object.keys(document.spec.elements)).toHaveLength(2)
+  })
+
   it('rejects unknown properties, handlers, versions, and oversized documents', () => {
     expect(() => parsePresentation({ ...plan, version: 2 })).toThrow()
     expect(() => parsePresentation({ ...plan, onLoad: 'post_message' })).toThrow()
