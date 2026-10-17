@@ -264,6 +264,9 @@
   "trustedDependencies": [
     "workerd",
   ],
+  "patchedDependencies": {
+    "decode-uri-component@0.2.2": "patches/decode-uri-component@0.2.2.patch",
+  },
   "overrides": {
     "@effect/platform-bun": "4.0.1",
     "@effect/platform-node": "4.0.1",
