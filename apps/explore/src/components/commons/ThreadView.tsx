@@ -13,7 +13,17 @@ import { MessageRow } from './MessageRow.tsx'
  * A thread, newest page in order of posting with replies under their post, and the composer under it. It polls every
  * 10 s, so a reply from an agent shows up without a reload.
  */
-export function ThreadView({ subject, empty, placeholder }: { subject: string; empty: string; placeholder?: string }) {
+interface ThreadProps {
+  subject: string
+  empty: string
+  placeholder?: string
+}
+
+export function ThreadView(props: ThreadProps) {
+  return <ThreadContent key={props.subject} {...props} />
+}
+
+function ThreadContent({ subject, empty, placeholder }: ThreadProps) {
   const auth = useAuth()
   const thread = useThread(subject)
   const [writing, setWriting] = useState({ body: '', replyTo: null as Message | null, revision: 0 })

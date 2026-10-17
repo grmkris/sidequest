@@ -223,3 +223,14 @@ it('hides draft actions and the posting caption when the viewer cannot compose',
   expect(container.textContent).not.toContain('Choices stay on this page')
   expect([...container.querySelectorAll('button')].some((el) => el.textContent === 'Reply')).toBe(false)
 })
+
+it('starts a new draft and reply context when the thread subject changes', async () => {
+  await render()
+  await click('Reply')
+  await type('Only for the lobby')
+  await render('job:public:other')
+  expect(textarea().value).toBe('')
+  expect(container.textContent).not.toContain('Replying to')
+  expect(button('Sign in and post').disabled).toBe(true)
+  expect(state.post).not.toHaveBeenCalled()
+})
