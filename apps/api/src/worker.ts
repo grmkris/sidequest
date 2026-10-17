@@ -84,6 +84,7 @@ import { MAX_AVATAR_BYTES, type AvatarBucket } from './avatars.ts'
 import { avatarRouteRequest } from './agent-profile-management.ts'
 import { objectFor } from './commons/route.ts'
 import { aaRpcRoute } from './aa-proxy.ts'
+import { MAX_API_BODY_BYTES, MAX_TELEGRAM_BODY_BYTES, readRequestBody } from './request-body.ts'
 
 const STATUS: Record<string, number> = {
   unauthenticated: 401,
@@ -261,9 +262,11 @@ export default class Api extends Cloudflare.Worker<Api>()(
           const supplied = request.headers['x-telegram-bot-api-secret-token'] ?? null
           if (telegramSecret === '' || supplied !== telegramSecret)
             return HttpServerResponse.jsonUnsafe({ ok: false }, { status: 401 })
+          const incoming = yield* Effect.promise(() => readRequestBody(request.source, MAX_TELEGRAM_BODY_BYTES))
+          if (!incoming.ok) return HttpServerResponse.jsonUnsafe({ ok: false }, { status: incoming.status })
           let body: unknown
           try {
-            body = JSON.parse(yield* request.text)
+            body = JSON.parse(new TextDecoder().decode(incoming.bytes))
           } catch {
             return HttpServerResponse.jsonUnsafe({ ok: false }, { status: 400 })
           }
@@ -616,16 +619,22 @@ export default class Api extends Cloudflare.Worker<Api>()(
             return reply
           })
 
-        // An avatar upload is raw image bytes: read as bytes, at most 1 MiB by its length, before any text parsing.
+        // Bound actual bytes before JSON/form parsing or image decoding, even without Content-Length.
         const avatarUpload =
           request.method === 'POST' &&
           /^\/api\/agents\/[A-Za-z0-9_-]{1,128}\/avatar$/.test(path) &&
           (request.headers['content-type'] ?? '').toLowerCase().startsWith('image/')
-        if (avatarUpload && !(Number(request.headers['content-length']) <= MAX_AVATAR_BYTES))
-          return json({ ok: false, code: 'invalid', message: 'An avatar upload is at most 1 MiB' }, 413)
-        const avatarBytes = avatarUpload ? new Uint8Array(yield* request.arrayBuffer) : undefined
+        const incoming =
+          request.method === 'POST'
+            ? yield* Effect.promise(() =>
+                readRequestBody(request.source, avatarUpload ? MAX_AVATAR_BYTES : MAX_API_BODY_BYTES),
+              )
+            : undefined
+        if (incoming !== undefined && !incoming.ok)
+          return json({ ok: false, code: 'invalid', message: incoming.message }, incoming.status)
+        const avatarBytes = avatarUpload ? incoming?.bytes : undefined
         // Hosted MCP OAuth is deliberately separate from the legacy website SIWE session.
-        const rawBody = request.method === 'POST' && !avatarUpload ? yield* request.text : ''
+        const rawBody = incoming !== undefined && !avatarUpload ? new TextDecoder().decode(incoming.bytes) : ''
         const oauthBody: Record<string, unknown> =
           rawBody === ''
             ? {}

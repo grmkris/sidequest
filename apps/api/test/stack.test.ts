@@ -13,6 +13,7 @@ import EventStreamApi, { STREAM_TOKEN, APPEND_TOKEN } from './mcp-event-stream-w
 import { decodeX402Header } from '@sidequest/board'
 import { deployment } from '@sidequest/sdk'
 import { pkceChallenge } from '../src/oauth-validation.ts'
+import { MAX_API_BODY_BYTES } from '../src/request-body.ts'
 
 /**
  * Deploys the stack into local workerd (`dev: true`) and probes every binding through the Worker.
@@ -68,6 +69,26 @@ const signIn = (apiUrl: string) =>
     })
     return { account, login }
   })
+
+test(
+  'the real Worker rejects an oversized chunked API body before JSON parsing',
+  Effect.gen(function* () {
+    const { apiUrl } = yield* stack
+    const response = yield* Effect.promise(() => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new Uint8Array(MAX_API_BODY_BYTES))
+          controller.enqueue(new Uint8Array(1))
+          controller.close()
+        },
+      })
+      const init: RequestInit & { duplex: 'half' } = { method: 'POST', body, duplex: 'half' }
+      return fetch(`${apiUrl}/api/list_messages`, init)
+    })
+    expect(response.status).toBe(413)
+    expect(yield* Effect.promise(() => response.json())).toMatchObject({ ok: false, code: 'invalid' })
+  }),
+)
 
 test(
   'the real local Worker serves the testnet x402 proof challenge without calling the facilitator',
