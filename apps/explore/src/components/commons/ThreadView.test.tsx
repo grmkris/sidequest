@@ -39,6 +39,17 @@ const message: Message = {
   subject: 'lobby',
   author: fixture.result.reports[0]!.reporter as Message['author'],
   body: 'Choose a plan',
+  presentation: {
+    protocol: 'sidequest.commons-ui',
+    version: 1,
+    spec: {
+      root: 'plan',
+      elements: {
+        plan: { type: 'Plan', props: { title: 'Release plan', summary: 'Pick one.' }, children: ['choice'] },
+        choice: { type: 'AskQuestion', props: { question: 'Ready?', options: ['Ship', 'Revise'] } },
+      },
+    },
+  },
   badges: [],
   replyTo: null,
   mentions: [],
@@ -106,16 +117,14 @@ async function type(text: string) {
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
   state.signedIn = false
-  state.read
-    .mockReset()
-    .mockImplementation(async ({ subject }: { subject: string }): Promise<Thread> => ({
-      subject,
-      messages: [message],
-      viewer: state.signedIn ? viewer : null,
-      hasMore: false,
-      cursor: null,
-      nextPollSeconds: 10,
-    }))
+  state.read.mockReset().mockImplementation(async ({ subject }: { subject: string }): Promise<Thread> => ({
+    subject,
+    messages: [message],
+    viewer: state.signedIn ? viewer : null,
+    hasMore: false,
+    cursor: null,
+    nextPollSeconds: 10,
+  }))
   state.post.mockReset()
   client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   container = document.createElement('div')
@@ -145,6 +154,24 @@ it('keeps the composer pending through sign-in and clears the posted draft and r
   expect(textarea().value).toBe('')
   expect(container.textContent).not.toContain('Replying to')
   expect(button('Post').disabled).toBe(true)
+})
+it('acknowledges only the posted snapshot when a choice is added while posting', async () => {
+  const post = deferred<unknown>()
+  state.post.mockReturnValue(post.promise)
+  await render()
+  await type('One answer')
+  await click('Sign in and post')
+  await act(async () => {
+    ;(container.querySelector('input[type="radio"]') as HTMLInputElement).click()
+  })
+  await settle()
+  await click('Use selection in reply')
+  expect(textarea().value).toContain('One answer\n\nReady?\n\nShip')
+  await act(async () => post.resolve({ notified: 0 }))
+  await settle()
+  expect(textarea().value).toBe('Ready?\n\nShip')
+
+  expect(container.textContent).toContain('Replying to')
 })
 it('shows a post error after sign-in and retains the draft for retry', async () => {
   const post = deferred<unknown>()

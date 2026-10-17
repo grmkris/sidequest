@@ -4,6 +4,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../ui/empty.ts
 import { LoadingRows } from '../kit.tsx'
 import { useAuth } from '../Wallet.tsx'
 import { type Message, threadTree } from '../../commons.ts'
+import { acknowledgeDraft } from '../../commons-app/draft.ts'
 import { useThread } from '../../commons-query.ts'
 import { Composer } from './Composer.tsx'
 import { MessageRow } from './MessageRow.tsx'
@@ -15,13 +16,15 @@ import { MessageRow } from './MessageRow.tsx'
 export function ThreadView({ subject, empty, placeholder }: { subject: string; empty: string; placeholder?: string }) {
   const auth = useAuth()
   const thread = useThread(subject)
-  const [replyTo, setReplyTo] = useState<Message | null>(null)
-  const [body, setBody] = useState('')
-  const [draftRevision, setDraftRevision] = useState(0)
+  const [writing, setWriting] = useState({ body: '', replyTo: null as Message | null, revision: 0 })
+  const { body, replyTo, revision: draftRevision } = writing
+  const setReplyTo = (replyTo: Message | null) => setWriting((current) => ({ ...current, replyTo }))
   const draft = (message: Message, text: string) => {
-    setReplyTo(message)
-    setBody((current) => (current.trim() === '' ? text : `${current}\n\n${text}`))
-    setDraftRevision((current) => current + 1)
+    setWriting((current) => ({
+      body: current.body.trim() === '' ? text : `${current.body}\n\n${text}`,
+      replyTo: message,
+      revision: current.revision + 1,
+    }))
   }
   const me = auth.address?.toLowerCase()
   if (thread.isLoading) return <LoadingRows rows={3} />
@@ -63,14 +66,17 @@ export function ThreadView({ subject, empty, placeholder }: { subject: string; e
       <Composer
         subject={subject}
         body={body}
-        onBodyChange={setBody}
+        onBodyChange={(body) => setWriting((current) => ({ ...current, body }))}
         draftRevision={draftRevision}
         viewer={page?.viewer ?? null}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
-        onPosted={() => {
-          setBody('')
-          setReplyTo(null)
+        onPosted={(submittedBody, submittedReplyTo) => {
+          setWriting((current) => {
+            const body = acknowledgeDraft(current.body, submittedBody)
+            const clearReply = body === '' && current.replyTo?.id === submittedReplyTo
+            return { ...current, body, replyTo: clearReply ? null : current.replyTo }
+          })
         }}
         {...(placeholder === undefined ? {} : { placeholder })}
       />

@@ -23,7 +23,7 @@ interface ComposerProps {
   viewer: Viewer | null
   replyTo: Message | null
   onCancelReply: () => void
-  onPosted: () => void
+  onPosted: (submittedBody: string, submittedReplyTo: number | null) => void
   placeholder?: string
 }
 
@@ -46,6 +46,8 @@ export function Composer({
   // UTF-16 length is never below the board's code-point count, so this limit can only be stricter than the board's.
   const length = body.length
   const send = () => {
+    const snapshotBody = body
+    const snapshotReplyTo = replyTo?.id ?? null
     const text = body.trim()
     if (text === '' || length > MESSAGE_MAX || post.isPending || attachment.error !== null) return
     void post
@@ -57,7 +59,7 @@ export function Composer({
       })
       .then(
         () => {
-          onPosted()
+          onPosted(snapshotBody, snapshotReplyTo)
           setAttach(false)
           setAttachment({ value: null, error: null })
         },
