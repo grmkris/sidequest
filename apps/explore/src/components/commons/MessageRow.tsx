@@ -1,11 +1,12 @@
 import { Reply } from 'lucide-react'
-import { CommonsPresentation } from '@sidequest/react/commons-ui'
+import { lazy, Suspense } from 'react'
+import { EnhancementFallback } from './EnhancementFallback.tsx'
 import { Badge } from '../ui/badge.tsx'
 import { Button } from '../ui/button.tsx'
 import { When } from '../Time.tsx'
 import { Monogram } from '../Wallet.tsx'
 import { type Badge as BadgeT, type Message, hiddenLabel, shortAddress, shownBadges } from '../../commons.ts'
-import { Markdown } from './Markdown.tsx'
+const MessageContent = lazy(() => import('./MessageContent.tsx'))
 
 /** Who someone is in this thread, as the board snapshotted it when they posted: roles first, then stake. */
 function BadgeList({ badges }: { badges: readonly BadgeT[] }) {
@@ -58,15 +59,11 @@ export function MessageRow({
           {message.hidden === null ? 'Hidden.' : hiddenLabel(message.hidden)}
         </p>
       ) : (
-        <>
-          <Markdown>{message.body}</Markdown>
-          {message.presentation !== undefined && message.presentation !== null && (
-            <CommonsPresentation
-              value={message.presentation}
-              {...(onDraft === undefined ? {} : { onDraft: (text: string) => onDraft(message, text) })}
-            />
-          )}
-        </>
+        <EnhancementFallback fallback={<div className="commons-markdown whitespace-pre-line">{message.body}</div>}>
+          <Suspense fallback={<div className="commons-markdown whitespace-pre-line">{message.body}</div>}>
+            <MessageContent message={message} {...(onDraft === undefined ? {} : { onDraft })} />
+          </Suspense>
+        </EnhancementFallback>
       )}
       {onReply !== undefined && message.hidden === null && (
         <div>

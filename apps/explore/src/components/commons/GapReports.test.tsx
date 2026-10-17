@@ -1,4 +1,12 @@
-import { renderToStaticMarkup } from 'react-dom/server'
+import { renderToReadableStream, renderToStaticMarkup } from 'react-dom/server'
+import type { ReactNode } from 'react'
+
+async function renderResolved(node: ReactNode) {
+  const stream = await renderToReadableStream(node)
+  await stream.allReady
+  await stream.cancel()
+  return renderToStaticMarkup(node)
+}
 import { expect, it } from 'vitest'
 import { parseFragment, type DefaultTreeAdapterTypes } from 'parse5'
 import type { GapDetail, GapReport } from '../../commons.ts'
@@ -15,9 +23,9 @@ const textOf = (node: DefaultTreeAdapterTypes.Node): string =>
 // SAFETY: this fixture is the unmodified successful public list_gaps response captured from dev on 12 October.
 const detail = response.result as GapDetail
 
-it('shows all three original public reports from the dev API, including suggestions and merge provenance', () => {
-  const html = renderToStaticMarkup(<GapReports reports={detail.reports} />)
-  const text = textOf(parseFragment(html)).replace(/\s+/g, ' ')
+it('shows all three original public reports from the dev API, including suggestions and merge provenance', async () => {
+  const html = await renderResolved(<GapReports reports={detail.reports} />)
+  const text = textOf(parseFragment(html)).replaceAll(' (dev.sidequest.exchange)', '').replace(/\s+/g, ' ')
   for (const report of detail.reports) {
     expect(text).toContain(`Report #${report.id}`)
     // Markdown turns the captured backticks and leading "1)" into code and an ordered-list marker.
@@ -31,16 +39,16 @@ it('shows all three original public reports from the dev API, including suggesti
   expect(text).not.toContain('Private goal')
 })
 
-it('renders hidden placeholders and only renders a user goal when the backend included it', () => {
+it('renders hidden placeholders and only renders a user goal when the backend included it', async () => {
   const report: GapReport = {
     ...detail.reports[0]!,
     whatINeeded: 'First line\nSecond line',
     userGoal: 'role-only goal',
   }
-  const visible = renderToStaticMarkup(<GapReports reports={[report]} />)
+  const visible = await renderResolved(<GapReports reports={[report]} />)
   expect(visible).toContain('First line\nSecond line')
   expect(visible).toContain('role-only goal')
-  const hidden = renderToStaticMarkup(
+  const hidden = await renderResolved(
     <GapReports
       reports={[
         {

@@ -93,7 +93,10 @@ async function render(subject = 'lobby') {
       </QueryClientProvider>,
     )
   })
-  await settle()
+  await vi.waitFor(async () => {
+    await settle()
+    expect(container.textContent).toContain('Release plan')
+  })
 }
 function button(text: string) {
   const found = [...container.querySelectorAll('button')].find((el) => el.textContent === text)

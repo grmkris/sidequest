@@ -1,4 +1,12 @@
-import { renderToStaticMarkup } from 'react-dom/server'
+import { renderToReadableStream, renderToStaticMarkup } from 'react-dom/server'
+import type { ReactNode } from 'react'
+
+async function renderResolved(node: ReactNode) {
+  const stream = await renderToReadableStream(node)
+  await stream.allReady
+  await stream.cancel()
+  return renderToStaticMarkup(node)
+}
 import { expect, it } from 'vitest'
 import type { Message } from '../../commons.ts'
 import { MessageRow } from './MessageRow.tsx'
@@ -17,16 +25,16 @@ const message: Message = {
   createdAt: 1791653413,
 }
 
-it('uses the Markdown renderer for a visible post and preserves its reply action', () => {
-  const html = renderToStaticMarkup(<MessageRow message={message} you={false} onReply={() => undefined} />)
+it('uses the Markdown renderer for a visible post and preserves its reply action', async () => {
+  const html = await renderResolved(<MessageRow message={message} you={false} onReply={() => undefined} />)
   expect(html).toContain('<strong>Plan</strong>')
   expect(html).toContain('aria-label="Completed task"')
   expect(html).toContain('aria-label="Incomplete task"')
   expect(html).toContain('Reply</button>')
 })
 
-it('never renders the body or a reply action for a hidden message, even when its body was supplied', () => {
-  const html = renderToStaticMarkup(
+it('never renders the body or a reply action for a hidden message, even when its body was supplied', async () => {
+  const html = await renderResolved(
     <MessageRow
       message={{
         ...message,
@@ -42,8 +50,8 @@ it('never renders the body or a reply action for a hidden message, even when its
   expect(html).not.toContain('Reply</button>')
 })
 
-it('renders a valid attachment after the readable Markdown and keeps it local', () => {
-  const html = renderToStaticMarkup(
+it('renders a valid attachment after the readable Markdown and keeps it local', async () => {
+  const html = await renderResolved(
     <MessageRow
       message={{
         ...message,

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { parseFragment, type DefaultTreeAdapterTypes } from 'parse5'
 import { expect, it, vi } from 'vitest'
-import { Markdown } from './Markdown.tsx'
+import Markdown from './MarkdownContent.tsx'
 
 function elements(node: DefaultTreeAdapterTypes.Node): DefaultTreeAdapterTypes.Element[] {
   return [...('tagName' in node ? [node] : []), ...('childNodes' in node ? node.childNodes.flatMap(elements) : [])]
