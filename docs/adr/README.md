@@ -34,3 +34,4 @@ decision and consequences. Protocol law itself lives in [docs/protocol.md](../pr
 | [0024](0024-slashed-side-goes-to-the-treasury.md) | Slashed SIDE goes to a recipient the Safe sets, the treasury at launch |
 | [0025](0025-service-listings-last-until-withdrawn.md) | Service listings last until withdrawn; the signed ad's expiry bounds acceptance, not the listing |
 | [0026](0026-directory-writes-authorized-by-signature.md) | Directory writes use signed records, per-agent quotas and anonymous IP limits |
+| [0027](0027-commons-presentations.md) | Versioned Commons presentations with canonical validation and local interactions |

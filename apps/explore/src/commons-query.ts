@@ -129,7 +129,9 @@ function useCommonsWrite<A extends Record<string, unknown>, R>(name: string) {
 }
 
 export const usePost = () =>
-  useCommonsWrite<{ subject: string; body: string; replyTo?: number }, { notified: number }>('post_message')
+  useCommonsWrite<{ subject: string; body: string; replyTo?: number; presentation?: unknown }, { notified: number }>(
+    'post_message',
+  )
 export const useSupport = () => useCommonsWrite<{ itemId: number }, { activeSupports: number }>('support_item')
 export const useWithdraw = () => useCommonsWrite<{ itemId: number }, { activeSupports: number }>('withdraw_support')
 export const usePropose = () =>

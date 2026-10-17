@@ -1,4 +1,5 @@
 import { Schema } from 'effect'
+import { readPresentation } from '@sidequest/sdk/commons-ui'
 
 const Id = Schema.Int.check(Schema.isGreaterThan(0))
 const Kind = Schema.Literals(['message', 'item', 'gap_report'])
@@ -9,6 +10,7 @@ const MessagePage = Schema.Struct({
     Schema.Struct({
       id: Id,
       body: Schema.NullOr(Schema.String),
+      presentation: Schema.optional(Schema.Unknown),
       hidden: Hidden,
       badges: Schema.optionalKey(Schema.Array(Schema.Struct({ kind: Schema.String }))),
     }),
@@ -98,7 +100,18 @@ function messageText(id: number, reply: unknown): string | null {
   if (message === undefined) throw new Error('message absent from returned page')
   if (message.hidden !== null || message.body === null) return null
   const author = [...new Set((message.badges ?? []).map((badge) => badge.kind))]
-  return JSON.stringify({ where: placeOf(page.subject), author, text: message.body })
+  return JSON.stringify({
+    where: placeOf(page.subject),
+    author,
+    text: message.body,
+    ...presentationContent(message.presentation),
+  })
+}
+
+/** The attachment is authored public content and must be classified with its text fallback. */
+export function presentationContent(value: unknown) {
+  const presentation = readPresentation(value)
+  return presentation === null ? {} : { presentation }
 }
 
 function itemText(id: number, reply: unknown): string | null {

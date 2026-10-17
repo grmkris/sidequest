@@ -8,6 +8,7 @@ import type { ParticipantsSnapshot, StakePosition } from '../services.ts'
 import type { SyncSql } from '../sql/sync.ts'
 import { messageOf, type MessageRow } from './rows.ts'
 import { parseSubject } from './subject.ts'
+import type { Presentation } from '@sidequest/sdk/commons-ui'
 
 interface ReplyRow {
   subject: string
@@ -23,6 +24,7 @@ interface InsertPost {
   readonly roles: readonly Role[]
   readonly stake: StakePosition | null
   readonly now: number
+  readonly presentation: Presentation | null
 }
 function replyTarget(sql: SyncSql, subject: string, id: number | undefined) {
   if (id === undefined) return { replyTo: null, parentAuthor: null }
@@ -44,8 +46,8 @@ export function insertPost(sql: SyncSql, post: InsertPost) {
   const parsed = parseSubject(input.subject)
   const badges = snapshotBadges(address, post.people, post.roles, post.stake)
   sql.run(
-    `INSERT INTO commons_messages(subject,subject_kind,board_id,task_id,item_id,author,badges_json,body,reply_to,mentions_json,created_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
+    `INSERT INTO commons_messages(subject,subject_kind,board_id,task_id,item_id,author,badges_json,body,presentation_json,reply_to,mentions_json,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`,
     input.subject,
     parsed.kind,
     parsed.boardId,
@@ -54,6 +56,7 @@ export function insertPost(sql: SyncSql, post: InsertPost) {
     address,
     JSON.stringify(badges),
     input.body,
+    post.presentation === null ? null : JSON.stringify(post.presentation),
     target.replyTo,
     JSON.stringify(post.mentions),
     now,

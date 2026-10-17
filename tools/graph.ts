@@ -108,7 +108,7 @@ export const nodes: readonly Node[] = [
     name: '@sidequest/commons',
     role: 'public threads, gaps and stake-weighted roadmap.',
     runtime: 'shared',
-    mayImport: [],
+    mayImport: ['@sidequest/sdk'],
   },
   {
     dir: 'packages/indexer',

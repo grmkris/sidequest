@@ -1,4 +1,5 @@
 import { Schema, SchemaGetter } from 'effect'
+import { PresentationInput, PresentationOutput } from './presentation.ts'
 import { Address, Cursor, Integer, ItemId, Limit, OutputId, Subject, WeiString, text } from './ids.ts'
 import { Hidden, Role } from './roles.ts'
 
@@ -42,6 +43,8 @@ export const Message = Schema.Struct({
   author: Address,
   badges: Schema.Array(Badge),
   body: Schema.NullOr(text(1, 2000)),
+  /** Validated sidecar document; hidden posts expose neither body nor presentation. */
+  presentation: Schema.optional(Schema.NullOr(PresentationOutput)),
   replyTo: Schema.NullOr(OutputId),
   mentions: Schema.Array(Mention),
   hidden: Schema.NullOr(Hidden),
@@ -72,5 +75,11 @@ export const ListMessagesOutput = Schema.Struct({
   nextPollSeconds: Schema.Literal(10),
   viewer: Schema.NullOr(Viewer),
 })
-export const PostMessageInput = Schema.Struct({ subject: Subject, body: Body, replyTo: Schema.optional(ItemId) })
+export const PostMessageInput = Schema.Struct({
+  subject: Subject,
+  body: Body,
+  replyTo: Schema.optional(ItemId),
+  /** A canonical presentation or `{protocol:'openui',version:1,source}` authoring input. */
+  presentation: Schema.optional(PresentationInput),
+})
 export const PostMessageOutput = Schema.Struct({ message: Message, notified: Integer })

@@ -20,6 +20,7 @@ import { eventArguments, eventCursor, eventMaxAge, type McpEvents } from './mcp-
 import { EventRpcError } from './webhooks.ts'
 import { renderedSkillManifests } from './generated/skills.ts'
 import { hiringTools, hiringResource, renderHiring } from './mcp-hiring.ts'
+import { commonsResource } from './mcp-commons.ts'
 import { docsResources, readDoc, searchDocs } from './mcp-docs.ts'
 import { MCP_LEGACY_PROTOCOL_VERSIONS, MCP_PROTOCOL_VERSION, MCP_SERVER_INFO } from './mcp-metadata.ts'
 
@@ -305,6 +306,7 @@ export async function mcpRoute(input: {
         })),
         ...skillManifests.map((skill) => ({ uri: skill.uri, name: skill.frontmatter.name, mimeType: 'text/markdown' })),
         { uri: hiringResource.uri, name: 'Hiring desk', mimeType: hiringResource.mimeType },
+        { uri: commonsResource.uri, name: 'Commons plans', mimeType: commonsResource.mimeType },
         ...docsResources(),
       ],
     })
@@ -363,6 +365,7 @@ export async function mcpRoute(input: {
       return respond({ contents: [{ uri: params.uri, mimeType: 'text/markdown', text }] })
     }
     if (params.uri === hiringResource.uri) return respond({ contents: [hiringResource] })
+    if (params.uri === commonsResource.uri) return respond({ contents: [commonsResource] })
     const skill = skillManifests.find((entry) => entry.uri === params.uri)
     if (skill !== undefined)
       return respond({ contents: [{ uri: skill.uri, mimeType: 'text/markdown', text: skill.raw }] })

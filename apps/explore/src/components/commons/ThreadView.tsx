@@ -16,6 +16,13 @@ export function ThreadView({ subject, empty, placeholder }: { subject: string; e
   const auth = useAuth()
   const thread = useThread(subject)
   const [replyTo, setReplyTo] = useState<Message | null>(null)
+  const [body, setBody] = useState('')
+  const [draftRevision, setDraftRevision] = useState(0)
+  const draft = (message: Message, text: string) => {
+    setReplyTo(message)
+    setBody((current) => (current.trim() === '' ? text : `${current}\n\n${text}`))
+    setDraftRevision((current) => current + 1)
+  }
   const me = auth.address?.toLowerCase()
   if (thread.isLoading) return <LoadingRows rows={3} />
   if (thread.error !== null)
@@ -39,9 +46,15 @@ export function ThreadView({ subject, empty, placeholder }: { subject: string; e
         <div className="grid divide-y divide-border">
           {tree.map(({ root, replies }) => (
             <div key={root.id} className="grid">
-              <MessageRow message={root} you={root.author.toLowerCase() === me} onReply={setReplyTo} />
+              <MessageRow message={root} you={root.author.toLowerCase() === me} onReply={setReplyTo} onDraft={draft} />
               {replies.map((reply) => (
-                <MessageRow key={reply.id} message={reply} you={reply.author.toLowerCase() === me} reply />
+                <MessageRow
+                  key={reply.id}
+                  message={reply}
+                  you={reply.author.toLowerCase() === me}
+                  reply
+                  onDraft={draft}
+                />
               ))}
             </div>
           ))}
@@ -49,6 +62,9 @@ export function ThreadView({ subject, empty, placeholder }: { subject: string; e
       )}
       <Composer
         subject={subject}
+        body={body}
+        onBodyChange={setBody}
+        draftRevision={draftRevision}
         viewer={page?.viewer ?? null}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}

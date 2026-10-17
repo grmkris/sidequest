@@ -1,7 +1,10 @@
-import ReactMarkdown, { type Components } from 'react-markdown'
+import { Streamdown, type Components } from 'streamdown'
+import rehypeSanitize from 'rehype-sanitize'
+import { CodeFence } from './CodeFence.tsx'
 import remarkGfm from 'remark-gfm'
 
 const plugins = [remarkGfm]
+const sanitizers = [rehypeSanitize]
 const components: Components = {
   // User headings sit below the page title and the containing section.
   h1: ({ children }) => <h3>{children}</h3>,
@@ -35,12 +38,27 @@ const components: Components = {
       aria-label={checked ? 'Completed task' : 'Incomplete task'}
     />
   ),
-  pre: ({ children }) => (
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Overflowing code must be scrollable with a keyboard in Safari as well as Chromium.
-    <pre tabIndex={0} aria-label="Code block">
-      {children}
-    </pre>
-  ),
+  // Read the parsed fence, never HTML. Inline code stays a normal code element.
+  pre: ({ node }) => {
+    const code = node?.children[0]
+    if (code?.type !== 'element') return null
+    const classes = code.properties.className
+    const language = Array.isArray(classes)
+      ? (classes.find((value) => value.startsWith('language-')) ?? '').slice(9)
+      : ''
+    const source = code.children
+      .map((child) => (child.type === 'text' ? child.value : ''))
+      .join('')
+      .replace(/\n$/u, '')
+    return <CodeFence key={`${language}:${source}`} code={source} language={language} />
+  },
+  code: ({ children }) => <code>{children}</code>,
+  p: ({ children }) => <p>{children}</p>,
+  ul: ({ children, className }) => <ul className={className}>{children}</ul>,
+  ol: ({ children, start }) => <ol start={start}>{children}</ol>,
+  li: ({ children, className }) => <li className={className}>{children}</li>,
+  blockquote: ({ children }) => <blockquote>{children}</blockquote>,
+  strong: ({ children }) => <strong>{children}</strong>,
   table: ({ children }) => (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- This named overflow region needs keyboard focus for horizontal scrolling.
     <section className="commons-table" aria-label="Table" tabIndex={0}>
@@ -49,13 +67,20 @@ const components: Components = {
   ),
 }
 
-/** Safe GFM for public posts. Raw HTML remains text; react-markdown filters unsafe URL schemes. */
+/** Saved public content is static: incomplete Markdown is never repaired into different authored content. */
 export function Markdown({ children }: { children: string }) {
   return (
-    <div className="commons-markdown">
-      <ReactMarkdown remarkPlugins={plugins} components={components}>
-        {children}
-      </ReactMarkdown>
-    </div>
+    <Streamdown
+      className="commons-markdown"
+      mode="static"
+      parseIncompleteMarkdown={false}
+      animated={false}
+      remarkPlugins={plugins}
+      rehypePlugins={sanitizers}
+      components={components}
+      controls={false}
+    >
+      {children}
+    </Streamdown>
   )
 }

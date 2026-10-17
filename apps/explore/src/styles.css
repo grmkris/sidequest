@@ -2,14 +2,26 @@
 @import 'tailwindcss' source(none);
 @import 'tw-animate-css';
 @import './shadcn.css';
+@import '@sidequest/react/commons-ui.css';
 @import './components/landing/landing.css';
 @import '@fontsource-variable/geist';
 @import '@fontsource-variable/newsreader/opsz.css';
 @import '@fontsource-variable/newsreader/opsz-italic.css';
 @source '.';
+@source '../node_modules/streamdown/dist';
 
 /* Commons documents: the content supplies the hierarchy, with quiet chrome around it. */
 @layer components {
+  .commons-code {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: clip;
+  }
+  .commons-code pre {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
   .commons-markdown {
     min-inline-size: 0;
     max-inline-size: 72ch;

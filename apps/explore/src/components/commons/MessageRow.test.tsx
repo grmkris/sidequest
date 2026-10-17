@@ -41,3 +41,30 @@ it('never renders the body or a reply action for a hidden message, even when its
   expect(html).not.toContain('type="checkbox"')
   expect(html).not.toContain('Reply</button>')
 })
+
+it('renders a valid attachment after the readable Markdown and keeps it local', () => {
+  const html = renderToStaticMarkup(
+    <MessageRow
+      message={{
+        ...message,
+        body: 'Readable **summary**',
+        presentation: {
+          protocol: 'sidequest.commons-ui',
+          version: 1,
+          spec: {
+            root: 'plan',
+            elements: {
+              plan: { type: 'Plan', props: { title: 'Plan', summary: 'Summary' }, children: ['ask'] },
+              ask: { type: 'AskQuestion', props: { question: 'Ready?', options: ['Yes', 'Not yet'] } },
+            },
+          },
+        },
+      }}
+      you={false}
+    />,
+  )
+  expect(html).toContain('Readable <strong>summary</strong>')
+  expect(html).toContain('Explore this plan')
+  expect(html).toContain('Ready?')
+  expect(html).not.toContain('tools/call')
+})

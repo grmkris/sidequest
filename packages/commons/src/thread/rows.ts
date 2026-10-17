@@ -1,6 +1,15 @@
 import { Schema } from 'effect'
 import { Badge, Mention, type Message } from '../schema/messages.ts'
 import { Hidden } from '../schema/roles.ts'
+import { readPresentation } from '@sidequest/sdk/commons-ui'
+
+function savedPresentation(json: string | null) {
+  try {
+    return json === null ? null : readPresentation(JSON.parse(json))
+  } catch {
+    return null
+  }
+}
 
 export interface HiddenRow {
   hidden_at: number | null
@@ -14,6 +23,7 @@ export interface MessageRow extends HiddenRow {
   author: string
   badges_json: string
   body: string
+  presentation_json: string | null
   reply_to: number | null
   mentions_json: string
   created_at: number
@@ -36,6 +46,7 @@ export function messageOf(row: MessageRow, reveal = false): Message {
     author: row.author,
     badges: Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(Badge)))(row.badges_json),
     body: row.hidden_at === null || reveal ? row.body : null,
+    presentation: row.hidden_at === null || reveal ? savedPresentation(row.presentation_json) : null,
     replyTo: row.reply_to,
     mentions: Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(Mention)))(row.mentions_json),
     hidden: hiddenOf(row),

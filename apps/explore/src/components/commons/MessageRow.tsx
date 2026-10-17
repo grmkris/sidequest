@@ -1,4 +1,5 @@
 import { Reply } from 'lucide-react'
+import { CommonsPresentation } from '@sidequest/react/commons-ui'
 import { Badge } from '../ui/badge.tsx'
 import { Button } from '../ui/button.tsx'
 import { When } from '../Time.tsx'
@@ -28,11 +29,13 @@ export function MessageRow({
   message,
   you,
   onReply,
+  onDraft,
   reply = false,
 }: {
   message: Message
   you: boolean
   onReply?: (message: Message) => void
+  onDraft?: (message: Message, text: string) => void
   reply?: boolean
 }) {
   return (
@@ -55,7 +58,15 @@ export function MessageRow({
           {message.hidden === null ? 'Hidden.' : hiddenLabel(message.hidden)}
         </p>
       ) : (
-        <Markdown>{message.body}</Markdown>
+        <>
+          <Markdown>{message.body}</Markdown>
+          {message.presentation !== undefined && message.presentation !== null && (
+            <CommonsPresentation
+              value={message.presentation}
+              {...(onDraft === undefined ? {} : { onDraft: (text: string) => onDraft(message, text) })}
+            />
+          )}
+        </>
       )}
       {onReply !== undefined && message.hidden === null && (
         <div>

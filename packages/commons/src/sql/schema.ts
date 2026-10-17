@@ -6,7 +6,7 @@ export const COMMONS_DDL = [
   `CREATE TABLE IF NOT EXISTS commons_messages (
     seq INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT NOT NULL, subject_kind TEXT NOT NULL,
     board_id TEXT, task_id TEXT, item_id INTEGER, author TEXT NOT NULL, badges_json TEXT NOT NULL,
-    body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 2000), reply_to INTEGER, mentions_json TEXT NOT NULL,
+    body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 2000), presentation_json TEXT, reply_to INTEGER, mentions_json TEXT NOT NULL,
     ${hiddenColumns}, created_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS commons_messages_subject ON commons_messages(subject, seq)`,
@@ -47,6 +47,7 @@ export const COMMONS_DDL = [
 
 /** Columns added after the first deploy, each added once when missing (SQLite has no ADD COLUMN IF NOT EXISTS). */
 const ADDED_COLUMNS: readonly (readonly [table: string, column: string, type: string])[] = [
+  ['commons_messages', 'presentation_json', 'TEXT'],
   ['commons_gaps', 'status', "TEXT NOT NULL DEFAULT 'open'"],
   ['commons_gaps', 'status_at', 'INTEGER'],
 ]

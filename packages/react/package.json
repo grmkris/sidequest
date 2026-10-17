@@ -5,7 +5,9 @@
   "description": "Headless React hooks and a typed client for embedding the sidequest marketplace: boards, tasks, publish and select, with any EIP-1193 wallet.",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./commons-ui": "./src/commons-ui/Presentation.tsx",
+    "./commons-ui.css": "./src/commons-ui/styles.css"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",

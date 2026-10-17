@@ -1,0 +1,11 @@
+{
+  "scope": "Local Explore with fixture thread responses; generated MCP App with official AppBridge fixture host. No live posting.",
+  "browser": "153.0.8010.12",
+  "checks": [
+    "Explore 1440px: selection, expanding steps, draft append and focus, table filter, code highlighting, Mermaid, editor validation, no writes, no overflow or page errors",
+    "Explore 390px: selection, expanding steps, draft append and focus, table filter, code highlighting, Mermaid, editor validation, no writes, no overflow or page errors",
+    "MCP App 1024px: official SDK handshake, same renderer, local selection, explicit reviewed message, mediated link, theme, no overflow or external requests",
+    "MCP App 390px: official SDK handshake, same renderer, local selection, explicit reviewed message, mediated link, theme, no overflow or external requests"
+  ],
+  "passed": true
+}

@@ -3,7 +3,7 @@ import { dirname } from 'node:path'
 import { Schema } from 'effect'
 import type { ModelEndpoint } from '@sidequest/board'
 import { type ModerationVerdict, classifyContent } from './moderation.ts'
-import { placeOf } from './moderator-content.ts'
+import { placeOf, presentationContent } from './moderator-content.ts'
 import { GitHubShip, RateLimited, REPOSITORY, type Shipped } from './maintainer-ship.ts'
 import {
   planTriage,
@@ -76,6 +76,7 @@ interface LogEntry {
 interface ThreadMessage {
   id: number
   body: string | null
+  presentation?: unknown
   hidden: unknown
   badges?: { kind: string }[]
 }
@@ -100,7 +101,12 @@ async function reviewEntry(o: MaintainerOptions, entry: LogEntry, budget: Budget
   const message = await hiddenMessage(o, { ...entry, subject: entry.subject })
   if (message === undefined) return 'next'
   const author = [...new Set((message.badges ?? []).map((b) => b.kind))]
-  const text = JSON.stringify({ where: placeOf(entry.subject), author, text: message.body })
+  const text = JSON.stringify({
+    where: placeOf(entry.subject),
+    author,
+    text: message.body,
+    ...presentationContent(message.presentation),
+  })
   const review = await (o.classify ?? classifier(o))(text)
   // Never restore on a failed review: the entry is retried next pass.
   if (review.failed || (review.verdict.verdict === 'keep' && budget.left <= 0)) return 'stop'

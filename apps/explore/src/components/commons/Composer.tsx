@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
+import type { AttachmentDraft } from './AttachmentEditor.tsx'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
 import { useAuth } from '../Wallet.tsx'
@@ -8,37 +9,55 @@ import { usePost } from '../../commons-query.ts'
 import { SideChip } from '../side/SideToken.tsx'
 import { MarkdownEditor } from './MarkdownEditor.tsx'
 
+const AttachmentEditor = lazy(() => import('./AttachmentEditor.tsx'))
+
 /**
  * Writing in a thread. The board decides who may post; the composer only explains its answer (sign in, or the SIDE it
  * needs) and keeps the draft when a post fails, so nothing typed is lost.
  */
-export function Composer({
-  subject,
-  viewer,
-  replyTo,
-  onCancelReply,
-  placeholder = 'Write a message',
-}: {
+interface ComposerProps {
   subject: string
+  body: string
+  onBodyChange: (body: string) => void
+  draftRevision: number
   viewer: Viewer | null
   replyTo: Message | null
   onCancelReply: () => void
   placeholder?: string
-}) {
+}
+
+export function Composer({
+  subject,
+  body,
+  onBodyChange: setBody,
+  draftRevision,
+  viewer,
+  replyTo,
+  onCancelReply,
+  placeholder = 'Write a message',
+}: ComposerProps) {
   const auth = useAuth()
   const post = usePost()
-  const [body, setBody] = useState('')
+  const [attach, setAttach] = useState(false)
+  const [attachment, setAttachment] = useState<AttachmentDraft>({ value: null, error: null })
   const guidance = composerGuidance(viewer, auth.signedIn)
   // UTF-16 length is never below the board's code-point count, so this limit can only be stricter than the board's.
   const length = body.length
   const send = () => {
     const text = body.trim()
-    if (text === '' || length > MESSAGE_MAX || post.isPending) return
+    if (text === '' || length > MESSAGE_MAX || post.isPending || attachment.error !== null) return
     post.mutate(
-      { subject, body: text, ...(replyTo === null ? {} : { replyTo: replyTo.id }) },
+      {
+        subject,
+        body: text,
+        ...(replyTo === null ? {} : { replyTo: replyTo.id }),
+        ...(attachment.value === null ? {} : { presentation: attachment.value }),
+      },
       {
         onSuccess: () => {
           setBody('')
+          setAttach(false)
+          setAttachment({ value: null, error: null })
           onCancelReply()
         },
       },
@@ -67,13 +86,23 @@ export function Composer({
         placeholder={placeholder}
         disabled={post.isPending}
         {...(replyTo === null ? {} : { replyId: replyTo.id })}
+        focusRevision={draftRevision}
       />
       <ComposerActions
         guidance={guidance}
         signedIn={auth.signedIn}
         pending={post.isPending}
-        disabled={body.trim() === '' || length > MESSAGE_MAX}
+        disabled={body.trim() === '' || length > MESSAGE_MAX || attachment.error !== null}
         error={post.error?.message}
+      />
+      <AttachmentPanel
+        attach={attach}
+        pending={post.isPending}
+        onChange={setAttachment}
+        onToggle={() => {
+          setAttach(!attach)
+          setAttachment({ value: null, error: null })
+        }}
       />
     </form>
   )
@@ -120,6 +149,33 @@ function ComposerActions({
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
+      )}
+    </>
+  )
+}
+
+function AttachmentPanel({
+  attach,
+  pending,
+  onChange,
+  onToggle,
+}: {
+  attach: boolean
+  pending: boolean
+  onChange: (value: AttachmentDraft) => void
+  onToggle: () => void
+}) {
+  return (
+    <>
+      <div>
+        <Button variant="ghost" disabled={pending} aria-expanded={attach} onClick={onToggle}>
+          {attach ? 'Remove plan attachment' : 'Attach interactive plan'}
+        </Button>
+      </div>
+      {attach && (
+        <Suspense fallback={<output>Opening plan editor…</output>}>
+          <AttachmentEditor disabled={pending} onChange={onChange} />
+        </Suspense>
       )}
     </>
   )

@@ -37,6 +37,7 @@ export interface Message {
   readonly author: Address
   readonly badges: readonly Badge[]
   readonly body: string | null
+  readonly presentation?: unknown
   readonly replyTo: number | null
   readonly mentions: readonly { readonly token: string; readonly address: Address | null }[]
   readonly hidden: Hidden | null

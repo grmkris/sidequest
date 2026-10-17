@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@sidequest/sdk": "workspace:*",
     "effect": "catalog:",
     "viem": "catalog:"
   },

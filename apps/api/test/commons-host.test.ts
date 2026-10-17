@@ -169,6 +169,36 @@ it('preserves BoardError codes for invalid input, authentication and absent jobs
   })
 })
 
+it('persists a canonical plan through the real host and rejects invalid presentations at admission', async () => {
+  const f = await fixture()
+  const presentation = {
+    protocol: 'openui',
+    version: 1,
+    source: 'root = Plan("Review", "Review this plan.", [AskQuestion("Ready?", ["Yes", "Revise"])])',
+  }
+  await expect(
+    f.host.run(
+      'post_message',
+      { address: maintainer },
+      {
+        subject: 'lobby',
+        body: 'Summary',
+        presentation: { ...presentation, source: 'root = Unknown("oops")' },
+      },
+    ),
+  ).rejects.toMatchObject({ code: 'invalid' })
+  expect(f.db.prepare('SELECT * FROM commons_messages').all()).toHaveLength(0)
+  const posted = await f.host.run(
+    'post_message',
+    { address: maintainer },
+    { subject: 'lobby', body: 'Summary', presentation },
+  )
+  expect(posted).toMatchObject({ message: { presentation: { protocol: 'sidequest.commons-ui', version: 1 } } })
+  expect(await f.host.run('list_messages', {}, { subject: 'lobby' })).toMatchObject({
+    messages: [{ body: 'Summary', presentation: { protocol: 'sidequest.commons-ui', version: 1 } }],
+  })
+})
+
 it('reads numeric and string gap IDs and reports safe field constraints through the real host', async () => {
   const f = await fixture()
   const report = await f.host.run(

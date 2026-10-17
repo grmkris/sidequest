@@ -39,10 +39,11 @@ it('keeps code literal and makes wide code and tables keyboard-scrollable', () =
   expect(html).toContain('<code>get_task</code>')
   expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
   expect(all.some((node) => node.tagName === 'table')).toBe(true)
-  expect(all.filter((node) => attr(node, 'tabindex') === '0').map((node) => attr(node, 'aria-label'))).toEqual([
-    'Code block',
-    'Table',
-  ])
+  expect(
+    all
+      .filter((node) => attr(node, 'tabindex') === '0' && node.tagName !== 'button')
+      .map((node) => attr(node, 'aria-label')),
+  ).toEqual(['Code block', 'Table'])
 })
 
 it('keeps ordinary messages and line breaks intact', () => {

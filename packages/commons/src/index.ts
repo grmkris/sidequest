@@ -1,6 +1,7 @@
 export * from './names.ts'
 export * from './schema/ids.ts'
 export * from './schema/messages.ts'
+export * from './schema/presentation.ts'
 export * from './schema/gaps.ts'
 export * from './schema/roadmap.ts'
 export * from './schema/roles.ts'

@@ -13,6 +13,7 @@ interface EditorProps {
   placeholder?: string
   disabled?: boolean
   replyId?: number
+  focusRevision?: number
 }
 
 /** Preview matches published content; switching tabs never changes the draft. */
@@ -25,18 +26,19 @@ export function MarkdownEditor({
   placeholder,
   disabled,
   replyId,
+  focusRevision,
 }: EditorProps) {
   const id = useId()
   const input = useRef<HTMLTextAreaElement>(null)
   const invalid = value.length > limit
   useEffect(() => {
-    if (replyId !== undefined) input.current?.focus()
-  }, [replyId])
+    if (replyId !== undefined || (focusRevision ?? 0) > 0) input.current?.focus()
+  }, [replyId, focusRevision])
   return (
     <Field data-invalid={invalid} className="min-w-0">
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       {description !== undefined && <FieldDescription>{description}</FieldDescription>}
-      <Tabs key={replyId} defaultValue="write" className="min-w-0 gap-3">
+      <Tabs key={`${replyId ?? ''}:${focusRevision ?? 0}`} defaultValue="write" className="min-w-0 gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <TabsList aria-label={`${label} editor`} className="group-data-horizontal/tabs:h-11">
             <TabsTrigger value="write" className="min-w-16 px-3">

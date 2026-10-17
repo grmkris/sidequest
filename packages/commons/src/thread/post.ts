@@ -11,6 +11,8 @@ import { postingAccess } from './access.ts'
 import { insertPost } from './insert.ts'
 import { subjectContext } from './subject.ts'
 import { mentionTokens, normalizeText } from './text.ts'
+import type { Presentation } from '@sidequest/sdk/commons-ui'
+import { normalizePresentation } from '@sidequest/sdk/commons-ui/openui'
 
 export const postMessage = Effect.fnUntraced(function* (
   caller: Address | undefined,
@@ -18,6 +20,13 @@ export const postMessage = Effect.fnUntraced(function* (
 ) {
   yield* enabled()
   const body = yield* normalizeText(input.body)
+  const presentation: Presentation | null =
+    input.presentation === undefined
+      ? null
+      : yield* Effect.try({
+          try: () => normalizePresentation(input.presentation),
+          catch: (error) => new Invalid({ message: error instanceof Error ? error.message : 'Invalid presentation' }),
+        })
   const context = yield* subjectContext(input.subject)
   const access = yield* postingAccess(caller, context.participants)
   const directory = yield* Directory
@@ -43,6 +52,7 @@ export const postMessage = Effect.fnUntraced(function* (
         roles: access.roles,
         stake: access.stake,
         now,
+        presentation,
       }),
     ),
   )

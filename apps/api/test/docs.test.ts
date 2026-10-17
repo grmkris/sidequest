@@ -8,6 +8,7 @@ import { mcpRoute } from '../src/mcp.ts'
 import { requiredToolScope } from '../src/mcp-policy.ts'
 import { ROLE_GUIDES } from '../src/mcp-instructions.ts'
 import { hiringResource, hiringTools } from '../src/mcp-hiring.ts'
+import { commonsResource } from '../src/mcp-commons.ts'
 import { tools } from '../src/tools.ts'
 import { tenantTools } from '../src/tools-tenant.ts'
 import { directoryTools } from '../src/directory.ts'
@@ -70,6 +71,7 @@ describe('docs from the real content pipeline', () => {
       })),
       ...SKILL_MANIFESTS.map((skill) => ({ uri: skill.uri, name: skill.frontmatter.name, mimeType: 'text/markdown' })),
       { uri: hiringResource.uri, name: 'Hiring desk', mimeType: hiringResource.mimeType },
+      { uri: commonsResource.uri, name: 'Commons plans', mimeType: commonsResource.mimeType },
     ]
     const docs = DOCS.map((page) => ({
       uri: `sidequest://docs/${page.slug || 'index'}`,

@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { BoardApiError } from '@sidequest/sdk'
+import { normalizeOpenUI } from '@sidequest/sdk/commons-ui/openui'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ModerationVerdict } from './moderation.ts'
 import { moderateOnce, type ModeratorEvent } from './moderator.ts'
@@ -53,6 +54,27 @@ const hideVerdict = async (): Promise<ModerationVerdict> => ({
 })
 
 describe('moderator polling', () => {
+  it('classifies the visible attachment together with the fallback body', async () => {
+    const presentation = normalizeOpenUI('root = Plan("Review", "Read the evidence.", [DraftReply("Suggested reply")])')
+    const f = fake((tool) =>
+      tool === 'inbox'
+        ? { events: [event()], cursor: 'v1:1' }
+        : {
+            subject: 'lobby',
+            messages: [{ id: 1, body: 'Summary', hidden: null, presentation }],
+          },
+    )
+    const classify = vi.fn(async (): Promise<ModerationVerdict> => ({
+      verdict: 'keep',
+      category: 'ok',
+      reason: 'Ordinary plan',
+    }))
+    await moderateOnce({ board: f.board, endpoint, cursorFile: await cursorFile(), classify })
+    expect(classify).toHaveBeenCalledWith(
+      JSON.stringify({ where: 'the lobby', author: [], text: 'Summary', presentation }),
+    )
+    expect(f.calls.map((call) => call.tool)).toEqual(['inbox', 'list_messages'])
+  })
   it('persists and reloads cursors while ignoring unrelated events', async () => {
     const file = await cursorFile()
     const f = fake((tool, args) => {
