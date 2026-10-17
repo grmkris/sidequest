@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { presentationInputJsonSchema, presentationJsonSchema } from './catalog.ts'
-import { normalizeOpenUI } from './openui.ts'
+import { normalizeOpenUI, normalizePresentation } from './openui.ts'
 import { parsePresentation, readPresentation } from './validate.ts'
 
 /** The exported free-text rule: the one pattern that is not an element ID or the HTTPS prefix. */
@@ -149,6 +149,17 @@ describe('Commons presentation contract', () => {
     ].join('\n')
     const document = normalizeOpenUI(source)
     expect(Object.keys(document.spec.elements)).toHaveLength(2)
+  })
+
+  it('collapses blank-line runs so nothing hides below the visible text', () => {
+    const padded = normalizePresentation({
+      ...plan,
+      spec: {
+        root: 'plan',
+        elements: { ...plan.spec.elements, question: { type: 'DraftReply', props: { text: 'Hi\n\n\n \n\t\nthere' } } },
+      },
+    })
+    expect(padded.spec.elements.question).toEqual({ type: 'DraftReply', props: { text: 'Hi\n\nthere' } })
   })
 
   it('exports tool schemas that strict and non-ECMAScript validators accept', () => {

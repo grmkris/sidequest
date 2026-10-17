@@ -1,7 +1,9 @@
 import { z } from 'zod'
 
+/** At most one blank line in a row (whitespace-only lines count), as in message bodies: no padding can hide text. */
+const collapseBlankLines = (value: string) => value.replace(/\n(?:[ \t]*\n){2,}/gu, '\n\n')
 const TEXT_RULE = /^(?:[^\p{Cc}\p{Cf}]|\n|\t)*$/u
-const text = (max: number) => z.string().min(1).max(max).regex(TEXT_RULE)
+const text = (max: number) => z.string().overwrite(collapseBlankLines).min(1).max(max).regex(TEXT_RULE)
 const title = text(160)
 const detail = text(2000)
 const items = <T extends z.ZodType>(schema: T) => z.array(schema).min(1).max(24)
