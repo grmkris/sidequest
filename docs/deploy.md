@@ -17,6 +17,11 @@ The workflow lives in [ci.yml](../.github/workflows/ci.yml); scheduled checks li
 [smoke.yml](../.github/workflows/smoke.yml). Promotion is manual:
 `git push origin <green dev sha>:prod`, performed only by the authorized coordinator/operator.
 
+CI deploys Workers only. The role containers (arbiter, Commons moderator and maintainer) run from pinned worktrees and keep
+their old commit until restarted. When a release changes `apps/arbiter/**` or what those roles read, restart the affected
+roles on the released SHA after a green deploy, for example `SIDEQUEST_STAGE=prod bun --no-env-file crew/bin/roles.ts up
+<sha> moderator`. Restart the arbiter only when its code changed; it signs mainnet rulings.
+
 ## Commands and release guard
 
 The only live release entry point is [`scripts/ci/release.ts`](../scripts/ci/release.ts):
