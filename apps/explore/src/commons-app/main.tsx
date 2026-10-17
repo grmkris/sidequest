@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { acknowledgeDraft, quoteCommonsDraft } from './draft.ts'
 import { parseCommonsAppResult, type CommonsAppView } from './result.ts'
 
-const app = new App({ name: 'Sidequest Commons', version: '1.0.0' }, {}, { strict: true })
+const app = new App({ name: 'Sidequest Commons', version: '1.0.0' }, {}, { strict: true, autoResize: true })
 
 function useCommonsHost() {
   const [view, setView] = useState<CommonsAppView>()
