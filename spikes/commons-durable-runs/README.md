@@ -105,14 +105,14 @@ These are local results only.
 
 ## Why this shape fits the other projects
 
-Source review used Vrials at `659272b`, MyApps/MyPlan at `4512afade`, Sidequest at `1b9d71be`, and the separate swarm-jobs
-spike at `a82c517b`. These are source observations, not fresh deployment acceptance.
+Source review covered a partner's research-swarm simulator, MyPlan's ticket planner, Sidequest at `1b9d71be`, and the separate
+swarm-jobs spike at `a82c517b`. These are source observations, not fresh deployment acceptance.
 
 | Source                                                                                             | Useful idea                                                                                           | Boundary kept here                                                                                              |
 | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Vrials `docs/implementation-report.md`, section 7; `packages/core/src/simulator`                   | A workflow can expose approvals, waits, rework and interruption in plain language.                    | Simulated workers and deliverables must stay visibly simulated.                                                 |
-| Vrials `apps/runtime/src/budget/apollo-budget.ts`                                                  | Reserve worst-case attempt costs before model calls; unresolved attempts do not become free capacity. | This POC has no inference budget or model dispatch; a real executor needs both.                                 |
-| MyPlan `docs/myplan/tickets-apply.md`                                                              | Tickets with dependencies, preview/apply, atomic edits and stable operation receipts.                 | MyPlan dependencies are metadata and may refer to absent items; an executor must separately validate its graph. |
+| A partner's workflow simulator                                                                     | A workflow can expose approvals, waits, rework and interruption in plain language.                    | Simulated workers and deliverables must stay visibly simulated.                                                 |
+| A partner's inference budget                                                                       | Reserve worst-case attempt costs before model calls; unresolved attempts do not become free capacity. | This POC has no inference budget or model dispatch; a real executor needs both.                                 |
+| MyPlan tickets                                                                                     | Tickets with dependencies, preview/apply, atomic edits and stable operation receipts.                 | MyPlan dependencies are metadata and may refer to absent items; an executor must separately validate its graph. |
 | [Commons](../../apps/docs/content/docs/concepts/commons.mdx)                                       | Public discussion, roadmap proposals and linked paid tasks already have distinct roles.               | A discussion or stake vote cannot authorize spending or rewrite a hire.                                         |
 | [Protocol](../../docs/protocol.md), [AA controller](../../apps/explore/src/aa-controller.ts)       | Bilateral hires, immutable accepted terms, persisted operations and reconciliation.                   | Chain state decides earned rights and settlement; journal entries cannot overrule it.                           |
 | [Swarm-jobs spike](https://github.com/grmkris/sidequest/blob/a82c517b/spikes/swarm-jobs/README.md) | Individual seats, workers, judges and rewards; blocked dependents must be excused.                    | Its multi-seat model and one-creator-bond economics are v2 experiments, not current v1 behavior.                |
@@ -158,10 +158,10 @@ boundaries are demonstrated. A new swarm contract is a separate experiment.
 
 ## The workflow display in Commons
 
-Vrials' `packages/core/src/simulator/engine.ts` separates start, advance, approval, forecast and power-cut actions. Its
+A partner's workflow simulator separates start, advance, approval, forecast and power-cut actions. Its
 browser view turns those transitions into a story of which work can proceed and why other work waits. That interaction
 is the inspiration here. This preview uses a deliberately simpler deterministic scheduler and a real local journal,
-not Vrials' probabilistic costs, seeded retries or runtime. The comparison keeps the same plan and rewards in both modes.
+not that simulator's probabilistic costs, seeded retries or runtime. The comparison keeps the same plan and rewards in both modes.
 
 For Commons, put the workflow beside the discussion that proposed it: **plan → simulate → approve → run**. A member should
 be able to inspect prerequisites, workers, acceptance criteria, rewards and estimated critical path before authorizing
