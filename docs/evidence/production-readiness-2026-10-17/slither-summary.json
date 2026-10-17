@@ -1,0 +1,17 @@
+{
+  "tool": "Slither 0.11.6",
+  "success": true,
+  "error": null,
+  "detectors": 102,
+  "contractsAnalyzed": 79,
+  "counts": {
+    "High": 5,
+    "Medium": 37,
+    "Low": 58,
+    "Informational": 164
+  },
+  "rawOutputSha256": "340269e460e00d31a8597d03c99d0caa36eb270b2cb4a873fdfd95fdab931779",
+  "rawOutputLocalPath": "/tmp/sidequest-prod-review-20261017/slither.json",
+  "triage": "findings-general-math.md#highmedium-dispositions",
+  "note": "Findings were emitted; this was not a clean scanner pass."
+}

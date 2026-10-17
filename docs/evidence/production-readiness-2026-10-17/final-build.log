@@ -1,0 +1,1221 @@
+$ turbo run build
+
+   • turbo 2.11.7
+   • Packages in scope: @sidequest/api, @sidequest/arbiter, @sidequest/board, @sidequest/commons, @sidequest/contracts, @sidequest/docs, @sidequest/explore, @sidequest/indexer, @sidequest/indexer-worker, @sidequest/react, @sidequest/sdk, tools
+   • Running build in 12 packages
+   • Remote caching enabled
+
+@sidequest/docs:build: cache miss, executing ad40a767ef5286e3
+@sidequest/docs:build: $ vite build && node scripts/verify-output.mjs
+@sidequest/docs:build: vite v8.3.3 building client environment for production...
+@sidequest/docs:build: [MDX] generated files in 2.502663999999868ms
+@sidequest/docs:build: transforming...
+@sidequest/docs:build: [plugin rolldown:vite-resolve] Module "node:fs/promises" has been externalized for browser compatibility, imported by "/tmp/sidequest-prod-review-check/node_modules/.bun/fumadocs-mdx@15.4.6+469da05d8dedd91a/node_modules/fumadocs-mdx/dist/runtime/server.js". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+@sidequest/docs:build: 
+@sidequest/docs:build: new URL("../../../apps/docs/", import.meta.url) doesn't exist at build time, it will remain unchanged to be resolved at runtime. If this is intended, you can use the /* @vite-ignore */ comment to suppress this warning.
+@sidequest/docs:build: [plugin rolldown:vite-resolve] Module "node:path" has been externalized for browser compatibility, imported by "/tmp/sidequest-prod-review-check/packages/sdk/src/docs-site.ts". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+@sidequest/docs:build: [plugin rolldown:vite-resolve] Module "node:fs" has been externalized for browser compatibility, imported by "/tmp/sidequest-prod-review-check/packages/sdk/src/docs-site.ts". See https://vite.dev/guide/troubleshooting.html#module-externalized-for-browser-compatibility for more details.
+@sidequest/docs:build: ✓ 4714 modules transformed.
+@sidequest/docs:build: rendering chunks...
+@sidequest/docs:build: computing gzip size...
+@sidequest/docs:build: dist/client/docs/_assets/geist-cyrillic-ext-wght-normal-DjL33-gN.woff2                        7.42 kB
+@sidequest/docs:build: dist/client/docs/_assets/geist-vietnamese-wght-normal-6IgcOCM7.woff2                          8.00 kB
+@sidequest/docs:build: dist/client/docs/_assets/geist-cyrillic-wght-normal-BEAKL7Jp.woff2                           15.08 kB
+@sidequest/docs:build: dist/client/docs/_assets/geist-latin-ext-wght-normal-DC-KSUi6.woff2                          16.51 kB
+@sidequest/docs:build: dist/client/docs/_assets/geist-latin-wght-normal-BgDaEnEv.woff2                              29.40 kB
+@sidequest/docs:build: dist/client/docs/_assets/app-BeJvcfH7.css                                                    89.67 kB │ gzip:  15.19 kB
+@sidequest/docs:build: dist/client/docs/_assets/fetch-BKr43LCC.js                                                    0.06 kB │ gzip:   0.07 kB
+@sidequest/docs:build: dist/client/docs/_assets/not-found-CxmF2-Gh.js                                                0.07 kB │ gzip:   0.08 kB
+@sidequest/docs:build: dist/client/docs/_assets/__vite-browser-external-Cl-YgGEM.js                                  0.07 kB │ gzip:   0.09 kB
+@sidequest/docs:build: dist/client/docs/_assets/server.browser-5SZ9-aug.js                                           0.07 kB │ gzip:   0.09 kB
+@sidequest/docs:build: dist/client/docs/_assets/__vite-browser-external-BbTE95wW.js                                  0.09 kB │ gzip:   0.10 kB
+@sidequest/docs:build: dist/client/docs/_assets/orama-static-CevPoUa8.js                                             0.09 kB │ gzip:   0.09 kB
+@sidequest/docs:build: dist/client/docs/_assets/server.browser-C1ktSDRZ.js                                           0.23 kB │ gzip:   0.16 kB
+@sidequest/docs:build: dist/client/docs/_assets/url-BVHvi3_K-CJAms2v1.js                                             0.30 kB │ gzip:   0.19 kB
+@sidequest/docs:build: dist/client/docs/_assets/remove-undefined-CzMSKybq-CUTPf38U.js                                0.34 kB │ gzip:   0.22 kB
+@sidequest/docs:build: dist/client/docs/_assets/jsx-runtime-NZYk81nU.js                                              0.43 kB │ gzip:   0.30 kB
+@sidequest/docs:build: dist/client/docs/_assets/fetch-B1C4rST5.js                                                    0.49 kB │ gzip:   0.34 kB
+@sidequest/docs:build: dist/client/docs/_assets/rolldown-runtime-hePW80VL.js                                         0.71 kB │ gzip:   0.42 kB
+@sidequest/docs:build: dist/client/docs/_assets/algolia-DKr0nUCN.js                                                  0.75 kB │ gzip:   0.47 kB
+@sidequest/docs:build: dist/client/docs/_assets/search-Bmm3eh8L.js                                                   0.99 kB │ gzip:   0.53 kB
+@sidequest/docs:build: dist/client/docs/_assets/orama-cloud-legacy-B88UsCk5.js                                       1.11 kB │ gzip:   0.58 kB
+@sidequest/docs:build: dist/client/docs/_assets/orama-cloud-BCyb3L5P.js                                              1.17 kB │ gzip:   0.60 kB
+@sidequest/docs:build: dist/client/docs/_assets/not-found-DvZE9WzF.js                                                1.19 kB │ gzip:   0.55 kB
+@sidequest/docs:build: dist/client/docs/_assets/search-default-DJV6H48b.js                                           1.66 kB │ gzip:   0.86 kB
+@sidequest/docs:build: dist/client/docs/_assets/get-sponsored.mdx_macro_id_src_2Flib_2Fsource-DWpnO2xA.js            8.11 kB │ gzip:   1.83 kB
+@sidequest/docs:build: dist/client/docs/_assets/roles.mdx_macro_id_src_2Flib_2Fsource-BBGxUu7j.js                    8.80 kB │ gzip:   1.94 kB
+@sidequest/docs:build: dist/client/docs/_assets/mixedbread-BNPVBZe6.js                                               9.26 kB │ gzip:   4.12 kB
+@sidequest/docs:build: dist/client/docs/_assets/arbitrate.mdx_macro_id_src_2Flib_2Fsource-CXwQb8LZ.js               10.53 kB │ gzip:   2.25 kB
+@sidequest/docs:build: dist/client/docs/_assets/addresses.mdx_macro_id_src_2Flib_2Fsource-qhdLq5rw.js               10.78 kB │ gzip:   2.17 kB
+@sidequest/docs:build: dist/client/docs/_assets/faq.mdx_macro_id_src_2Flib_2Fsource-D9E7YrYT.js                     10.94 kB │ gzip:   2.30 kB
+@sidequest/docs:build: dist/client/docs/_assets/sponsorship.mdx_macro_id_src_2Flib_2Fsource-C_KLnwww.js             11.45 kB │ gzip:   2.38 kB
+@sidequest/docs:build: dist/client/docs/_assets/governance.mdx_macro_id_src_2Flib_2Fsource-F20QIK9T.js              11.49 kB │ gzip:   2.36 kB
+@sidequest/docs:build: dist/client/docs/_assets/known-issues.mdx_macro_id_src_2Flib_2Fsource-CmQFGDVx.js            11.67 kB │ gzip:   2.39 kB
+@sidequest/docs:build: dist/client/docs/_assets/react-dom-BvuGKBlP.js                                               11.67 kB │ gzip:   4.08 kB
+@sidequest/docs:build: dist/client/docs/_assets/execution-budgets.mdx_macro_id_src_2Flib_2Fsource-Bk9kAHGw.js       11.70 kB │ gzip:   2.47 kB
+@sidequest/docs:build: dist/client/docs/_assets/boards.mdx_macro_id_src_2Flib_2Fsource-psXVtgbE.js                  12.39 kB │ gzip:   2.51 kB
+@sidequest/docs:build: dist/client/docs/_assets/trust.mdx_macro_id_src_2Flib_2Fsource-CzAWL5AZ.js                   13.15 kB │ gzip:   2.59 kB
+@sidequest/docs:build: dist/client/docs/_assets/money.mdx_macro_id_src_2Flib_2Fsource-Co3DR7t6.js                   13.70 kB │ gzip:   3.10 kB
+@sidequest/docs:build: dist/client/docs/_assets/commons.mdx_macro_id_src_2Flib_2Fsource-sjl-pKz1.js                 15.83 kB │ gzip:   3.28 kB
+@sidequest/docs:build: dist/client/docs/_assets/index.mdx_macro_id_src_2Flib_2Fsource-eL5L85Et.js                   16.37 kB │ gzip:   3.34 kB
+@sidequest/docs:build: dist/client/docs/_assets/agents.mdx_macro_id_src_2Flib_2Fsource-DL5rz5bd.js                  17.57 kB │ gzip:   3.31 kB
+@sidequest/docs:build: dist/client/docs/_assets/work.mdx_macro_id_src_2Flib_2Fsource-C7zvFWUR.js                    20.15 kB │ gzip:   3.69 kB
+@sidequest/docs:build: dist/client/docs/_assets/token.mdx_macro_id_src_2Flib_2Fsource-C5HTF-qX.js                   20.27 kB │ gzip:   3.87 kB
+@sidequest/docs:build: dist/client/docs/_assets/app.mdx_macro_id_src_2Flib_2Fsource-DZj30N6W.js                     22.81 kB │ gzip:   4.31 kB
+@sidequest/docs:build: dist/client/docs/_assets/http-api.mdx_macro_id_src_2Flib_2Fsource-DYidbLED.js                24.22 kB │ gzip:   4.78 kB
+@sidequest/docs:build: dist/client/docs/_assets/hires.mdx_macro_id_src_2Flib_2Fsource-DuhT06Ft.js                   24.44 kB │ gzip:   4.53 kB
+@sidequest/docs:build: dist/client/docs/_assets/hire.mdx_macro_id_src_2Flib_2Fsource-CvSCuqtk.js                    25.90 kB │ gzip:   4.42 kB
+@sidequest/docs:build: dist/client/docs/_assets/crew.mdx_macro_id_src_2Flib_2Fsource-CS2Lrowm.js                    28.39 kB │ gzip:   4.92 kB
+@sidequest/docs:build: dist/client/docs/_assets/bonds-and-staking.mdx_macro_id_src_2Flib_2Fsource-BekNZop1.js       29.23 kB │ gzip:   5.09 kB
+@sidequest/docs:build: dist/client/docs/_assets/quickstart.mdx_macro_id_src_2Flib_2Fsource-CONEiAd6.js              41.86 kB │ gzip:   6.22 kB
+@sidequest/docs:build: dist/client/docs/_assets/commons-presentations.mdx_macro_id_src_2Flib_2Fsource-DE-Kt4jv.js   46.47 kB │ gzip:   6.49 kB
+@sidequest/docs:build: dist/client/docs/_assets/glossary.mdx_macro_id_src_2Flib_2Fsource-C2oUGpQy.js                57.48 kB │ gzip:   8.26 kB
+@sidequest/docs:build: dist/client/docs/_assets/orama-static-Ay6eg01k.js                                            74.70 kB │ gzip:  26.00 kB
+@sidequest/docs:build: dist/client/docs/_assets/dist-5ZxRnlWK.js                                                    95.37 kB │ gzip:  35.20 kB
+@sidequest/docs:build: dist/client/docs/_assets/remark-BdS2G4s7.js                                                  96.79 kB │ gzip:  28.25 kB
+@sidequest/docs:build: dist/client/docs/_assets/mcp.mdx_macro_id_src_2Flib_2Fsource-B1JANUb7.js                    151.58 kB │ gzip:  38.73 kB
+@sidequest/docs:build: dist/client/docs/_assets/_-BHAQDe3v.js                                                      155.77 kB │ gzip:  51.34 kB
+@sidequest/docs:build: dist/client/docs/_assets/server.edge-BjeRW_nN.js                                            207.68 kB │ gzip:  63.45 kB
+@sidequest/docs:build: dist/client/docs/_assets/self-run.mdx_macro_id_src_2Flib_2Fsource-CXhVNjaf.js               212.48 kB │ gzip:  20.45 kB
+@sidequest/docs:build: dist/client/docs/_assets/search-N9vqMMpM.js                                                 229.29 kB │ gzip:  71.75 kB
+@sidequest/docs:build: dist/client/docs/_assets/index-BYlkbEDV.js                                                  281.14 kB │ gzip:  90.38 kB
+@sidequest/docs:build: dist/client/docs/_assets/_-dUnJxOdV.js                                                      712.46 kB │ gzip: 194.22 kB
+@sidequest/docs:build: 
+@sidequest/docs:build: [plugin builtin:vite-reporter] 
+@sidequest/docs:build: (!) Some chunks are larger than 500 kB after minification. Consider:
+@sidequest/docs:build: - Using dynamic import() to code-split the application
+@sidequest/docs:build: - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+@sidequest/docs:build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+@sidequest/docs:build: ✓ built in 3.62s
+@sidequest/docs:build: vite v8.3.3 building ssr environment for production...
+@sidequest/docs:build: [MDX] generated files in 1.1093590000000404ms
+@sidequest/docs:build: transforming...
+@sidequest/docs:build: ✓ 4482 modules transformed.
+@sidequest/docs:build: rendering chunks...
+@sidequest/docs:build: computing gzip size...
+@sidequest/docs:build: dist/server/docs/_assets/fetch-BOMPFjzN.js                                                      0.08 kB │ gzip:   0.08 kB
+@sidequest/docs:build: dist/server/docs/_assets/server-BA-28Zxk.js                                                     0.09 kB │ gzip:   0.09 kB
+@sidequest/docs:build: dist/server/docs/_assets/orama-static-DV_Ht2u3.js                                               0.13 kB │ gzip:   0.10 kB
+@sidequest/docs:build: dist/server/docs/_assets/not-found-Ctz4GWkn.js                                                  0.20 kB │ gzip:   0.15 kB
+@sidequest/docs:build: dist/server/docs/_assets/start-CkIaFt6p.js                                                      0.21 kB │ gzip:   0.17 kB
+@sidequest/docs:build: dist/server/docs/_assets/empty-plugin-adapters-BiS8JcEA.js                                      0.30 kB │ gzip:   0.20 kB
+@sidequest/docs:build: dist/server/docs/_assets/url-BVHvi3_K-DPhlB-6M.js                                               0.72 kB │ gzip:   0.43 kB
+@sidequest/docs:build: dist/server/docs/_assets/__23tanstack-start-server-fn-resolver-CM-2nKs7.js                      0.76 kB │ gzip:   0.42 kB
+@sidequest/docs:build: dist/server/docs/_assets/remove-undefined-CzMSKybq-DM9JcSou.js                                  0.83 kB │ gzip:   0.41 kB
+@sidequest/docs:build: dist/server/docs/_assets/fetch--Q3VZchX.js                                                      0.94 kB │ gzip:   0.54 kB
+@sidequest/docs:build: dist/server/docs/_assets/_tanstack-start-manifest_v-2jvlxNCj.js                                 1.29 kB │ gzip:   0.55 kB
+@sidequest/docs:build: dist/server/docs/_assets/remark-V_UvvFW0.js                                                     1.35 kB │ gzip:   0.61 kB
+@sidequest/docs:build: dist/server/docs/_assets/_-Cu7SrpiW.js                                                          1.46 kB │ gzip:   0.74 kB
+@sidequest/docs:build: dist/server/docs/_assets/algolia-BVxNga13.js                                                    1.49 kB │ gzip:   0.73 kB
+@sidequest/docs:build: dist/server/docs/_assets/not-found-QLX7Qf9p.js                                                  1.52 kB │ gzip:   0.63 kB
+@sidequest/docs:build: dist/server/docs/_assets/rolldown-runtime-B4iAMlE-.js                                           1.58 kB │ gzip:   0.74 kB
+@sidequest/docs:build: dist/server/docs/_assets/search-BXaNAFeQ.js                                                     2.16 kB │ gzip:   0.93 kB
+@sidequest/docs:build: dist/server/docs/_assets/orama-cloud-legacy-CrPAYWay.js                                         2.25 kB │ gzip:   0.89 kB
+@sidequest/docs:build: dist/server/docs/_assets/orama-cloud-D7rOSqIZ.js                                                2.31 kB │ gzip:   0.90 kB
+@sidequest/docs:build: dist/server/docs/_assets/search-default-BcOezt3f.js                                             2.36 kB │ gzip:   0.98 kB
+@sidequest/docs:build: dist/server/docs/_assets/get-sponsored.mdx_macro_id_src_2Flib_2Fsource-DfiPRFDn.js              9.10 kB │ gzip:   2.01 kB
+@sidequest/docs:build: dist/server/docs/_assets/roles.mdx_macro_id_src_2Flib_2Fsource-Dh8_GlIF.js                     10.22 kB │ gzip:   2.12 kB
+@sidequest/docs:build: dist/server/docs/_assets/mixedbread-DE5gZ-Gc.js                                                11.82 kB │ gzip:   5.03 kB
+@sidequest/docs:build: dist/server/docs/_assets/arbitrate.mdx_macro_id_src_2Flib_2Fsource-jWfdVrJz.js                 11.93 kB │ gzip:   2.42 kB
+@sidequest/docs:build: dist/server/docs/_assets/faq.mdx_macro_id_src_2Flib_2Fsource-DPC_WHJu.js                       12.59 kB │ gzip:   2.48 kB
+@sidequest/docs:build: dist/server/docs/_assets/sponsorship.mdx_macro_id_src_2Flib_2Fsource-BfVQ2PDd.js               12.66 kB │ gzip:   2.49 kB
+@sidequest/docs:build: dist/server/docs/_assets/governance.mdx_macro_id_src_2Flib_2Fsource-Cz0YJlNV.js                12.88 kB │ gzip:   2.55 kB
+@sidequest/docs:build: dist/server/docs/_assets/known-issues.mdx_macro_id_src_2Flib_2Fsource-DxVRnVBY.js              12.94 kB │ gzip:   2.57 kB
+@sidequest/docs:build: dist/server/docs/_assets/addresses.mdx_macro_id_src_2Flib_2Fsource-DamnmTT-.js                 13.12 kB │ gzip:   2.38 kB
+@sidequest/docs:build: dist/server/docs/_assets/execution-budgets.mdx_macro_id_src_2Flib_2Fsource-De3wL3Cj.js         13.54 kB │ gzip:   2.61 kB
+@sidequest/docs:build: dist/server/docs/_assets/server-Bd6CCdsS.js                                                    13.76 kB │ gzip:   4.76 kB
+@sidequest/docs:build: dist/server/docs/_assets/trust.mdx_macro_id_src_2Flib_2Fsource-C_GSgWrB.js                     14.53 kB │ gzip:   2.76 kB
+@sidequest/docs:build: dist/server/docs/_assets/boards.mdx_macro_id_src_2Flib_2Fsource-Bx4z_rf3.js                    14.55 kB │ gzip:   2.72 kB
+@sidequest/docs:build: dist/server/docs/_assets/money.mdx_macro_id_src_2Flib_2Fsource-CmX4L9PW.js                     15.32 kB │ gzip:   3.25 kB
+@sidequest/docs:build: dist/server/docs/_assets/commons.mdx_macro_id_src_2Flib_2Fsource-BIDh8Nbs.js                   17.84 kB │ gzip:   3.37 kB
+@sidequest/docs:build: dist/server/docs/_assets/agents.mdx_macro_id_src_2Flib_2Fsource-CPPNtn0k.js                    19.16 kB │ gzip:   3.43 kB
+@sidequest/docs:build: dist/server/docs/_assets/index.mdx_macro_id_src_2Flib_2Fsource-SlntkXv2.js                     19.61 kB │ gzip:   3.56 kB
+@sidequest/docs:build: dist/server/docs/_assets/token.mdx_macro_id_src_2Flib_2Fsource-FUTN7Oju.js                     22.77 kB │ gzip:   4.13 kB
+@sidequest/docs:build: dist/server/docs/_assets/work.mdx_macro_id_src_2Flib_2Fsource-WAw2HdA7.js                      24.58 kB │ gzip:   4.02 kB
+@sidequest/docs:build: dist/server/docs/_assets/app.mdx_macro_id_src_2Flib_2Fsource-9IMIrxIS.js                       24.94 kB │ gzip:   4.52 kB
+@sidequest/docs:build: dist/server/docs/_assets/hires.mdx_macro_id_src_2Flib_2Fsource-VUAWEW-m.js                     27.48 kB │ gzip:   4.70 kB
+@sidequest/docs:build: dist/server/docs/_assets/http-api.mdx_macro_id_src_2Flib_2Fsource-DQXKHZTx.js                  27.88 kB │ gzip:   5.09 kB
+@sidequest/docs:build: dist/server/docs/_assets/hire.mdx_macro_id_src_2Flib_2Fsource-Bx288WOp.js                      32.36 kB │ gzip:   4.77 kB
+@sidequest/docs:build: dist/server/docs/_assets/crew.mdx_macro_id_src_2Flib_2Fsource-D1tN89dG.js                      32.87 kB │ gzip:   5.16 kB
+@sidequest/docs:build: dist/server/docs/_assets/bonds-and-staking.mdx_macro_id_src_2Flib_2Fsource-BC9R-N9w.js         33.87 kB │ gzip:   5.32 kB
+@sidequest/docs:build: dist/server/docs/_assets/router-DFuTLhbd.js                                                    34.58 kB │ gzip:   8.51 kB
+@sidequest/docs:build: dist/server/docs/_assets/quickstart.mdx_macro_id_src_2Flib_2Fsource-D8udu-EB.js                52.00 kB │ gzip:   7.20 kB
+@sidequest/docs:build: dist/server/docs/_assets/commons-presentations.mdx_macro_id_src_2Flib_2Fsource-DHNvHdCj.js     60.97 kB │ gzip:   8.29 kB
+@sidequest/docs:build: dist/server/docs/_assets/glossary.mdx_macro_id_src_2Flib_2Fsource-CjX8OOYA.js                  67.12 kB │ gzip:   8.48 kB
+@sidequest/docs:build: dist/server/docs/_assets/_-iCiRws0i.js                                                         91.37 kB │ gzip:  23.32 kB
+@sidequest/docs:build: dist/server/docs/_assets/createMiddleware-BMClaFMF.js                                         119.38 kB │ gzip:  25.60 kB
+@sidequest/docs:build: dist/server/server.js                                                                         129.76 kB │ gzip:  33.32 kB
+@sidequest/docs:build: dist/server/docs/_assets/orama-static-CUwgKO0I.js                                             156.50 kB │ gzip:  37.87 kB
+@sidequest/docs:build: dist/server/docs/_assets/mcp.mdx_macro_id_src_2Flib_2Fsource-BAl8xben.js                      176.12 kB │ gzip:  40.11 kB
+@sidequest/docs:build: dist/server/docs/_assets/dist-CR3zFyFI.js                                                     243.25 kB │ gzip:  62.94 kB
+@sidequest/docs:build: dist/server/docs/_assets/_-SIW9Qu7y.js                                                        292.79 kB │ gzip:  65.96 kB
+@sidequest/docs:build: dist/server/docs/_assets/self-run.mdx_macro_id_src_2Flib_2Fsource-q1hS_E7S.js                 328.62 kB │ gzip:  22.24 kB
+@sidequest/docs:build: dist/server/docs/_assets/search-CXQfpgEE.js                                                   466.74 kB │ gzip: 109.22 kB
+@sidequest/docs:build: dist/server/docs/_assets/staticFunctionMiddleware-DyXRQg9l.js                               1,576.84 kB │ gzip: 210.55 kB
+@sidequest/docs:build: 
+@sidequest/docs:build: ✓ built in 2.51s
+@sidequest/docs:build: [prerender] Prerendering pages...
+@sidequest/docs:build: [prerender] Concurrency: 16
+@sidequest/docs:build: [prerender] Crawling: /docs/app
+@sidequest/docs:build: [prerender] Crawling: /docs/app.md
+@sidequest/docs:build: [prerender] Crawling: /docs/crew
+@sidequest/docs:build: [prerender] Crawling: /docs/crew.md
+@sidequest/docs:build: [prerender] Crawling: /docs/faq
+@sidequest/docs:build: [prerender] Crawling: /docs/faq.md
+@sidequest/docs:build: [prerender] Crawling: /docs/governance
+@sidequest/docs:build: [prerender] Crawling: /docs/governance.md
+@sidequest/docs:build: [prerender] Crawling: /docs
+@sidequest/docs:build: [prerender] Crawling: /docs/index.md
+@sidequest/docs:build: [prerender] Crawling: /docs/known-issues
+@sidequest/docs:build: [prerender] Crawling: /docs/known-issues.md
+@sidequest/docs:build: [prerender] Crawling: /docs/quickstart
+@sidequest/docs:build: [prerender] Crawling: /docs/quickstart.md
+@sidequest/docs:build: [prerender] Crawling: /docs/token
+@sidequest/docs:build: [prerender] Crawling: /docs/token.md
+@sidequest/docs:build: [prerender] Crawling: /docs/trust
+@sidequest/docs:build: [prerender] Crawling: /docs/trust.md
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/agents
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/agents.md
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/bonds-and-staking
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/bonds-and-staking.md
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/commons
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/commons.md
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/execution-budgets
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/execution-budgets.md
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/hires
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/hires.md
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/money
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/money.md
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/roles
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/roles.md
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/sponsorship
+@sidequest/docs:build: [prerender] Crawling: /docs/concepts/sponsorship.md
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/arbitrate
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/arbitrate.md
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/boards
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/boards.md
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/get-sponsored
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/get-sponsored.md
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/hire
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/hire.md
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/self-run
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/self-run.md
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/work
+@sidequest/docs:build: [prerender] Crawling: /docs/guides/work.md
+@sidequest/docs:build: [prerender] Crawling: /docs/reference/addresses
+@sidequest/docs:build: [prerender] Crawling: /docs/reference/addresses.md
+@sidequest/docs:build: [prerender] Crawling: /docs/reference/commons-presentations
+@sidequest/docs:build: [prerender] Crawling: /docs/reference/commons-presentations.md
+@sidequest/docs:build: [prerender] Crawling: /docs/reference/glossary
+@sidequest/docs:build: [prerender] Crawling: /docs/reference/glossary.md
+@sidequest/docs:build: [prerender] Crawling: /docs/reference/http-api
+@sidequest/docs:build: [prerender] Crawling: /docs/reference/http-api.md
+@sidequest/docs:build: [prerender] Crawling: /docs/reference/mcp
+@sidequest/docs:build: [prerender] Crawling: /docs/reference/mcp.md
+@sidequest/docs:build: [prerender] Crawling: /docs/not-found
+@sidequest/docs:build: [prerender] Crawling: /docs/search.json
+@sidequest/docs:build: [prerender] Crawling: /llms.txt
+@sidequest/docs:build: [prerender] Crawling: /llms-full.txt
+@sidequest/docs:build: [prerender] Crawling: /docs/governance#related-parties
+@sidequest/docs:build: [prerender] Prerendered 61 pages:
+@sidequest/docs:build: [prerender] - /docs/app.md
+@sidequest/docs:build: [prerender] - /docs/crew.md
+@sidequest/docs:build: [prerender] - /docs/faq.md
+@sidequest/docs:build: [prerender] - /docs/governance.md
+@sidequest/docs:build: [prerender] - /docs/crew
+@sidequest/docs:build: [prerender] - /docs/faq
+@sidequest/docs:build: [prerender] - /docs/index.md
+@sidequest/docs:build: [prerender] - /docs/governance
+@sidequest/docs:build: [prerender] - /docs/known-issues.md
+@sidequest/docs:build: [prerender] - /docs
+@sidequest/docs:build: [prerender] - /docs/quickstart.md
+@sidequest/docs:build: [prerender] - /docs/trust.md
+@sidequest/docs:build: [prerender] - /docs/known-issues
+@sidequest/docs:build: [prerender] - /docs/token.md
+@sidequest/docs:build: [prerender] - /docs/quickstart
+@sidequest/docs:build: [prerender] - /docs/trust
+@sidequest/docs:build: [prerender] - /docs/concepts/agents.md
+@sidequest/docs:build: [prerender] - /docs/token
+@sidequest/docs:build: [prerender] - /docs/app
+@sidequest/docs:build: [prerender] - /docs/concepts/bonds-and-staking.md
+@sidequest/docs:build: [prerender] - /docs/concepts/commons.md
+@sidequest/docs:build: [prerender] - /docs/concepts/agents
+@sidequest/docs:build: [prerender] - /docs/concepts/execution-budgets.md
+@sidequest/docs:build: [prerender] - /docs/concepts/bonds-and-staking
+@sidequest/docs:build: [prerender] - /docs/concepts/commons
+@sidequest/docs:build: [prerender] - /docs/concepts/hires.md
+@sidequest/docs:build: [prerender] - /docs/concepts/money.md
+@sidequest/docs:build: [prerender] - /docs/concepts/execution-budgets
+@sidequest/docs:build: [prerender] - /docs/concepts/roles.md
+@sidequest/docs:build: [prerender] - /docs/concepts/sponsorship.md
+@sidequest/docs:build: [prerender] - /docs/concepts/hires
+@sidequest/docs:build: [prerender] - /docs/guides/arbitrate.md
+@sidequest/docs:build: [prerender] - /docs/concepts/money
+@sidequest/docs:build: [prerender] - /docs/concepts/roles
+@sidequest/docs:build: [prerender] - /docs/guides/boards.md
+@sidequest/docs:build: [prerender] - /docs/concepts/sponsorship
+@sidequest/docs:build: [prerender] - /docs/guides/arbitrate
+@sidequest/docs:build: [prerender] - /docs/guides/get-sponsored.md
+@sidequest/docs:build: [prerender] - /docs/guides/hire.md
+@sidequest/docs:build: [prerender] - /docs/guides/boards
+@sidequest/docs:build: [prerender] - /docs/guides/self-run.md
+@sidequest/docs:build: [prerender] - /docs/guides/get-sponsored
+@sidequest/docs:build: [prerender] - /docs/reference/addresses.md
+@sidequest/docs:build: [prerender] - /docs/guides/hire
+@sidequest/docs:build: [prerender] - /docs/guides/work.md
+@sidequest/docs:build: [prerender] - /docs/reference/commons-presentations.md
+@sidequest/docs:build: [prerender] - /docs/guides/self-run
+@sidequest/docs:build: [prerender] - /docs/guides/work
+@sidequest/docs:build: [prerender] - /docs/reference/glossary.md
+@sidequest/docs:build: [prerender] - /docs/reference/addresses
+@sidequest/docs:build: [prerender] - /docs/reference/http-api.md
+@sidequest/docs:build: [prerender] - /docs/reference/commons-presentations
+@sidequest/docs:build: [prerender] - /docs/not-found
+@sidequest/docs:build: [prerender] - /docs/reference/glossary
+@sidequest/docs:build: [prerender] - /docs/reference/http-api
+@sidequest/docs:build: [prerender] - /llms.txt
+@sidequest/docs:build: [prerender] - /docs/reference/mcp.md
+@sidequest/docs:build: [prerender] - /docs/reference/mcp
+@sidequest/docs:build: [prerender] - /docs/governance#related-parties
+@sidequest/docs:build: [prerender] - /llms-full.txt
+@sidequest/docs:build: [prerender] - /docs/search.json
+@sidequest/docs:build: verified 60 docs outputs, assets, cache, and Markdown in /tmp/sidequest-prod-review-check/apps/docs/dist/client
+@sidequest/explore:build: cache miss, executing 5e4b514d5a0a6182
+@sidequest/explore:build: $ SIDEQUEST_DOCS_PREBUILT=1 vite build
+@sidequest/explore:build: vite v8.3.3 building client environment for production...
+@sidequest/explore:build: verified 60 docs outputs, assets, cache, and Markdown in /tmp/sidequest-prod-review-check/apps/docs/dist/client
+@sidequest/explore:build: transforming...
+@sidequest/explore:build: ✓ 14516 modules transformed.
+@sidequest/explore:build: rendering chunks...
+@sidequest/explore:build: computing gzip size...
+@sidequest/explore:build: dist/docs/_assets/fetch-BKr43LCC.js                                                      0.06 kB
+@sidequest/explore:build: dist/docs/_assets/not-found-CxmF2-Gh.js                                                  0.07 kB
+@sidequest/explore:build: dist/docs/_assets/__vite-browser-external-Cl-YgGEM.js                                    0.07 kB
+@sidequest/explore:build: dist/release.json                                                                        0.07 kB │ gzip:   0.08 kB
+@sidequest/explore:build: dist/docs/_assets/server.browser-5SZ9-aug.js                                             0.07 kB
+@sidequest/explore:build: dist/docs/_assets/__vite-browser-external-BbTE95wW.js                                    0.09 kB
+@sidequest/explore:build: dist/docs/_assets/orama-static-CevPoUa8.js                                               0.09 kB
+@sidequest/explore:build: dist/docs/_assets/server.browser-C1ktSDRZ.js                                             0.23 kB
+@sidequest/explore:build: dist/docs/_assets/url-BVHvi3_K-CJAms2v1.js                                               0.30 kB
+@sidequest/explore:build: dist/docs/_assets/remove-undefined-CzMSKybq-CUTPf38U.js                                  0.34 kB
+@sidequest/explore:build: dist/docs/_assets/jsx-runtime-NZYk81nU.js                                                0.43 kB
+@sidequest/explore:build: dist/docs/_assets/fetch-B1C4rST5.js                                                      0.49 kB
+@sidequest/explore:build: dist/docs/_assets/rolldown-runtime-hePW80VL.js                                           0.71 kB
+@sidequest/explore:build: dist/docs/_assets/algolia-DKr0nUCN.js                                                    0.75 kB
+@sidequest/explore:build: dist/manifest.webmanifest                                                                0.80 kB
+@sidequest/explore:build: dist/docs/_assets/search-Bmm3eh8L.js                                                     0.99 kB
+@sidequest/explore:build: dist/docs/_assets/orama-cloud-legacy-B88UsCk5.js                                         1.11 kB
+@sidequest/explore:build: dist/docs/_assets/orama-cloud-BCyb3L5P.js                                                1.17 kB
+@sidequest/explore:build: dist/docs/_assets/not-found-DvZE9WzF.js                                                  1.19 kB
+@sidequest/explore:build: dist/docs/_assets/search-default-DJV6H48b.js                                             1.66 kB
+@sidequest/explore:build: dist/docs/reference/addresses.md                                                         2.08 kB
+@sidequest/explore:build: dist/docs/guides/get-sponsored.md                                                        2.16 kB
+@sidequest/explore:build: dist/docs/concepts/roles.md                                                              2.42 kB
+@sidequest/explore:build: dist/docs/guides/arbitrate.md                                                            2.61 kB
+@sidequest/explore:build: dist/docs/faq.md                                                                         2.67 kB
+@sidequest/explore:build: dist/docs/concepts/execution-budgets.md                                                  2.98 kB
+@sidequest/explore:build: dist/docs/concepts/sponsorship.md                                                        3.01 kB
+@sidequest/explore:build: dist/docs/guides/boards.md                                                               3.01 kB
+@sidequest/explore:build: dist/docs/governance.md                                                                  3.04 kB
+@sidequest/explore:build: dist/docs/known-issues.md                                                                3.13 kB
+@sidequest/explore:build: dist/docs/concepts/money.md                                                              3.47 kB
+@sidequest/explore:build: dist/docs/trust.md                                                                       3.55 kB
+@sidequest/explore:build: dist/docs/index.md                                                                       3.75 kB
+@sidequest/explore:build: dist/docs/guides/work.md                                                                 3.86 kB
+@sidequest/explore:build: dist/docs/not-found.html                                                                 4.15 kB │ gzip:   1.77 kB
+@sidequest/explore:build: dist/docs/concepts/commons.md                                                            4.27 kB
+@sidequest/explore:build: dist/llms.txt                                                                            4.37 kB │ gzip:   1.70 kB
+@sidequest/explore:build: dist/skills/arbitrator/SKILL.md                                                          4.89 kB
+@sidequest/explore:build: dist/docs/concepts/agents.md                                                             4.93 kB
+@sidequest/explore:build: dist/docs/guides/hire.md                                                                 5.19 kB
+@sidequest/explore:build: dist/docs/token.md                                                                       5.45 kB
+@sidequest/explore:build: dist/docs/reference/http-api.md                                                          5.69 kB
+@sidequest/explore:build: dist/docs/concepts/hires.md                                                              6.38 kB
+@sidequest/explore:build: dist/docs/app.md                                                                         6.54 kB
+@sidequest/explore:build: dist/index.html                                                                          7.12 kB │ gzip:   1.88 kB
+@sidequest/explore:build: dist/docs/concepts/bonds-and-staking.md                                                  7.21 kB
+@sidequest/explore:build: dist/assets/geist-cyrillic-ext-wght-normal-DjL33-gN.woff2                                7.42 kB
+@sidequest/explore:build: dist/docs/_assets/geist-cyrillic-ext-wght-normal-DjL33-gN.woff2                          7.42 kB
+@sidequest/explore:build: dist/skills/self-run/SKILL.md                                                            7.62 kB
+@sidequest/explore:build: dist/docs/crew.md                                                                        7.78 kB
+@sidequest/explore:build: dist/assets/geist-vietnamese-wght-normal-6IgcOCM7.woff2                                  8.00 kB
+@sidequest/explore:build: dist/docs/_assets/geist-vietnamese-wght-normal-6IgcOCM7.woff2                            8.00 kB
+@sidequest/explore:build: dist/docs/_assets/get-sponsored.mdx_macro_id_src_2Flib_2Fsource-DWpnO2xA.js              8.11 kB
+@sidequest/explore:build: dist/docs/quickstart.md                                                                  8.23 kB
+@sidequest/explore:build: dist/docs/reference/commons-presentations.md                                             8.43 kB
+@sidequest/explore:build: dist/assets/8-anCr4LJX.webp                                                              8.59 kB
+@sidequest/explore:build: dist/skills/connector/SKILL.md                                                           8.63 kB
+@sidequest/explore:build: dist/docs/_assets/roles.mdx_macro_id_src_2Flib_2Fsource-BBGxUu7j.js                      8.80 kB
+@sidequest/explore:build: dist/docs/_assets/mixedbread-BNPVBZe6.js                                                 9.26 kB
+@sidequest/explore:build: dist/skills/publisher/SKILL.md                                                           9.51 kB
+@sidequest/explore:build: dist/assets/11-D40Wf-4t.webp                                                             9.69 kB
+@sidequest/explore:build: dist/docs/_assets/arbitrate.mdx_macro_id_src_2Flib_2Fsource-CXwQb8LZ.js                 10.53 kB
+@sidequest/explore:build: dist/assets/9-DXi20uK0.webp                                                             10.71 kB
+@sidequest/explore:build: dist/docs/_assets/addresses.mdx_macro_id_src_2Flib_2Fsource-qhdLq5rw.js                 10.78 kB
+@sidequest/explore:build: dist/docs/_assets/faq.mdx_macro_id_src_2Flib_2Fsource-D9E7YrYT.js                       10.94 kB
+@sidequest/explore:build: dist/docs/_assets/sponsorship.mdx_macro_id_src_2Flib_2Fsource-C_KLnwww.js               11.45 kB
+@sidequest/explore:build: dist/docs/_assets/governance.mdx_macro_id_src_2Flib_2Fsource-F20QIK9T.js                11.49 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/039c615051775fbac2a0c780ea442df5709f1ad1.json            11.55 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/1dd026351ae3f6429c37056e15b8978bf7791303.json            11.55 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/21d4e7d3f457cd0b445bbc94a08854f6bf43de11.json            11.55 kB │ gzip:   2.44 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/a039bd1fa350c37e1a97c45da3cbc3d1298d1aa9.json            11.55 kB │ gzip:   2.46 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/16d79aa0500c7e90c38447dfcd4a3b7657a5f921.json            11.56 kB │ gzip:   2.46 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/9be6e8d43bcd62cbaa7956c203145d9c736121c3.json            11.57 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/9155088dffc1beff46a491d77c4ee8cdc15c5ec3.json            11.57 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/cb00d6842639a917ae87cef83def578071c42f59.json            11.58 kB │ gzip:   2.46 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/ea55734496712f9316cf85908e0b08544166423e.json            11.59 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/2293b2846319c9beed84a5a539a33e4e8f5d982f.json            11.59 kB │ gzip:   2.46 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/cf0ac2d8e1ff339d687d8f619465f949cc54cd10.json            11.59 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/317b9efe20ac6a80dffaba7ea229f38df4ed422a.json            11.60 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/79b4d23ff2591b8b20350e941bb913ace9fdb536.json            11.60 kB │ gzip:   2.46 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/4cbe664b83679ff1e310baaef5662077271d5ae2.json            11.60 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/308071f4db95928a14e15b47e7808bab9e8f8ecd.json            11.60 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/8cefb2a4dad2ea2b24d4bd37e00c328a544db1ef.json            11.60 kB │ gzip:   2.47 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/1b968348880980e03f03a1153ea4d97c777a3121.json            11.60 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/7bf0f8219728eb30f78e32c610f120c587be796a.json            11.60 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/7ce391809ca252970cb8286127c112abce1aeffc.json            11.61 kB │ gzip:   2.46 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/8fe1839b991e942c4f1ea3a9ac2f4db15526c219.json            11.62 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/e87009469740c9e0f93a5a1626e7336c3d2d22d5.json            11.62 kB │ gzip:   2.46 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/3ad179cc8715cf5cf055f6c01b5b0307cf847d1f.json            11.62 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/484fdc4356d67c16654d3a688138ebb33517d97e.json            11.62 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/98114e0fb4895fca36425207055405aab96c459f.json            11.62 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/b6164f1696182b81260d0a7250370b8e855061e0.json            11.62 kB │ gzip:   2.46 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/e107662a4a7fea460df919228d825931de36d027.json            11.64 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/fbc52276773841cc18637bd78db3b6ce54ba2132.json            11.65 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/docs/_assets/known-issues.mdx_macro_id_src_2Flib_2Fsource-CmQFGDVx.js              11.67 kB
+@sidequest/explore:build: dist/docs/_assets/react-dom-BvuGKBlP.js                                                 11.67 kB
+@sidequest/explore:build: dist/__tsr/staticServerFnCache/74c60a57b204dae485c621d81a3af5dc409c9061.json            11.68 kB │ gzip:   2.45 kB
+@sidequest/explore:build: dist/docs/_assets/execution-budgets.mdx_macro_id_src_2Flib_2Fsource-Bk9kAHGw.js         11.70 kB
+@sidequest/explore:build: dist/assets/31-Cp_A6IuP.webp                                                            11.72 kB
+@sidequest/explore:build: dist/skills/worker/SKILL.md                                                             12.04 kB
+@sidequest/explore:build: dist/start.md                                                                           12.14 kB
+@sidequest/explore:build: dist/assets/27-BCatyxkd.webp                                                            12.22 kB
+@sidequest/explore:build: dist/assets/37-B-cGiSxv.webp                                                            12.33 kB
+@sidequest/explore:build: dist/docs/_assets/boards.mdx_macro_id_src_2Flib_2Fsource-psXVtgbE.js                    12.39 kB
+@sidequest/explore:build: dist/assets/42-B52NQYnh.webp                                                            12.87 kB
+@sidequest/explore:build: dist/docs/_assets/trust.mdx_macro_id_src_2Flib_2Fsource-CzAWL5AZ.js                     13.15 kB
+@sidequest/explore:build: dist/docs/_assets/money.mdx_macro_id_src_2Flib_2Fsource-Co3DR7t6.js                     13.70 kB
+@sidequest/explore:build: dist/assets/geist-cyrillic-wght-normal-BEAKL7Jp.woff2                                   15.08 kB
+@sidequest/explore:build: dist/docs/_assets/geist-cyrillic-wght-normal-BEAKL7Jp.woff2                             15.08 kB
+@sidequest/explore:build: dist/docs/reference/glossary.md                                                         15.47 kB
+@sidequest/explore:build: dist/docs/_assets/commons.mdx_macro_id_src_2Flib_2Fsource-sjl-pKz1.js                   15.83 kB
+@sidequest/explore:build: dist/docs/_assets/index.mdx_macro_id_src_2Flib_2Fsource-eL5L85Et.js                     16.37 kB
+@sidequest/explore:build: dist/assets/geist-latin-ext-wght-normal-DC-KSUi6.woff2                                  16.51 kB
+@sidequest/explore:build: dist/docs/_assets/geist-latin-ext-wght-normal-DC-KSUi6.woff2                            16.51 kB
+@sidequest/explore:build: dist/docs/_assets/agents.mdx_macro_id_src_2Flib_2Fsource-DL5rz5bd.js                    17.57 kB
+@sidequest/explore:build: dist/assets/36-C7OE3eDW.webp                                                            18.82 kB
+@sidequest/explore:build: dist/assets/7-GEmbO_Jg.webp                                                             19.26 kB
+@sidequest/explore:build: dist/docs/guides/self-run.md                                                            19.69 kB
+@sidequest/explore:build: dist/assets/54-rhIeudZx.webp                                                            20.14 kB
+@sidequest/explore:build: dist/docs/_assets/work.mdx_macro_id_src_2Flib_2Fsource-C7zvFWUR.js                      20.15 kB
+@sidequest/explore:build: dist/docs/_assets/token.mdx_macro_id_src_2Flib_2Fsource-C5HTF-qX.js                     20.27 kB
+@sidequest/explore:build: dist/assets/35-DX3T8-MD.webp                                                            22.42 kB
+@sidequest/explore:build: dist/assets/53-ltKQsCnS.webp                                                            22.49 kB
+@sidequest/explore:build: dist/assets/12-B1bXBexD.webp                                                            22.81 kB
+@sidequest/explore:build: dist/docs/_assets/app.mdx_macro_id_src_2Flib_2Fsource-DZj30N6W.js                       22.81 kB
+@sidequest/explore:build: dist/assets/26-DVwlUBj0.webp                                                            23.38 kB
+@sidequest/explore:build: dist/docs/_assets/http-api.mdx_macro_id_src_2Flib_2Fsource-DYidbLED.js                  24.22 kB
+@sidequest/explore:build: dist/docs/_assets/hires.mdx_macro_id_src_2Flib_2Fsource-DuhT06Ft.js                     24.44 kB
+@sidequest/explore:build: dist/assets/15-CKYW7H7L.webp                                                            25.03 kB
+@sidequest/explore:build: dist/docs/_assets/hire.mdx_macro_id_src_2Flib_2Fsource-CvSCuqtk.js                      25.90 kB
+@sidequest/explore:build: dist/assets/newsreader-vietnamese-opsz-normal-BjhtXyW2.woff2                            27.24 kB
+@sidequest/explore:build: dist/assets/newsreader-vietnamese-opsz-italic-DTr-ymY4.woff2                            27.90 kB
+@sidequest/explore:build: dist/docs/_assets/crew.mdx_macro_id_src_2Flib_2Fsource-CS2Lrowm.js                      28.39 kB
+@sidequest/explore:build: dist/docs/_assets/bonds-and-staking.mdx_macro_id_src_2Flib_2Fsource-BekNZop1.js         29.23 kB
+@sidequest/explore:build: dist/assets/geist-latin-wght-normal-BgDaEnEv.woff2                                      29.40 kB
+@sidequest/explore:build: dist/docs/_assets/geist-latin-wght-normal-BgDaEnEv.woff2                                29.40 kB
+@sidequest/explore:build: dist/docs/reference/mcp.md                                                              40.19 kB
+@sidequest/explore:build: dist/docs/_assets/quickstart.mdx_macro_id_src_2Flib_2Fsource-CONEiAd6.js                41.86 kB
+@sidequest/explore:build: dist/docs/_assets/commons-presentations.mdx_macro_id_src_2Flib_2Fsource-DE-Kt4jv.js     46.47 kB
+@sidequest/explore:build: dist/docs/concepts/roles.html                                                           48.05 kB │ gzip:   8.84 kB
+@sidequest/explore:build: dist/docs/guides/get-sponsored.html                                                     49.77 kB │ gzip:   8.96 kB
+@sidequest/explore:build: dist/docs/reference/addresses.html                                                      50.18 kB │ gzip:   9.05 kB
+@sidequest/explore:build: dist/docs/guides/boards.html                                                            50.62 kB │ gzip:   9.31 kB
+@sidequest/explore:build: dist/docs/known-issues.html                                                             51.51 kB │ gzip:   9.40 kB
+@sidequest/explore:build: dist/docs/guides/arbitrate.html                                                         51.79 kB │ gzip:   9.36 kB
+@sidequest/explore:build: dist/docs/concepts/execution-budgets.html                                               52.00 kB │ gzip:   9.33 kB
+@sidequest/explore:build: dist/docs/concepts/sponsorship.html                                                     52.18 kB │ gzip:   9.46 kB
+@sidequest/explore:build: dist/docs/governance.html                                                               52.19 kB │ gzip:   9.44 kB
+@sidequest/explore:build: dist/docs/trust.html                                                                    52.50 kB │ gzip:   9.63 kB
+@sidequest/explore:build: dist/docs.html                                                                          53.60 kB │ gzip:   9.77 kB
+@sidequest/explore:build: dist/docs/token.html                                                                    54.69 kB │ gzip:  10.61 kB
+@sidequest/explore:build: dist/docs/concepts/commons.html                                                         54.89 kB │ gzip:  10.07 kB
+@sidequest/explore:build: dist/docs/concepts/agents.html                                                          55.60 kB │ gzip:  10.24 kB
+@sidequest/explore:build: dist/docs/concepts/money.html                                                           55.64 kB │ gzip:  10.06 kB
+@sidequest/explore:build: dist/docs/_assets/glossary.mdx_macro_id_src_2Flib_2Fsource-C2oUGpQy.js                  57.48 kB
+@sidequest/explore:build: dist/docs/reference/http-api.html                                                       58.05 kB │ gzip:  11.16 kB
+@sidequest/explore:build: dist/docs/guides/work.html                                                              59.89 kB │ gzip:  10.53 kB
+@sidequest/explore:build: dist/docs/app.html                                                                      60.12 kB │ gzip:  11.04 kB
+@sidequest/explore:build: dist/docs/faq.html                                                                      60.83 kB │ gzip:   9.60 kB
+@sidequest/explore:build: dist/docs/concepts/hires.html                                                           61.07 kB │ gzip:  11.27 kB
+@sidequest/explore:build: dist/docs/concepts/bonds-and-staking.html                                               61.69 kB │ gzip:  11.66 kB
+@sidequest/explore:build: dist/docs/crew.html                                                                     63.48 kB │ gzip:  11.44 kB
+@sidequest/explore:build: dist/docs/guides/hire.html                                                              63.56 kB │ gzip:  11.20 kB
+@sidequest/explore:build: dist/docs/reference/glossary.html                                                       63.65 kB │ gzip:  12.43 kB
+@sidequest/explore:build: dist/docs/quickstart.html                                                               66.40 kB │ gzip:  11.84 kB
+@sidequest/explore:build: dist/docs/reference/commons-presentations.html                                          74.65 kB │ gzip:  12.48 kB
+@sidequest/explore:build: dist/docs/_assets/orama-static-Ay6eg01k.js                                              74.70 kB
+@sidequest/explore:build: dist/assets/newsreader-latin-ext-opsz-normal-BQn1nviT.woff2                             86.60 kB
+@sidequest/explore:build: dist/docs/_assets/dist-5ZxRnlWK.js                                                      95.37 kB
+@sidequest/explore:build: dist/assets/newsreader-latin-ext-opsz-italic-CSPGnFdO.woff2                             95.54 kB
+@sidequest/explore:build: dist/docs/_assets/remark-BdS2G4s7.js                                                    96.79 kB
+@sidequest/explore:build: dist/docs/reference/mcp.html                                                           121.06 kB │ gzip:  23.49 kB
+@sidequest/explore:build: dist/assets/newsreader-latin-opsz-normal-s-izfB6B.woff2                                132.00 kB
+@sidequest/explore:build: dist/assets/newsreader-latin-opsz-italic-kJKFiXvB.woff2                                146.87 kB
+@sidequest/explore:build: dist/docs/_assets/mcp.mdx_macro_id_src_2Flib_2Fsource-B1JANUb7.js                      151.58 kB
+@sidequest/explore:build: dist/docs/_assets/_-BHAQDe3v.js                                                        155.77 kB
+@sidequest/explore:build: dist/docs/guides/self-run.html                                                         184.57 kB │ gzip:  21.31 kB
+@sidequest/explore:build: dist/llms-full.txt                                                                     191.90 kB │ gzip:  62.54 kB
+@sidequest/explore:build: dist/docs/_assets/server.edge-BjeRW_nN.js                                              207.68 kB
+@sidequest/explore:build: dist/docs/_assets/self-run.mdx_macro_id_src_2Flib_2Fsource-CXhVNjaf.js                 212.48 kB
+@sidequest/explore:build: dist/docs/_assets/search-N9vqMMpM.js                                                   229.29 kB
+@sidequest/explore:build: dist/docs/_assets/index-BYlkbEDV.js                                                    281.14 kB
+@sidequest/explore:build: dist/docs/_assets/_-dUnJxOdV.js                                                        712.46 kB
+@sidequest/explore:build: dist/docs/search.json                                                                1,521.09 kB │ gzip: 336.41 kB
+@sidequest/explore:build: dist/docs/_assets/app-BeJvcfH7.css                                                      89.67 kB │ gzip:  15.19 kB
+@sidequest/explore:build: dist/assets/index-B0S05N_A.css                                                         136.11 kB │ gzip:  23.35 kB
+@sidequest/explore:build: dist/assets/dist-D-YBlpX6.js                                                             0.03 kB │ gzip:   0.05 kB
+@sidequest/explore:build: dist/assets/analytics-mkkvFRju-BRBcadka.js                                               0.06 kB │ gzip:   0.08 kB
+@sidequest/explore:build: dist/assets/mermaid-MCJ5UELQ-C6I4LGaD.js                                                 0.07 kB │ gzip:   0.08 kB
+@sidequest/explore:build: dist/assets/capitalizeFirstLetter-DmLYqXsO-DtOXx-2n.js                                   0.07 kB │ gzip:   0.09 kB
+@sidequest/explore:build: dist/assets/parseEther-BAAEjMEv.js                                                       0.10 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/array-BifhSqXX.js                                                            0.10 kB │ gzip:   0.11 kB
+@sidequest/explore:build: dist/assets/channel-tpm-AbWa.js                                                          0.11 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/pie-WAS4IAKB-DWSm9SSD.js                                                     0.11 kB │ gzip:   0.11 kB
+@sidequest/explore:build: dist/assets/info-A6RAGUB7-BlutK7BT.js                                                    0.11 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/radar-RG4KPBEZ-BfNQUEQy.js                                                   0.11 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/packet-AYTQ26CC-DvbY8dI6.js                                                  0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/cynefin-OW5HDTMX-CF3N9j1_.js                                                 0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/treemap-WGGIJYW6-oety7paS.js                                                 0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/wardley-WFR3VGLG-BdwDpX_I.js                                                 0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/gitGraph-4MIJSDKK-B-rpDYbz.js                                                0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/railroad-74A4TZTK-BaQ6U6eJ.js                                                0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/treeView-Q6P3EWNA-BvHOzbu9.js                                                0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/check-DSfeIX4q.js                                                            0.12 kB │ gzip:   0.14 kB
+@sidequest/explore:build: dist/assets/railroad-peg-WCYAUIDC-DCmlICzO.js                                            0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/architecture-7GRP2DOG-BBwRXFv3.js                                            0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/railroad-abnf-HS5TGJTU-BJ3KZw7J.js                                           0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/railroad-ebnf-LZEXJU2U-DA0sEq7w.js                                           0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/eventmodeling-NTZA5JFV-CDy1bN6j.js                                           0.12 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/chevron-down-DtXNKxuu.js                                                     0.12 kB │ gzip:   0.14 kB
+@sidequest/explore:build: dist/assets/init-C-OQMol4.js                                                             0.14 kB │ gzip:   0.12 kB
+@sidequest/explore:build: dist/assets/safe-url-D7SRPu33-CkMedGro.js                                                0.14 kB │ gzip:   0.13 kB
+@sidequest/explore:build: dist/assets/shouldProceedtoEmbeddedWalletCreationFlow-BxvaW_Vy-CErrEbIP.js               0.14 kB │ gzip:   0.13 kB
+@sidequest/explore:build: dist/assets/react-auth-sHnipzbS.js                                                       0.14 kB │ gzip:   0.14 kB
+@sidequest/explore:build: dist/assets/formatErc20TokenAmount-BuPk9xcy-BVqOKQif.js                                  0.14 kB │ gzip:   0.14 kB
+@sidequest/explore:build: dist/assets/getChainName-DjpPdUSc-DUyKDrnp.js                                            0.14 kB │ gzip:   0.11 kB
+@sidequest/explore:build: dist/assets/x-CgeCMhd8.js                                                                0.15 kB │ gzip:   0.15 kB
+@sidequest/explore:build: dist/assets/chunk-Y2CYZVJY-DsF7k-Jl.js                                                   0.15 kB │ gzip:   0.14 kB
+@sidequest/explore:build: dist/assets/getUsdcMintAddress-BVgm9GRo-r2UnDeEy.js                                      0.17 kB │ gzip:   0.17 kB
+@sidequest/explore:build: dist/assets/chunk-2Q5K7J3B-C1jixKkw.js                                                   0.19 kB │ gzip:   0.16 kB
+@sidequest/explore:build: dist/assets/circle-check-big-D_w-fTjR.js                                                 0.19 kB │ gzip:   0.17 kB
+@sidequest/explore:build: dist/assets/LabelXs-oqZNqbm_-Dz32ojnm.js                                                 0.19 kB │ gzip:   0.18 kB
+@sidequest/explore:build: dist/assets/smartphone-DsVD4Nq0.js                                                       0.19 kB │ gzip:   0.18 kB
+@sidequest/explore:build: dist/assets/lock-cDUOOz_b.js                                                             0.20 kB │ gzip:   0.19 kB
+@sidequest/explore:build: dist/assets/circle-x-BQX9I3Zr.js                                                         0.20 kB │ gzip:   0.17 kB
+@sidequest/explore:build: dist/assets/ErrorMessage-D8VaAP5m-B7CaWp3z.js                                            0.21 kB │ gzip:   0.18 kB
+@sidequest/explore:build: dist/assets/mail-DAigI1YQ.js                                                             0.21 kB │ gzip:   0.19 kB
+@sidequest/explore:build: dist/assets/Title-BnzYV3Is-DT5Yg341.js                                                   0.22 kB │ gzip:   0.19 kB
+@sidequest/explore:build: dist/assets/chunk-JWPE2WC7-DVXcaiue.js                                                   0.22 kB │ gzip:   0.17 kB
+@sidequest/explore:build: dist/assets/copy-He_obp_X.js                                                             0.23 kB │ gzip:   0.20 kB
+@sidequest/explore:build: dist/assets/circle-alert-Dg0NO_SW.js                                                     0.25 kB │ gzip:   0.18 kB
+@sidequest/explore:build: dist/assets/external-link-DtJenJgZ.js                                                    0.25 kB │ gzip:   0.19 kB
+@sidequest/explore:build: dist/assets/chunk-XXDRQBXY-C9OHJi25.js                                                   0.26 kB │ gzip:   0.22 kB
+@sidequest/explore:build: dist/assets/triangle-alert-D34NXP9L.js                                                   0.26 kB │ gzip:   0.21 kB
+@sidequest/explore:build: dist/assets/wallet-vqvnnmIJ.js                                                           0.28 kB │ gzip:   0.20 kB
+@sidequest/explore:build: dist/assets/Subtitle-CV-2yKE4-cH7Xn0qE.js                                                0.29 kB │ gzip:   0.23 kB
+@sidequest/explore:build: dist/assets/WalletOverflowButton-BQB3rBwe-BChMKKo2.js                                    0.30 kB │ gzip:   0.21 kB
+@sidequest/explore:build: dist/assets/esm-C3DslVJx.js                                                              0.32 kB │ gzip:   0.24 kB
+@sidequest/explore:build: dist/assets/chunk-CLGD4ZFX-ZzXz3n0e.js                                                   0.32 kB │ gzip:   0.25 kB
+@sidequest/explore:build: dist/assets/InjectedWalletIcon-DLcYOGDj-CgkKcK_l.js                                      0.34 kB │ gzip:   0.24 kB
+@sidequest/explore:build: dist/assets/clsx.m-COYlpEKN.js                                                           0.35 kB │ gzip:   0.22 kB
+@sidequest/explore:build: dist/assets/hourglass-B9w9d47z.js                                                        0.36 kB │ gzip:   0.23 kB
+@sidequest/explore:build: dist/assets/chunk-5VM5RSS4-ZNzvKenW.js                                                   0.36 kB │ gzip:   0.27 kB
+@sidequest/explore:build: dist/assets/clsx-DB0hHKMi.js                                                             0.36 kB │ gzip:   0.23 kB
+@sidequest/explore:build: dist/assets/transfer-6YztDh-t-BVQkTvG-.js                                                0.38 kB │ gzip:   0.16 kB
+@sidequest/explore:build: dist/assets/id-UqEwL2BI-DBaJPjJB.js                                                      0.38 kB │ gzip:   0.28 kB
+@sidequest/explore:build: dist/assets/StackedContainer-B2vaEl56-Djal2P3N.js                                        0.40 kB │ gzip:   0.25 kB
+@sidequest/explore:build: dist/assets/dist-Cm7pNAtL.js                                                             0.45 kB │ gzip:   0.28 kB
+@sidequest/explore:build: dist/assets/chunk-UY3FDG6J-DqSM_0FB.js                                                   0.45 kB │ gzip:   0.31 kB
+@sidequest/explore:build: dist/assets/chunk-I5DQTOEV-B98XA8VK.js                                                   0.45 kB │ gzip:   0.31 kB
+@sidequest/explore:build: dist/assets/chunk-5V3GS4D5-BR7kgIgJ.js                                                   0.46 kB │ gzip:   0.31 kB
+@sidequest/explore:build: dist/assets/chunk-KI3K4JFJ-D5XCPRZv.js                                                   0.46 kB │ gzip:   0.31 kB
+@sidequest/explore:build: dist/assets/chunk-6TQVIW2G-DgBX-Pv0.js                                                   0.46 kB │ gzip:   0.31 kB
+@sidequest/explore:build: dist/assets/LoadingSkeleton-BMsgO5PV-BcuXXRUF.js                                         0.47 kB │ gzip:   0.25 kB
+@sidequest/explore:build: dist/assets/chunk-ICYGCRZG-D97UeqJs.js                                                   0.50 kB │ gzip:   0.35 kB
+@sidequest/explore:build: dist/assets/getErc20Balance-jXNpFf0N-CLN1nkFl.js                                         0.50 kB │ gzip:   0.34 kB
+@sidequest/explore:build: dist/assets/PrivyPluginContext-DA-yS5vO-Coi_R-Am.js                                      0.50 kB │ gzip:   0.32 kB
+@sidequest/explore:build: dist/assets/isPaymentRequestAvailable-Bq1cemEn-n-lAmpjo.js                               0.50 kB │ gzip:   0.36 kB
+@sidequest/explore:build: dist/assets/shared-FM0rljBt-DndKkhoP.js                                                  0.51 kB │ gzip:   0.32 kB
+@sidequest/explore:build: dist/assets/WalletCards-DH1rqayz-B5H8uH_7.js                                             0.51 kB │ gzip:   0.34 kB
+@sidequest/explore:build: dist/assets/ChevronDownIcon-ByUAuXkM.js                                                  0.53 kB │ gzip:   0.38 kB
+@sidequest/explore:build: dist/assets/codeowners-C8r90Shi.js                                                       0.54 kB │ gzip:   0.31 kB
+@sidequest/explore:build: dist/assets/useGetSolPrice-x7gfUIHJ-DkF3fJ4E.js                                          0.54 kB │ gzip:   0.37 kB
+@sidequest/explore:build: dist/assets/telegram-B-JqnkqZ-PL0qiyiq.js                                                0.54 kB │ gzip:   0.36 kB
+@sidequest/explore:build: dist/assets/landmark-DcDt63e9.js                                                         0.55 kB │ gzip:   0.34 kB
+@sidequest/explore:build: dist/assets/transaction-BNTP-bFm-M5tJx8vY.js                                             0.57 kB │ gzip:   0.37 kB
+@sidequest/explore:build: dist/assets/CheckCircleIcon-Cynd-9bd.js                                                  0.57 kB │ gzip:   0.40 kB
+@sidequest/explore:build: dist/assets/chunk-POPQ4Y6H--f6jN_yE.js                                                   0.57 kB │ gzip:   0.40 kB
+@sidequest/explore:build: dist/assets/use-sign-with-user-signer-OxgKiUdW-CgSOfHQl.js                               0.58 kB │ gzip:   0.37 kB
+@sidequest/explore:build: dist/assets/ExclamationCircleIcon-DdviGaV7.js                                            0.58 kB │ gzip:   0.41 kB
+@sidequest/explore:build: dist/assets/chunk-3Z5EZCMW-Yx4Q5AcN.js                                                   0.60 kB │ gzip:   0.39 kB
+@sidequest/explore:build: dist/assets/FundWalletMethodHeader-CBdY084Z-CxiXk_J8.js                                  0.60 kB │ gzip:   0.36 kB
+@sidequest/explore:build: dist/assets/ConnectOrCreateScreen-DRvyMrwl-DcGQLQl8.js                                   0.60 kB │ gzip:   0.39 kB
+@sidequest/explore:build: dist/assets/fingerprint-pattern-8McoTy1K.js                                              0.61 kB │ gzip:   0.35 kB
+@sidequest/explore:build: dist/assets/flowDiagram-HODETNUW-BN2dtecx.js                                             0.61 kB │ gzip:   0.32 kB
+@sidequest/explore:build: dist/assets/esm-CG_aiq74.js                                                              0.63 kB │ gzip:   0.29 kB
+@sidequest/explore:build: dist/assets/LandingScreen-DRUbwL_z-Dqj7jmQB.js                                           0.64 kB │ gzip:   0.42 kB
+@sidequest/explore:build: dist/assets/highlighted-body-KQOG7T2V-CaCPHTqg.js                                        0.65 kB │ gzip:   0.41 kB
+@sidequest/explore:build: dist/assets/infoDiagram-27XIBGKW-CZLwrS1-.js                                             0.65 kB │ gzip:   0.42 kB
+@sidequest/explore:build: dist/assets/sha256-CsuvD51V.js                                                           0.66 kB │ gzip:   0.38 kB
+@sidequest/explore:build: dist/assets/InAppBrowserLoginNotPossible-92qfsBpt-DRGmnzF0.js                            0.67 kB │ gzip:   0.44 kB
+@sidequest/explore:build: dist/assets/getErc20TokenInfo-CgPHS-3o-DMZ13bL9.js                                       0.67 kB │ gzip:   0.38 kB
+@sidequest/explore:build: dist/assets/react-D3TXZ-15.js                                                            0.68 kB │ gzip:   0.42 kB
+@sidequest/explore:build: dist/assets/LockClosedIcon-DqYZa_FW.js                                                   0.68 kB │ gzip:   0.44 kB
+@sidequest/explore:build: dist/assets/ExclamationTriangleIcon-DQ6KvMvG.js                                          0.68 kB │ gzip:   0.48 kB
+@sidequest/explore:build: dist/assets/CheckCircleIcon-DbhZrPeD.js                                                  0.70 kB │ gzip:   0.46 kB
+@sidequest/explore:build: dist/assets/Value-DTgR824E-CFjlis7Q.js                                                   0.70 kB │ gzip:   0.37 kB
+@sidequest/explore:build: dist/assets/shellsession-DE7fzJNJ.js                                                     0.71 kB │ gzip:   0.43 kB
+@sidequest/explore:build: dist/assets/ShieldCheckIcon-C6_ccEOd.js                                                  0.72 kB │ gzip:   0.50 kB
+@sidequest/explore:build: dist/assets/tsv-sltzmVWM.js                                                              0.73 kB │ gzip:   0.33 kB
+@sidequest/explore:build: dist/assets/useWalletBalance-CZnP5f_f-D8h3t3Bj.js                                        0.74 kB │ gzip:   0.47 kB
+@sidequest/explore:build: dist/assets/simulateTransaction-CP42l5SJ-Cr6OpPEo.js                                     0.74 kB │ gzip:   0.42 kB
+@sidequest/explore:build: dist/assets/EnvelopeIcon-DYLUdsYN.js                                                     0.76 kB │ gzip:   0.46 kB
+@sidequest/explore:build: dist/assets/WalletIcon-D3Hn6hoK.js                                                       0.77 kB │ gzip:   0.45 kB
+@sidequest/explore:build: dist/assets/classDiagram-ZZMXUADV-C_MaSydb.js                                            0.78 kB │ gzip:   0.44 kB
+@sidequest/explore:build: dist/assets/classDiagram-v2-VYDZK3BY-C_MaSydb.js                                         0.78 kB │ gzip:   0.44 kB
+@sidequest/explore:build: dist/assets/stateDiagram-v2-MP3YSRHH-CdMkf3X5.js                                         0.78 kB │ gzip:   0.44 kB
+@sidequest/explore:build: dist/assets/ethers-DNxEwCFm-DX65SdDp.js                                                  0.79 kB │ gzip:   0.50 kB
+@sidequest/explore:build: dist/assets/ArrowsRightLeftIcon-YeK9QffP.js                                              0.79 kB │ gzip:   0.45 kB
+@sidequest/explore:build: dist/assets/FingerPrintIcon-CCCBQGPg.js                                                  0.81 kB │ gzip:   0.54 kB
+@sidequest/explore:build: dist/assets/chunk-XHIXRSVI-BSN7JlfK.js                                                   0.83 kB │ gzip:   0.47 kB
+@sidequest/explore:build: dist/assets/html-derivative-BmcwVr7p.js                                                  0.84 kB │ gzip:   0.45 kB
+@sidequest/explore:build: dist/assets/LinkEmailScreen-DBYu47Ce-TJA-WZfX.js                                         0.84 kB │ gzip:   0.49 kB
+@sidequest/explore:build: dist/assets/PhoneIcon-BG2TMhRH.js                                                        0.86 kB │ gzip:   0.56 kB
+@sidequest/explore:build: dist/assets/sizeCapture-INFHLROL-3uHXrFqA.js                                             0.87 kB │ gzip:   0.51 kB
+@sidequest/explore:build: dist/assets/swimlanesDiagram-VR7AAH4N-BXHZGYHU.js                                        0.87 kB │ gzip:   0.49 kB
+@sidequest/explore:build: dist/assets/LoginFailedScreen-BogLDpQD-CpwdxzjU.js                                       0.87 kB │ gzip:   0.53 kB
+@sidequest/explore:build: dist/assets/chunk-6AZGARVD-CnZDr4Cj.js                                                   0.90 kB │ gzip:   0.49 kB
+@sidequest/explore:build: dist/assets/ErrorBanner-BcpGRt0h-DNttLD6A.js                                             0.91 kB │ gzip:   0.53 kB
+@sidequest/explore:build: dist/assets/ScreenLayout-XFsWudNK-Buoahk6h.js                                            0.92 kB │ gzip:   0.46 kB
+@sidequest/explore:build: dist/assets/WarningBanner-ZZqCEtZK-vFQUtBJg.js                                           0.92 kB │ gzip:   0.53 kB
+@sidequest/explore:build: dist/assets/chunk-IH6LHLGP-CvXe34hB.js                                                   0.92 kB │ gzip:   0.49 kB
+@sidequest/explore:build: dist/assets/line-BGs-WRSH.js                                                             0.94 kB │ gzip:   0.47 kB
+@sidequest/explore:build: dist/assets/rolldown-runtime-C_s2cVnS.js                                                 0.95 kB │ gzip:   0.52 kB
+@sidequest/explore:build: dist/assets/git-rebase-vDRynXC3.js                                                       0.98 kB │ gzip:   0.44 kB
+@sidequest/explore:build: dist/assets/GlobeAltIcon-Ds7ElxKG.js                                                     0.98 kB │ gzip:   0.59 kB
+@sidequest/explore:build: dist/assets/qmldir-DCQb3MpD.js                                                           0.99 kB │ gzip:   0.44 kB
+@sidequest/explore:build: dist/assets/chunk-OUJLGHUK-DA95-S9B.js                                                   1.04 kB │ gzip:   0.58 kB
+@sidequest/explore:build: dist/assets/useGetTokenPrice-Ufl46eND-CKUqtYXi.js                                        1.05 kB │ gzip:   0.54 kB
+@sidequest/explore:build: dist/assets/ScreenHeader-CHmc4-Lu-LJfpieAx.js                                            1.05 kB │ gzip:   0.54 kB
+@sidequest/explore:build: dist/assets/chunk-747NJXEK-Cur1aosP.js                                                   1.06 kB │ gzip:   0.59 kB
+@sidequest/explore:build: dist/assets/Chip-CZKIKt9K-DY0Ox8mh.js                                                    1.08 kB │ gzip:   0.54 kB
+@sidequest/explore:build: dist/assets/chunk-2ZTRR5NV-CnDP55cn.js                                                   1.13 kB │ gzip:   0.62 kB
+@sidequest/explore:build: dist/assets/AllowlistRejectionScreen-Dxn2QBch-DbvSbwqS.js                                1.13 kB │ gzip:   0.61 kB
+@sidequest/explore:build: dist/assets/csv-Dx-8-gkx.js                                                              1.13 kB │ gzip:   0.36 kB
+@sidequest/explore:build: dist/assets/OpenLink-CUpJ1mOr-CgWy-w5V.js                                                1.14 kB │ gzip:   0.59 kB
+@sidequest/explore:build: dist/assets/EmbeddedWalletPasswordUpdateSplashScreen-B9SS2EuP-CWmqr1eY.js                1.14 kB │ gzip:   0.67 kB
+@sidequest/explore:build: dist/assets/AccountNotFoundScreen-dpvlPdBk-DoEHNyYM.js                                   1.15 kB │ gzip:   0.71 kB
+@sidequest/explore:build: dist/assets/ordinal-BDEzSJ7C.js                                                          1.17 kB │ gzip:   0.56 kB
+@sidequest/explore:build: dist/assets/dijkstra-BsSV2JU0.js                                                         1.17 kB │ gzip:   0.60 kB
+@sidequest/explore:build: dist/assets/dist-Dl07uGq1.js                                                             1.18 kB │ gzip:   0.60 kB
+@sidequest/explore:build: dist/assets/JsonTree-BHzNC-ic-BBdHpLx4.js                                                1.19 kB │ gzip:   0.64 kB
+@sidequest/explore:build: dist/assets/modal-context-C9-YL9cl-Be4GtKOi.js                                           1.19 kB │ gzip:   0.59 kB
+@sidequest/explore:build: dist/assets/UserLimitReachedScreen-cTdLG4Aq-DS6hhd_T.js                                  1.21 kB │ gzip:   0.73 kB
+@sidequest/explore:build: dist/assets/createLucideIcon-B_1mz55h.js                                                 1.21 kB │ gzip:   0.70 kB
+@sidequest/explore:build: dist/assets/git-commit-BSykSTBG.js                                                       1.22 kB │ gzip:   0.52 kB
+@sidequest/explore:build: dist/assets/EmbeddedWalletCreatedScreen-njjn_fWc-DApH1t6b.js                             1.24 kB │ gzip:   0.74 kB
+@sidequest/explore:build: dist/assets/xsl-DC_LWfeA.js                                                              1.36 kB │ gzip:   0.50 kB
+@sidequest/explore:build: dist/assets/preload-helper-DjzSQ1t3.js                                                   1.38 kB │ gzip:   0.75 kB
+@sidequest/explore:build: dist/assets/getFormattedUsdFromLamports-De3U9GlO-Gx4_wxON.js                             1.41 kB │ gzip:   0.72 kB
+@sidequest/explore:build: dist/assets/chunk-GVQU2GXP-CYBX6YyY.js                                                   1.41 kB │ gzip:   0.79 kB
+@sidequest/explore:build: dist/assets/chunk-6K3QC6MW-DGVRzL6v.js                                                   1.46 kB │ gzip:   0.78 kB
+@sidequest/explore:build: dist/assets/LinkPhoneScreen-CxzCokXL-CSWiaPHl.js                                         1.46 kB │ gzip:   0.81 kB
+@sidequest/explore:build: dist/assets/sparql-D_iOobhT.js                                                           1.47 kB │ gzip:   0.81 kB
+@sidequest/explore:build: dist/assets/InfoBanner-Cb3p1z12-Cu1tm2G3.js                                              1.48 kB │ gzip:   0.84 kB
+@sidequest/explore:build: dist/assets/farcaster-DPlSjvF5-v9ACbqLH.js                                               1.49 kB │ gzip:   0.70 kB
+@sidequest/explore:build: dist/assets/index-CWARkn2w-UpKIAYKC.js                                                   1.50 kB │ gzip:   0.62 kB
+@sidequest/explore:build: dist/assets/ini-B5eOa1yu.js                                                              1.51 kB │ gzip:   0.49 kB
+@sidequest/explore:build: dist/assets/Address-DMC9FYV2-D6FmnI6r.js                                                 1.52 kB │ gzip:   0.77 kB
+@sidequest/explore:build: dist/assets/UpdatePhoneScreen-XtZryXw--B02_5KYA.js                                       1.56 kB │ gzip:   0.88 kB
+@sidequest/explore:build: dist/assets/CopyableText-CQapvaMr-DUK352oW.js                                            1.56 kB │ gzip:   0.75 kB
+@sidequest/explore:build: dist/assets/InstallWalletScreen-Be7abwcn-Ch5Nk_2C.js                                     1.57 kB │ gzip:   0.82 kB
+@sidequest/explore:build: dist/assets/WalletInterstitialScreen-Bb1Dv0ks-vENM_EJj.js                                1.66 kB │ gzip:   0.91 kB
+@sidequest/explore:build: dist/assets/fortran-fixed-form-DEKoE2YW.js                                               1.66 kB │ gzip:   0.68 kB
+@sidequest/explore:build: dist/assets/Layouts-BMRfo5hw-BhZl0bWZ.js                                                 1.67 kB │ gzip:   0.56 kB
+@sidequest/explore:build: dist/assets/chunk-6EIED4P4-Bp8dpTvX.js                                                   1.67 kB │ gzip:   0.74 kB
+@sidequest/explore:build: dist/assets/railroadDiagram-O6MQD6OU-CbtCjz-b.js                                         1.70 kB │ gzip:   0.79 kB
+@sidequest/explore:build: dist/assets/WalletLink-wyEl6U-t-B-xMRGNm.js                                              1.72 kB │ gzip:   0.84 kB
+@sidequest/explore:build: dist/assets/docker-IyjqRm3v.js                                                           1.73 kB │ gzip:   0.59 kB
+@sidequest/explore:build: dist/assets/WalletInfoCard-zmo6O2YN-K7iXc4Gm.js                                          1.74 kB │ gzip:   0.93 kB
+@sidequest/explore:build: dist/assets/dotenv-CuH5my32.js                                                           1.74 kB │ gzip:   0.60 kB
+@sidequest/explore:build: dist/assets/ConnectOnlyLandingScreen-DRjLarbZ-CFPwGkXr.js                                1.75 kB │ gzip:   0.85 kB
+@sidequest/explore:build: dist/assets/DelegatedActionsRevokeScreen-Ddfj8i91-CYPo0gt_.js                            1.76 kB │ gzip:   1.00 kB
+@sidequest/explore:build: dist/assets/PasskeySelectSignupOrLogin-Bz4eA1kT-CDsqQ682.js                              1.77 kB │ gzip:   0.75 kB
+@sidequest/explore:build: dist/assets/Link-BdDilT2T-DKawSisz.js                                                    1.77 kB │ gzip:   0.64 kB
+@sidequest/explore:build: dist/assets/AuthenticateWithWalletScreen-XZW4H6Rp-CwHajmVr.js                            1.79 kB │ gzip:   0.90 kB
+@sidequest/explore:build: dist/assets/MfaVerifyFlowScreen-CH_lq1t9-ll7eqKpD.js                                     1.80 kB │ gzip:   0.93 kB
+@sidequest/explore:build: dist/assets/TodoList-DnyULl18-DRKLXOGT.js                                                1.82 kB │ gzip:   0.82 kB
+@sidequest/explore:build: dist/assets/desktop-Dlh5hvp9.js                                                          1.82 kB │ gzip:   0.75 kB
+@sidequest/explore:build: dist/assets/PhCaretLeft-CI460R-A.js                                                      1.85 kB │ gzip:   0.90 kB
+@sidequest/explore:build: dist/assets/styles-C4IROdYt-BNS_UH6O.js                                                  1.87 kB │ gzip:   0.75 kB
+@sidequest/explore:build: dist/assets/hxml-Dcm88srW.js                                                             1.89 kB │ gzip:   0.89 kB
+@sidequest/explore:build: dist/assets/abnfDiagram-VCTEODGH-BqmxDzzS.js                                             1.89 kB │ gzip:   0.92 kB
+@sidequest/explore:build: dist/assets/PhCaretDown-BDNabFuL.js                                                      1.91 kB │ gzip:   0.93 kB
+@sidequest/explore:build: dist/assets/FundingEditAmountScreen-Sl84OThy-UkKeS08z.js                                 1.91 kB │ gzip:   1.04 kB
+@sidequest/explore:build: dist/assets/PhCaretRight-D7ZS3Ls8.js                                                     1.93 kB │ gzip:   0.92 kB
+@sidequest/explore:build: dist/assets/chunk-P2QGCYS3-C8XaR-k7.js                                                   1.94 kB │ gzip:   0.95 kB
+@sidequest/explore:build: dist/assets/styles-DVyDvTdj-qjO3ppqq.js                                                  1.95 kB │ gzip:   0.74 kB
+@sidequest/explore:build: dist/assets/index-D8ngJizK-_g34d6HO.js                                                   1.96 kB │ gzip:   0.94 kB
+@sidequest/explore:build: dist/assets/get-entropy-details-for-user-CWaM1Zij-CRqdd9C6.js                            1.96 kB │ gzip:   0.98 kB
+@sidequest/explore:build: dist/assets/chunk-F27PBJKO-ldVLwHFH.js                                                   1.97 kB │ gzip:   0.88 kB
+@sidequest/explore:build: dist/assets/DelegatedActionsConsentScreen-CgjAuH1X-s6-d33aC.js                           1.99 kB │ gzip:   1.13 kB
+@sidequest/explore:build: dist/assets/PhCaretUp-C-iIfyvO.js                                                        1.99 kB │ gzip:   0.91 kB
+@sidequest/explore:build: dist/assets/PhArrowUpRight-BNghD2zq.js                                                   2.03 kB │ gzip:   0.99 kB
+@sidequest/explore:build: dist/assets/pegDiagram-XKGWAZYB-Che0prJD.js                                              2.05 kB │ gzip:   0.96 kB
+@sidequest/explore:build: dist/assets/PhArrowDown-87b1BizM.js                                                      2.07 kB │ gzip:   0.99 kB
+@sidequest/explore:build: dist/assets/PhPlus-C4UoW-2n.js                                                           2.08 kB │ gzip:   0.94 kB
+@sidequest/explore:build: dist/assets/PhCheck-DxQXn57r.js                                                          2.08 kB │ gzip:   0.96 kB
+@sidequest/explore:build: dist/assets/PhArrowRight-AdrIL4DW.js                                                     2.08 kB │ gzip:   0.99 kB
+@sidequest/explore:build: dist/assets/ConnectLedgerScreen-Cbl7rv9--GGkHQcVR.js                                     2.09 kB │ gzip:   1.04 kB
+@sidequest/explore:build: dist/assets/PhArrowLeft-Da0MfnbK.js                                                      2.09 kB │ gzip:   0.98 kB
+@sidequest/explore:build: dist/assets/ebnfDiagram-PWID7BFC-DYBDakWq.js                                             2.10 kB │ gzip:   0.91 kB
+@sidequest/explore:build: dist/assets/erb-C3cRg-Pl.js                                                              2.13 kB │ gzip:   0.62 kB
+@sidequest/explore:build: dist/assets/PhArrowUp-4sgyKPGx.js                                                        2.14 kB │ gzip:   0.98 kB
+@sidequest/explore:build: dist/assets/wenyan-C8pVoKbM.js                                                           2.15 kB │ gzip:   1.08 kB
+@sidequest/explore:build: dist/assets/dist-C_yfW-4f.js                                                             2.17 kB │ gzip:   0.97 kB
+@sidequest/explore:build: dist/assets/PhBrowser-2-9m-AkM.js                                                        2.18 kB │ gzip:   0.95 kB
+@sidequest/explore:build: dist/assets/PhMagnifyingGlass-C9u8jSCJ.js                                                2.18 kB │ gzip:   1.05 kB
+@sidequest/explore:build: dist/assets/MfaAuthVerifyFlowScreen-Caf1mG_p-BqEc4ySk.js                                 2.19 kB │ gzip:   1.12 kB
+@sidequest/explore:build: dist/assets/PhDotsThree-D-k1BiYg.js                                                      2.22 kB │ gzip:   0.92 kB
+@sidequest/explore:build: dist/assets/jssm-DXw9l8Rf.js                                                             2.23 kB │ gzip:   0.61 kB
+@sidequest/explore:build: dist/assets/reservoir-x-nGuZkT-BA9XmyJY.js                                               2.27 kB │ gzip:   1.14 kB
+@sidequest/explore:build: dist/assets/path-fybaL0A-.js                                                             2.27 kB │ gzip:   0.98 kB
+@sidequest/explore:build: dist/assets/floating-ui.utils.dom-Bga_OvHD.js                                            2.30 kB │ gzip:   1.05 kB
+@sidequest/explore:build: dist/assets/edge-DeDNfGqC.js                                                             2.30 kB │ gzip:   0.67 kB
+@sidequest/explore:build: dist/assets/PhCopy-CWNYcABI.js                                                           2.33 kB │ gzip:   0.99 kB
+@sidequest/explore:build: dist/assets/PhFunnelSimple-CfQs5DAW.js                                                   2.33 kB │ gzip:   0.98 kB
+@sidequest/explore:build: dist/assets/reg-CRGYupPL.js                                                              2.33 kB │ gzip:   0.69 kB
+@sidequest/explore:build: dist/assets/PhClock-x3MS3Mwi.js                                                          2.34 kB │ gzip:   1.01 kB
+@sidequest/explore:build: dist/assets/PhWarningCircle-BXHw1fCt.js                                                  2.40 kB │ gzip:   1.03 kB
+@sidequest/explore:build: dist/assets/PhX-DX0SFIqC.js                                                              2.47 kB │ gzip:   1.04 kB
+@sidequest/explore:build: dist/assets/Checkbox-D1EDeo41-Di8nfYAI.js                                                2.48 kB │ gzip:   1.29 kB
+@sidequest/explore:build: dist/assets/RecoveryPasswordCreateScreen-BLH8kpZr-DjdoGROw.js                            2.49 kB │ gzip:   1.25 kB
+@sidequest/explore:build: dist/assets/ConnectEmailForm-DZRoHv1b-BWvp_ml3.js                                        2.51 kB │ gzip:   1.38 kB
+@sidequest/explore:build: dist/assets/PhDeviceMobile-CsyA5Goi.js                                                   2.54 kB │ gzip:   1.05 kB
+@sidequest/explore:build: dist/assets/PhArrowClockwise-DVgyFuez.js                                                 2.56 kB │ gzip:   1.17 kB
+@sidequest/explore:build: dist/assets/diff-woXpYk--.js                                                             2.56 kB │ gzip:   0.68 kB
+@sidequest/explore:build: dist/assets/gleam-CSRkHgEL.js                                                            2.57 kB │ gzip:   0.81 kB
+@sidequest/explore:build: dist/assets/AffirmativeConsentScreen-CNKhHlgd-C2A_Hm9p.js                                2.57 kB │ gzip:   1.34 kB
+@sidequest/explore:build: dist/assets/hy-CZbG8q4J.js                                                               2.64 kB │ gzip:   1.17 kB
+@sidequest/explore:build: dist/assets/PhUser-0sWNXQeZ.js                                                           2.65 kB │ gzip:   1.25 kB
+@sidequest/explore:build: dist/assets/PhEnvelope-D8kzeNox.js                                                       2.66 kB │ gzip:   1.16 kB
+@sidequest/explore:build: dist/assets/PhCircleHalf-MJZeRBGF.js                                                     2.69 kB │ gzip:   1.20 kB
+@sidequest/explore:build: dist/assets/UpdateEmailScreen-D_Zhi8bE-BjHSCCQ0.js                                       2.69 kB │ gzip:   1.39 kB
+@sidequest/explore:build: dist/assets/styles-BsotlekN-BFDXyiXZ.js                                                  2.71 kB │ gzip:   1.29 kB
+@sidequest/explore:build: dist/assets/CaptchaScreen-CjA52GUM-29VPKEvX.js                                           2.73 kB │ gzip:   1.34 kB
+@sidequest/explore:build: dist/assets/PhSignOut-CxELV-i0.js                                                        2.73 kB │ gzip:   1.14 kB
+@sidequest/explore:build: dist/assets/PhInfo-Bwi51-2X.js                                                           2.74 kB │ gzip:   1.19 kB
+@sidequest/explore:build: dist/assets/PhPower-CFyWDmgD.js                                                          2.75 kB │ gzip:   1.26 kB
+@sidequest/explore:build: dist/assets/PhDesktop-CxrzCSv5.js                                                        2.75 kB │ gzip:   1.09 kB
+@sidequest/explore:build: dist/assets/PhArrowsLeftRight-MuKBLUoF.js                                                2.77 kB │ gzip:   1.16 kB
+@sidequest/explore:build: dist/assets/PhArrowCircleDown-D97G-BOA.js                                                2.78 kB │ gzip:   1.16 kB
+@sidequest/explore:build: dist/assets/PhQuestionMark-CV0k9C0Y.js                                                   2.81 kB │ gzip:   1.28 kB
+@sidequest/explore:build: dist/assets/openscad-BUDT5pXO.js                                                         2.81 kB │ gzip:   1.00 kB
+@sidequest/explore:build: dist/assets/eventemitter3-BB9OE-nf.js                                                    2.83 kB │ gzip:   1.09 kB
+@sidequest/explore:build: dist/assets/log-BNLmms1o.js                                                              2.84 kB │ gzip:   0.89 kB
+@sidequest/explore:build: dist/assets/sha3-D7MpjpcL.js                                                             2.84 kB │ gzip:   1.33 kB
+@sidequest/explore:build: dist/assets/ccip-NGw4JExi.js                                                             2.86 kB │ gzip:   1.32 kB
+@sidequest/explore:build: dist/assets/diagnostics-uK0BnEyO.js                                                      2.87 kB │ gzip:   1.41 kB
+@sidequest/explore:build: dist/assets/json-DqzJegjj.js                                                             2.89 kB │ gzip:   0.82 kB
+@sidequest/explore:build: dist/assets/PhArrowSquareOut-Bk2CMG3I.js                                                 2.89 kB │ gzip:   1.23 kB
+@sidequest/explore:build: dist/assets/ccip-CnHxS1oH.js                                                             2.90 kB │ gzip:   1.34 kB
+@sidequest/explore:build: dist/assets/PhArrowsDownUp-DM09Jo_3.js                                                   2.90 kB │ gzip:   1.15 kB
+@sidequest/explore:build: dist/assets/PhCreditCard-Fy4pzwtt.js                                                     2.90 kB │ gzip:   1.13 kB
+@sidequest/explore:build: dist/assets/PhBank-fHbgCqqZ.js                                                           2.91 kB │ gzip:   1.23 kB
+@sidequest/explore:build: dist/assets/cairo-DLTphjLi.js                                                            2.93 kB │ gzip:   0.80 kB
+@sidequest/explore:build: dist/assets/PhVault-6JTskUcC.js                                                          2.93 kB │ gzip:   1.18 kB
+@sidequest/explore:build: dist/assets/PhCompass-hYn3HhGN.js                                                        2.95 kB │ gzip:   1.25 kB
+@sidequest/explore:build: dist/assets/EmbeddedWalletConnectingScreen-DTxYtwkh-DxR12iiL.js                          2.97 kB │ gzip:   1.42 kB
+@sidequest/explore:build: dist/assets/EmbeddedWalletOnAccountCreateScreen-DVnOfOJg-7Gh_bHzx.js                     2.98 kB │ gzip:   1.45 kB
+@sidequest/explore:build: dist/assets/SetAutomaticRecoveryScreen-GtEwf97v-CMwULXc9.js                              2.99 kB │ gzip:   1.44 kB
+@sidequest/explore:build: dist/assets/berry-DKpUyyne.js                                                            2.99 kB │ gzip:   0.80 kB
+@sidequest/explore:build: dist/assets/jsonl-CmCQp5Yx.js                                                            3.00 kB │ gzip:   0.78 kB
+@sidequest/explore:build: dist/assets/pkce-9IlxxmsH-C5pSigHC.js                                                    3.04 kB │ gzip:   1.09 kB
+@sidequest/explore:build: dist/assets/src-DC80d6Ns.js                                                              3.06 kB │ gzip:   1.16 kB
+@sidequest/explore:build: dist/assets/PhPaperPlaneRight-zxQVvPLX.js                                                3.06 kB │ gzip:   1.40 kB
+@sidequest/explore:build: dist/assets/PhTrash-C9PD0SAt.js                                                          3.09 kB │ gzip:   1.17 kB
+@sidequest/explore:build: dist/assets/EmbeddedWalletPasswordUpdateScreen-Ce4369UE-BkJQhSDk.js                      3.09 kB │ gzip:   1.24 kB
+@sidequest/explore:build: dist/assets/GooglePay-B53WnudL-C16Ec0Gn.js                                               3.10 kB │ gzip:   1.44 kB
+@sidequest/explore:build: dist/assets/jsonc-CYpm1nAK.js                                                            3.10 kB │ gzip:   0.78 kB
+@sidequest/explore:build: dist/assets/EmailInputForm-Cqo1mda8-Tq-qOw85.js                                          3.11 kB │ gzip:   1.00 kB
+@sidequest/explore:build: dist/assets/logo-Cluzi2Zq.js                                                             3.12 kB │ gzip:   1.46 kB
+@sidequest/explore:build: dist/assets/CopyToClipboard-i_OQSBJr-CQKTAGwv.js                                         3.20 kB │ gzip:   1.35 kB
+@sidequest/explore:build: dist/assets/PhCurrencyDollar-BgiaenCi.js                                                 3.22 kB │ gzip:   1.32 kB
+@sidequest/explore:build: dist/assets/po-BiJDBrnU.js                                                               3.23 kB │ gzip:   0.90 kB
+@sidequest/explore:build: dist/assets/json5-BR5RXkoi.js                                                            3.24 kB │ gzip:   0.82 kB
+@sidequest/explore:build: dist/assets/mipsasm-BMqwQI7S.js                                                          3.25 kB │ gzip:   1.17 kB
+@sidequest/explore:build: dist/assets/tasl-DMoTqEGO.js                                                             3.28 kB │ gzip:   0.84 kB
+@sidequest/explore:build: dist/assets/PhQuestion-wOWJBd3G.js                                                       3.28 kB │ gzip:   1.43 kB
+@sidequest/explore:build: dist/assets/CrossAppAuthScreen-CjEnrdrJ-y9vXqAoB.js                                      3.29 kB │ gzip:   1.65 kB
+@sidequest/explore:build: dist/assets/rbs-C0MpOrj4.js                                                              3.30 kB │ gzip:   0.72 kB
+@sidequest/explore:build: dist/assets/ConnectOnlyStatusScreen-HQr2eWJ8-B8pq0vCX.js                                 3.32 kB │ gzip:   1.62 kB
+@sidequest/explore:build: dist/assets/genie-CV2tkWYe.js                                                            3.34 kB │ gzip:   1.20 kB
+@sidequest/explore:build: dist/assets/rel-BtDbiS_P.js                                                              3.36 kB │ gzip:   1.10 kB
+@sidequest/explore:build: dist/assets/vala-zf12oZj6.js                                                             3.36 kB │ gzip:   1.18 kB
+@sidequest/explore:build: dist/assets/PhImage-Cf0J2ZfJ.js                                                          3.40 kB │ gzip:   1.43 kB
+@sidequest/explore:build: dist/assets/splunk-BC2Px7Mm.js                                                           3.42 kB │ gzip:   1.51 kB
+@sidequest/explore:build: dist/assets/PasskeyStatusScreen-CPNqvDoG-rxfPg0Oh.js                                     3.45 kB │ gzip:   1.67 kB
+@sidequest/explore:build: dist/assets/arc-Cev3HYkO.js                                                              3.47 kB │ gzip:   1.46 kB
+@sidequest/explore:build: dist/assets/hurl-CoUA4p__.js                                                             3.51 kB │ gzip:   1.09 kB
+@sidequest/explore:build: dist/assets/PasswordRecoveryScreen-BBadAC-E-9nUWbpa5.js                                  3.55 kB │ gzip:   1.77 kB
+@sidequest/explore:build: dist/assets/TelegramAuthScreen-BG263Fwa-CjnFbBZZ.js                                      3.55 kB │ gzip:   1.73 kB
+@sidequest/explore:build: dist/assets/fluent-C03EYrpw.js                                                           3.60 kB │ gzip:   0.89 kB
+@sidequest/explore:build: dist/assets/ssh-config-BgfXC-Er.js                                                       3.61 kB │ gzip:   1.59 kB
+@sidequest/explore:build: dist/assets/jsonnet-CJTPZ8u_.js                                                          3.61 kB │ gzip:   1.03 kB
+@sidequest/explore:build: dist/assets/kdl-CsD5j6eV.js                                                              3.62 kB │ gzip:   1.03 kB
+@sidequest/explore:build: dist/assets/narrat-_X_XdTYD.js                                                           3.66 kB │ gzip:   1.09 kB
+@sidequest/explore:build: dist/assets/turtle-ByJddavk.js                                                           3.69 kB │ gzip:   0.96 kB
+@sidequest/explore:build: dist/assets/glsl-KDp2QGUf.js                                                             3.69 kB │ gzip:   1.45 kB
+@sidequest/explore:build: dist/assets/chunk-TLUHSLCS-BCKmFbwS.js                                                   3.74 kB │ gzip:   1.54 kB
+@sidequest/explore:build: dist/assets/FarcasterSignerStatusScreen-B67IDHNj-461VDXnI.js                             3.81 kB │ gzip:   1.66 kB
+@sidequest/explore:build: dist/assets/PhArrowsClockwise-BXRn1GEl.js                                                3.84 kB │ gzip:   1.57 kB
+@sidequest/explore:build: dist/assets/PhWarning-CoKs3gz6.js                                                        3.88 kB │ gzip:   1.47 kB
+@sidequest/explore:build: dist/assets/styles-BSL8-rdX-Bv-FuTli.js                                                  3.89 kB │ gzip:   1.11 kB
+@sidequest/explore:build: dist/assets/react-dom-DGctscHX.js                                                        3.89 kB │ gzip:   1.41 kB
+@sidequest/explore:build: dist/assets/zenscript-BnlCZFoB.js                                                        3.90 kB │ gzip:   1.28 kB
+@sidequest/explore:build: dist/assets/ron-VUp2lXgN.js                                                              3.90 kB │ gzip:   0.97 kB
+@sidequest/explore:build: dist/assets/utils-oVEYY1QK.js                                                            3.91 kB │ gzip:   1.57 kB
+@sidequest/explore:build: dist/assets/AddFundsSelectionScreen-D252cdfE-CSTLln8K.js                                 4.00 kB │ gzip:   1.65 kB
+@sidequest/explore:build: dist/assets/gn-CAXYAgV-.js                                                               4.01 kB │ gzip:   1.48 kB
+@sidequest/explore:build: dist/assets/getUserOperationHash-DEeBwM4P.js                                             4.05 kB │ gzip:   1.57 kB
+@sidequest/explore:build: dist/assets/utils-De7E53Fk.js                                                            4.08 kB │ gzip:   1.71 kB
+@sidequest/explore:build: dist/assets/pascal-4ZHwLPI5.js                                                           4.14 kB │ gzip:   1.67 kB
+@sidequest/explore:build: dist/assets/SignRequestScreen-Chf6Z75H-CleXaL_j.js                                       4.17 kB │ gzip:   2.14 kB
+@sidequest/explore:build: dist/assets/PhIdentificationCard-CfkZm-5K.js                                             4.19 kB │ gzip:   1.63 kB
+@sidequest/explore:build: dist/assets/RecoverySelectionScreen-B4zO4H6R-DJYoJrJG.js                                 4.25 kB │ gzip:   2.07 kB
+@sidequest/explore:build: dist/assets/diagram-Z3DM3KII-Ct24isBl.js                                                 4.28 kB │ gzip:   1.85 kB
+@sidequest/explore:build: dist/assets/CoinbaseOnrampStatusScreen-MwBZBEO8-D2gMIVYs.js                              4.35 kB │ gzip:   1.95 kB
+@sidequest/explore:build: dist/assets/ErrorScreen-CZXyXJwt-BNs3_RBX.js                                             4.35 kB │ gzip:   1.84 kB
+@sidequest/explore:build: dist/assets/http-CQOStPCk.js                                                             4.41 kB │ gzip:   1.06 kB
+@sidequest/explore:build: dist/assets/tcl-CZd0xW_V.js                                                              4.42 kB │ gzip:   1.50 kB
+@sidequest/explore:build: dist/assets/PhSpinner-CGDmbzUd.js                                                        4.42 kB │ gzip:   1.63 kB
+@sidequest/explore:build: dist/assets/ConnectPhoneForm-CSL588et-n3BDdTuk.js                                        4.45 kB │ gzip:   1.78 kB
+@sidequest/explore:build: dist/assets/nextflow-CSgcYZcx.js                                                         4.50 kB │ gzip:   1.16 kB
+@sidequest/explore:build: dist/assets/rosmsg-CAekHB0j.js                                                           4.51 kB │ gzip:   1.05 kB
+@sidequest/explore:build: dist/assets/MfaAuthEnrollmentFlowScreen-aQyc42kT-BCj83wuy.js                             4.54 kB │ gzip:   1.81 kB
+@sidequest/explore:build: dist/assets/defaultLocale-BFoDCU3G.js                                                    4.63 kB │ gzip:   2.12 kB
+@sidequest/explore:build: dist/assets/polar-C7UOKdEL.js                                                            4.66 kB │ gzip:   1.12 kB
+@sidequest/explore:build: dist/assets/sdbl-bTVj8UrX.js                                                             4.69 kB │ gzip:   2.00 kB
+@sidequest/explore:build: dist/assets/MoonpayStatusScreen-C_ioqmOe-BTZGOQMq.js                                     4.73 kB │ gzip:   2.32 kB
+@sidequest/explore:build: dist/assets/fennel-DQxkIbk2.js                                                           4.76 kB │ gzip:   1.53 kB
+@sidequest/explore:build: dist/assets/bibtex-Ci_nEsc7.js                                                           4.78 kB │ gzip:   0.83 kB
+@sidequest/explore:build: dist/assets/PhLightbulb-C4FZV7Es.js                                                      4.88 kB │ gzip:   1.84 kB
+@sidequest/explore:build: dist/assets/PhQrCode-CP3tFauY.js                                                         4.89 kB │ gzip:   1.46 kB
+@sidequest/explore:build: dist/assets/errors-BQ3N-RVt-BLqjTPNR.js                                                  4.90 kB │ gzip:   1.98 kB
+@sidequest/explore:build: dist/assets/llvm-DqHOMS-s.js                                                             5.03 kB │ gzip:   2.01 kB
+@sidequest/explore:build: dist/assets/ManualTransferScreen-D_NY_W-D-CM8J7SRY.js                                    5.06 kB │ gzip:   2.37 kB
+@sidequest/explore:build: dist/assets/stripe.esm-BCW9KcRF.js                                                       5.08 kB │ gzip:   1.79 kB
+@sidequest/explore:build: dist/assets/wgsl-BsKzXJz4.js                                                             5.13 kB │ gzip:   1.38 kB
+@sidequest/explore:build: dist/assets/EmbeddedWalletKeyExportScreen-CkF-zPTJ-D_ZAPHNJ.js                           5.27 kB │ gzip:   2.26 kB
+@sidequest/explore:build: dist/assets/gdresource-xMC7jr7x.js                                                       5.28 kB │ gzip:   1.33 kB
+@sidequest/explore:build: dist/assets/zig-CMLA9XwU.js                                                              5.33 kB │ gzip:   1.55 kB
+@sidequest/explore:build: dist/assets/qml-c4hD6DrI.js                                                              5.33 kB │ gzip:   1.38 kB
+@sidequest/explore:build: dist/assets/PhPuzzlePiece-BjoNVfST.js                                                    5.34 kB │ gzip:   1.94 kB
+@sidequest/explore:build: dist/assets/dax-BkyTk9wS.js                                                              5.35 kB │ gzip:   2.21 kB
+@sidequest/explore:build: dist/assets/SelectSourceAsset-BE6EzMW7-Csn89tk4.js                                       5.36 kB │ gzip:   2.03 kB
+@sidequest/explore:build: dist/assets/bicep-CUHmPFLl.js                                                            5.37 kB │ gzip:   1.14 kB
+@sidequest/explore:build: dist/assets/useActiveWallet-DCQDqX3Q-BKJv-T25.js                                         5.40 kB │ gzip:   2.16 kB
+@sidequest/explore:build: dist/assets/TransactionDetails-BOeB1w20-bkEnWSI0.js                                      5.43 kB │ gzip:   1.77 kB
+@sidequest/explore:build: dist/assets/xml-djSiQEPu.js                                                              5.44 kB │ gzip:   1.24 kB
+@sidequest/explore:build: dist/assets/awk-BWXHIvNe.js                                                              5.45 kB │ gzip:   1.37 kB
+@sidequest/explore:build: dist/assets/esm-l2W4dAq3.js                                                              5.46 kB │ gzip:   1.23 kB
+@sidequest/explore:build: dist/assets/linear-Cjisg8Ox.js                                                           5.51 kB │ gzip:   2.25 kB
+@sidequest/explore:build: dist/assets/OAuthStatusScreen-CippSqIJ-BjYCuwH-.js                                       5.60 kB │ gzip:   2.63 kB
+@sidequest/explore:build: dist/assets/jinja-BFuEnI9k.js                                                            5.62 kB │ gzip:   1.36 kB
+@sidequest/explore:build: dist/assets/PhGlobe-DvmSc9_A.js                                                          5.69 kB │ gzip:   1.91 kB
+@sidequest/explore:build: dist/assets/features-CcBSEUoQ.js                                                         5.71 kB │ gzip:   2.24 kB
+@sidequest/explore:build: dist/assets/lean-CewbzKMR.js                                                             5.77 kB │ gzip:   1.91 kB
+@sidequest/explore:build: dist/assets/chunk-PWAF6VOD-DsJ7IXCE.js                                                   5.83 kB │ gzip:   2.68 kB
+@sidequest/explore:build: dist/assets/AwaitingSolToEvmBridgingScreen-m93Tmzeb-CwMRuDD-.js                          5.84 kB │ gzip:   2.64 kB
+@sidequest/explore:build: dist/assets/powerquery-DNMTfnFr.js                                                       5.89 kB │ gzip:   1.51 kB
+@sidequest/explore:build: dist/assets/shaderlab-TOUzSsQk.js                                                        5.91 kB │ gzip:   2.08 kB
+@sidequest/explore:build: dist/assets/cypher-ClKdZ_lG.js                                                           5.94 kB │ gzip:   1.71 kB
+@sidequest/explore:build: dist/assets/coq-CGaSfhwR.js                                                              6.04 kB │ gzip:   1.95 kB
+@sidequest/explore:build: dist/assets/vb-DOwzaHZ0.js                                                               6.06 kB │ gzip:   2.32 kB
+@sidequest/explore:build: dist/assets/diagram-UQ7AKVKN-DANdPCrZ.js                                                 6.07 kB │ gzip:   2.56 kB
+@sidequest/explore:build: dist/assets/moonbit-D9W784E_.js                                                          6.07 kB │ gzip:   1.70 kB
+@sidequest/explore:build: dist/assets/to-ui-error-DriSyvzX-BxzVLs7E.js                                             6.12 kB │ gzip:   2.54 kB
+@sidequest/explore:build: dist/assets/shared-C4KM7VSO-C0dwh-J9.js                                                  6.16 kB │ gzip:   2.05 kB
+@sidequest/explore:build: dist/assets/pieDiagram-E7YTZNPT-BWqJaaCH.js                                              6.21 kB │ gzip:   2.60 kB
+@sidequest/explore:build: dist/assets/min-dark-BSWPekZh.js                                                         6.28 kB │ gzip:   1.70 kB
+@sidequest/explore:build: dist/assets/gdshader-CBce3t8t.js                                                         6.31 kB │ gzip:   1.72 kB
+@sidequest/explore:build: dist/assets/ara-4CJ0cIlV.js                                                              6.35 kB │ gzip:   1.80 kB
+@sidequest/explore:build: dist/assets/verilog-B2gwz-sJ.js                                                          6.40 kB │ gzip:   1.92 kB
+@sidequest/explore:build: dist/assets/clojure-DqKBuwfJ.js                                                          6.40 kB │ gzip:   1.41 kB
+@sidequest/explore:build: dist/assets/postcss-BXeXVLqQ.js                                                          6.41 kB │ gzip:   1.90 kB
+@sidequest/explore:build: dist/assets/toml-CcmNWLt0.js                                                             6.41 kB │ gzip:   1.28 kB
+@sidequest/explore:build: dist/assets/proto-DB4EqR-F.js                                                            6.54 kB │ gzip:   1.41 kB
+@sidequest/explore:build: dist/assets/LinkPasskeyScreen-BjrBgk8F-CVqIPSM0.js                                       6.59 kB │ gzip:   2.59 kB
+@sidequest/explore:build: dist/assets/chapel-DzDkHm7V.js                                                           6.62 kB │ gzip:   1.85 kB
+@sidequest/explore:build: dist/assets/mermaid-parser.core-zmA3YSFD.js                                              6.71 kB │ gzip:   1.86 kB
+@sidequest/explore:build: dist/assets/storage-DWGw0C_e-CP9OQ-V0.js                                                 6.72 kB │ gzip:   2.89 kB
+@sidequest/explore:build: dist/assets/red-CYlAq2b0.js                                                              6.73 kB │ gzip:   1.70 kB
+@sidequest/explore:build: dist/assets/talonscript-CohzipZa.js                                                      6.75 kB │ gzip:   1.48 kB
+@sidequest/explore:build: dist/assets/r-CawgMV1G.js                                                                6.80 kB │ gzip:   1.89 kB
+@sidequest/explore:build: dist/assets/riscv-Ckw8ddFX.js                                                            6.90 kB │ gzip:   1.97 kB
+@sidequest/explore:build: dist/assets/soy-DIgKaBBr.js                                                              6.92 kB │ gzip:   1.62 kB
+@sidequest/explore:build: dist/assets/Screen-Dtn4lspb-D5rE3f7K.js                                                  6.93 kB │ gzip:   2.31 kB
+@sidequest/explore:build: dist/assets/solarized-light-DFPxpIYQ.js                                                  6.93 kB │ gzip:   1.79 kB
+@sidequest/explore:build: dist/assets/min-light-DDpmG2fV.js                                                        6.96 kB │ gzip:   1.88 kB
+@sidequest/explore:build: dist/assets/useButton-f-ji394i.js                                                        7.06 kB │ gzip:   2.95 kB
+@sidequest/explore:build: dist/assets/scheme-DQCgrYNe.js                                                           7.16 kB │ gzip:   2.04 kB
+@sidequest/explore:build: dist/assets/TurnstileWrapper-20sam7uS-BYm3ZVvx.js                                        7.19 kB │ gzip:   2.82 kB
+@sidequest/explore:build: dist/assets/hlsl-Cvrh5tZx.js                                                             7.25 kB │ gzip:   2.18 kB
+@sidequest/explore:build: dist/assets/solarized-dark-b97czJOk.js                                                   7.39 kB │ gzip:   1.89 kB
+@sidequest/explore:build: dist/assets/qss-Fe1Jh2GI.js                                                              7.46 kB │ gzip:   2.57 kB
+@sidequest/explore:build: dist/assets/FarcasterConnectStatusScreen-C9sUwPj2-DyuwC7Co.js                            7.54 kB │ gzip:   3.25 kB
+@sidequest/explore:build: dist/assets/esm-DJNUAQDg.js                                                              7.57 kB │ gzip:   2.89 kB
+@sidequest/explore:build: dist/assets/prisma-DMgNhnYS.js                                                           7.73 kB │ gzip:   1.48 kB
+@sidequest/explore:build: dist/assets/systemd-BxMlprV5.js                                                          7.86 kB │ gzip:   2.54 kB
+@sidequest/explore:build: dist/assets/regexp-Z4B0jLoV.js                                                           8.05 kB │ gzip:   1.47 kB
+@sidequest/explore:build: dist/assets/use-unlink-wallet-CzhLmtfX-DgG5B2NP.js                                       8.07 kB │ gzip:   3.31 kB
+@sidequest/explore:build: dist/assets/isAddress-C6_gPDNS.js                                                        8.08 kB │ gzip:   3.06 kB
+@sidequest/explore:build: dist/assets/AwaitingEvmToSolBridgingScreen-kxYkefvS-CT5vUIib.js                          8.15 kB │ gzip:   3.41 kB
+@sidequest/explore:build: dist/assets/diagram-S7CK7UJ4-B0H0Za3y.js                                                 8.19 kB │ gzip:   3.66 kB
+@sidequest/explore:build: dist/assets/LinkConflictScreen-BIU8ewTv-ZM8A3KLJ.js                                      8.21 kB │ gzip:   3.07 kB
+@sidequest/explore:build: dist/assets/react-CA_A-1K6.js                                                            8.24 kB │ gzip:   3.11 kB
+@sidequest/explore:build: dist/assets/monokai-BscAjiQZ.js                                                          8.24 kB │ gzip:   1.97 kB
+@sidequest/explore:build: dist/assets/haml-CI-nWuwH.js                                                             8.33 kB │ gzip:   1.85 kB
+@sidequest/explore:build: dist/assets/FundSolWalletWithExternalSolanaWallet-DAgCcGSZ-DMJIYX6x.js                   8.36 kB │ gzip:   3.48 kB
+@sidequest/explore:build: dist/assets/ofetch.CWycOUEr-CHp-crOQ.js                                                  8.41 kB │ gzip:   3.38 kB
+@sidequest/explore:build: dist/assets/RecoveryOAuthStatusScreen-x9acanvl-7zwl59TP.js                               8.47 kB │ gzip:   3.25 kB
+@sidequest/explore:build: dist/assets/vue-html-CbO-twO-.js                                                         8.47 kB │ gzip:   1.68 kB
+@sidequest/explore:build: dist/assets/plsql-DGHpHOYJ.js                                                            8.50 kB │ gzip:   2.99 kB
+@sidequest/explore:build: dist/assets/dart-CHZY9Xhz.js                                                             8.60 kB │ gzip:   1.99 kB
+@sidequest/explore:build: dist/assets/horizon-CE9ld1lL.js                                                          8.77 kB │ gzip:   1.94 kB
+@sidequest/explore:build: dist/assets/kotlin-DhhofPvG.js                                                           8.77 kB │ gzip:   2.12 kB
+@sidequest/explore:build: dist/assets/horizon-bright-DSNQnXHK.js                                                   8.78 kB │ gzip:   1.96 kB
+@sidequest/explore:build: dist/assets/FundingMethodSelectionScreen-C7QABfvW-DxoeH8pf.js                            8.92 kB │ gzip:   3.40 kB
+@sidequest/explore:build: dist/assets/make-Dixweg8N.js                                                             8.95 kB │ gzip:   1.76 kB
+@sidequest/explore:build: dist/assets/esm-Ci1ogKuK.js                                                              8.95 kB │ gzip:   2.91 kB
+@sidequest/explore:build: dist/assets/andromeeda-vGVdxbeo.js                                                       9.01 kB │ gzip:   2.35 kB
+@sidequest/explore:build: dist/assets/sas-D4LZwwZz.js                                                              9.06 kB │ gzip:   3.82 kB
+@sidequest/explore:build: dist/assets/AwaitingPasswordlessCodeScreen-Y39Smn5S-ykU_5pX3.js                          9.07 kB │ gzip:   3.77 kB
+@sidequest/explore:build: dist/assets/dark-plus-Cs2F2srj.js                                                        9.09 kB │ gzip:   2.10 kB
+@sidequest/explore:build: dist/assets/slack-dark-DnToyrRv.js                                                       9.11 kB │ gzip:   1.96 kB
+@sidequest/explore:build: dist/assets/smithy-Dgaz7aur.js                                                           9.12 kB │ gzip:   1.51 kB
+@sidequest/explore:build: dist/assets/hmac-D_yamlhz.js                                                             9.21 kB │ gzip:   4.42 kB
+@sidequest/explore:build: dist/assets/sass-DXrisJhu.js                                                             9.28 kB │ gzip:   2.48 kB
+@sidequest/explore:build: dist/assets/plastic-DQwYfKfQ.js                                                          9.29 kB │ gzip:   1.96 kB
+@sidequest/explore:build: dist/assets/slack-ochin-B2OO5cIa.js                                                      9.42 kB │ gzip:   2.08 kB
+@sidequest/explore:build: dist/assets/ConnectionStatusScreen-CkSP8_A8-B4-Ed7w1.js                                  9.52 kB │ gzip:   3.99 kB
+@sidequest/explore:build: dist/assets/chunk-L3NEJ4N5-B3W5cISC.js                                                   9.68 kB │ gzip:   2.93 kB
+@sidequest/explore:build: dist/assets/jison-Bc3JQOGL.js                                                            9.69 kB │ gzip:   1.87 kB
+@sidequest/explore:build: dist/assets/tex-RerfBRZt.js                                                              9.73 kB │ gzip:   3.10 kB
+@sidequest/explore:build: dist/assets/cmake-Bj61d0ZC.js                                                            9.84 kB │ gzip:   3.37 kB
+@sidequest/explore:build: dist/assets/light-plus-DVQuIRkW.js                                                       9.93 kB │ gzip:   2.27 kB
+@sidequest/explore:build: dist/assets/cynefinDiagram-5FMLGOSQ-C78GiPYt.js                                          9.94 kB │ gzip:   3.51 kB
+@sidequest/explore:build: dist/assets/hcl-Dh228itO.js                                                             10.04 kB │ gzip:   1.93 kB
+@sidequest/explore:build: dist/assets/PinInput-DbZ0b1i1-jCCN2VFW.js                                               10.15 kB │ gzip:   3.70 kB
+@sidequest/explore:build: dist/assets/MfaEnrollmentFlowScreen-CsCKhXOZ-DiGRs6m6.js                                10.21 kB │ gzip:   3.46 kB
+@sidequest/explore:build: dist/assets/FundWithBankDepositScreen-CPTWNJlt-DjtuwxT4.js                              10.28 kB │ gzip:   3.76 kB
+@sidequest/explore:build: dist/assets/rst-Czz5-mE3.js                                                             10.31 kB │ gzip:   2.24 kB
+@sidequest/explore:build: dist/assets/pkl-ot-7Btpt.js                                                             10.36 kB │ gzip:   1.37 kB
+@sidequest/explore:build: dist/assets/chunk-2E4U76K2-D63Goywk.js                                                  10.39 kB │ gzip:   4.15 kB
+@sidequest/explore:build: dist/assets/dream-maker-DW3nJb8Q.js                                                     10.46 kB │ gzip:   2.25 kB
+@sidequest/explore:build: dist/assets/raku-B3gFvitq.js                                                            10.46 kB │ gzip:   2.94 kB
+@sidequest/explore:build: dist/assets/nextflow-groovy-D7IRt6Pp.js                                                 10.52 kB │ gzip:   2.16 kB
+@sidequest/explore:build: dist/assets/yaml-jfx616NZ.js                                                            10.57 kB │ gzip:   2.32 kB
+@sidequest/explore:build: dist/assets/stateDiagram-D77RDMKH-DR5b-lIW.js                                           10.64 kB │ gzip:   3.74 kB
+@sidequest/explore:build: dist/assets/diagram-VSXAHHWV-B4HEOL5p.js                                                10.66 kB │ gzip:   4.12 kB
+@sidequest/explore:build: dist/assets/just-C51OknTE.js                                                            10.84 kB │ gzip:   2.61 kB
+@sidequest/explore:build: dist/assets/TransferFromWalletScreen-FPypY7tU-DirThN-W.js                               10.91 kB │ gzip:   3.70 kB
+@sidequest/explore:build: dist/assets/elm-BUw3uBop.js                                                             10.94 kB │ gzip:   2.09 kB
+@sidequest/explore:build: dist/assets/dagre-GXQ25YYZ-XVE__CVm.js                                                  10.98 kB │ gzip:   4.15 kB
+@sidequest/explore:build: dist/assets/AwaitingExternalEthereumTransferScreen-CRXTmg6K-B0UnY_pl.js                 11.06 kB │ gzip:   4.20 kB
+@sidequest/explore:build: dist/assets/github-light-EUqPIrTm.js                                                    11.18 kB │ gzip:   2.49 kB
+@sidequest/explore:build: dist/assets/prolog-iXnhIJG7.js                                                          11.34 kB │ gzip:   3.84 kB
+@sidequest/explore:build: dist/assets/terraform-DswuEJGm.js                                                       11.38 kB │ gzip:   2.51 kB
+@sidequest/explore:build: dist/assets/github-dark-C-LZuMrd.js                                                     11.40 kB │ gzip:   2.53 kB
+@sidequest/explore:build: dist/assets/puppet-CDv2pdJW.js                                                          11.43 kB │ gzip:   2.10 kB
+@sidequest/explore:build: dist/assets/laserwave-C_8bwKvT.js                                                       11.49 kB │ gzip:   2.57 kB
+@sidequest/explore:build: dist/assets/gherkin-DExj1W_8.js                                                         11.93 kB │ gzip:   5.04 kB
+@sidequest/explore:build: dist/assets/wasm-ByWQv1Qj.js                                                            12.00 kB │ gzip:   2.17 kB
+@sidequest/explore:build: dist/assets/hjson-CxZEssPk.js                                                           12.04 kB │ gzip:   1.64 kB
+@sidequest/explore:build: dist/assets/surrealql-Bq3GUra1.js                                                       12.06 kB │ gzip:   3.30 kB
+@sidequest/explore:build: dist/assets/PhSealCheck-vIKzREuN.js                                                     12.07 kB │ gzip:   4.06 kB
+@sidequest/explore:build: dist/assets/wallet-connect-Ca-N52lE-C-mKpFe2.js                                         12.26 kB │ gzip:   6.05 kB
+@sidequest/explore:build: dist/assets/apache-U0d_L8uA.js                                                          12.44 kB │ gzip:   3.71 kB
+@sidequest/explore:build: dist/assets/handlebars-CUD3L-PA.js                                                      12.48 kB │ gzip:   2.43 kB
+@sidequest/explore:build: dist/assets/useI18n-DJGbXMkU-Dj0F-L_F.js                                                12.70 kB │ gzip:   3.33 kB
+@sidequest/explore:build: dist/assets/vesper-DdrHHSXu.js                                                          12.73 kB │ gzip:   1.99 kB
+@sidequest/explore:build: dist/assets/beancount-C2IN4Vk8.js                                                       12.84 kB │ gzip:   2.21 kB
+@sidequest/explore:build: dist/assets/bat-qdxAdBWQ.js                                                             12.88 kB │ gzip:   3.23 kB
+@sidequest/explore:build: dist/assets/fish-BJitypiv.js                                                            13.03 kB │ gzip:   1.73 kB
+@sidequest/explore:build: dist/assets/nsis-CjNLYCLg.js                                                            13.11 kB │ gzip:   4.06 kB
+@sidequest/explore:build: dist/assets/v-DBj4K9d_.js                                                               13.32 kB │ gzip:   2.75 kB
+@sidequest/explore:build: dist/assets/vitesse-light-VbXTXTou.js                                                   13.61 kB │ gzip:   3.03 kB
+@sidequest/explore:build: dist/assets/TransferOrBridgeLoadingScreen-BHVCJFXe-FjRNcSM6.js                          13.63 kB │ gzip:   5.20 kB
+@sidequest/explore:build: dist/assets/aurora-x-CDeNXAV0.js                                                        13.65 kB │ gzip:   2.28 kB
+@sidequest/explore:build: dist/assets/vitesse-black-fwtXNY1n.js                                                   13.67 kB │ gzip:   3.05 kB
+@sidequest/explore:build: dist/assets/vitesse-dark-BZCL-v6S.js                                                    13.75 kB │ gzip:   3.06 kB
+@sidequest/explore:build: dist/assets/parseAbi-QjW1Ifa2.js                                                        13.76 kB │ gzip:   4.03 kB
+@sidequest/explore:build: dist/assets/pug-CEuin0pH.js                                                             13.84 kB │ gzip:   2.58 kB
+@sidequest/explore:build: dist/assets/synthwave-84-nFMaYfgc.js                                                    14.03 kB │ gzip:   2.85 kB
+@sidequest/explore:build: dist/assets/smalltalk-BHpQb5nM.js                                                       14.11 kB │ gzip:   2.14 kB
+@sidequest/explore:build: dist/assets/github-light-default-BXViO-2h.js                                            14.15 kB │ gzip:   3.02 kB
+@sidequest/explore:build: dist/assets/DepositAddressScreen-DIaAeDcJ-DOeo0fUW.js                                   14.25 kB │ gzip:   4.91 kB
+@sidequest/explore:build: dist/assets/github-light-high-contrast-B68TUdTA.js                                      14.27 kB │ gzip:   3.00 kB
+@sidequest/explore:build: dist/assets/clarity-CtfBBspg.js                                                         14.35 kB │ gzip:   2.50 kB
+@sidequest/explore:build: dist/assets/DepositAddressAddressStepView-DEuzIXen-MINBqB98.js                          14.39 kB │ gzip:   5.16 kB
+@sidequest/explore:build: dist/assets/github-dark-dimmed-Bx1FflLF.js                                              14.43 kB │ gzip:   3.11 kB
+@sidequest/explore:build: dist/assets/github-dark-default-DXG-b-1a.js                                             14.43 kB │ gzip:   3.12 kB
+@sidequest/explore:build: dist/assets/github-dark-high-contrast-B_tTalzw.js                                       14.59 kB │ gzip:   3.07 kB
+@sidequest/explore:build: dist/assets/gnuplot-7GGW24-e.js                                                         14.77 kB │ gzip:   3.27 kB
+@sidequest/explore:build: dist/assets/rust-DpiIf5JO.js                                                            15.16 kB │ gzip:   2.72 kB
+@sidequest/explore:build: dist/assets/kusto-C7mF5XQf.js                                                           15.16 kB │ gzip:   3.92 kB
+@sidequest/explore:build: dist/assets/nix-IvuFDN5E.js                                                             15.50 kB │ gzip:   2.47 kB
+@sidequest/explore:build: dist/assets/actionscript-3-Cs6JJXT5.js                                                  15.53 kB │ gzip:   2.70 kB
+@sidequest/explore:build: dist/assets/lua-BUgfIb4s.js                                                             15.60 kB │ gzip:   3.19 kB
+@sidequest/explore:build: dist/assets/chunk-SVP7TREG-CwO9E8Ag.js                                                  15.64 kB │ gzip:   4.35 kB
+@sidequest/explore:build: dist/assets/diagram-VX7I27RA-Dj1UMoKB.js                                                15.75 kB │ gzip:   5.52 kB
+@sidequest/explore:build: dist/assets/abap-CLvhMVsD.js                                                            15.84 kB │ gzip:   5.93 kB
+@sidequest/explore:build: dist/assets/matlab-D7qyCx1q.js                                                          16.07 kB │ gzip:   3.06 kB
+@sidequest/explore:build: dist/assets/property-DuZ9DLP4.js                                                        16.17 kB │ gzip:   6.08 kB
+@sidequest/explore:build: dist/assets/cue-CE9AQfxI.js                                                             16.19 kB │ gzip:   2.04 kB
+@sidequest/explore:build: dist/assets/elixir-C4jKS0AO.js                                                          16.26 kB │ gzip:   2.76 kB
+@sidequest/explore:build: dist/assets/luau-VGWVLoqX.js                                                            16.29 kB │ gzip:   3.56 kB
+@sidequest/explore:build: dist/assets/index-DjJmUJpR-B9eA12ph.js                                                  16.35 kB │ gzip:   5.59 kB
+@sidequest/explore:build: dist/assets/DepositAddressV3Screen-CrX8jlrq-DVVEGnuk.js                                 16.36 kB │ gzip:   5.40 kB
+@sidequest/explore:build: dist/assets/solidity-Bj7E1mRn.js                                                        16.40 kB │ gzip:   3.14 kB
+@sidequest/explore:build: dist/assets/odin-B1RWQWA5.js                                                            16.50 kB │ gzip:   2.92 kB
+@sidequest/explore:build: dist/assets/ts-tags-DfZkpfOb.js                                                         16.54 kB │ gzip:   2.06 kB
+@sidequest/explore:build: dist/assets/kanagawa-wave-BML5mF2J.js                                                   17.11 kB │ gzip:   2.90 kB
+@sidequest/explore:build: dist/assets/kanagawa-lotus-BmuOG9ZW.js                                                  17.11 kB │ gzip:   2.91 kB
+@sidequest/explore:build: dist/assets/kanagawa-dragon-Bozd7klA.js                                                 17.12 kB │ gzip:   2.92 kB
+@sidequest/explore:build: dist/assets/ishikawaDiagram-5VMMS53U-Dn4jmxlg.js                                        17.31 kB │ gzip:   6.53 kB
+@sidequest/explore:build: dist/assets/move-BYnGhZoM.js                                                            17.65 kB │ gzip:   3.06 kB
+@sidequest/explore:build: dist/assets/floating-ui.react-dom-BQRmygY7.js                                           17.81 kB │ gzip:   7.08 kB
+@sidequest/explore:build: dist/assets/ConnectorUtil-CMo4grT1.js                                                   17.92 kB │ gzip:   7.32 kB
+@sidequest/explore:build: dist/assets/graphql-DFPqqx_R.js                                                         18.08 kB │ gzip:   2.54 kB
+@sidequest/explore:build: dist/assets/liquid-BWXsxAyl.js                                                          18.10 kB │ gzip:   3.14 kB
+@sidequest/explore:build: dist/assets/AttachmentEditor-ZV3ktEYE.js                                                18.12 kB │ gzip:   6.51 kB
+@sidequest/explore:build: dist/assets/svelte-CME2NvtG.js                                                          18.25 kB │ gzip:   3.15 kB
+@sidequest/explore:build: dist/assets/material-theme-Bm3Qr25_.js                                                  18.61 kB │ gzip:   3.10 kB
+@sidequest/explore:build: dist/assets/material-theme-darker-2IIEA8gg.js                                           18.62 kB │ gzip:   3.10 kB
+@sidequest/explore:build: dist/assets/material-theme-ocean-CHQ94UKr.js                                            18.62 kB │ gzip:   3.12 kB
+@sidequest/explore:build: dist/assets/material-theme-lighter-uhdI0v04.js                                          18.63 kB │ gzip:   3.10 kB
+@sidequest/explore:build: dist/assets/material-theme-palenight-B5W6OYN7.js                                        18.63 kB │ gzip:   3.11 kB
+@sidequest/explore:build: dist/assets/gdscript-DYvRD3hg.js                                                        19.08 kB │ gzip:   3.76 kB
+@sidequest/explore:build: dist/assets/groovy-CacY0gHj.js                                                          19.17 kB │ gzip:   3.59 kB
+@sidequest/explore:build: dist/assets/StandardSignAndSendTransactionScreen-BlF4_0ms-pc-e-FVD.js                   19.71 kB │ gzip:   6.44 kB
+@sidequest/explore:build: dist/assets/ayu-dark-DluEY0Gj.js                                                        20.07 kB │ gzip:   3.93 kB
+@sidequest/explore:build: dist/assets/ayu-mirage-Bqwy1Gya.js                                                      20.08 kB │ gzip:   3.91 kB
+@sidequest/explore:build: dist/assets/glimmer-js-C4XGtw65.js                                                      20.08 kB │ gzip:   2.94 kB
+@sidequest/explore:build: dist/assets/glimmer-ts-DdvH-G9O.js                                                      20.08 kB │ gzip:   2.93 kB
+@sidequest/explore:build: dist/assets/mdc-C5XSEfnq.js                                                             20.08 kB │ gzip:   6.81 kB
+@sidequest/explore:build: dist/assets/HCaptchaWrapper-CUi9LJsp-DqofSH0S.js                                        20.08 kB │ gzip:   7.46 kB
+@sidequest/explore:build: dist/assets/powershell-QtSnmXcu.js                                                      20.14 kB │ gzip:   4.05 kB
+@sidequest/explore:build: dist/assets/ayu-light-C3h-C4tm.js                                                       20.14 kB │ gzip:   3.89 kB
+@sidequest/explore:build: dist/assets/kanban-definition-UXKFOSKX-LIj1Jt_C.js                                      20.30 kB │ gzip:   7.17 kB
+@sidequest/explore:build: dist/assets/viml-DvXPmvsu.js                                                            20.35 kB │ gzip:   6.73 kB
+@sidequest/explore:build: dist/assets/snazzy-light-4G7pJPwS.js                                                    20.77 kB │ gzip:   3.80 kB
+@sidequest/explore:build: dist/assets/dracula-BHWKrbxM.js                                                         21.06 kB │ gzip:   3.99 kB
+@sidequest/explore:build: dist/assets/dracula-soft-5eyTD99u.js                                                    21.07 kB │ gzip:   4.02 kB
+@sidequest/explore:build: dist/assets/index-DEvxmE29-CAc4RX4A.js                                                  21.22 kB │ gzip:   6.10 kB
+@sidequest/explore:build: dist/assets/CustomLandingScreenView-BKG1b2JP-Ck7mAOcd.js                                21.22 kB │ gzip:   7.25 kB
+@sidequest/explore:build: dist/assets/wit-DdvCle-K.js                                                             21.46 kB │ gzip:   2.87 kB
+@sidequest/explore:build: dist/assets/secp256k1-DZXeCH9F.js                                                       21.60 kB │ gzip:   8.71 kB
+@sidequest/explore:build: dist/assets/rose-pine-aMsaMD1D.js                                                       21.73 kB │ gzip:   3.88 kB
+@sidequest/explore:build: dist/assets/rose-pine-moon-DO-qXg-I.js                                                  21.74 kB │ gzip:   3.89 kB
+@sidequest/explore:build: dist/assets/rose-pine-dawn-8PwUyIlP.js                                                  21.74 kB │ gzip:   3.89 kB
+@sidequest/explore:build: dist/assets/nushell--0fT3PI1.js                                                         21.76 kB │ gzip:   5.44 kB
+@sidequest/explore:build: dist/assets/nim-CTuoUS2D.js                                                             22.45 kB │ gzip:   3.15 kB
+@sidequest/explore:build: dist/assets/common-lisp-Cv5bFMCO.js                                                     22.57 kB │ gzip:   6.07 kB
+@sidequest/explore:build: dist/assets/gruvbox-dark-hard-C820rvS2.js                                               22.63 kB │ gzip:   4.15 kB
+@sidequest/explore:build: dist/assets/gruvbox-dark-soft-MrdJrrXF.js                                               22.63 kB │ gzip:   4.15 kB
+@sidequest/explore:build: dist/assets/gruvbox-light-hard-BC_s9l72.js                                              22.63 kB │ gzip:   4.16 kB
+@sidequest/explore:build: dist/assets/gruvbox-light-soft-BSMLrYjP.js                                              22.63 kB │ gzip:   4.16 kB
+@sidequest/explore:build: dist/assets/gruvbox-dark-medium-BPjhmG05.js                                             22.63 kB │ gzip:   4.15 kB
+@sidequest/explore:build: dist/assets/gruvbox-light-medium-BAWPOn9u.js                                            22.63 kB │ gzip:   4.16 kB
+@sidequest/explore:build: dist/assets/ModalFooter-BldNwiHO-nq1Pprqc.js                                            22.65 kB │ gzip:   7.32 kB
+@sidequest/explore:build: dist/assets/sankeyDiagram-P5KCCOFB-gUoHuseT.js                                          22.79 kB │ gzip:   8.25 kB
+@sidequest/explore:build: dist/assets/journeyDiagram-3NMN7TZE-C9u9ryTH.js                                         23.15 kB │ gzip:   8.16 kB
+@sidequest/explore:build: dist/assets/lib-C1u5IQrF.js                                                             23.20 kB │ gzip:   9.92 kB
+@sidequest/explore:build: dist/assets/mindmap-definition-YA3MSWOX-DDdATPrV.js                                     23.44 kB │ gzip:   8.02 kB
+@sidequest/explore:build: dist/assets/cadence-CQ2zXKGN.js                                                         23.66 kB │ gzip:   3.65 kB
+@sidequest/explore:build: dist/assets/sql-PZruFKXC.js                                                             23.73 kB │ gzip:   7.57 kB
+@sidequest/explore:build: dist/assets/EnrollTotp-9U-h-h7Y-fqtxaizN.js                                             23.85 kB │ gzip:   9.92 kB
+@sidequest/explore:build: dist/assets/graphlib-DS17s2tU.js                                                        23.90 kB │ gzip:   8.31 kB
+@sidequest/explore:build: dist/assets/astro-BNiFO0rl.js                                                           24.02 kB │ gzip:   7.60 kB
+@sidequest/explore:build: dist/assets/apl-MXaNvbRT.js                                                             24.02 kB │ gzip:   4.17 kB
+@sidequest/explore:build: dist/assets/templ-B90eNqj7.js                                                           24.06 kB │ gzip:   5.41 kB
+@sidequest/explore:build: dist/assets/angular-html-nT4Y5vey.js                                                    24.24 kB │ gzip:   3.99 kB
+@sidequest/explore:build: dist/assets/vhdl-BroJfC0k.js                                                            24.25 kB │ gzip:   3.86 kB
+@sidequest/explore:build: dist/assets/purescript-9MfHhQsQ.js                                                      24.67 kB │ gzip:   3.24 kB
+@sidequest/explore:build: dist/assets/twig-CWBkjR6c.js                                                            24.85 kB │ gzip:   4.00 kB
+@sidequest/explore:build: dist/assets/vue-B4pLHUU6.js                                                             24.96 kB │ gzip:   3.03 kB
+@sidequest/explore:build: dist/assets/TransactionErrorView-CHChscnJ-Caev_iCc.js                                   25.05 kB │ gzip:   6.79 kB
+@sidequest/explore:build: dist/assets/wardleyDiagram-VM6X3IG4-B28Uxu2A.js                                         25.20 kB │ gzip:   6.55 kB
+@sidequest/explore:build: dist/assets/one-light-D7Lr4KcI.js                                                       25.29 kB │ gzip:   3.63 kB
+@sidequest/explore:build: dist/assets/fsharp-D13ZGOAj.js                                                          25.30 kB │ gzip:   4.12 kB
+@sidequest/explore:build: dist/assets/QrCode-cA9rnMIN-Dz0Iy6Ew.js                                                 25.31 kB │ gzip:   9.66 kB
+@sidequest/explore:build: dist/assets/marko-CBj6qv2L.js                                                           25.72 kB │ gzip:   3.66 kB
+@sidequest/explore:build: dist/assets/night-owl-light-eJ-hLW7d.js                                                 25.89 kB │ gzip:   4.23 kB
+@sidequest/explore:build: dist/assets/c3-D0apG41V.js                                                              26.37 kB │ gzip:   3.97 kB
+@sidequest/explore:build: dist/assets/twitch-5IOe4sIQ-DP2W8rCm.js                                                 26.51 kB │ gzip:  14.32 kB
+@sidequest/explore:build: dist/assets/system-verilog-Dh5ihWbf.js                                                  26.54 kB │ gzip:   4.85 kB
+@sidequest/explore:build: dist/assets/nord-Cb4Vim4T.js                                                            26.72 kB │ gzip:   4.35 kB
+@sidequest/explore:build: dist/assets/codeql-oeQT6MSM.js                                                          26.87 kB │ gzip:   3.79 kB
+@sidequest/explore:build: dist/assets/typespec-BGhR2SqG.js                                                        26.99 kB │ gzip:   2.75 kB
+@sidequest/explore:build: dist/assets/rough.esm-Dy-Kn_BL.js                                                       27.10 kB │ gzip:   8.85 kB
+@sidequest/explore:build: dist/assets/scss-DwleU3a5.js                                                            27.26 kB │ gzip:   4.23 kB
+@sidequest/explore:build: dist/assets/java-CzmgatgJ.js                                                            27.28 kB │ gzip:   4.31 kB
+@sidequest/explore:build: dist/assets/coffee-L7N02ZT5.js                                                          27.42 kB │ gzip:   6.35 kB
+@sidequest/explore:build: dist/assets/razor-DO8DodyQ.js                                                           27.45 kB │ gzip:   3.54 kB
+@sidequest/explore:build: dist/assets/secp256k1-C8Ph-XiD.js                                                       27.96 kB │ gzip:  10.84 kB
+@sidequest/explore:build: dist/assets/scala-BiFt_7mu.js                                                           28.88 kB │ gzip:   3.93 kB
+@sidequest/explore:build: dist/assets/night-owl-DhmEMT88.js                                                       28.91 kB │ gzip:   5.14 kB
+@sidequest/explore:build: dist/assets/gitGraphDiagram-WWUBYQGX-CtgVNLV9.js                                        29.01 kB │ gzip:   8.57 kB
+@sidequest/explore:build: dist/assets/crystal-DCcxCxft.js                                                         29.41 kB │ gzip:   4.44 kB
+@sidequest/explore:build: dist/assets/applescript-CCn79oCD.js                                                     29.56 kB │ gzip:   5.94 kB
+@sidequest/explore:build: dist/assets/Loader-UAZqxsnw-DAeAUpFw.js                                                 29.74 kB │ gzip:  12.00 kB
+@sidequest/explore:build: dist/assets/timeline-definition-24CTP7MA-B_UsmfPE.js                                    30.37 kB │ gzip:   9.97 kB
+@sidequest/explore:build: dist/assets/erDiagram-RLTQ6QDP-kAGaD1bJ.js                                              30.69 kB │ gzip:  10.57 kB
+@sidequest/explore:build: dist/assets/chunk-75Z2AOVW-B8xI3dMD.js                                                  30.75 kB │ gzip:   8.50 kB
+@sidequest/explore:build: dist/assets/requirementDiagram-BXWQKSXE-CqbttyEu.js                                     31.00 kB │ gzip:   9.77 kB
+@sidequest/explore:build: dist/assets/stylus-B6D30XZt.js                                                          31.06 kB │ gzip:   8.01 kB
+@sidequest/explore:build: dist/assets/julia-C8-5eM9f.js                                                           31.22 kB │ gzip:   4.34 kB
+@sidequest/explore:build: dist/assets/ahk-DwADkxyd.js                                                             31.44 kB │ gzip:   7.83 kB
+@sidequest/explore:build: dist/assets/floating-ui.react-DyKFhTZs.js                                               32.27 kB │ gzip:  11.44 kB
+@sidequest/explore:build: dist/assets/poimandres-DRFjx7u4.js                                                      33.49 kB │ gzip:   5.49 kB
+@sidequest/explore:build: dist/assets/quadrantDiagram-AXDQQJYC-Z81epQNl.js                                        33.51 kB │ gzip:   9.74 kB
+@sidequest/explore:build: dist/assets/bsl-_VjlB9mv.js                                                             33.94 kB │ gzip:   8.35 kB
+@sidequest/explore:build: dist/assets/nginx-CS8XhVGa.js                                                           35.35 kB │ gzip:   4.45 kB
+@sidequest/explore:build: dist/assets/houston-CsvMBhTu.js                                                         35.41 kB │ gzip:   5.76 kB
+@sidequest/explore:build: dist/assets/tokyo-night-oM2G3aXe.js                                                     35.66 kB │ gzip:   6.22 kB
+@sidequest/explore:build: dist/assets/haxe-C8oCnwJJ.js                                                            35.94 kB │ gzip:   6.00 kB
+@sidequest/explore:build: dist/assets/org-gJ6-kJPT.js                                                             36.26 kB │ gzip:   3.67 kB
+@sidequest/explore:build: dist/assets/chunk-OSK3NFVY-DplEV7RF.js                                                  36.47 kB │ gzip:   7.96 kB
+@sidequest/explore:build: dist/assets/dagre-C-rnJpZF.js                                                           36.85 kB │ gzip:  13.23 kB
+@sidequest/explore:build: dist/assets/one-dark-pro-C6YyR8OD.js                                                    37.05 kB │ gzip:   6.10 kB
+@sidequest/explore:build: dist/assets/ConstantsUtil-DmLsRHAl.js                                                   37.10 kB │ gzip:  11.33 kB
+@sidequest/explore:build: dist/assets/erlang-Cphh6RMH.js                                                          37.47 kB │ gzip:   4.36 kB
+@sidequest/explore:build: dist/assets/chunk-IMKFNOWR-D3JDQ-Tb.js                                                  37.64 kB │ gzip:  12.27 kB
+@sidequest/explore:build: dist/assets/Diagram-Dh7RhCFf.js                                                         38.43 kB │ gzip:  13.01 kB
+@sidequest/explore:build: dist/assets/bird2-CYIUgYqB.js                                                           38.67 kB │ gzip:   8.49 kB
+@sidequest/explore:build: dist/assets/cobol-CoKHh2nP.js                                                           39.07 kB │ gzip:  10.88 kB
+@sidequest/explore:build: dist/assets/asm-Cmm7eHzH.js                                                             40.71 kB │ gzip:   8.16 kB
+@sidequest/explore:build: dist/assets/vennDiagram-4TSXK5OY-Du4FQxzu.js                                            41.16 kB │ gzip:  15.11 kB
+@sidequest/explore:build: dist/assets/blockDiagram-I7D4REHJ-Bxz_5ovU.js                                           41.44 kB │ gzip:  13.36 kB
+@sidequest/explore:build: dist/assets/haskell-D8IpX4py.js                                                         41.48 kB │ gzip:   6.41 kB
+@sidequest/explore:build: dist/assets/shellscript-Cm36sLSA.js                                                     41.54 kB │ gzip:   6.13 kB
+@sidequest/explore:build: dist/assets/BridgeNetworkSelectionView-Crnt5gup-D0J46G8z.js                             41.99 kB │ gzip:  14.72 kB
+@sidequest/explore:build: dist/assets/perl-LHztnrB5.js                                                            43.14 kB │ gzip:   4.64 kB
+@sidequest/explore:build: dist/assets/d-qD-0Kul2.js                                                               43.78 kB │ gzip:   8.43 kB
+@sidequest/explore:build: dist/assets/xychartDiagram-S5SC5T6Z-CxGR0mDh.js                                         44.14 kB │ gzip:  12.22 kB
+@sidequest/explore:build: dist/assets/ahk2-_6rzW9BS.js                                                            45.05 kB │ gzip:   9.87 kB
+@sidequest/explore:build: dist/assets/src-VCQdCrjN.js                                                             45.68 kB │ gzip:  16.00 kB
+@sidequest/explore:build: dist/assets/chunk-LNGE3PJU-5-SxdO55.js                                                  46.38 kB │ gzip:  15.54 kB
+@sidequest/explore:build: dist/assets/ruby-DvpsHyVD.js                                                            46.63 kB │ gzip:   5.70 kB
+@sidequest/explore:build: dist/assets/go-rLFTqkRN.js                                                              46.81 kB │ gzip:   5.14 kB
+@sidequest/explore:build: dist/assets/apex-KFGFyKwG.js                                                            47.88 kB │ gzip:   6.85 kB
+@sidequest/explore:build: dist/assets/ada-X3Y2mlq2.js                                                             48.07 kB │ gzip:   5.96 kB
+@sidequest/explore:build: dist/assets/chunk-TICWLB2K-7JnOqgcW.js                                                  48.78 kB │ gzip:  15.75 kB
+@sidequest/explore:build: dist/assets/imba-DsUTQ-LC.js                                                            49.92 kB │ gzip:   9.47 kB
+@sidequest/explore:build: dist/assets/catppuccin-mocha-DjuaAJKi.js                                                50.84 kB │ gzip:   8.47 kB
+@sidequest/explore:build: dist/assets/catppuccin-latte-CtsyrtPq.js                                                50.84 kB │ gzip:   8.48 kB
+@sidequest/explore:build: dist/assets/catppuccin-frappe-C9Q5zVZY.js                                               50.85 kB │ gzip:   8.48 kB
+@sidequest/explore:build: dist/assets/catppuccin-macchiato-R8nAf1vR.js                                            50.85 kB │ gzip:   8.48 kB
+@sidequest/explore:build: dist/assets/chunk-GMAD6QVW-C3wLNX2U.js                                                  51.84 kB │ gzip:  16.68 kB
+@sidequest/explore:build: dist/assets/css-DLOSDQAv.js                                                             53.43 kB │ gzip:  12.53 kB
+@sidequest/explore:build: dist/assets/everforest-dark-sB-x3p7T.js                                                 53.74 kB │ gzip:   8.37 kB
+@sidequest/explore:build: dist/assets/everforest-light-Df2xbC6M.js                                                53.74 kB │ gzip:   8.36 kB
+@sidequest/explore:build: dist/assets/ConnectWalletView-BLywHxyt-DQwdP_XG.js                                      54.49 kB │ gzip:  17.78 kB
+@sidequest/explore:build: dist/assets/mermaid-BxpfTIzt.js                                                         54.80 kB │ gzip:   4.79 kB
+@sidequest/explore:build: dist/assets/wikitext-ClFFjSW2.js                                                        55.87 kB │ gzip:   4.81 kB
+@sidequest/explore:build: dist/assets/stata-3t7392O5.js                                                           56.99 kB │ gzip:  12.40 kB
+@sidequest/explore:build: dist/assets/html-lBYS1seB.js                                                            57.32 kB │ gzip:  11.79 kB
+@sidequest/explore:build: dist/assets/ballerina-B7ZEbQpA.js                                                       58.68 kB │ gzip:   8.10 kB
+@sidequest/explore:build: dist/assets/markdown-BYOwaDjH.js                                                        59.32 kB │ gzip:   5.66 kB
+@sidequest/explore:build: dist/assets/chunk-SHT3W25Y-LRVHDhxH.js                                                  61.24 kB │ gzip:  19.84 kB
+@sidequest/explore:build: dist/assets/ocaml-O90oeIOV.js                                                           62.44 kB │ gzip:   5.04 kB
+@sidequest/explore:build: dist/assets/privy-context-CHgh9ALO-Dy0BdDyy.js                                          63.43 kB │ gzip:  18.46 kB
+@sidequest/explore:build: dist/assets/stringifyLocale-CDPnmxKs.js                                                 63.54 kB │ gzip:  22.54 kB
+@sidequest/explore:build: dist/assets/c4Diagram-7LVT6UL2-C54adBdZ.js                                              64.74 kB │ gzip:  18.53 kB
+@sidequest/explore:build: dist/assets/useWallets-Bdalx8ys-DAKycvhD.js                                             67.17 kB │ gzip:  21.18 kB
+@sidequest/explore:build: dist/assets/ganttDiagram-EL5Y4UJY-D8A3U5RN.js                                           69.35 kB │ gzip:  22.74 kB
+@sidequest/explore:build: dist/assets/mojo-fg40_ntQ.js                                                            69.51 kB │ gzip:   9.20 kB
+@sidequest/explore:build: dist/assets/python-gzcpVVnB.js                                                          69.94 kB │ gzip:   9.09 kB
+@sidequest/explore:build: dist/assets/c-D4po5ieV.js                                                               72.17 kB │ gzip:  10.55 kB
+@sidequest/explore:build: dist/assets/latex-qj_XJwYU.js                                                           73.24 kB │ gzip:   6.78 kB
+@sidequest/explore:build: dist/assets/vyper-CgoNMtux.js                                                           74.64 kB │ gzip:  10.69 kB
+@sidequest/explore:build: dist/assets/core-DhjwKksN.js                                                            74.68 kB │ gzip:  20.50 kB
+@sidequest/explore:build: dist/assets/SetWalletPasswordForm-mtF9E932-DPqSMYrj.js                                  76.11 kB │ gzip:  30.89 kB
+@sidequest/explore:build: dist/assets/w3m-modal-BNoi85Vh.js                                                       79.12 kB │ gzip:  17.39 kB
+@sidequest/explore:build: dist/assets/wui-ux-by-reown-BnOejUzV.js                                                 79.15 kB │ gzip:  22.36 kB
+@sidequest/explore:build: dist/assets/hack-ChsWOWPH.js                                                            81.07 kB │ gzip:  26.45 kB
+@sidequest/explore:build: dist/assets/cose-bilkent-JH36ORCC-DcmRLVUF.js                                           81.25 kB │ gzip:  21.54 kB
+@sidequest/explore:build: dist/assets/swift-CyEgAFGc.js                                                           87.22 kB │ gzip:  14.79 kB
+@sidequest/explore:build: dist/assets/localBatchGatewayRequest-Cfgmgby0.js                                        88.30 kB │ gzip:  24.81 kB
+@sidequest/explore:build: dist/assets/fortran-free-form-CYNrtFtB.js                                               88.96 kB │ gzip:  11.18 kB
+@sidequest/explore:build: dist/assets/csharp-dmMxLVLW.js                                                          91.43 kB │ gzip:  10.79 kB
+@sidequest/explore:build: dist/assets/racket-DcIDlBhZ.js                                                          92.38 kB │ gzip:  15.07 kB
+@sidequest/explore:build: dist/assets/ccip-Dlcw0c_R.js                                                            96.05 kB │ gzip:  26.94 kB
+@sidequest/explore:build: dist/assets/less-DVTAwKKz.js                                                            97.62 kB │ gzip:  14.84 kB
+@sidequest/explore:build: dist/assets/localBatchGatewayRequest-C4tlE0bv.js                                       104.84 kB │ gzip:  29.42 kB
+@sidequest/explore:build: dist/assets/chunk-4HAMMTFA-W7f-ANno.js                                                 104.85 kB │ gzip:  25.62 kB
+@sidequest/explore:build: dist/assets/blade-C2aKfNCX.js                                                          104.97 kB │ gzip:  28.30 kB
+@sidequest/explore:build: dist/assets/objective-c-D1A_Heim.js                                                    105.40 kB │ gzip:  23.63 kB
+@sidequest/explore:build: dist/assets/swimlanes-42K2YHIH-BcMjWP0x.js                                             111.11 kB │ gzip:  38.00 kB
+@sidequest/explore:build: dist/assets/php-D-soRb1P.js                                                            113.12 kB │ gzip:  28.84 kB
+@sidequest/explore:build: dist/assets/ApiController-DuxaxYgP.js                                                  115.16 kB │ gzip:  33.79 kB
+@sidequest/explore:build: dist/assets/sequenceDiagram-WJ2MYXX4-CmOTo4rP.js                                       115.74 kB │ gzip:  30.58 kB
+@sidequest/explore:build: dist/assets/basic-CiF8-OkX.js                                                          118.24 kB │ gzip:  29.68 kB
+@sidequest/explore:build: dist/assets/_esm-e5VQ_IF3.js                                                           125.80 kB │ gzip:  38.15 kB
+@sidequest/explore:build: dist/assets/FiatOnrampScreen-mHppmT9g-Cs7uKor3.js                                      129.06 kB │ gzip:  39.88 kB
+@sidequest/explore:build: dist/assets/index.es-CRyLqHkP.js                                                       134.14 kB │ gzip:  42.72 kB
+@sidequest/explore:build: dist/assets/asciidoc-SCjQUq34.js                                                       136.04 kB │ gzip:   9.45 kB
+@sidequest/explore:build: dist/assets/mdx-DQZ5AkYe.js                                                            136.10 kB │ gzip:  23.54 kB
+@sidequest/explore:build: dist/assets/architectureDiagram-5GKGNRK7-gnRrby-o.js                                   148.91 kB │ gzip:  41.13 kB
+@sidequest/explore:build: dist/assets/typst-nwgq9W1m.js                                                          163.48 kB │ gzip:  10.96 kB
+@sidequest/explore:build: dist/assets/objective-cpp-BsSzOQcm.js                                                  171.96 kB │ gzip:  30.98 kB
+@sidequest/explore:build: dist/assets/javascript-C6JL_7LQ.js                                                     174.89 kB │ gzip:  16.68 kB
+@sidequest/explore:build: dist/assets/tsx-VqzRekuJ.js                                                            175.60 kB │ gzip:  16.68 kB
+@sidequest/explore:build: dist/assets/jsx-BNyRTgPC.js                                                            177.85 kB │ gzip:  16.77 kB
+@sidequest/explore:build: dist/assets/typescript-BkL3AaLT.js                                                     181.14 kB │ gzip:  16.29 kB
+@sidequest/explore:build: dist/assets/Presentation-e8mIoWlC.js                                                   181.55 kB │ gzip:  47.68 kB
+@sidequest/explore:build: dist/assets/angular-ts-BebCXh9R.js                                                     183.73 kB │ gzip:  16.77 kB
+@sidequest/explore:build: dist/assets/vue-vine-CSleJH0q.js                                                       190.05 kB │ gzip:  18.07 kB
+@sidequest/explore:build: dist/assets/HighlightedCode-BS_z8VlP.js                                                192.42 kB │ gzip:  61.05 kB
+@sidequest/explore:build: dist/assets/chunk-DU6HZSFF-B_QaIExp.js                                                 237.79 kB │ gzip:  39.00 kB
+@sidequest/explore:build: dist/assets/use-deposit-address-BdO356-0-DGtm1Men.js                                   258.25 kB │ gzip:  76.21 kB
+@sidequest/explore:build: dist/assets/katex-ZlcWpGUi.js                                                          258.68 kB │ gzip:  77.43 kB
+@sidequest/explore:build: dist/assets/wolfram-DLL8P-h_.js                                                        262.38 kB │ gzip:  77.63 kB
+@sidequest/explore:build: dist/assets/SIWXUtil-Cr5rl6qt.js                                                       299.37 kB │ gzip:  86.31 kB
+@sidequest/explore:build: dist/assets/dist-DeUyPag9.js                                                           319.13 kB │ gzip: 123.41 kB
+@sidequest/explore:build: dist/assets/esm-Cl7mmX7p.js                                                            343.63 kB │ gzip:  83.80 kB
+@sidequest/explore:build: dist/assets/tempoModerato-HaxWNj7e.js                                                  344.81 kB │ gzip:  72.68 kB
+@sidequest/explore:build: dist/assets/cytoscape.esm-ZKjJ8woK.js                                                  434.99 kB │ gzip: 137.81 kB
+@sidequest/explore:build: dist/assets/index-BStyLWM--BeH1B0Y2.js                                                 438.26 kB │ gzip: 126.40 kB
+@sidequest/explore:build: dist/assets/toViemAccount-BEZt_I8V-CfilKU1l.js                                         468.83 kB │ gzip: 135.37 kB
+@sidequest/explore:build: dist/assets/chunk-D32TOXHM-NKlPE4UP.js                                                 503.96 kB │ gzip: 153.94 kB
+@sidequest/explore:build: dist/assets/wasm-BnjxR4X6.js                                                           622.32 kB │ gzip: 232.09 kB
+@sidequest/explore:build: dist/assets/model-scene-D5j-BKMG.js                                                    634.33 kB │ gzip: 159.08 kB
+@sidequest/explore:build: dist/assets/chunk-FOHPRMQF-DzxwRta7.js                                                 662.10 kB │ gzip: 143.16 kB
+@sidequest/explore:build: dist/assets/cpp-Cl0KmFcE.js                                                            785.54 kB │ gzip:  58.27 kB
+@sidequest/explore:build: dist/assets/emacs-lisp-DR2vtWaj.js                                                     790.01 kB │ gzip: 200.31 kB
+@sidequest/explore:build: dist/assets/index-D66ijpSs.js                                                        1,480.06 kB │ gzip: 447.95 kB
+@sidequest/explore:build: 
+@sidequest/explore:build: [plugin builtin:vite-reporter] 
+@sidequest/explore:build: (!) Some chunks are larger than 500 kB after minification. Consider:
+@sidequest/explore:build: - Using dynamic import() to code-split the application
+@sidequest/explore:build: - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+@sidequest/explore:build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+@sidequest/explore:build: ✓ built in 2.97s
+
+ Tasks:    2 successful, 2 total
+Cached:    0 cached, 2 total
+  Time:    14.051s 
+

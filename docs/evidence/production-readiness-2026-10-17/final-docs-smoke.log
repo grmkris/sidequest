@@ -1,0 +1,2 @@
+Explore client build includes docs; testing the real Worker over HTTP.
+Docs smoke passed: 174 HTTP checks, 32 parsed HTML responses (http://127.0.0.1:36421).

@@ -1,0 +1,2 @@
+$ bun scripts/ci/smoke.ts prod
+ok prod https://sidequest.exchange

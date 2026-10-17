@@ -1,0 +1,670 @@
+No files changed, compilation skipped
+
+Ran 12 tests for test/sidequest/AgentSweep.t.sol:AgentSweepTest
+[PASS] testFuzz_sweep_movesExactlyTheAmount(uint256) (runs: 512, μ: 170198, ~: 170301)
+[PASS] test_constructor_refusesZeroIdentity() (gas: 11482)
+[PASS] test_sweep_cannotExceedTheWalletsBalance() (gas: 107740)
+[PASS] test_sweep_needsTheWalletsApproval() (gas: 145567)
+[PASS] test_sweep_paysTheAgentsOwner() (gas: 192521)
+[PASS] test_sweep_paysWhoeverOwnsTheAgentNow() (gas: 265930)
+[PASS] test_sweep_pullsOnlyFromTheCaller() (gas: 297193)
+[PASS] test_sweep_refusesATokenThatIsNoContract() (gas: 92204)
+[PASS] test_sweep_refusesAnUnknownAgent() (gas: 71397)
+[PASS] test_sweep_refusesAnotherAgentsId() (gas: 71883)
+[PASS] test_sweep_refusesEveryoneButTheAgentWallet() (gas: 241489)
+[PASS] test_sweep_refusesZeroAmount() (gas: 53266)
+Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 30.86ms (29.02ms CPU time)
+
+Ran 3 tests for test/sidequest/AgentSweep.t.sol:DeployAgentSweepTest
+[PASS] test_deploysAgainstTheConfiguredRegistry() (gas: 1862857)
+[PASS] test_refusesAChainOtherThanTheConfigs() (gas: 820113)
+[PASS] test_refusesAMissingRegistry() (gas: 836057)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 1.35ms (1.16ms CPU time)
+
+Ran 5 tests for test/sidequest/BondHorizon.t.sol:BondHorizonTest
+[PASS] testFuzz_bondsReservedBeforeExitExpireByUnlock(uint48,uint48) (runs: 512, μ: 1661894, ~: 1661878)
+[PASS] test_publish_andActivateAcceptExactHorizon() (gas: 1437961)
+[PASS] test_publish_blocksUnbondedBypassOfWorkerHorizonAtomically() (gas: 166339)
+[PASS] test_publish_refusesCreatorBondBeyondHorizonAtomically() (gas: 187512)
+[PASS] test_zeroBondsCannotBypassHorizonWithMaximumWindows() (gas: 174399)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 483.32ms (479.24ms CPU time)
+
+Ran 5 tests for test/sidequest/BondHorizon.t.sol:TestnetBondHorizonTest
+[PASS] testFuzz_bondsReservedBeforeExitExpireByUnlock(uint48,uint48) (runs: 512, μ: 1661901, ~: 1661900)
+[PASS] test_publish_andActivateAcceptExactHorizon() (gas: 1437973)
+[PASS] test_publish_blocksUnbondedBypassOfWorkerHorizonAtomically() (gas: 166339)
+[PASS] test_publish_refusesCreatorBondBeyondHorizonAtomically() (gas: 187512)
+[PASS] test_zeroBondsCannotBypassHorizonWithMaximumWindows() (gas: 174399)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 471.63ms (468.61ms CPU time)
+
+Ran 22 tests for test/sidequest/BondPolicy.t.sol:BondPolicyTest
+[PASS] testFuzz_belowFloorHasNoEffects(uint256) (runs: 512, μ: 181944, ~: 181855)
+[PASS] testFuzz_forfeitRoundedDownAndPreservesSupply(uint256,uint16) (runs: 512, μ: 1183745, ~: 1187340)
+[PASS] test_activatedExpiryDoesNotForfeit() (gas: 1864899)
+[PASS] test_cancelAt599IsFree() (gas: 1033429)
+[PASS] test_cancelAt600ForfeitsAndReleasesRemainder() (gas: 1306296)
+[PASS] test_constructorRejectsInvalidPolicy() (gas: 22550)
+[PASS] test_expiryInsideGraceStillForfeits() (gas: 1617544)
+[PASS] test_floorAccepted() (gas: 737618)
+[PASS] test_floorMinusOneRefused() (gas: 182070)
+[PASS] test_invalidTreasuryKeepsReservationUntilFixed() (gas: 1165947)
+[PASS] test_onlyOwnerCanChangePolicy() (gas: 92748)
+[PASS] test_partlyQueuedBackingSharesForfeitProRata() (gas: 1449950)
+[PASS] test_policyCapsAndZeroRate() (gas: 237868)
+[PASS] test_policyChangesOnlyAffectNewListings() (gas: 2112833)
+[PASS] test_rotationUsesLiveTimelockedTreasury() (gas: 1298891)
+[PASS] test_unfilledExpiryForfeitsAfterHorizon() (gas: 1181485)
+[PASS] test_unfilledExpiryForfeitsAtExactExpiry() (gas: 1145934)
+[PASS] test_vaultFullForfeitResetsPoolAndCannotTakeOthersReservation() (gas: 351033)
+[PASS] test_vaultRejectsZeroForfeitRecipient() (gas: 174147)
+[PASS] test_withdrawBlockedUntilExpiryForfeitRuns() (gas: 1396260)
+[PASS] test_zeroBondRefused() (gas: 181997)
+[PASS] test_zeroRateReleasesAll() (gas: 1075595)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 302.94ms (299.82ms CPU time)
+
+Ran 4 tests for test/sidequest/ClockConfig.t.sol:ClockConfigTest
+[PASS] test_143_fastBlockRefusesProductionBlockPasses() (gas: 297537)
+[PASS] test_loadApprovedFastClocks() (gas: 203483)
+[PASS] test_loadOverflowCannotWrap() (gas: 294573)
+[PASS] test_loadPartialAndNullBlockRefuse() (gas: 287513)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 12.86ms (12.61ms CPU time)
+
+Ran 12 tests for test/sidequest/Clocks.t.sol:ClocksTest
+[PASS] test_143_acceptsProductionInAllConstructors() (gas: 147038)
+[PASS] test_143_refusesFeeDelay() (gas: 147979)
+[PASS] test_143_refusesHoldingDelay() (gas: 147847)
+[PASS] test_143_refusesMinArbitrationWindow() (gas: 148397)
+[PASS] test_143_refusesMinDisputeWindow() (gas: 148199)
+[PASS] test_143_refusesMinReviewWindow() (gas: 148146)
+[PASS] test_143_refusesProposalGrace() (gas: 148375)
+[PASS] test_143_refusesUnstakeDelay() (gas: 148059)
+[PASS] test_everyChain_delayAndEpochFloors() (gas: 558080)
+[PASS] test_everyChain_holdingDelayMustOutlastUnstake() (gas: 284093)
+[PASS] test_everyChain_windowsCannotExceedMaximums() (gas: 421498)
+[PASS] test_everyChain_zeroClocksRefuse() (gas: 558737)
+Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 10.34ms (7.66ms CPU time)
+
+Ran 4 tests for test/sidequest/Clocks.t.sol:FastClocksTest
+[PASS] test_fastFeeDelayAndGraceCutoffs() (gas: 669608)
+[PASS] test_fastHoldingGraceCutoff() (gas: 277688)
+[PASS] test_fastUnstakeExitBeforeHoldingAcceptance() (gas: 492919)
+[PASS] test_fastWindowsPublishAtMinimums_belowEachRefuses() (gas: 849922)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 4.41ms (1.16ms CPU time)
+
+Ran 4 tests for test/fork/Erc8004Fork.t.sol:Erc8004ForkTest
+[SKIP] test_ownerCannotRateItself() (gas: 0)
+[SKIP] test_registriesAreWired() (gas: 0)
+[SKIP] test_unregisteredAgentIsRefused() (gas: 0)
+[SKIP] test_workerRegistersAndContractWritesFeedback() (gas: 0)
+Suite result: ok. 0 passed; 0 failed; 4 skipped; finished in 310.81µs (62.34µs CPU time)
+
+Ran 3 tests for test/fork/Erc8004RolesFork.t.sol:Erc8004RolesForkTest
+[SKIP] test_agentCannotCertifyItself() (gas: 0)
+[SKIP] test_agentDeclaresRoles_onlyOwnerMaySet() (gas: 0)
+[SKIP] test_projectCertifiesARole_readableByTag() (gas: 0)
+Suite result: ok. 0 passed; 0 failed; 3 skipped; finished in 372.65µs (35.74µs CPU time)
+
+Ran 14 tests for test/sidequest/FeeSchedule.t.sol:FeeScheduleTest
+[PASS] testFuzz_feeNeverIncreasesWithStake(uint256,uint256) (runs: 512, μ: 51154, ~: 51197)
+[PASS] test_bounds_firstThresholdZero() (gas: 64221)
+[PASS] test_bounds_rateCap() (gas: 64674)
+[PASS] test_bounds_ratesNonIncreasing() (gas: 213854)
+[PASS] test_bounds_thresholdsStrictlyAscending() (gas: 65490)
+[PASS] test_bounds_treasuryNonzero() (gas: 64084)
+[PASS] test_cancel() (gas: 274965)
+[PASS] test_constructor_heldToTheSameBounds() (gas: 22274)
+[PASS] test_defaultTiers_boundaries() (gas: 140794)
+[PASS] test_handoverDropsTheOldOwnersProposal() (gas: 323924)
+[PASS] test_onlyOwnerProposesAndCancels() (gas: 94687)
+[PASS] test_propose_executeAfterThreeDays_anyone() (gas: 409531)
+[PASS] test_propose_expiresAfterTheGrace() (gas: 251696)
+[PASS] test_replacedProposalIsCancelledVisibly() (gas: 226128)
+Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 13.22ms (12.62ms CPU time)
+
+Ran 14 tests for test/sidequest/GasFloors.t.sol:GasFloorsTest
+[PASS] test_gas_accept() (gas: 8185347)
+[PASS] test_gas_cancel() (gas: 5988847)
+[PASS] test_gas_claimTopUpRefund() (gas: 3650841)
+[PASS] test_gas_completeAfterSilence() (gas: 8794654)
+[PASS] test_gas_delegate() (gas: 1819943)
+[PASS] test_gas_rejectAfterDeliveryDeadline() (gas: 11040909)
+[PASS] test_gas_requestUndelegate() (gas: 1221292)
+[PASS] test_gas_reserve() (gas: 1678556)
+[PASS] test_gas_retryDeferred() (gas: 2809738)
+[PASS] test_gas_ruleWithSignature() (gas: 10784688)
+[PASS] test_gas_ruleWithSlash() (gas: 9759284)
+[PASS] test_gas_settle_afterAccept() (gas: 6064494)
+[PASS] test_gas_settle_worstCase() (gas: 8831333)
+[PASS] test_gas_withdraw() (gas: 1410020)
+Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 62.59ms (59.82ms CPU time)
+
+Ran 18 tests for test/sidequest/HorizonLateSlash.t.sol:HorizonLateSlashTest
+[PASS] test_creatorBondAtExactExpiryReleases() (gas: 1608540)
+[PASS] test_creatorBondAtExpiryMinusOneStillSlashes() (gas: 1644053)
+[PASS] test_delayedHoldingSettlementReleasesAfterBackerExit() (gas: 2979239)
+[PASS] test_delayedMissedDeliveryReleasesAfterBackerExit() (gas: 2756270)
+[PASS] test_delayedViolationReleasesAfterBackerExit() (gas: 2963395)
+[PASS] test_holdingSettlementAtExactExpiryReleases() (gas: 2073735)
+[PASS] test_horizonNearUint48MaximumDoesNotWrap() (gas: 2107190)
+[PASS] test_missedDeliveryAtExactExpiryReleases() (gas: 1993386)
+[PASS] test_permissionlessReleaseUnblocksFullQueue() (gas: 2122792)
+[PASS] test_queueNearUint48MaximumRefusesOverflow() (gas: 1595067)
+[PASS] test_rulingAfterHorizonRefusedTimeoutDoesNotSlash() (gas: 2174838)
+[PASS] test_rulingAtLatestCutoffPrecedesHorizon() (gas: 2266358)
+[PASS] test_timelyHoldingSettlementSlashesQueuedBacking() (gas: 2634983)
+[PASS] test_timelyMissedDeliverySlashesQueuedBacking() (gas: 2382502)
+[PASS] test_timelyViolationSlashesQueuedBacking() (gas: 2600326)
+[PASS] test_unactivatedExpiryForfeitsAndRefunds() (gas: 1354798)
+[PASS] test_violationAtExactExpiryReleases() (gas: 2211606)
+[PASS] test_zeroWorkerBondKeepsAccountingAndSettlement() (gas: 2099174)
+Suite result: ok. 18 passed; 0 failed; 0 skipped; finished in 29.34ms (25.90ms CPU time)
+
+Ran 18 tests for test/sidequest/HorizonLateSlash.t.sol:TestnetHorizonLateSlashTest
+[PASS] test_creatorBondAtExactExpiryReleases() (gas: 1608528)
+[PASS] test_creatorBondAtExpiryMinusOneStillSlashes() (gas: 1644041)
+[PASS] test_delayedHoldingSettlementReleasesAfterBackerExit() (gas: 2979227)
+[PASS] test_delayedMissedDeliveryReleasesAfterBackerExit() (gas: 2756258)
+[PASS] test_delayedViolationReleasesAfterBackerExit() (gas: 2963383)
+[PASS] test_holdingSettlementAtExactExpiryReleases() (gas: 2073723)
+[PASS] test_horizonNearUint48MaximumDoesNotWrap() (gas: 2107166)
+[PASS] test_missedDeliveryAtExactExpiryReleases() (gas: 1993374)
+[PASS] test_permissionlessReleaseUnblocksFullQueue() (gas: 2122780)
+[PASS] test_queueNearUint48MaximumRefusesOverflow() (gas: 1595055)
+[PASS] test_rulingAfterHorizonRefusedTimeoutDoesNotSlash() (gas: 2174826)
+[PASS] test_rulingAtLatestCutoffPrecedesHorizon() (gas: 2266346)
+[PASS] test_timelyHoldingSettlementSlashesQueuedBacking() (gas: 2634971)
+[PASS] test_timelyMissedDeliverySlashesQueuedBacking() (gas: 2382490)
+[PASS] test_timelyViolationSlashesQueuedBacking() (gas: 2600314)
+[PASS] test_unactivatedExpiryForfeitsAndRefunds() (gas: 1354774)
+[PASS] test_violationAtExactExpiryReleases() (gas: 2211594)
+[PASS] test_zeroWorkerBondKeepsAccountingAndSettlement() (gas: 2099150)
+Suite result: ok. 18 passed; 0 failed; 0 skipped; finished in 29.67ms (26.24ms CPU time)
+
+Ran 1 test for test/sidequest/Invariants.t.sol:SidequestInvariantsTest
+[PASS]
+SidequestInvariantsTest invariants:
+[PASS] invariant_bondsReservedBeforeExitExpireByUnlock
+[PASS] invariant_escrowPerToken
+[PASS] invariant_slashOnlyOnAFinding
+[PASS] invariant_vaultBooks
+ SidequestInvariantsTest invariants (runs: 64, calls: 6144, reverts: 4385)
+
+╭------------------+---------------------+-------+---------+----------╮
+| Contract         | Selector            | Calls | Reverts | Discards |
++=====================================================================+
+| SidequestHandler | accept              | 347   | 279     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | activate            | 317   | 239     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | cancel              | 364   | 252     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | claimRefund         | 333   | 283     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | claimTopUpRefund    | 305   | 243     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | dispute             | 293   | 230     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | progress            | 306   | 249     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | publish             | 328   | 176     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | reject              | 338   | 275     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | requestUnstake      | 315   | 193     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | rule                | 330   | 278     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | settle              | 312   | 255     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | submit              | 327   | 266     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | timeout             | 322   | 262     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | toggleWorkerBlocked | 299   | 0       | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | topUp               | 289   | 213     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | warp                | 327   | 0       | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | withdrawOwed        | 316   | 316     | 0        |
+|------------------+---------------------+-------+---------+----------|
+| SidequestHandler | withdrawStake       | 376   | 376     | 0        |
+╰------------------+---------------------+-------+---------+----------╯
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.61s (1.60s CPU time)
+
+Ran 3 tests for test/LaunchLock.t.sol:LaunchLockTest
+[PASS] test_everyRunTakesTheLockFirst() (gas: 279542)
+[PASS] test_noAnvilHoldsTheLock() (gas: 874822)
+[PASS] test_rehearsalsUseTheirOwnForgePaths() (gas: 428129)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 5.01ms (4.78ms CPU time)
+
+Ran 16 tests for test/MainnetRunbook.t.sol:MainnetRunbookTest
+[PASS] test_acceptPlanUsesReadOnlyChainGuard() (gas: 333383)
+[PASS] test_commandsNameTheirCwdEnvAndRpc() (gas: 2126468)
+[PASS] test_documentedSidequestInputLoads() (gas: 3641251)
+[PASS] test_launchGateReadsTheReviewedSafe() (gas: 1099602)
+[PASS] test_launchKitBindsEveryPlanAndSendToConfigChain() (gas: 1234791)
+[PASS] test_launchKitPersistsBeforePublishAndReconcilesBeforeRetry() (gas: 2242667)
+[PASS] test_launchKitSignsFromPromptedKeystores() (gas: 1920636)
+[PASS] test_mainnetSignsFromKeystores() (gas: 2262427)
+[PASS] test_namedScriptsExist() (gas: 37867)
+[PASS] test_noMainnetRawKeyExamples() (gas: 36253126)
+[PASS] test_r7ChecksAaOnTheForkAndFundsTheArbitrator() (gas: 2846186)
+[PASS] test_repeatedPromotionRechecksTheVerifier() (gas: 16462)
+[PASS] test_runbookAndR7RunTheSameForgeSteps() (gas: 41032222)
+[PASS] test_runbookCarriesBudgetAndFunding() (gas: 1782247)
+[PASS] test_runbookHasNoLegacyPath() (gas: 1064600)
+[PASS] test_runbookSequenceWithGates() (gas: 63298383)
+Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 404.57ms (399.69ms CPU time)
+
+Ran 2 tests for test/sidequest/NoRenounce.t.sol:NoRenounceTest
+[PASS] test_noOwnedContractCanRenounce() (gas: 265114)
+[PASS] test_ownershipStillMovesInTwoSteps() (gas: 538829)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 3.86ms (515.60µs CPU time)
+
+Ran 4 tests for test/testnet/OddTokens.t.sol:OddTokensTest
+[PASS] test_blocklist_showsM2() (gas: 2678067)
+[PASS] test_deploy_mintsEveryWallet_ownerOnly() (gas: 152721)
+[PASS] test_deploy_refusesMainnet() (gas: 35432)
+[PASS] test_gasBurner_showsC9001() (gas: 3242322)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 9.70ms (6.09ms CPU time)
+
+Ran 3 tests for test/SafeAcceptSimulation.t.sol:SafeAcceptSimulationTest
+[PASS] test_mainnetPlanSimulatesPendingAcceptancesWithoutGo() (gas: 589054)
+[PASS] test_mainnetSendStillNeedsGo() (gas: 193241)
+[PASS] test_planRefusesWrongChainWithoutGo() (gas: 194024)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 6.12ms (5.40ms CPU time)
+
+Ran 4 tests for test/sidequest/SeedPoolMath.t.sol:SeedPoolMathTest
+[PASS] testFuzz_repairCapRoundsOnlyAtTheRawUnit(uint256,uint256,uint256,bool) (runs: 512, μ: 6130, ~: 6065)
+[PASS] test_committedTestnetRatio_requiresTwentyThousandFactory() (gas: 4524)
+[PASS] test_fractionalRepairCap_factoryFirst() (gas: 4504)
+[PASS] test_fractionalRepairCap_quoteFirst() (gas: 4682)
+Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 25.58ms (25.26ms CPU time)
+
+Ran 4 tests for test/fork/SideUsdcRoute.fork.t.sol:SideUsdcRouteForkTest
+[SKIP] test_fork_delegatedWalletBuysInOneBatch() (gas: 0)
+[SKIP] test_fork_monSellsForUsdc() (gas: 0)
+[SKIP] test_fork_sideBoughtAndSoldWithUsdc() (gas: 0)
+[SKIP] test_fork_usdcBuysExactMon() (gas: 0)
+Suite result: ok. 0 passed; 0 failed; 4 skipped; finished in 594.08µs (154.65µs CPU time)
+
+Ran 2 tests for test/sidequest/SidequestEvaluator.t.sol:SidequestEvaluatorStarvationTest
+[PASS] test_M2_gasStarvationChangesOnlyTheRoute() (gas: 17465218)
+[PASS] test_expensiveTransferDefersAtAnyGasLimit() (gas: 2962978)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 113.64ms (109.83ms CPU time)
+
+Ran 41 tests for test/sidequest/SidequestEvaluator.t.sol:SidequestEvaluatorTest
+[PASS] test_C9001_bothCoreAttemptsBurnTheirBudgets_decisionStillLands() (gas: 9122925)
+[PASS] test_C9001_gasBurningRefundCannotRollBackACreatorRuling() (gas: 3814644)
+[PASS] test_C9001_gasBurningWorkerTransferCannotRollBackAWorkerRuling() (gas: 4544007)
+[PASS] test_C9003_pendingClaimAfterTheDeferral() (gas: 4208949)
+[PASS] test_C9003_pendingClaimBeforeTheDeferral() (gas: 4214524)
+[PASS] test_M1_reentrantSettleDuringRulingForCreatorCannotRecoverWorkerBond() (gas: 3552296)
+[PASS] test_M1_reentrantSettleDuringRulingForWorkerCannotRecoverCreatorBond() (gas: 3795021)
+[PASS] test_M1_reentryIntoTheEvaluatorIsRefused() (gas: 3306100)
+[PASS] test_M2_blocklistedWorker_acceptDefersThenSettlePaysThroughOwed() (gas: 3780709)
+[PASS] test_M2_blocklistedWorker_rulingStands_timeoutCannotRefund() (gas: 3763887)
+[PASS] test_M2_frozenToken_bothCallsFail_claimRefundLaterPaysWorker() (gas: 3398507)
+[PASS] test_M2_rulingForCreatorWithFrozenTokenStillRecordsAndSlashes() (gas: 3359420)
+[PASS] test_acceptRefusedWhileDisputed() (gas: 1846532)
+[PASS] test_alreadyRuled_secondRulingRefused() (gas: 2268989)
+[PASS] test_arbitrationCutoffAndTimeout() (gas: 2218928)
+[PASS] test_cancelRuling_revokesASignedRuling() (gas: 1907046)
+[PASS] test_coreFees_refuseActivation_liveJobPaysThroughHolding() (gas: 3136569)
+[PASS] test_coreGasTooLow_refusesBeforeRecording() (gas: 1738478)
+[PASS] test_customArbitratorRules_defaultCannot() (gas: 2415217)
+[PASS] test_dispute_onlyWorkerWithinWindow() (gas: 1784032)
+[PASS] test_evidence_boundToTheListingsPolicy() (gas: 1817851)
+[PASS] test_evidence_olderStatementCannotReplaceANewerOne() (gas: 2019582)
+[PASS] test_feedbackFailure_copiesAtMost32Bytes() (gas: 1934871)
+[PASS] test_feedback_failureNeverUndoesPayment_andGasFloor() (gas: 3587852)
+[PASS] test_missedDeliveryBurn() (gas: 2109381)
+[PASS] test_pause_deadlineInsideThePauseRefundsWithoutTheSlash() (gas: 2661924)
+[PASS] test_pause_deadlineOutsideEveryIntervalStillBurns() (gas: 2995276)
+[PASS] test_pause_endedBeforeTheDeadlineExcusesNothing() (gas: 2345908)
+[PASS] test_pause_history_boundaries() (gas: 4811617)
+[PASS] test_pause_laterPauseKeepsAnEarlierExemption_settleAfterExpiry() (gas: 2651433)
+[PASS] test_pause_laterPauseKeepsAnEarlierExemption_timeout() (gas: 2554691)
+[PASS] test_pausedCoreDefers_thenRetryPaysTheWorker() (gas: 2889472)
+[PASS] test_reject_onlyApproverWithinItsWindow() (gas: 1693181)
+[PASS] test_retryDeferred_refusesWhatIsNotDeferred() (gas: 1981919)
+[PASS] test_ruleForCreator_slashNeedsANamedViolation() (gas: 1849532)
+[PASS] test_ruleForCreator_upholdsViolationBurnsWorkerBond() (gas: 2464725)
+[PASS] test_ruleForWorker_badFaithBurnsCreatorBond() (gas: 2460954)
+[PASS] test_rulingNonces_perArbitrator() (gas: 5847201)
+[PASS] test_silencePaysAfterTheListingsOwnReviewWindow() (gas: 2143996)
+[PASS] test_thirdPartyApproverJudges() (gas: 1998195)
+[PASS] test_undisputedViolationBurns_noneDoesNot() (gas: 4038870)
+Suite result: ok. 41 passed; 0 failed; 0 skipped; finished in 138.09ms (132.75ms CPU time)
+
+Ran 43 tests for test/sidequest/SidequestHolding.t.sol:SidequestHoldingTest
+[PASS] test_C9002_claimTopUpRefund() (gas: 3139189)
+[PASS] test_C9002_falseAfterTransfer_cancel() (gas: 2901121)
+[PASS] test_C9002_shortReturnAfterTransfer_cancel() (gas: 2900132)
+[PASS] test_C9002_workerBonusAndTreasuryFeePushes() (gas: 3352822)
+[PASS] test_activate_budgetAuthMustNameNet() (gas: 1178330)
+[PASS] test_activate_feePerTier() (gas: 5894622)
+[PASS] test_activate_feeSnapshot_scheduleChangeNeverReachesLiveJob() (gas: 2367221)
+[PASS] test_activate_feeSnapshot_stakeChangeAfterActivationIgnored() (gas: 1564093)
+[PASS] test_activate_onceOnly() (gas: 1463252)
+[PASS] test_activate_reservationsIncludedInTier() (gas: 2152182)
+[PASS] test_activate_reservesWorkerBond_blocksWithdrawal() (gas: 1626894)
+[PASS] test_activate_roleConflicts() (gas: 2135790)
+[PASS] test_activate_selectionChecks() (gas: 1241630)
+[PASS] test_activate_tierCountsDelegatedBackingAndSnapshotsIt() (gas: 2374169)
+[PASS] test_activate_workerBondNeedsStake() (gas: 1103915)
+[PASS] test_activate_workerBondUsesBackingTheWorkerDoesNotOwn() (gas: 1871563)
+[PASS] test_admin_setEvaluatorOnce_defaultArbitratorOwnerOnly() (gas: 125008)
+[PASS] test_bondMovesAreEvaluatorOnly() (gas: 1450446)
+[PASS] test_cancel_onlyCreatorBeforeActivation() (gas: 1448607)
+[PASS] test_cancel_refundsInOneTransaction_noFee_bondReleased() (gas: 1196278)
+[PASS] test_fee_roundsUp_neverTakesTheWholeReward() (gas: 1348554)
+[PASS] test_owed_creatorRefusesRefund_bondsStillSettle() (gas: 1926063)
+[PASS] test_owed_gasBombBonusPushCannotBlockSettle() (gas: 3639020)
+[PASS] test_owed_treasuryRefusesFee_workerStillPaid() (gas: 3355188)
+[PASS] test_publish_M3_frontRunByAnotherCreatorDoesNotBlock() (gas: 2177714)
+[PASS] test_publish_arbitratorConflict() (gas: 569010)
+[PASS] test_publish_creatorBondNeedsUnreservedStake() (gas: 216944)
+[PASS] test_publish_customArbitratorAndDefaultChangeNeverTouchLiveListing() (gas: 1981118)
+[PASS] test_publish_escrowsRewardReservesBondFreezesTerms() (gas: 867582)
+[PASS] test_publish_expiryMustCoverEveryWindowPlusMargin() (gas: 748550)
+[PASS] test_publish_refusals() (gas: 169438)
+[PASS] test_publish_refusesShortfallToken() (gas: 902345)
+[PASS] test_publish_revokedHoldingPublishesNothing() (gas: 253465)
+[PASS] test_publish_windowBounds() (gas: 969560)
+[PASS] test_pushPayment_onlySelf() (gas: 53520)
+[PASS] test_settle_completed_feeToTreasury_bondsReleased() (gas: 2254044)
+[PASS] test_settle_earnedAfterThirdPartyClaimRefund() (gas: 2290117)
+[PASS] test_settle_needsGasForTheFullPushBudget() (gas: 2219548)
+[PASS] test_settle_onlyWhenTerminal_andOnce() (gas: 2297756)
+[PASS] test_termsOf() (gas: 1416643)
+[PASS] test_topUp_onlyWhileActive() (gas: 2068649)
+[PASS] test_topUp_paid_bonusMinusBonusFeeToWorker() (gas: 2667511)
+[PASS] test_topUp_refunded_pullPerContributor() (gas: 3176143)
+Suite result: ok. 43 passed; 0 failed; 0 skipped; finished in 65.98ms (61.16ms CPU time)
+
+Ran 2 tests for test/fork/SidequestRehearsal.t.sol:SidequestRehearsalForkTest
+[SKIP] test_fork_mainnet_freshCore_rolesToSafe_oneHire() (gas: 0)
+[SKIP] test_fork_testnet_freshCore_rolesToSafe_oneHire() (gas: 0)
+Suite result: ok. 0 passed; 0 failed; 2 skipped; finished in 2.37ms (123.21µs CPU time)
+
+Ran 3 tests for test/testnet/SidequestTestnetPaymaster.t.sol:DeployTestnetPaymasterTest
+[PASS] test_deploysAgainstTheConfiguredEntryPointAndToken() (gas: 3142976)
+[PASS] test_refusesAChainWithoutTheEntryPoint() (gas: 1839460)
+[PASS] test_refusesMainnetAndOtherChains() (gas: 1848542)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 2.77ms (2.14ms CPU time)
+
+Ran 23 tests for test/testnet/SidequestTestnetPaymaster.t.sol:SidequestTestnetPaymasterTest
+[PASS] testFuzz_postOp_costMath(uint256,uint256,uint256,uint256,uint256,uint256) (runs: 512, μ: 247294, ~: 263103)
+[PASS] testFuzz_validate_packsAnyWindow(uint48,uint48) (runs: 512, μ: 64527, ~: 64527)
+[PASS] test_constructor_recordsItsInputs() (gas: 104664)
+[PASS] test_constructor_refusesMainnet() (gas: 249175)
+[PASS] test_constructor_refusesZeroInputs() (gas: 1395566)
+[PASS] test_deposit_isOpenToAnyone() (gas: 135069)
+[PASS] test_getHash_coversChainAndPaymaster_notTheSignatures() (gas: 75484)
+[PASS] test_onlyTheEntryPoint_validatesAndCharges() (gas: 95956)
+[PASS] test_ownerFunctions_refuseEveryoneElse() (gas: 223756)
+[PASS] test_owner_setsPricing() (gas: 152368)
+[PASS] test_owner_stakesAndWithdraws() (gas: 526864)
+[PASS] test_postOp_chargesAtTheQuotedRate() (gas: 386772)
+[PASS] test_postOp_chargesTheTreasury_whenTheOpSucceededOrReverted() (gas: 269161)
+[PASS] test_postOp_revertsWhenTheSenderCannotPay() (gas: 127097)
+[PASS] test_postOp_zeroCost_movesNothing() (gas: 120690)
+[PASS] test_validate_doesNotRequireFundsYet() (gas: 185564)
+[PASS] test_validate_expiredWindow_isPassedToTheEntryPoint() (gas: 113020)
+[PASS] test_validate_garbageSignature_failsWithoutReverting() (gas: 83665)
+[PASS] test_validate_quoteBindsTheOperation() (gas: 640323)
+[PASS] test_validate_quoteBindsThePaymaster() (gas: 1078248)
+[PASS] test_validate_refusesMalformedPaymasterData() (gas: 97685)
+[PASS] test_validate_signedQuote_returnsWindowAndRateContext() (gas: 65783)
+[PASS] test_validate_wrongSigner_setsFailureBit_keepsWindowAndContext() (gas: 87496)
+Suite result: ok. 23 passed; 0 failed; 0 skipped; finished in 195.22ms (193.61ms CPU time)
+
+Ran 3 tests for test/Signatures.t.sol:SignaturesTest
+[PASS] test_contractWalletFallbackAndRefusals() (gas: 482822)
+[PASS] test_malleableAndInvalidRecoveryAreRefused() (gas: 74712)
+[PASS] test_rawSignatureWorksBeforeAndAfter7702Delegation() (gas: 226212)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 1.44ms (1.20ms CPU time)
+
+Ran 39 tests for test/sidequest/StakeVault.t.sol:StakeVaultTest
+[PASS] testFuzz_flowsConserve(uint96,uint96,uint96,uint96,bool) (runs: 512, μ: 679879, ~: 665600)
+[PASS] testFuzz_slashAfterRecipientChange_onlyNewRecipientPaid(uint96) (runs: 512, μ: 597338, ~: 597266)
+[PASS] test_bootstrap_acceptedHoldingAlsoOpensStakingAndClosesBootstrap() (gas: 459580)
+[PASS] test_bootstrap_onceOnly() (gas: 79170)
+[PASS] test_bootstrap_stakingClosedUntilBootstrapThenBootstrapWorks() (gas: 657166)
+[PASS] test_constructor_refusesZeroSlashRecipient() (gas: 20941)
+[PASS] test_delegateWithPermit_backingAnotherAccountKeepsSignerOwnership() (gas: 437176)
+[PASS] test_delegateWithPermit_invalidPermitWithoutAllowanceLeavesBooksUntouched() (gas: 349880)
+[PASS] test_deny_neverStopsExistingReservationsSettling() (gas: 554667)
+[PASS] test_deny_protectsStakeReleasedAfterANewHoldingArrives() (gas: 974141)
+[PASS] test_holdingCannotTouchAnotherHoldingsReservation() (gas: 805353)
+[PASS] test_holding_delayOutlastsCooldown() (gas: 516051)
+[PASS] test_holding_handoverDropsTheOldOwnersProposal() (gas: 314544)
+[PASS] test_holding_onlyOwnerProposesCancelsRevokes() (gas: 126097)
+[PASS] test_holding_proposalExpiresAfterTheGrace() (gas: 133515)
+[PASS] test_holding_proposalRules() (gas: 259519)
+[PASS] test_holding_proposeAcceptAfterEightDays_anyoneAccepts() (gas: 237377)
+[PASS] test_holding_replacedProposalIsCancelledVisibly() (gas: 137606)
+[PASS] test_holding_revokeDropsAPendingProposalForTheSameHolding() (gas: 344480)
+[PASS] test_holding_revokeOfAnAuthorizedHoldingClearsItsProposal() (gas: 290865)
+[PASS] test_ownership_twoStep() (gas: 160825)
+[PASS] test_release_returnsToAvailable_cappedAtOwnReservation() (gas: 543524)
+[PASS] test_reserve_limitedToAvailable() (gas: 515868)
+[PASS] test_reserve_onlyAuthorizedHolding() (gas: 326421)
+[PASS] test_revoke_stopsReservingButExistingReservationsStillSettle() (gas: 749430)
+[PASS] test_setSlashRecipient_emitsPreviousAndRecipient() (gas: 77809)
+[PASS] test_setSlashRecipient_ownerOnly() (gas: 70464)
+[PASS] test_setSlashRecipient_refusesVault() (gas: 70765)
+[PASS] test_setSlashRecipient_refusesZero() (gas: 70328)
+[PASS] test_slash_sendsReservedSideToRecipientOnly() (gas: 769250)
+[PASS] test_stakeFor_paidByCallerCreditsAccount() (gas: 323701)
+[PASS] test_stakeWithPermit_andToleratesAFrontRunPermit() (gas: 438811)
+[PASS] test_stakeWithPermit_plain() (gas: 395412)
+[PASS] test_stake_creditsAndCountsForTier() (gas: 311781)
+[PASS] test_stake_refusesZero() (gas: 61065)
+[PASS] test_undelegate_bondsAllowQueueButBlockWithdrawal() (gas: 719045)
+[PASS] test_unstake_cancelRestoresStake() (gas: 504693)
+[PASS] test_unstake_cooldownSevenDays() (gas: 721937)
+[PASS] test_unstake_secondRequestRestartsCooldown() (gas: 374831)
+Suite result: ok. 39 passed; 0 failed; 0 skipped; finished in 335.23ms (332.68ms CPU time)
+
+Ran 24 tests for test/sidequest/StakeVaultDelegation.t.sol:StakeVaultDelegationTest
+[PASS] testFuzz_depositSlashRedeemCannotCreateValue(uint96,uint96,uint96,uint96) (runs: 512, μ: 1245756, ~: 1249153)
+[PASS] testFuzz_proRataLossWithinOneWei(uint96,uint96,uint96,bool) (runs: 512, μ: 752526, ~: 794945)
+[PASS] test_cancel_eventRestoresSlashedActiveValue() (gas: 622930)
+[PASS] test_delegateFor_additionDoesNotRestartQueueOrChangeOwner() (gas: 441122)
+[PASS] test_delegateFor_payerIsNotDelegatorOrAccount() (gas: 526422)
+[PASS] test_delegate_directTransfersCannotInflateSharePrice() (gas: 455111)
+[PASS] test_delegate_failedTransferRollsBackAllBooks() (gas: 225528)
+[PASS] test_delegate_ownerCanExitButAccountCannotTakePosition() (gas: 632904)
+[PASS] test_delegate_poolsStayIsolated() (gas: 740532)
+[PASS] test_delegate_roundsSharesDownAfterSlash() (gas: 686681)
+[PASS] test_delegate_zeroAddressesRejected() (gas: 125184)
+[PASS] test_fullSlash_resetsGenerationAndNeverRevivesOldPositions() (gas: 1147519)
+[PASS] test_fullSlash_staleQueueCannotCancelOrWithdraw() (gas: 900640)
+[PASS] test_inflatedSharesUseFullPrecisionForBackingAndRedemption() (gas: 1581472)
+[PASS] test_queuedSharesStaySlashableAndStillBondedUntilRelease() (gas: 981576)
+[PASS] test_request_eventTracksWholeQueueAndCurrentValue() (gas: 592020)
+[PASS] test_request_onlyOwnActiveSharesAndNonzero() (gas: 379852)
+[PASS] test_shareCap_isolatedPoolDoesNotPreventOtherBacking() (gas: 1491579)
+[PASS] test_shareCap_nearTotalSlashesStillAllowOneCooldownExitAndRecovery() (gas: 1858466)
+[PASS] test_shareCap_otherHoldingBondSurvivesUntilReleaseThenWholeExitWorks() (gas: 2224081)
+[PASS] test_vetoBelongsToBackedAccountRatherThanDelegator() (gas: 546376)
+[PASS] test_withdraw_dustAndFinalShareDrainExactAssets() (gas: 1306969)
+[PASS] test_withdraw_eventUsesSlashedValueAndPaysOnlyOwner() (gas: 665505)
+[PASS] test_withdraw_keepsExactHeadroomForExistingBond() (gas: 719116)
+Suite result: ok. 24 passed; 0 failed; 0 skipped; finished in 483.98ms (481.82ms CPU time)
+
+Ran 1 test for test/sidequest/StakeVaultInvariants.t.sol:StakeVaultDelegationInvariantsTest
+[PASS]
+StakeVaultDelegationInvariantsTest invariants:
+[PASS] invariant_booksAndPoolSharesBalance
+[PASS] invariant_depositsOnlyReturnExistingAssets
+ StakeVaultDelegationInvariantsTest invariants (runs: 64, calls: 2048, reverts: 0)
+
+╭-----------------------+----------------------+-------+---------+----------╮
+| Contract              | Selector             | Calls | Reverts | Discards |
++===========================================================================+
+| DelegatedVaultHandler | cancel               | 183   | 0       | 0        |
+|-----------------------+----------------------+-------+---------+----------|
+| DelegatedVaultHandler | changeSlashRecipient | 189   | 0       | 0        |
+|-----------------------+----------------------+-------+---------+----------|
+| DelegatedVaultHandler | delegate             | 181   | 0       | 0        |
+|-----------------------+----------------------+-------+---------+----------|
+| DelegatedVaultHandler | forfeit              | 166   | 0       | 0        |
+|-----------------------+----------------------+-------+---------+----------|
+| DelegatedVaultHandler | fullSlash            | 203   | 0       | 0        |
+|-----------------------+----------------------+-------+---------+----------|
+| DelegatedVaultHandler | release              | 190   | 0       | 0        |
+|-----------------------+----------------------+-------+---------+----------|
+| DelegatedVaultHandler | request              | 175   | 0       | 0        |
+|-----------------------+----------------------+-------+---------+----------|
+| DelegatedVaultHandler | reserve              | 208   | 0       | 0        |
+|-----------------------+----------------------+-------+---------+----------|
+| DelegatedVaultHandler | slash                | 171   | 0       | 0        |
+|-----------------------+----------------------+-------+---------+----------|
+| DelegatedVaultHandler | warp                 | 187   | 0       | 0        |
+|-----------------------+----------------------+-------+---------+----------|
+| DelegatedVaultHandler | withdraw             | 195   | 0       | 0        |
+╰-----------------------+----------------------+-------+---------+----------╯
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.16s (1.15s CPU time)
+
+Ran 1 test for test/sidequest/StakeVaultLedger.t.sol:StakeVaultLedgerTest
+[PASS] test_eventsReconstructEveryPoolAndPositionAcrossReset() (gas: 4278619)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 3.58ms (2.19ms CPU time)
+
+Ran 5 tests for test/testnet/TestnetFaucet.t.sol:TestnetFaucetTest
+[PASS] test_constructor_refusesMainnet() (gas: 21290)
+[PASS] test_drip_coolsDownPerRecipient() (gas: 744935)
+[PASS] test_drip_givesEveryTokenOnce_anyoneMayPayTheGas() (gas: 385820)
+[PASS] test_drip_refusesWhenEmpty_andZeroRecipient() (gas: 825147)
+[PASS] test_owner_setsAmounts_andWithdraws() (gas: 470159)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 1.76ms (930.92µs CPU time)
+
+Ran 6 tests for test/fork/TestnetPaymasterFork.t.sol:TestnetPaymasterForkTest
+[SKIP] test_batchedApprove_paysGasInUsdc() (gas: 0)
+[SKIP] test_postOpGas_fitsTheLimit() (gas: 0)
+[SKIP] test_quoteFromAnotherKey_isRefused() (gas: 0)
+[SKIP] test_revertedCalls_stillPay() (gas: 0)
+[SKIP] test_unpaidOperation_isUndone_andCostsOnlyTheDeposit() (gas: 0)
+[SKIP] test_wiredToTheConfiguredEntryPoint() (gas: 0)
+Suite result: ok. 0 passed; 0 failed; 6 skipped; finished in 773.52µs (99.70µs CPU time)
+
+Ran 2 tests for test/fork/UniswapRouterSwap.fork.t.sol:UniswapRouterSwapForkTest
+[SKIP] test_fork_mainnet_routerTakesOriginalLayout() (gas: 0)
+[SKIP] test_fork_testnet_routerTakesMinHopLayout() (gas: 0)
+Suite result: ok. 0 passed; 0 failed; 2 skipped; finished in 705.36µs (67.53µs CPU time)
+
+Ran 7 tests for test/sidequest/V1Activation.t.sol:V1ActivationTest
+[PASS] test_activation_activateByMustPrecedeDeliveryDeadline() (gas: 805762)
+[PASS] test_activation_afterRevocationRefused_creatorCanStillCancel() (gas: 1421687)
+[PASS] test_activation_atActivateByAllowed_afterRefused() (gas: 1484734)
+[PASS] test_activation_creatorCannotActivateOnTheWorkersBehalf() (gas: 788460)
+[PASS] test_activation_isAtomic() (gas: 1944440)
+[PASS] test_activation_lapsedSelectionLetsTheNextApplicantActivate() (gas: 1818136)
+[PASS] test_activation_registryWalletChangeAfterwardsLeavesPayoutUnchanged() (gas: 1984536)
+Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 10.22ms (7.13ms CPU time)
+
+Ran 3 tests for test/sidequest/V1ArbitraryTokens.t.sol:V1ArbitraryTokensTest
+[PASS] test_aTokenWithoutReturnValues_worksEndToEnd() (gas: 2831688)
+[PASS] test_aTransferHookCannotReenterHolding() (gas: 1983918)
+[PASS] test_anyErc20IsAReward_withoutAnAllowlist() (gas: 2779882)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 6.34ms (3.33ms CPU time)
+
+Ran 3 tests for test/sidequest/V1Evidence.t.sol:V1EvidenceTest
+[PASS] test_differingConclusionsStayInspectable() (gas: 1902469)
+[PASS] test_rightSignerWrongPolicyRejected_expiredRefused() (gas: 1848969)
+[PASS] test_twoVerifiersSameStatementBothRecorded_sameVerifierIdempotent() (gas: 2215220)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 7.83ms (5.14ms CPU time)
+
+Ran 27 tests for test/sidequest/V1Lifecycle.t.sol:V1LifecycleTest
+[PASS] testFuzz_ruling_conservesBothAssets(bool,bool,uint96,uint96) (runs: 512, μ: 2999218, ~: 2996573)
+[PASS] test_R114_02_acceptRefused_thenBadFaithRulingBurnsCreatorBond() (gas: 2340639)
+[PASS] test_R114_02_reconsiderBeforeDispute_thenDisputeRefused() (gas: 2101524)
+[PASS] test_R114_02_rulingFirstThenAcceptRefused() (gas: 2172742)
+[PASS] test_R114_03_arbitrationTimeoutAfterExpiryRefundsCreatorBurnsNothing() (gas: 2223568)
+[PASS] test_R114_03_lateSubmissionEarnsNoSilencePayment() (gas: 1747663)
+[PASS] test_R114_03_otherEscrowsUntouched() (gas: 3226264)
+[PASS] test_R114_03_refundFirst_thenSilenceCompletionRefused() (gas: 2132279)
+[PASS] test_R114_03_silenceCompletionFirst_thenRefundRefused() (gas: 2038667)
+[PASS] test_R114_03_undisputedRejectionAfterExpiryRefundsCreator() (gas: 2111552)
+[PASS] test_adversarial_claimRefundCannotPreemptSettlement() (gas: 2284027)
+[PASS] test_adversarial_milestoneClaimCannotBlockRefund() (gas: 2121914)
+[PASS] test_adversarial_noSubmissionBeforeActivation() (gas: 771967)
+[PASS] test_arbitration_ruleAtExactDeadline_lateRuleFails() (gas: 2528419)
+[PASS] test_auth_replayRejected() (gas: 1443220)
+[PASS] test_auth_workerCannotUnderfundThemselves() (gas: 1239587)
+[PASS] test_auth_wrongSignerCannotSetTheBudget() (gas: 1242847)
+[PASS] test_delegatorExitsAfterSuccessfulHireWithoutTakingWorkerPay() (gas: 2633121)
+[PASS] test_happyPath_directWorker() (gas: 2253997)
+[PASS] test_happyPath_relayedSubmission() (gas: 2056170)
+[PASS] test_moneyPath_terminalRejectAfterFundingReturnsBothBonds() (gas: 2230328)
+[PASS] test_moneyPath_thirdPartyClaimRefund_noShowBondExpires() (gas: 1968284)
+[PASS] test_review_acceptStaysOpenLate() (gas: 1953338)
+[PASS] test_review_rejectAtExactDeadline_lateRejectFails() (gas: 1794195)
+[PASS] test_rule_onlyArbitratorAndOnlyWhenDisputed() (gas: 1844548)
+[PASS] test_ruling_matrix() (gas: 9123931)
+[PASS] test_settle_notBeforeTerminal() (gas: 1561000)
+Suite result: ok. 27 passed; 0 failed; 0 skipped; finished in 922.98ms (919.83ms CPU time)
+
+Ran 16 tests for test/sidequest/V1Slashing.t.sol:V1SlashingTest
+[PASS] testFuzz_qualitySlash_proRataAcrossThreeOwners(uint96,uint96) (runs: 512, μ: 2633306, ~: 2633208)
+[PASS] test_arbitrationTimeout_neverBurnsAndWritesNoFeedback() (gas: 2257801)
+[PASS] test_disputeRefusedOnUnactivatedOrSettledJobs() (gas: 2614319)
+[PASS] test_guard_burnThenClaimRefundRefused() (gas: 1999041)
+[PASS] test_guard_claimRefundThenSettleReleasesExpiredNoShow() (gas: 1877950)
+[PASS] test_guard_lateSubmissionThenClaimRefundReleasesExpiredBond() (gas: 1997713)
+[PASS] test_guard_pendingMilestoneClaimDoesNotEscapeTheBurn() (gas: 2025257)
+[PASS] test_late_approverAcceptsBeforeTheBurn() (gas: 2020380)
+[PASS] test_late_burnBeforeTheApproverAccepts() (gas: 2047690)
+[PASS] test_late_noSilencePaymentNoRejection() (gas: 1609729)
+[PASS] test_noShowSlash_sharedProRataIncludingQueuedDelegator() (gas: 2251721)
+[PASS] test_signedRuling_anyRelayerEqualsRule() (gas: 2256668)
+[PASS] test_signedRuling_invalidCombinationRefused() (gas: 1918878)
+[PASS] test_signedRuling_sameCutoffAsRule_atExactCutoffBeatsTheTimeout() (gas: 4087740)
+[PASS] test_timely_submissionCannotBeBurned() (gas: 1628766)
+[PASS] test_undisputed_noneQualityFalsified() (gas: 5904922)
+Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 742.76ms (739.56ms CPU time)
+
+Ran 31 tests for test/sidequest/Recipe.t.sol:RecipeTest
+[PASS] test_guardChain_rpcMustMatchTheConfig() (gas: 208377)
+[PASS] test_load_sidequestInputBlock() (gas: 67127)
+[PASS] test_output_duplicateGetterMismatch_preservesConfig() (gas: 18139487)
+[PASS] test_output_eachInputClockMismatch_preservesConfig() (gas: 19077932)
+[PASS] test_output_mainnetRewardTokensKeepUsdc() (gas: 18652769)
+[PASS] test_output_mainnetShape() (gas: 18241711)
+[PASS] test_output_mainnetShape_refusesFastClocksEvenWhenInputMatches() (gas: 18272495)
+[PASS] test_output_refusesUnknownKeys() (gas: 18353789)
+[PASS] test_output_shippedPromotedTestnet_refusesAnotherDeployment() (gas: 18070729)
+[PASS] test_output_slashRecipientMismatch_preservesConfig() (gas: 18109912)
+[PASS] test_output_testnetShape_recordsFreshCoreAndPair() (gas: 18434007)
+[PASS] test_promotion_candidateRoundTrip() (gas: 18056258)
+[PASS] test_promotion_changedSlashRecipientRefuses() (gas: 18337999)
+[PASS] test_promotion_dustDoesNotBlock() (gas: 18555094)
+[PASS] test_promotion_isIdempotent() (gas: 18784126)
+[PASS] test_promotion_mainnetTreasuryAndSlashRecipientAreTheSafe() (gas: 40520342)
+[PASS] test_promotion_readsEveryImmutableClock() (gas: 20096628)
+[PASS] test_promotion_receiptBlocks() (gas: 18430234)
+[PASS] test_promotion_refusesAnIncompleteHandover() (gas: 17013877)
+[PASS] test_promotion_repeatedRunChecksCurrentCoreState() (gas: 27875700)
+[PASS] test_promotion_verifyLiveState() (gas: 20584991)
+[PASS] test_recipe_checkRefusals() (gas: 803942)
+[PASS] test_recipe_checkRefusesClocksWithNoBondedHire() (gas: 383842)
+[PASS] test_recipe_mainnetDefaultArbitratorIsTheFreshRole() (gas: 40857163)
+[PASS] test_recipe_mainnetPinsTheNadFunToken() (gas: 475595)
+[PASS] test_recipe_mainnetTreasuryAndSlashRecipientAreTheSafe() (gas: 633716)
+[PASS] test_recipe_oneHire() (gas: 20994164)
+[PASS] test_recipe_refusesZeroSlashRecipient() (gas: 92433)
+[PASS] test_recipe_retiredKeysMatchTheApiDenylist() (gas: 87571)
+[PASS] test_recipe_stepsWithThirdPartyGaps_handover() (gas: 18765861)
+[PASS] test_recipe_testnetDefaultArbitratorIsFree() (gas: 278954)
+Suite result: ok. 31 passed; 0 failed; 0 skipped; finished in 4.38s (4.43s CPU time)
+
+Ran 1 test for test/fork/SafeAcceptRehearsal.t.sol:SafeAcceptRehearsalForkTest
+[SKIP] test_fork_testnet_safeAcceptsAllFour() (gas: 0)
+Suite result: ok. 0 passed; 0 failed; 1 skipped; finished in 1.22ms (45.25µs CPU time)
+
+Ran 43 test suites in 7.87s (12.09s CPU time): 436 tests passed, 0 failed, 22 skipped (458 total tests)

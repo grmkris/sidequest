@@ -1,0 +1,53 @@
+No files changed, compilation skipped
+
+Ran 3 tests for test/SafeAcceptSimulation.t.sol:SafeAcceptSimulationTest
+[FAIL: o �vm.readFile: failed to open file "/tmp/sidequest-prod-review-check/contracts/config/.test-accept-chain.json": No such file or directory (os error 2)] test_mainnetPlanSimulatesPendingAcceptancesWithoutGo() (gas: 161652)
+[FAIL: Error != expected error: vm.readFile: failed to open file "/tmp/sidequest-prod-review-check/contracts/config/.test-accept-chain.json": No such file or directory (os error 2) != MainnetNotGo()] test_mainnetSendStillNeedsGo() (gas: 160439)
+[PASS] test_planRefusesWrongChainWithoutGo() (gas: 194024)
+Suite result: FAILED. 1 passed; 2 failed; 0 skipped; finished in 3.86ms (4.21ms CPU time)
+
+Ran 31 tests for test/sidequest/Recipe.t.sol:RecipeTest
+[PASS] test_guardChain_rpcMustMatchTheConfig() (gas: 208377)
+[PASS] test_load_sidequestInputBlock() (gas: 67127)
+[PASS] test_output_duplicateGetterMismatch_preservesConfig() (gas: 18139487)
+[PASS] test_output_eachInputClockMismatch_preservesConfig() (gas: 19077932)
+[PASS] test_output_mainnetRewardTokensKeepUsdc() (gas: 18652769)
+[PASS] test_output_mainnetShape() (gas: 18241711)
+[PASS] test_output_mainnetShape_refusesFastClocksEvenWhenInputMatches() (gas: 18272495)
+[PASS] test_output_refusesUnknownKeys() (gas: 18353789)
+[PASS] test_output_shippedPromotedTestnet_refusesAnotherDeployment() (gas: 18070729)
+[PASS] test_output_slashRecipientMismatch_preservesConfig() (gas: 18109912)
+[PASS] test_output_testnetShape_recordsFreshCoreAndPair() (gas: 18434007)
+[PASS] test_promotion_candidateRoundTrip() (gas: 18056258)
+[PASS] test_promotion_changedSlashRecipientRefuses() (gas: 18337999)
+[PASS] test_promotion_dustDoesNotBlock() (gas: 18555094)
+[PASS] test_promotion_isIdempotent() (gas: 18784126)
+[PASS] test_promotion_mainnetTreasuryAndSlashRecipientAreTheSafe() (gas: 40520342)
+[PASS] test_promotion_readsEveryImmutableClock() (gas: 20096628)
+[PASS] test_promotion_receiptBlocks() (gas: 18430234)
+[PASS] test_promotion_refusesAnIncompleteHandover() (gas: 17013877)
+[PASS] test_promotion_repeatedRunChecksCurrentCoreState() (gas: 27875710)
+[PASS] test_promotion_verifyLiveState() (gas: 20584991)
+[PASS] test_recipe_checkRefusals() (gas: 803942)
+[PASS] test_recipe_checkRefusesClocksWithNoBondedHire() (gas: 383842)
+[PASS] test_recipe_mainnetDefaultArbitratorIsTheFreshRole() (gas: 40857163)
+[PASS] test_recipe_mainnetPinsTheNadFunToken() (gas: 475595)
+[PASS] test_recipe_mainnetTreasuryAndSlashRecipientAreTheSafe() (gas: 633716)
+[PASS] test_recipe_oneHire() (gas: 20994164)
+[PASS] test_recipe_refusesZeroSlashRecipient() (gas: 92433)
+[PASS] test_recipe_retiredKeysMatchTheApiDenylist() (gas: 87571)
+[PASS] test_recipe_stepsWithThirdPartyGaps_handover() (gas: 18765861)
+[PASS] test_recipe_testnetDefaultArbitratorIsFree() (gas: 278954)
+Suite result: ok. 31 passed; 0 failed; 0 skipped; finished in 49.28ms (321.21ms CPU time)
+
+Ran 2 test suites in 52.52ms (53.15ms CPU time): 32 tests passed, 2 failed, 0 skipped (34 total tests)
+
+Failing tests:
+Encountered 2 failing tests in test/SafeAcceptSimulation.t.sol:SafeAcceptSimulationTest
+[FAIL: o �vm.readFile: failed to open file "/tmp/sidequest-prod-review-check/contracts/config/.test-accept-chain.json": No such file or directory (os error 2)] test_mainnetPlanSimulatesPendingAcceptancesWithoutGo() (gas: 161652)
+[FAIL: Error != expected error: vm.readFile: failed to open file "/tmp/sidequest-prod-review-check/contracts/config/.test-accept-chain.json": No such file or directory (os error 2) != MainnetNotGo()] test_mainnetSendStillNeedsGo() (gas: 160439)
+
+Encountered a total of 2 failing tests, 32 tests succeeded
+
+Tip: Run `forge test --rerun` to retry only the 2 failed tests
+Tip: Run `forge test --debug --match-test <TEST_NAME>` to inspect one failing test in the debugger

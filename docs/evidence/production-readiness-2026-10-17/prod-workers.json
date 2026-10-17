@@ -1,0 +1,131 @@
+{
+  "checkedAt": "2026-10-17T08:17:01.112Z",
+  "scope": "Read-only production settings/deployments. Secret names and types only.",
+  "results": [
+    {
+      "name": "sidequest-api-prod",
+      "settingsStatus": 200,
+      "deploymentsStatus": 200,
+      "compatibility_date": "2026-09-01",
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "redact_query_string": false,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": true
+        },
+        "traces": {
+          "enabled": true,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      },
+      "selectedBindings": [
+        {
+          "name": "HOSTED_SEND",
+          "type": "plain_text",
+          "text": "userop"
+        },
+        {
+          "name": "NETWORK",
+          "type": "plain_text",
+          "text": "monad-mainnet"
+        },
+        {
+          "name": "PIMLICO_API_KEY",
+          "type": "secret_text"
+        },
+        {
+          "name": "PROD_ADMISSION_DRAIN",
+          "type": "plain_text",
+          "text": "0"
+        }
+      ],
+      "deployment": {
+        "id": "04500116-6a45-46ee-bab4-3ad4c33064d4",
+        "created_on": "2026-10-15T18:37:49.681789Z",
+        "versions": [
+          {
+            "version_id": "a16bb30c-a304-42e1-955c-c36fdcd98837",
+            "percentage": 100
+          }
+        ]
+      }
+    },
+    {
+      "name": "sidequest-indexer-prod",
+      "settingsStatus": 200,
+      "deploymentsStatus": 200,
+      "compatibility_date": "2026-09-01",
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "redact_query_string": false,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": true
+        },
+        "traces": {
+          "enabled": true,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      },
+      "selectedBindings": [
+        {
+          "name": "NETWORK",
+          "type": "plain_text",
+          "text": "monad-mainnet"
+        }
+      ],
+      "deployment": {
+        "id": "4829609e-b796-41c3-9290-ca4dea9c2705",
+        "created_on": "2026-10-15T18:37:49.634316Z",
+        "versions": [
+          {
+            "version_id": "eeab1b41-d913-4e68-97cf-d5ea85d6c23b",
+            "percentage": 100
+          }
+        ]
+      }
+    },
+    {
+      "name": "sidequest-explore-prod",
+      "settingsStatus": 200,
+      "deploymentsStatus": 200,
+      "compatibility_date": "2026-08-31",
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "redact_query_string": false,
+        "logs": {
+          "enabled": true,
+          "head_sampling_rate": 1,
+          "persist": true,
+          "invocation_logs": true
+        },
+        "traces": {
+          "enabled": true,
+          "persist": true,
+          "head_sampling_rate": 1
+        }
+      },
+      "selectedBindings": [],
+      "deployment": {
+        "id": "522c4fc9-9fad-474a-9902-9aca9e937b49",
+        "created_on": "2026-10-15T20:05:02.362982Z",
+        "versions": [
+          {
+            "version_id": "ed7ad94d-dd12-4265-bea2-f604fc421660",
+            "percentage": 100
+          }
+        ]
+      }
+    }
+  ]
+}

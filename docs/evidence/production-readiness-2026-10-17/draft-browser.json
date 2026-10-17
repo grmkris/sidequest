@@ -1,0 +1,25 @@
+{
+  "scope": "Local generated MCP app with official AppBridge fixture host; no remote message or Commons post",
+  "results": [
+    {
+      "width": 1440,
+      "passed": true,
+      "assertions": [
+        "host receives original snapshot",
+        "new attachment draft survives delayed acknowledgement",
+        "composer reenabled",
+        "no overflow or page errors"
+      ]
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "assertions": [
+        "host receives original snapshot",
+        "new attachment draft survives delayed acknowledgement",
+        "composer reenabled",
+        "no overflow or page errors"
+      ]
+    }
+  ]
+}

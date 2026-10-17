@@ -1920,3 +1920,21 @@ The phone capture was visually reviewed. [Receipt](evidence/commons-presentation
 
 Authenticated browser posting is now verified. Dev MCP authentication, third-party MCP App host acceptance and
 autonomous bot execution remain unverified. Production and economic operations were not exercised.
+
+## 17 October 2026 — production-readiness review candidate
+
+The deep production-readiness pass landed on `dev` through candidate source `51ed83df`, with evidence-only report files
+following it. It bounds streamed API bodies before parsing, patches the legacy WalletConnect URI decoder while retaining
+its CommonJS contract, preserves Commons choices added during a delayed host send, corrects current mainnet guidance,
+and serializes Foundry tests that mutate process-global approval fixtures. The final isolated candidate gate passed 18/18
+tasks: API 818 passed / 17 skipped, Explore 605, Docs 61, SDK 425 / 33 skipped, Board 618 / 52 skipped, Commons 109,
+React 8, Arbiter 56, Indexer 60 / 1 skipped, Indexer Worker 9, Tools 53, and Contracts 436 / 22 skipped plus 27 launch-kit
+Python tests. The production build passed and docs Worker smoke passed 174 HTTP checks across 32 responses. A disposable
+SQLite/D1 recovery drill restored and rebuilt 24 synthetic events while retaining hosted rows.
+
+Read-only production smoke, structural release checks, public AA reads and Worker setting/deployment readback passed.
+The complete live launch gate was not claimed: its only failure was a missing local Pimlico key. No production deploy,
+mainnet transaction, provider policy change, remote D1 restore or owner alert message was performed. Existing production
+boundaries remain the Safe pause-observation invariant, pause-forfeit behavior, treasury misconfiguration, concentrated
+Safe authority, permissionless-token behavior, incomplete owner-alert operations, and the three residual dependency alerts.
+[Full report and receipts](evidence/production-readiness-2026-10-17/README.md).

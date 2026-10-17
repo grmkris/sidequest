@@ -1,0 +1,2389 @@
+$ bun run format:check && bun run agents:check && bun run graph && bun run migrations:check && bun run dupes && bun run typecheck && bun run lint:gate && bun run test && bun run test:scripts
+$ oxfmt -c oxfmt.config.ts --check
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 1258ms on 1329 files using 16 threads.
+$ bunx repoagents@1 check && bun tools/agents-check.ts
+repoagents: ok
+agents:check passed
+$ bun tools/check-graph.ts
+Graph check passed (12 workspaces, 10 reachable from an app)
+$ bun scripts/migrations-lock.ts check
+migrations:check passed (0 new files; apps/api/migrations.lock.json)
+$ jscpd
+Using config from .jscpd.json
+[1mClone found (typescript)[22m
+ - [1m[32mapi/src/board.ts[39m[22m [416:18 - 426:16] (11 lines, 110 tokens)
+   api/src/board.ts [625:23 - 635:16]
+[1mClone found (typescript)[22m
+ - [1m[32mapi/src/board.ts[39m[22m [478:86 - 486:16] (9 lines, 72 tokens)
+   api/src/board.ts [503:97 - 511:16]
+[1mClone found (typescript)[22m
+ - [1m[32mapi/src/board.ts[39m[22m [478:86 - 488:16] (11 lines, 104 tokens)
+   api/src/board.ts [603:71 - 613:16]
+[1mClone found (typescript)[22m
+ - [1m[32mapi/src/services.ts[39m[22m [164:5 - 174:66] (11 lines, 122 tokens)
+   board/src/agent-directory.ts [49:5 - 59:66]
+[1mClone found (typescript)[22m
+ - [1m[32mapi/src/tools.ts[39m[22m [255:65 - 272:25] (18 lines, 83 tokens)
+   api/src/tools.ts [361:89 - 378:25]
+[1mClone found (typescript)[22m
+ - [1m[32mexplore/src/gas-allowance.ts[39m[22m [6:1 - 16:6] (11 lines, 127 tokens)
+   explore/src/operator-disables.ts [5:1 - 15:6]
+[1mClone found (typescript)[22m
+ - [1m[32mbin/hirers.ts[39m[22m [234:32 - 242:57] (9 lines, 110 tokens)
+   bin/hosted-hirer.ts [323:38 - 331:57]
+[1mClone found (typescript)[22m
+ - [1m[32mbin/hirers.ts[39m[22m [373:3 - 389:2] (17 lines, 199 tokens)
+   bin/hosted-hirer.ts [485:3 - 501:2]
+[1mClone found (typescript)[22m
+ - [1m[32mbin/hirers.ts[39m[22m [404:61 - 417:15] (14 lines, 112 tokens)
+   bin/hosted-hirers.ts [93:47 - 107:15]
+[1mClone found (typescript)[22m
+ - [1m[32mboard/src/budget.ts[39m[22m [177:50 - 185:37] (9 lines, 80 tokens)
+   board/src/budget.ts [226:69 - 231:98]
+[1mClone found (typescript)[22m
+ - [1m[32mboard/src/deliverable.ts[39m[22m [14:21 - 31:7] (18 lines, 101 tokens)
+   react/src/types.ts [26:12 - 37:7]
+[1mClone found (typescript)[22m
+ - [1m[32mboard/src/grants.ts[39m[22m [150:76 - 161:16] (12 lines, 71 tokens)
+   board/src/grants.ts [217:68 - 228:16]
+[1mClone found (typescript)[22m
+ - [1m[32mboard/src/hire-batch.ts[39m[22m [20:18 - 40:11] (21 lines, 113 tokens)
+   sdk/src/delegation/index.ts [107:28 - 127:11]
+[1mClone found (typescript)[22m
+ - [1m[32mboard/src/typed-data.ts[39m[22m [2:1 - 14:111] (13 lines, 106 tokens)
+   sdk/src/typed-data.ts [111:1 - 125:8]
+[1mClone found (typescript)[22m
+ - [1m[32mboard/src/x402.ts[39m[22m [8:1 - 17:2] (10 lines, 71 tokens)
+   sdk/scripts/privy/policy.ts [110:1 - 119:2]
+[1mClone found (typescript)[22m
+ - [1m[32msdk/scripts/examples/self-run-hire.ts[39m[22m [57:36 - 66:96] (10 lines, 78 tokens)
+   sdk/src/board-client.ts [32:39 - 40:98]
+[1mClone found (typescript)[22m
+ - [1m[32msdk/scripts/examples/self-run-hire.ts[39m[22m [57:48 - 67:36] (11 lines, 89 tokens)
+   probes/self-custody-listing.ts [125:48 - 135:36]
+[1mClone found (typescript)[22m
+ - [1m[32msdk/scripts/examples/self-run-hire.ts[39m[22m [111:32 - 120:97] (10 lines, 109 tokens)
+   probes/self-custody-listing.ts [66:46 - 75:97]
+[1mClone found (typescript)[22m
+ - [1m[32msdk/scripts/live/aa-privy-probe.ts[39m[22m [201:14 - 210:6] (10 lines, 101 tokens)
+   sdk/scripts/live/aa-probe.ts [59:11 - 68:6]
+[90m┌────────────┬────────────────┬─────────────┬──────────────┬──────────────┬──────────────────┬───────────────────┐[39m
+[90m│[39m[31m Format     [39m[90m│[39m[31m Files analyzed [39m[90m│[39m[31m Total lines [39m[90m│[39m[31m Total tokens [39m[90m│[39m[31m Clones found [39m[90m│[39m[31m Duplicated lines [39m[90m│[39m[31m Duplicated tokens [39m[90m│[39m
+[90m├────────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
+[90m│[39m javascript [90m│[39m 18             [90m│[39m 2238        [90m│[39m 17834        [90m│[39m 0            [90m│[39m 0 (0.00%)        [90m│[39m 0 (0.00%)         [90m│[39m
+[90m├────────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
+[90m│[39m tsx        [90m│[39m 188            [90m│[39m 29608       [90m│[39m 187615       [90m│[39m 0            [90m│[39m 0 (0.00%)        [90m│[39m 0 (0.00%)         [90m│[39m
+[90m├────────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
+[90m│[39m typescript [90m│[39m 506            [90m│[39m 79622       [90m│[39m 554767       [90m│[39m 19           [90m│[39m 235 (0.30%)      [90m│[39m 1958 (0.35%)      [90m│[39m
+[90m├────────────┼────────────────┼─────────────┼──────────────┼──────────────┼──────────────────┼───────────────────┤[39m
+[90m│[39m [1mTotal:[22m     [90m│[39m 712            [90m│[39m 111468      [90m│[39m 760216       [90m│[39m 19           [90m│[39m 235 (0.21%)      [90m│[39m 1958 (0.26%)      [90m│[39m
+[90m└────────────┴────────────────┴─────────────┴──────────────┴──────────────┴──────────────────┴───────────────────┘[39m
+[90mFound 19 clones.[39m
+[90mtime: 176.086ms[39m
+$ tsc -p scripts/ci/tsconfig.json && turbo run typecheck
+
+   • turbo 2.11.7
+   • Packages in scope: @sidequest/api, @sidequest/arbiter, @sidequest/board, @sidequest/commons, @sidequest/contracts, @sidequest/docs, @sidequest/explore, @sidequest/indexer, @sidequest/indexer-worker, @sidequest/react, @sidequest/sdk, tools
+   • Running typecheck in 12 packages
+   • Remote caching enabled
+
+@sidequest/sdk:typecheck: cache hit, replaying logs c3f77806f0068451
+tools:typecheck: cache hit, replaying logs 583568c2fbc06440
+@sidequest/sdk:typecheck: $ tsc -p tsconfig.json
+tools:typecheck: $ tsc -p tsconfig.json
+@sidequest/docs:typecheck: cache hit, replaying logs 7953d8d039b8687d
+@sidequest/docs:typecheck: $ tsc -p tsconfig.json
+@sidequest/react:typecheck: cache hit, replaying logs c666dea4c8102a08
+@sidequest/commons:typecheck: cache hit, replaying logs 9e201388ee871a06
+@sidequest/react:typecheck: $ tsc -p tsconfig.json
+@sidequest/commons:typecheck: $ tsc -p tsconfig.json
+@sidequest/board:typecheck: cache hit, replaying logs c60f33fffd70e39d
+@sidequest/board:typecheck: $ tsc -p tsconfig.json
+@sidequest/indexer:typecheck: cache hit, replaying logs e2b8617273d16318
+@sidequest/indexer:typecheck: $ tsc -p tsconfig.json
+@sidequest/arbiter:typecheck: cache hit, replaying logs 681ed343f8a1e9f6
+@sidequest/arbiter:typecheck: $ tsc -p tsconfig.json
+@sidequest/indexer-worker:typecheck: cache hit, replaying logs f6d9d2b50990eea1
+@sidequest/indexer-worker:typecheck: $ tsc -p tsconfig.json
+@sidequest/api:typecheck: cache hit, replaying logs f2f838f6c8d59ed4
+@sidequest/api:typecheck: $ tsc -p tsconfig.json
+@sidequest/explore:typecheck: cache hit, replaying logs c484c57465ac39e9
+@sidequest/explore:typecheck: $ tsc -p tsconfig.json
+
+ Tasks:    11 successful, 11 total
+Cached:    11 cached, 11 total
+  Time:    256ms >>> FULL TURBO
+
+$ bun tools/lint-baseline.ts
+lint:gate: passed; the baseline holds 2802 findings in 364 files (oxlint 2802, knip 0).
+lint:gate: 21 s
+$ turbo run test --concurrency=2
+
+   • turbo 2.11.7
+   • Packages in scope: @sidequest/api, @sidequest/arbiter, @sidequest/board, @sidequest/commons, @sidequest/contracts, @sidequest/docs, @sidequest/explore, @sidequest/indexer, @sidequest/indexer-worker, @sidequest/react, @sidequest/sdk, tools
+   • Running test in 12 packages
+   • Remote caching enabled
+
+tools:typecheck: cache hit, replaying logs 583568c2fbc06440
+tools:typecheck: $ tsc -p tsconfig.json
+@sidequest/sdk:typecheck: cache hit, replaying logs c3f77806f0068451
+@sidequest/sdk:typecheck: $ tsc -p tsconfig.json
+@sidequest/sdk:test: cache hit, replaying logs 4ac7a304a09b6de0
+@sidequest/sdk:test: $ vitest run
+@sidequest/sdk:test: 
+@sidequest/sdk:test:  RUN  v5.0.3 /tmp/sidequest-prod-review-check/packages/sdk
+@sidequest/sdk:test: 
+@sidequest/sdk:test:  ✓ src/lifecycle.test.ts (50 tests) 113ms
+@sidequest/sdk:test:  ✓ src/deployment.test.ts (27 tests) 58ms
+@sidequest/sdk:test:  ✓ src/market.test.ts (16 tests) 78ms
+@sidequest/sdk:test:  ✓ src/swap.test.ts (7 tests) 74ms
+@sidequest/sdk:test:  ✓ src/clocks.test.ts (38 tests) 93ms
+@sidequest/sdk:test:  ✓ src/batch.test.ts (9 tests) 52ms
+@sidequest/sdk:test:  ✓ src/actions.test.ts (20 tests) 36ms
+@sidequest/sdk:test:  ✓ src/delegation/permissions.test.ts (31 tests) 135ms
+@sidequest/sdk:test:  ↓ src/sidequest.fork.test.ts (3 tests | 3 skipped)
+@sidequest/sdk:test:  ✓ src/bond-policy.test.ts (9 tests) 45ms
+@sidequest/sdk:test:  ✓ src/aa/build.test.ts (23 tests) 143ms
+@sidequest/sdk:test:  ✓ src/v1-flow-economics.test.ts (8 tests) 180ms
+@sidequest/sdk:test:  ✓ src/commons-ui/commons-ui.test.ts (18 tests) 37ms
+@sidequest/sdk:test:  ✓ src/flow-journal.test.ts (7 tests) 32ms
+@sidequest/sdk:test:  ✓ src/launcher.test.ts (8 tests) 39ms
+@sidequest/sdk:test:  ✓ src/transaction-cost.test.ts (14 tests) 24ms
+@sidequest/sdk:test:  ↓ scripts/live/authority.fork.test.ts (3 tests | 3 skipped)
+@sidequest/sdk:test:  ✓ src/delegation/grants.test.ts (7 tests) 36ms
+@sidequest/sdk:test:  ✓ src/staking.test.ts (5 tests) 27ms
+@sidequest/sdk:test:  ↓ src/v1-flows.fork.test.ts (21 tests | 21 skipped)
+@sidequest/sdk:test:  ✓ src/v1-admin-flows.test.ts (4 tests) 90ms
+@sidequest/sdk:test:  ✓ src/aa/events.test.ts (6 tests) 49ms
+@sidequest/sdk:test:  ✓ scripts/privy/sidequest-cutover.test.ts (14 tests) 382ms
+@sidequest/sdk:test:  ✓ src/aa/userop.test.ts (7 tests) 90ms
+@sidequest/sdk:test:  ✓ src/delegation/delegation.test.ts (8 tests) 136ms
+@sidequest/sdk:test:  ✓ src/flow-persistence.test.ts (2 tests) 51ms
+@sidequest/sdk:test:  ↓ src/staking.fork.test.ts (3 tests | 3 skipped)
+@sidequest/sdk:test:  ✓ src/sidequest.test.ts (5 tests) 60ms
+@sidequest/sdk:test:  ✓ src/mainnet-policy.test.ts (5 tests) 100ms
+@sidequest/sdk:test:  ✓ src/directory.test.ts (6 tests) 73ms
+@sidequest/sdk:test:  ✓ src/userop-policy.test.ts (6 tests) 31ms
+@sidequest/sdk:test:  ✓ src/privy-policy-update.test.ts (1 test) 108ms
+@sidequest/sdk:test:  ✓ scripts/privy/update-agent-rules.test.ts (4 tests) 73ms
+@sidequest/sdk:test:  ✓ src/aa/testnet-paymaster.test.ts (2 tests) 23ms
+@sidequest/sdk:test:  ✓ src/client.test.ts (3 tests) 67ms
+@sidequest/sdk:test:  ✓ src/typed-data.test.ts (4 tests | 3 skipped) 21ms
+@sidequest/sdk:test:  ✓ src/aa/rpc.test.ts (3 tests) 109ms
+@sidequest/sdk:test:  ✓ src/privy-server.test.ts (2 tests) 99ms
+@sidequest/sdk:test:  ✓ src/registry.test.ts (2 tests) 45ms
+@sidequest/sdk:test:  ✓ src/staking-ledger.test.ts (1 test) 8ms
+@sidequest/sdk:test:  ✓ src/sidequest-fixture.test.ts (8 tests) 778ms
+@sidequest/sdk:test:  ✓ src/p256.test.ts (2 tests) 39ms
+@sidequest/sdk:test:  ✓ src/attach-evidence.test.ts (1 test) 15ms
+@sidequest/sdk:test:  ✓ src/log-ranges.test.ts (1 test) 6ms
+@sidequest/sdk:test:  ✓ scripts/live/deployed/guards.test.ts (8 tests) 47ms
+@sidequest/sdk:test:  ✓ scripts/live/deployed/audit-fetch.test.ts (2 tests) 17ms
+@sidequest/sdk:test:  ✓ src/job-tags.test.ts (2 tests) 7ms
+@sidequest/sdk:test:  ✓ src/hosted-send.test.ts (2 tests) 6ms
+@sidequest/sdk:test:  ✓ src/aa/config.test.ts (3 tests) 45ms
+@sidequest/sdk:test:  ✓ src/agent-sweep-deployment.test.ts (1 test) 8ms
+@sidequest/sdk:test:  ✓ src/v1-flow-keys.test.ts (4 tests) 16ms
+@sidequest/sdk:test:  ✓ scripts/live/deployed/audit-blocks.test.ts (2 tests) 14ms
+@sidequest/sdk:test:  ✓ scripts/live/authority-cost.test.ts (1 test) 63ms
+@sidequest/sdk:test:  ✓ src/relay-override.test.ts (1 test) 13ms
+@sidequest/sdk:test:  ✓ src/privy.test.ts (1 test) 4ms
+@sidequest/sdk:test:  ✓ src/stage-policy.test.ts (1 test) 10ms
+@sidequest/sdk:test:  ✓ scripts/live/deployed/signing.test.ts (3 tests) 62ms
+@sidequest/sdk:test:  ✓ scripts/live/deployed/backing.test.ts (3 tests) 7ms
+@sidequest/sdk:test: 
+@sidequest/sdk:test:  Test Files  54 passed | 4 skipped (58)
+@sidequest/sdk:test:       Tests  425 passed | 33 skipped (458)
+@sidequest/sdk:test:    Start at  10:20:14
+@sidequest/sdk:test:    Duration  6.11s (import 66%, transform 27%, tests 6%, worker 1%)
+@sidequest/sdk:test: 
+@sidequest/sdk:test:   Transform  transforming modules took 16.96s · 27% of tracked time, re-done on every run
+@sidequest/sdk:test:              persist transforms across runs with fsModuleCache: true
+@sidequest/sdk:test:              learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+@sidequest/sdk:test: 
+tools:test: cache hit, replaying logs eb02fc8448be7b27
+tools:test: $ vitest run
+tools:test: 
+tools:test:  RUN  v5.0.3 /tmp/sidequest-prod-review-check/tools
+tools:test: 
+tools:test:  ✓ test/boundaries.test.ts (13 tests) 49ms
+tools:test:  ✓ test/baseline.test.ts (21 tests) 19ms
+tools:test:  ✓ test/migrations.test.ts (4 tests) 24ms
+tools:test:  ✓ test/report.test.ts (8 tests) 18ms
+tools:test:  ✓ test/agents.test.ts (7 tests) 158ms
+tools:test: 
+tools:test:  Test Files  5 passed (5)
+tools:test:       Tests  53 passed (53)
+tools:test:    Start at  10:20:41
+tools:test:    Duration  1.02s (import 62%, transform 27%, tests 10%, worker 1%)
+tools:test: 
+@sidequest/commons:test: cache hit, replaying logs d9dcb5b7636d26e5
+@sidequest/commons:test: $ vitest run
+@sidequest/commons:test: 
+@sidequest/commons:test:  RUN  v5.0.3 /tmp/sidequest-prod-review-check/packages/commons
+@sidequest/commons:test: 
+@sidequest/commons:test: (node:286419) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/commons:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/commons:test: (node:286390) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/commons:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/commons:test: (node:286437) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/commons:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/commons:test: (node:286460) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/commons:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/commons:test: (node:286398) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/commons:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/commons:test: (node:286471) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/commons:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/commons:test: (node:286400) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/commons:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/commons:test: (node:286491) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/commons:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/commons:test:  ✓ test/schema.test.ts (37 tests) 52ms
+@sidequest/commons:test:  ✓ test/gaps.test.ts (6 tests) 64ms
+@sidequest/commons:test:  ✓ test/gap-status.test.ts (3 tests) 73ms
+@sidequest/commons:test:  ✓ test/roles.test.ts (24 tests) 111ms
+@sidequest/commons:test:  ✓ test/presentation.test.ts (6 tests) 97ms
+@sidequest/commons:test:  ✓ test/rates.test.ts (4 tests) 156ms
+@sidequest/commons:test:  ✓ test/thread.test.ts (15 tests) 139ms
+@sidequest/commons:test:  ✓ test/roadmap.test.ts (12 tests) 173ms
+@sidequest/commons:test:  ✓ test/feed.test.ts (2 tests) 553ms
+@sidequest/commons:test:    ✓ all feed triggers omit random body, title, gap fields and reasons 547ms
+@sidequest/commons:test: 
+@sidequest/commons:test:  Test Files  9 passed (9)
+@sidequest/commons:test:       Tests  109 passed (109)
+@sidequest/commons:test:    Start at  10:20:24
+@sidequest/commons:test:    Duration  2.20s (import 55%, transform 35%, tests 10%, worker 1%)
+@sidequest/commons:test: 
+@sidequest/commons:test:   Transform  transforming modules took 4.86s · 35% of tracked time, re-done on every run
+@sidequest/commons:test:              persist transforms across runs with fsModuleCache: true
+@sidequest/commons:test:              learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+@sidequest/commons:test: 
+@sidequest/commons:typecheck: cache hit, replaying logs 9e201388ee871a06
+@sidequest/commons:typecheck: $ tsc -p tsconfig.json
+@sidequest/board:test: cache hit, replaying logs 04ed69ef342317f7
+@sidequest/board:test: $ vitest run
+@sidequest/board:test: 
+@sidequest/board:test:  RUN  v5.0.3 /tmp/sidequest-prod-review-check/packages/board
+@sidequest/board:test: 
+@sidequest/board:test: (node:287122) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287128) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287149) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287140) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287191) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287142) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287170) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287169) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287184) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287155) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287121) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287181) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ↓ src/hire-batch.fork.test.ts (5 tests | 5 skipped)
+@sidequest/board:test: (node:287129) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ↓ src/agent-onboarding.fork.test.ts (4 tests | 4 skipped)
+@sidequest/board:test:  ↓ src/sponsor.fork.test.ts (9 tests | 9 skipped)
+@sidequest/board:test:  ✓ src/agent-signing.test.ts (43 tests) 147ms
+@sidequest/board:test:  ↓ src/sidequest.fork.test.ts (9 tests | 9 skipped)
+@sidequest/board:test:  ↓ src/agent-executor.fork.test.ts (11 tests | 11 skipped)
+@sidequest/board:test:  ✓ src/list-tasks.test.ts (12 tests) 194ms
+@sidequest/board:test:  ✓ src/agent-x402.test.ts (41 tests) 270ms
+@sidequest/board:test:  ✓ src/receipts.test.ts (26 tests) 305ms
+@sidequest/board:test:  ✓ src/agent-permissions.test.ts (6 tests) 400ms
+@sidequest/board:test:  ✓ src/selection-service.test.ts (13 tests) 371ms
+@sidequest/board:test: (node:287518) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287520) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287556) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287564) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287527) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287588) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287595) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/deliverable.test.ts (21 tests) 148ms
+@sidequest/board:test: (node:287659) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/agent-directory.test.ts (14 tests) 1775ms
+@sidequest/board:test:    ✓ a hosted agent listing itself (14)
+@sidequest/board:test:      ✓ re-enrolls a changed profile and keeps every live ad live, including ten long names 545ms
+@sidequest/board:test: (node:287421) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287748) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/directory.test.ts (85 tests) 2549ms
+@sidequest/board:test:    ✓ directory mutation quota (4)
+@sidequest/board:test:      ✓ limits verified mutations across record kinds and accepts again at the window boundary 456ms
+@sidequest/board:test:      ✓ preserves the mutation bucket through enrollment and keeps heartbeat limits separate 709ms
+@sidequest/board:test:  ↓ src/sponsor-grants.fork.test.ts (4 tests | 4 skipped)
+@sidequest/board:test:  ✓ src/agent-registration.test.ts (13 tests) 338ms
+@sidequest/board:test:  ✓ src/agent-batch.test.ts (6 tests) 138ms
+@sidequest/board:test: (node:287572) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287780) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/offer-errors.test.ts (11 tests) 132ms
+@sidequest/board:test:  ✓ src/agent-failure.test.ts (9 tests) 39ms
+@sidequest/board:test:  ✓ src/evidence-submit.test.ts (5 tests) 370ms
+@sidequest/board:test: (node:287802) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/permission-calls.test.ts (11 tests) 378ms
+@sidequest/board:test:  ✓ src/sponsor.test.ts (30 tests) 2867ms
+@sidequest/board:test:    ✓ ERC-7710 sponsorship boundaries and recovery (29)
+@sidequest/board:test:      ✓ a stranded operation is replaced durably after grant revocation or expiry, releasing both ledgers 326ms
+@sidequest/board:test: (node:287856) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287815) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/poster-agent.test.ts (10 tests) 389ms
+@sidequest/board:test: (node:287849) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/grants.test.ts (4 tests) 380ms
+@sidequest/board:test:  ✓ src/agent-calls.test.ts (6 tests) 308ms
+@sidequest/board:test:  ✓ src/archived-preparations.test.ts (4 tests) 217ms
+@sidequest/board:test: (node:287924) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/userop-desk.test.ts (12 tests) 931ms
+@sidequest/board:test: (node:287954) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287943) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/agent-executor.test.ts (9 tests) 1932ms
+@sidequest/board:test:    ✓ sends a hosted action through the real desk, resumes after restart and reports the bundle transaction once 440ms
+@sidequest/board:test:    ✓ attaches the frozen board evidence to a hosted submit and reuses it after a dropped attempt 330ms
+@sidequest/board:test:    ✓ preserves hire-over-limit approval and redeems the exact operator allowance once without relay signatures 436ms
+@sidequest/board:test:  ✓ src/grant-calls.test.ts (4 tests) 168ms
+@sidequest/board:test: (node:287984) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:288004) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/quote-invite.test.ts (13 tests) 282ms
+@sidequest/board:test: (node:288010) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/pick-release-executor.test.ts (1 test) 50ms
+@sidequest/board:test: (node:288033) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/agent-auto-select.test.ts (3 tests) 46ms
+@sidequest/board:test:  ✓ src/terms.test.ts (5 tests) 64ms
+@sidequest/board:test:  ✓ src/quote-request-cover.test.ts (4 tests) 210ms
+@sidequest/board:test:  ✓ src/tenant.test.ts (4 tests) 17ms
+@sidequest/board:test: (node:288048) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:288060) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/gas-allowance.test.ts (4 tests) 405ms
+@sidequest/board:test: (node:288085) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/arbitration.test.ts (15 tests) 167ms
+@sidequest/board:test: (node:288096) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/agent-grant-renewal.test.ts (1 test) 602ms
+@sidequest/board:test:    ✓ deployment-aware agent grant renewal (1)
+@sidequest/board:test:      ✓ renews stale gas grants while retaining an allowance grant 600ms
+@sidequest/board:test:  ✓ src/agents.test.ts (4 tests) 87ms
+@sidequest/board:test: (node:288102) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:288127) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:287966) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/archived-tasks.test.ts (3 tests) 150ms
+@sidequest/board:test:  ✓ src/agent-reject-reopen.test.ts (4 tests) 47ms
+@sidequest/board:test:  ✓ src/agent-lifecycle-userop.test.ts (3 tests) 218ms
+@sidequest/board:test: (node:288212) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:288378) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test: (node:288394) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ↓ src/staking.fork.test.ts (2 tests | 2 skipped)
+@sidequest/board:test:  ✓ src/sessions.test.ts (3 tests) 104ms
+@sidequest/board:test:  ✓ src/ruling-send.test.ts (3 tests) 180ms
+@sidequest/board:test:  ✓ src/selection.test.ts (23 tests) 89ms
+@sidequest/board:test:  ✓ src/userop-store.test.ts (6 tests) 52ms
+@sidequest/board:test:  ✓ src/store.test.ts (5 tests) 46ms
+@sidequest/board:test: (node:288697) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/publisher-view.test.ts (3 tests) 25ms
+@sidequest/board:test:  ✓ src/pick-release.test.ts (2 tests) 138ms
+@sidequest/board:test:  ✓ src/admission-rate.test.ts (4 tests) 55ms
+@sidequest/board:test: (node:288633) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/board:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/board:test:  ✓ src/admission.test.ts (5 tests) 16ms
+@sidequest/board:test:  ✓ src/hosted-creators.test.ts (2 tests) 294ms
+@sidequest/board:test:  ✓ src/sql-limits.test.ts (63 tests) 53ms
+@sidequest/board:test:  ✓ src/agent-roles.test.ts (4 tests) 68ms
+@sidequest/board:test:  ✓ src/screening.test.ts (5 tests) 225ms
+@sidequest/board:test:  ✓ src/agent-profiles.test.ts (4 tests) 64ms
+@sidequest/board:test:  ✓ src/testnet-relay.test.ts (1 test) 81ms
+@sidequest/board:test:  ✓ src/agent-lifecycle.test.ts (3 tests) 29ms
+@sidequest/board:test:  ✓ src/roles.test.ts (8 tests) 10ms
+@sidequest/board:test:  ✓ src/agent-schema.test.ts (3 tests) 19ms
+@sidequest/board:test:  ✓ src/hire-batch.test.ts (2 tests) 19ms
+@sidequest/board:test:  ✓ src/sidequest-backing.test.ts (3 tests) 7ms
+@sidequest/board:test:  ✓ src/agent-onboarding.test.ts (2 tests) 9ms
+@sidequest/board:test:  ✓ src/staking.test.ts (2 tests) 10ms
+@sidequest/board:test:  ✓ src/dispute-thread.test.ts (2 tests) 12ms
+@sidequest/board:test:  ✓ src/v1-tools.test.ts (1 test) 7ms
+@sidequest/board:test:  ↓ src/v1-flows.fork.test.ts (8 tests | 8 skipped)
+@sidequest/board:test: 
+@sidequest/board:test:  Test Files  60 passed | 8 skipped (68)
+@sidequest/board:test:       Tests  618 passed | 52 skipped (670)
+@sidequest/board:test:    Start at  10:20:28
+@sidequest/board:test:    Duration  12.15s (import 68%, transform 19%, tests 13%, worker 1%)
+@sidequest/board:test: 
+@sidequest/board:test:     Isolate  68 workers spawned · ~278ms startup each (spawn + environment, per file)
+@sidequest/board:test:              at least ~983ms faster with isolate: false — reuses workers across files instead of one per file
+@sidequest/board:test: 
+@sidequest/board:typecheck: cache hit, replaying logs c60f33fffd70e39d
+@sidequest/board:typecheck: $ tsc -p tsconfig.json
+@sidequest/react:test: cache hit, replaying logs eecbfb5cf7504ac7
+@sidequest/react:test: $ vitest run
+@sidequest/react:test: 
+@sidequest/react:test:  RUN  v5.0.3 /tmp/sidequest-prod-review-check/packages/react
+@sidequest/react:test: 
+@sidequest/react:test:  ✓ src/query.test.ts (2 tests) 7ms
+@sidequest/react:test:  ✓ src/client.test.ts (3 tests) 44ms
+@sidequest/react:test:  ✓ src/send.test.ts (3 tests) 38ms
+@sidequest/react:test: 
+@sidequest/react:test:  Test Files  3 passed (3)
+@sidequest/react:test:       Tests  8 passed (8)
+@sidequest/react:test:    Start at  10:20:27
+@sidequest/react:test:    Duration  690ms (import 74%, transform 17%, tests 8%, worker 1%)
+@sidequest/react:test: 
+@sidequest/react:typecheck: cache hit, replaying logs c666dea4c8102a08
+@sidequest/react:typecheck: $ tsc -p tsconfig.json
+@sidequest/docs:test: cache hit, replaying logs 48e821c37cbb23f7
+@sidequest/docs:test: $ vitest run
+@sidequest/docs:test: [MDX] generated files in 7.202868999999964ms
+@sidequest/docs:test: 
+@sidequest/docs:test:  RUN  v5.0.3 /tmp/sidequest-prod-review-check/apps/docs
+@sidequest/docs:test: 
+@sidequest/docs:test:  ✓ test/self-run-example.test.ts (1 test) 7ms
+@sidequest/docs:test:  ✓ test/theme-drift.test.ts (1 test) 5ms
+@sidequest/docs:test:  ✓ test/origin.test.ts (2 tests) 6ms
+@sidequest/docs:test:  ✓ test/remark-origin.test.ts (2 tests) 27ms
+@sidequest/docs:test:  ✓ test/addresses.test.ts (3 tests) 22ms
+@sidequest/docs:test:  ✓ test/llms.test.ts (1 test) 6ms
+@sidequest/docs:test:  ✓ test/markdown-components.test.ts (1 test) 11ms
+@sidequest/docs:test:  ✓ test/content.test.ts (50 tests) 607ms
+@sidequest/docs:test: 
+@sidequest/docs:test:  Test Files  8 passed (8)
+@sidequest/docs:test:       Tests  61 passed (61)
+@sidequest/docs:test:    Start at  10:20:22
+@sidequest/docs:test:    Duration  1.31s (transform 41%, import 39%, tests 18%, worker 2%)
+@sidequest/docs:test: 
+@sidequest/indexer:test: cache hit, replaying logs d48716ec846fb36b
+@sidequest/indexer:test: $ vitest run
+@sidequest/indexer:test: 
+@sidequest/indexer:test:  RUN  v5.0.3 /tmp/sidequest-prod-review-check/packages/indexer
+@sidequest/indexer:test: 
+@sidequest/indexer:test: (node:293462) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/indexer:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/indexer:test: (node:293477) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/indexer:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/indexer:test: (node:293460) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/indexer:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/indexer:test: (node:293456) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/indexer:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/indexer:test: (node:293500) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/indexer:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/indexer:test: (node:293491) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/indexer:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/indexer:test: (node:293497) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/indexer:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/indexer:test: (node:293484) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/indexer:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/indexer:test: (node:293468) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/indexer:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/indexer:test:  ✓ src/activity.test.ts (4 tests) 12ms
+@sidequest/indexer:test:  ✓ src/read.test.ts (3 tests) 15ms
+@sidequest/indexer:test:  ✓ src/delegations.test.ts (2 tests) 16ms
+@sidequest/indexer:test:  ✓ src/foreign-offers.test.ts (9 tests) 178ms
+@sidequest/indexer:test:  ↓ src/hypersync.live.test.ts (1 test | 1 skipped)
+@sidequest/indexer:test:  ✓ src/feed.test.ts (3 tests) 33ms
+@sidequest/indexer:test:  ✓ src/gas-watch.test.ts (4 tests) 16ms
+@sidequest/indexer:test:  ✓ src/telegram-generation.test.ts (3 tests) 26ms
+@sidequest/indexer:test:  ✓ src/sidequest.test.ts (11 tests) 136ms
+@sidequest/indexer:test:  ✓ src/cutover.test.ts (10 tests) 157ms
+@sidequest/indexer:test:  ✓ src/indexer.test.ts (11 tests) 279ms
+@sidequest/indexer:test: 
+@sidequest/indexer:test:  Test Files  10 passed | 1 skipped (11)
+@sidequest/indexer:test:       Tests  60 passed | 1 skipped (61)
+@sidequest/indexer:test:    Start at  10:21:07
+@sidequest/indexer:test:    Duration  3.73s (transform 55%, import 42%, tests 3%)
+@sidequest/indexer:test: 
+@sidequest/indexer:test:   Transform  transforming modules took 17.31s · 55% of tracked time, re-done on every run
+@sidequest/indexer:test:              persist transforms across runs with fsModuleCache: true
+@sidequest/indexer:test:              learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+@sidequest/indexer:test: 
+@sidequest/arbiter:test: cache hit, replaying logs 8821155ff39f6333
+@sidequest/arbiter:test: $ vitest run
+@sidequest/arbiter:test: 
+@sidequest/arbiter:test:  RUN  v5.0.3 /tmp/sidequest-prod-review-check/apps/arbiter
+@sidequest/arbiter:test: 
+@sidequest/arbiter:test:  ✓ src/moderation.test.ts (7 tests) 34ms
+@sidequest/arbiter:test:  ✓ src/role.test.ts (4 tests) 73ms
+@sidequest/arbiter:test:  ✓ src/keygen.test.ts (5 tests) 235ms
+@sidequest/arbiter:test:  ✓ src/maintainer.test.ts (6 tests) 105ms
+@sidequest/arbiter:test:  ✓ src/moderator.test.ts (9 tests) 92ms
+@sidequest/arbiter:test:  ✓ src/runtime.test.ts (6 tests) 18ms
+@sidequest/arbiter:test:  ✓ src/ruling.test.ts (6 tests) 190ms
+@sidequest/arbiter:test:  ✓ src/arbiter.test.ts (13 tests) 51ms
+@sidequest/arbiter:test: 
+@sidequest/arbiter:test:  Test Files  8 passed (8)
+@sidequest/arbiter:test:       Tests  56 passed (56)
+@sidequest/arbiter:test:    Start at  10:21:03
+@sidequest/arbiter:test:    Duration  3.25s (import 50%, transform 43%, tests 6%)
+@sidequest/arbiter:test: 
+@sidequest/arbiter:test:   Transform  transforming modules took 5.41s · 43% of tracked time, re-done on every run
+@sidequest/arbiter:test:              persist transforms across runs with fsModuleCache: true
+@sidequest/arbiter:test:              learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+@sidequest/arbiter:test: 
+@sidequest/indexer:typecheck: cache hit, replaying logs e2b8617273d16318
+@sidequest/indexer:typecheck: $ tsc -p tsconfig.json
+@sidequest/explore:test: cache hit, replaying logs 70a03cf4a125d67a
+@sidequest/explore:test: $ vitest run
+@sidequest/explore:test: 
+@sidequest/explore:test:  RUN  v5.0.3 /tmp/sidequest-prod-review-check/apps/explore
+@sidequest/explore:test: 
+@sidequest/explore:test: (node:289559) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/explore:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/explore:test:  ✓ src/design-tokens.test.ts (22 tests) 60ms
+@sidequest/explore:test:  ✓ worker.test.ts (36 tests) 110ms
+@sidequest/explore:test:  ✓ src/vault-lock.test.ts (13 tests) 31ms
+@sidequest/explore:test:  ✓ src/components/txOperation.test.ts (17 tests) 26ms
+@sidequest/explore:test:  ✓ src/commons.test.ts (15 tests) 24ms
+@sidequest/explore:test:  ✓ src/components/txJournal.test.ts (8 tests) 19ms
+@sidequest/explore:test:  ✓ src/aa-mode.test.ts (20 tests) 42ms
+@sidequest/explore:test:  ✓ src/admin.test.ts (5 tests) 72ms
+@sidequest/explore:test:  ✓ src/posting-funding.test.ts (5 tests) 35ms
+@sidequest/explore:test:  ✓ src/aa-reconcile.test.ts (6 tests) 50ms
+@sidequest/explore:test:  ✓ src/vault-proof.test.ts (11 tests) 42ms
+@sidequest/explore:test:  ✓ src/side-trade.test.ts (13 tests) 71ms
+@sidequest/explore:test:  ✓ src/approval-view.test.ts (5 tests) 63ms
+@sidequest/explore:test:  ✓ src/permission-review.test.ts (5 tests) 108ms
+@sidequest/explore:test:  ✓ src/service-wall.test.ts (8 tests) 32ms
+@sidequest/explore:test:  ✓ src/aa-controller.test.ts (14 tests) 561ms
+@sidequest/explore:test:  ✓ src/onboarding.test.ts (7 tests) 48ms
+@sidequest/explore:test:  ✓ start-guide.test.ts (9 tests) 543ms
+@sidequest/explore:test:  ✓ src/agent-stats.test.ts (8 tests) 32ms
+@sidequest/explore:test:  ✓ src/activity-feed.test.ts (15 tests) 69ms
+@sidequest/explore:test:  ✓ src/position-label.test.ts (9 tests) 18ms
+@sidequest/explore:test:  ✓ src/aa-request.test.ts (5 tests) 54ms
+@sidequest/explore:test:  ✓ src/side-sheet.test.ts (10 tests) 62ms
+@sidequest/explore:test:  ✓ src/gas-allowance.test.ts (7 tests) 31ms
+@sidequest/explore:test:  ✓ src/operator-disables.test.ts (6 tests) 75ms
+@sidequest/explore:test:  ✓ src/job-list.test.ts (7 tests) 13ms
+@sidequest/explore:test:  ✓ src/sponsor.contract.test.ts (4 tests) 460ms
+@sidequest/explore:test:  ✓ src/job-detail.test.ts (6 tests) 15ms
+@sidequest/explore:test:  ✓ src/wallet-record.test.ts (2 tests) 8ms
+@sidequest/explore:test:  ✓ src/components/landing/agents-strip.test.ts (6 tests) 14ms
+@sidequest/explore:test:  ✓ src/countdown.test.ts (8 tests) 29ms
+@sidequest/explore:test:  ✓ src/components/commons/Markdown.test.tsx (6 tests) 348ms
+@sidequest/explore:test:  ✓ src/delivery-plan.test.ts (7 tests) 16ms
+@sidequest/explore:test:  ✓ src/safe.test.ts (5 tests) 31ms
+@sidequest/explore:test:  ✓ src/launch.test.ts (4 tests) 138ms
+@sidequest/explore:test:  ✓ src/side-revert.test.ts (5 tests) 15ms
+@sidequest/explore:test:  ✓ src/sponsor.test.ts (5 tests) 12ms
+@sidequest/explore:test:  ✓ src/components/landing/live-rail.test.ts (5 tests) 35ms
+@sidequest/explore:test:  ✓ src/delivery.test.ts (6 tests) 18ms
+@sidequest/explore:test:  ✓ src/diagnostics.test.ts (2 tests) 13ms
+@sidequest/explore:test:  ✓ src/sign-in.test.ts (3 tests) 28ms
+@sidequest/explore:test:  ✓ src/services.test.ts (5 tests) 14ms
+@sidequest/explore:test:  ✓ src/gas.test.ts (3 tests) 28ms
+@sidequest/explore:test:  ✓ src/aa-journal.test.ts (4 tests) 63ms
+@sidequest/explore:test:  ✓ src/service-ask.test.ts (4 tests) 6ms
+@sidequest/explore:test:  ✓ src/commons-access.test.ts (2 tests) 47ms
+@sidequest/explore:test:  ✓ src/queries.test.ts (3 tests) 11ms
+@sidequest/explore:test:  ✓ src/components/ConnectAgent.test.tsx (7 tests) 144ms
+@sidequest/explore:test:  ✓ src/live-activity.test.ts (2 tests) 18ms
+@sidequest/explore:test:  ✓ src/components/job/Timeline.test.ts (2 tests) 53ms
+@sidequest/explore:test:  ✓ src/backing-summary.test.ts (2 tests) 7ms
+@sidequest/explore:test:  ✓ docs-site-plugin.test.ts (4 tests) 42ms
+@sidequest/explore:test:  ✓ src/format.test.ts (7 tests) 37ms
+@sidequest/explore:test:  ✓ src/components/BondHorizonNotice.test.tsx (10 tests) 89ms
+@sidequest/explore:test:  ✓ src/position-refresh.test.ts (4 tests) 22ms
+@sidequest/explore:test:  ✓ client-setup.test.ts (6 tests) 22ms
+@sidequest/explore:test:  ✓ src/job-milestones.test.ts (2 tests) 19ms
+@sidequest/explore:test:  ✓ src/agent-peek.test.ts (4 tests) 21ms
+@sidequest/explore:test:  ✓ src/onboarding-steps.test.ts (4 tests) 24ms
+@sidequest/explore:test:  ✓ src/model-fetch.test.ts (2 tests) 63ms
+@sidequest/explore:test:  ✓ src/agent-orb.test.ts (5 tests) 16ms
+@sidequest/explore:test:  ✓ src/components/commons/GapReports.test.tsx (2 tests) 318ms
+@sidequest/explore:test:  ✓ src/backing-refusal.test.ts (6 tests) 21ms
+@sidequest/explore:test:  ✓ src/wallet-prompt.test.ts (4 tests) 14ms
+@sidequest/explore:test:  ✓ src/commons-role.test.ts (4 tests) 20ms
+@sidequest/explore:test:  ✓ src/useServiceSelection.test.ts (3 tests) 16ms
+@sidequest/explore:test:  ✓ src/directory-presence.test.ts (4 tests) 22ms
+@sidequest/explore:test:  ✓ src/components/landing/showcase-data.test.ts (4 tests) 28ms
+@sidequest/explore:test:  ✓ src/components/CardLink.test.tsx (2 tests) 193ms
+@sidequest/explore:test:  ✓ src/components/sheet-scroll-lock.test.ts (5 tests) 14ms
+@sidequest/explore:test:  ✓ src/related-party.test.ts (3 tests) 15ms
+@sidequest/explore:test:  ✓ src/managed.test.ts (5 tests) 12ms
+@sidequest/explore:test:  ✓ src/agent-setup.test.ts (4 tests) 19ms
+@sidequest/explore:test:  ✓ src/components/token/TokenAmount.test.tsx (5 tests) 185ms
+@sidequest/explore:test:  ✓ src/txErrors.test.ts (5 tests) 35ms
+@sidequest/explore:test:  ✓ src/agent-name.test.ts (3 tests) 12ms
+@sidequest/explore:test:  ✓ src/components/services/ServiceWallCard.test.tsx (4 tests) 151ms
+@sidequest/explore:test:  ✓ src/components/ConnectionCard.test.ts (2 tests) 17ms
+@sidequest/explore:test:  ✓ src/components/services/ServiceCard.test.tsx (3 tests) 235ms
+@sidequest/explore:test:  ✓ src/components/AgentDirectory.test.ts (2 tests) 13ms
+@sidequest/explore:test:  ✓ src/owner-route.test.ts (3 tests) 13ms
+@sidequest/explore:test:  ✓ src/receipt.test.ts (2 tests) 9ms
+@sidequest/explore:test:  ✓ src/app-recovery.test.ts (3 tests) 9ms
+@sidequest/explore:test:  ✓ src/side-usdc.test.ts (2 tests) 20ms
+@sidequest/explore:test:  ✓ src/tokens.generated.test.ts (3 tests) 30ms
+@sidequest/explore:test:  ✓ src/delivery-preview.test.ts (2 tests) 31ms
+@sidequest/explore:test:  ✓ src/listing.test.ts (2 tests) 7ms
+@sidequest/explore:test:  ✓ src/quote-handoff.test.ts (3 tests) 12ms
+@sidequest/explore:test:  ✓ src/account-route.test.ts (3 tests) 12ms
+@sidequest/explore:test:  ✓ src/components/agent/shader-budget.test.ts (2 tests) 5ms
+@sidequest/explore:test:  ✓ src/stake.test.ts (3 tests) 54ms
+@sidequest/explore:test:  ✓ src/activity.test.ts (2 tests) 6ms
+@sidequest/explore:test:  ✓ src/usd.test.ts (4 tests) 24ms
+@sidequest/explore:test:  ✓ src/components/commons/MessageRow.test.tsx (3 tests) 141ms
+@sidequest/explore:test:  ✓ src/components/OAuthClient.test.tsx (1 test) 79ms
+@sidequest/explore:test:  ✓ src/agent-setup-api.test.ts (3 tests) 43ms
+@sidequest/explore:test:  ✓ src/backing-agents.test.ts (1 test) 19ms
+@sidequest/explore:test:  ✓ src/job-offer.test.tsx (3 tests) 142ms
+@sidequest/explore:test:  ✓ src/lib/cn.test.ts (4 tests) 116ms
+@sidequest/explore:test:  ✓ src/agent-registration-api.test.ts (2 tests) 12ms
+@sidequest/explore:test:  ✓ src/page-search.test.ts (2 tests) 5ms
+@sidequest/explore:test:  ✓ src/components/services/SelectionTray.test.tsx (3 tests) 67ms
+@sidequest/explore:test:  ✓ src/components/radio.test.ts (2 tests) 20ms
+@sidequest/explore:test:  ✓ src/components/delivery/KindGlyph.test.tsx (2 tests) 194ms
+@sidequest/explore:test:  ✓ src/faucet-claim.test.ts (2 tests) 39ms
+@sidequest/explore:test:  ✓ src/approve-branch.test.ts (3 tests) 39ms
+@sidequest/explore:test:  ✓ src/commons-app/draft.test.ts (3 tests) 5ms
+@sidequest/explore:test:  ✓ src/components/confirm-button.test.tsx (1 test) 46ms
+@sidequest/explore:test:  ✓ src/components/landing/live-format.test.ts (1 test) 79ms
+@sidequest/explore:test:  ✓ src/components/ui/button.test.tsx (1 test) 133ms
+@sidequest/explore:test:  ✓ src/inbox-query.test.ts (2 tests) 14ms
+@sidequest/explore:test:  ✓ src/components/Phase.test.ts (2 tests) 8ms
+@sidequest/explore:test:  ✓ src/agent-profile-api.test.ts (2 tests) 7ms
+@sidequest/explore:test:  ✓ src/bond-policy.test.ts (3 tests) 9ms
+@sidequest/explore:test:  ✓ src/components/GasWarning.test.tsx (1 test) 78ms
+@sidequest/explore:test:  ✓ src/components/backing/AgentPicker.test.tsx (1 test) 7ms
+@sidequest/explore:test:  ✓ src/components/onboarding/useOnboardingFacts.test.ts (4 tests) 10ms
+@sidequest/explore:test:  ✓ src/agent-backing.test.ts (1 test) 5ms
+@sidequest/explore:test:  ✓ src/agent-connections.test.ts (2 tests) 6ms
+@sidequest/explore:test:  ✓ src/commons-poll.test.ts (1 test) 4ms
+@sidequest/explore:test:  ✓ src/lazy-three.test.ts (1 test) 14ms
+@sidequest/explore:test:  ✓ src/components/agent/permission-period.test.ts (1 test) 5ms
+@sidequest/explore:test:  ✓ src/components/job/RequestTerms.test.ts (1 test) 4ms
+@sidequest/explore:test: 
+@sidequest/explore:test:  Test Files  123 passed (123)
+@sidequest/explore:test:       Tests  605 passed (605)
+@sidequest/explore:test:    Start at  10:20:43
+@sidequest/explore:test:    Duration  19.42s (import 72%, transform 24%, tests 3%)
+@sidequest/explore:test: 
+@sidequest/explore:test:      Import  780 modules were evaluated 4032 times · 160.88s total, 72% of tracked time
+@sidequest/explore:test:              ~3.83s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+@sidequest/explore:test:              learn more: https://vitest.dev/guide/improving-performance#test-isolation
+@sidequest/explore:test: 
+@sidequest/api:test: cache hit, replaying logs 8211153b0f9f079e
+@sidequest/api:test: $ vitest run
+@sidequest/api:test: 
+@sidequest/api:test:  RUN  v5.0.3 /tmp/sidequest-prod-review-check/apps/api
+@sidequest/api:test: 
+@sidequest/api:test: (node:294607) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/launch-gate.test.ts (49 tests) 681ms
+@sidequest/api:test:  ✓ |unit| test/webhooks.test.ts (83 tests) 436ms
+@sidequest/api:test: (node:294996) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/mcp-protocol.test.ts (38 tests) 111ms
+@sidequest/api:test: (node:295260) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test: (node:295036) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/services.test.ts (40 tests) 168ms
+@sidequest/api:test:  ✓ |unit| test/agent-setup.test.ts (15 tests) 355ms
+@sidequest/api:test: (node:295437) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test: (node:295458) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ↓ |unit| test/collect.fork.test.ts (6 tests | 6 skipped)
+@sidequest/api:test: (node:295592) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/deliverable-preview.test.ts (25 tests | 2 skipped) 47ms
+@sidequest/api:test:  ✓ |unit| test/prod-config.test.ts (48 tests) 37ms
+@sidequest/api:test: (node:295850) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/agent-approval.test.ts (8 tests) 766ms
+@sidequest/api:test:  ✓ |unit| test/mcp-events.test.ts (36 tests) 113ms
+@sidequest/api:test: (node:296052) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/aa-proxy.test.ts (14 tests) 172ms
+@sidequest/api:test: (node:296204) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test: stdout | test/feed-board.test.ts > board feed hook > replays the invitation once in the inbox and Telegram, using the stored wallet
+@sidequest/api:test: Telegram public request skipped: channel unset monad-testnet
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/feed-board.test.ts > board feed hook > replays the invitation once in the inbox and Telegram, using the stored wallet
+@sidequest/api:test: Telegram public request skipped: channel unset monad-testnet
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/feed-board.test.ts > board feed hook > passes quote.invited through MCP inbox polling and subscribed webhook delivery
+@sidequest/api:test: Telegram public request skipped: channel unset monad-testnet
+@sidequest/api:test: 
+@sidequest/api:test: stderr | test/feed-board.test.ts > board feed hook > writes the inbox and the moved Telegram notice once, and swallows its own failures
+@sidequest/api:test: {"event":"feed-failed","name":"Error"}
+@sidequest/api:test: 
+@sidequest/api:test:  ✓ |unit| test/feed-board.test.ts (10 tests) 124ms
+@sidequest/api:test:  ✓ |unit| test/telegram-unit.test.ts (10 tests) 90ms
+@sidequest/api:test: (node:296354) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test: stderr | test/mcp-output-schema.test.ts > legacy output schemas > compiles every advertised schema and validates real publisher success outputs
+@sidequest/api:test: unknown format "starts_with" ignored in schema at path "#/properties/result/properties/messages/items/properties/presentation/anyOf/0/anyOf/0/properties/spec/properties/elements/additionalProperties/oneOf/3/properties/props/properties/items/items/properties/url"
+@sidequest/api:test: unknown format "starts_with" ignored in schema at path "#/properties/result/properties/messages/items/properties/presentation/anyOf/0/anyOf/0/properties/spec/properties/elements/additionalProperties/oneOf/3/properties/props/properties/items/items/properties/url"
+@sidequest/api:test: 
+@sidequest/api:test: stderr | test/mcp-output-schema.test.ts > 2026-07-28 output schemas > compiles every advertised schema and validates real publisher success outputs
+@sidequest/api:test: unknown format "starts_with" ignored in schema at path "#/properties/result/properties/messages/items/properties/presentation/anyOf/0/anyOf/0/properties/spec/properties/elements/additionalProperties/oneOf/3/properties/props/properties/items/items/properties/url"
+@sidequest/api:test: unknown format "starts_with" ignored in schema at path "#/properties/result/properties/messages/items/properties/presentation/anyOf/0/anyOf/0/properties/spec/properties/elements/additionalProperties/oneOf/3/properties/props/properties/items/items/properties/url"
+@sidequest/api:test: 
+@sidequest/api:test:  ✓ |unit| test/mcp-output-schema.test.ts (2 tests) 444ms
+@sidequest/api:test: (node:296960) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/docs.test.ts (33 tests) 3911ms
+@sidequest/api:test:    ✓ docs from the real content pipeline (9)
+@sidequest/api:test:      ✓ keeps the checked-in export current in under twenty seconds 3754ms
+@sidequest/api:test:  ✓ |unit| test/oauth.test.ts (9 tests) 115ms
+@sidequest/api:test: (node:297184) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/hiring.test.ts (6 tests) 163ms
+@sidequest/api:test: (node:297283) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/deadline-retry.test.ts (7 tests) 117ms
+@sidequest/api:test: (node:297336) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/feed.test.ts (7 tests) 52ms
+@sidequest/api:test: (node:297368) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/commons-host.test.ts (6 tests) 88ms
+@sidequest/api:test:  ✓ |unit| test/directory.test.ts (15 tests) 31ms
+@sidequest/api:test:  ✓ |unit| test/x402-demo.test.ts (24 tests) 60ms
+@sidequest/api:test:  ✓ |unit| test/mcp-mrtr.test.ts (7 tests) 45ms
+@sidequest/api:test: (node:297743) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/testnet-paymaster.test.ts (11 tests) 149ms
+@sidequest/api:test:  ✓ |unit| test/mcp-event-stream.test.ts (11 tests) 75ms
+@sidequest/api:test:  ✓ |unit| test/stage-profile.test.ts (7 tests) 91ms
+@sidequest/api:test: (node:298229) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/activity-reader.test.ts (10 tests) 71ms
+@sidequest/api:test: (node:298287) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test: (node:298254) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ↓ |unit| test/staking.fork.test.ts (4 tests | 4 skipped)
+@sidequest/api:test:  ✓ |unit| test/public-directory.test.ts (13 tests) 172ms
+@sidequest/api:test: (node:298338) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/agent-samples.test.ts (11 tests) 434ms
+@sidequest/api:test: (node:298574) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test: (node:298436) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/hosted-listing-mainnet.test.ts (2 tests) 283ms
+@sidequest/api:test: stderr | test/profile-routes.test.ts > workersAiImages > keeps the full JPEG when the Images binding refuses to resize
+@sidequest/api:test: {"event":"avatar-resize-failed","message":"Error: Images transformations are unavailable"}
+@sidequest/api:test: 
+@sidequest/api:test:  ✓ |unit| test/profile-routes.test.ts (9 tests) 24ms
+@sidequest/api:test:  ✓ |unit| test/release-pin.test.ts (8 tests) 530ms
+@sidequest/api:test:    ✓ the runbook command starts and judges the artifact (its imports resolve from scripts/) 516ms
+@sidequest/api:test: (node:298744) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/agent-access.test.ts (6 tests) 139ms
+@sidequest/api:test: (node:298606) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/agent-profiles.test.ts (7 tests) 90ms
+@sidequest/api:test: (node:299087) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/mcp-policy.test.ts (8 tests) 10ms
+@sidequest/api:test: (node:299127) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/commons-participants.test.ts (3 tests) 49ms
+@sidequest/api:test: (node:299155) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/feed-agent.test.ts (5 tests) 21ms
+@sidequest/api:test:  ✓ |unit| test/telegram-notifications.test.ts (5 tests) 39ms
+@sidequest/api:test:  ✓ |unit| test/admission.test.ts (11 tests) 31ms
+@sidequest/api:test:  ✓ |unit| test/alerts.test.ts (10 tests) 41ms
+@sidequest/api:test: (node:299336) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/oauth-setup.test.ts (7 tests) 98ms
+@sidequest/api:test:  ✓ |unit| test/mcp-listen.test.ts (5 tests) 21ms
+@sidequest/api:test: (node:299251) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/request-role.test.ts (4 tests) 87ms
+@sidequest/api:test: (node:299443) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/avatars.test.ts (8 tests) 23ms
+@sidequest/api:test: (node:299474) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/faucet.test.ts (5 tests) 19ms
+@sidequest/api:test: (node:299594) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/listing-tools.test.ts (3 tests) 82ms
+@sidequest/api:test:  ✓ |unit| test/archived-jobs.test.ts (3 tests) 26ms
+@sidequest/api:test: (node:299669) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test: (node:299694) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/foreign-offers.test.ts (3 tests) 37ms
+@sidequest/api:test:  ✓ |unit| test/skills.test.ts (7 tests) 163ms
+@sidequest/api:test: (node:299830) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/agent-stop-events.test.ts (3 tests) 31ms
+@sidequest/api:test: (node:299882) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/commons-stake-live.test.ts (4 tests) 39ms
+@sidequest/api:test:  ✓ |unit| test/aa-preflight.test.ts (11 tests) 56ms
+@sidequest/api:test:  ✓ |unit| test/agent-userop.test.ts (3 tests) 36ms
+@sidequest/api:test:  ✓ |unit| test/mcp-metadata.test.ts (6 tests) 15ms
+@sidequest/api:test: (node:300030) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/profiles.test.ts (4 tests) 24ms
+@sidequest/api:test: (node:300103) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/agent-data.test.ts (3 tests) 39ms
+@sidequest/api:test:  ✓ |unit| test/read-cache.test.ts (5 tests) 17ms
+@sidequest/api:test: (node:300023) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/agent-profile-management.test.ts (4 tests) 60ms
+@sidequest/api:test:  ✓ |unit| test/observability.test.ts (4 tests) 1147ms
+@sidequest/api:test:    ✓ stops the traced request when its caller is interrupted 1126ms
+@sidequest/api:test:  ✓ |unit| test/agent-requests.test.ts (6 tests) 25ms
+@sidequest/api:test: (node:300223) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/directory-ip.test.ts (2 tests) 148ms
+@sidequest/api:test: stderr | test/mcp-commons.test.ts > advertises the App only on thread reads and validates attachments in structured output
+@sidequest/api:test: unknown format "starts_with" ignored in schema at path "#/properties/result/properties/messages/items/properties/presentation/anyOf/0/anyOf/0/properties/spec/properties/elements/additionalProperties/oneOf/3/properties/props/properties/items/items/properties/url"
+@sidequest/api:test: unknown format "starts_with" ignored in schema at path "#/properties/result/properties/messages/items/properties/presentation/anyOf/0/anyOf/0/properties/spec/properties/elements/additionalProperties/oneOf/3/properties/props/properties/items/items/properties/url"
+@sidequest/api:test: 
+@sidequest/api:test:  ✓ |unit| test/mcp-commons.test.ts (2 tests) 163ms
+@sidequest/api:test: (node:300412) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/collect-index.test.ts (4 tests) 34ms
+@sidequest/api:test:  ✓ |unit| test/commons-directory-live.test.ts (2 tests) 20ms
+@sidequest/api:test: (node:300621) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test: (node:300392) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/activity-route.test.ts (4 tests) 34ms
+@sidequest/api:test:  ✓ |unit| test/directory-admission.test.ts (5 tests) 11ms
+@sidequest/api:test: (node:300664) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/relay-watch.test.ts (3 tests) 14ms
+@sidequest/api:test:  ✓ |unit| test/mcp-log.test.ts (2 tests) 8ms
+@sidequest/api:test:  ✓ |unit| test/x402-tools.test.ts (2 tests) 15ms
+@sidequest/api:test:  ✓ |unit| test/worker-failure.test.ts (8 tests) 16ms
+@sidequest/api:test:  ✓ |unit| test/agent-backing-request.test.ts (6 tests) 14ms
+@sidequest/api:test:  ✓ |unit| test/request-body.test.ts (5 tests) 70ms
+@sidequest/api:test: (node:300896) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/deadlines.test.ts (6 tests) 11ms
+@sidequest/api:test: (node:300946) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test:  ✓ |unit| test/agent-gas-allowance.test.ts (6 tests) 49ms
+@sidequest/api:test:  ✓ |unit| test/privy-identity.test.ts (1 test) 46ms
+@sidequest/api:test:  ✓ |unit| test/request-quotes-invite.test.ts (1 test) 70ms
+@sidequest/api:test:  ✓ |unit| test/commons-tools.test.ts (2 tests) 9ms
+@sidequest/api:test:  ✓ |unit| test/mcp-registry.test.ts (1 test) 17ms
+@sidequest/api:test:  ✓ |unit| test/json.test.ts (1 test) 14ms
+@sidequest/api:test:  ✓ |unit| test/directory-origin.test.ts (2 tests) 10ms
+@sidequest/api:test:  ✓ |unit| test/offers.test.ts (2 tests) 4ms
+@sidequest/api:test:  ✓ |unit| test/permission-tools.test.ts (1 test) 5ms
+@sidequest/api:test:  ✓ |unit| test/agent-registration-routes.test.ts (1 test) 4ms
+@sidequest/api:test:  ✓ |unit| test/commons-route.test.ts (1 test) 4ms
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:32.588] INFO (#9): Plan: 3 to create, 37 binding changes
+@sidequest/api:test: [10:22:32.590] INFO (#9): [Api] create (local)
+@sidequest/api:test: [10:22:32.590] INFO (#9): [Api/AI] create
+@sidequest/api:test: [10:22:32.591] INFO (#9): [Api/AI_GATEWAY_API_KEY] create
+@sidequest/api:test: [10:22:32.591] INFO (#9): [Api/ATTESTER_PRIVATE_KEY] create
+@sidequest/api:test: [10:22:32.591] INFO (#9): [Api/Board] create
+@sidequest/api:test: [10:22:32.591] INFO (#9): [Api/Cloudflare.Telemetry] create
+@sidequest/api:test: [10:22:32.591] INFO (#9): [Api/Database] create
+@sidequest/api:test: [10:22:32.591] INFO (#9): [Api/DEPLOY_STAGE] create
+@sidequest/api:test: [10:22:32.591] INFO (#9): [Api/DIRECTORY_DATABASE] create
+@sidequest/api:test: [10:22:32.591] INFO (#9): [Api/DirectoryObject] create
+@sidequest/api:test: [10:22:32.591] INFO (#9): [Api/GITHUB_APP_ID] create
+@sidequest/api:test: [10:22:32.591] INFO (#9): [Api/GITHUB_APP_INSTALLATION_ID] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/GITHUB_APP_PRIVATE_KEY] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/HOSTED_SEND] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/IMAGES] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/Manifests] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/MONAD_RPC_URL] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/NETWORK] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/PIMLICO_API_KEY] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/PRIVY_APP_ID] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/PRIVY_APP_SECRET] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/PRIVY_POLICY_ID] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/PRIVY_SIGNER_ID] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/PRIVY_SIGNER_KEY] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/PROD_ADMISSION_DRAIN] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/PROD_APPROVED_ACTIONS] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/PROD_APPROVED_BOARDS] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/PROD_APPROVED_WALLETS] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/PUBLIC_ORIGIN] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/RELAY_ADDRESS] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/RELAY_PRIVATE_KEY] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/REQUIRE_POSTER_AGENT] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/SCREENING_BASE_URL] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/SCREENING_MODEL] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/TELEGRAM_BOT_TOKEN] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/TELEGRAM_BOT_USERNAME] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/TELEGRAM_WEBHOOK_SECRET] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Api/TESTNET_PAYMASTER_SIGNER_KEY] create
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Database] create (local)
+@sidequest/api:test: [10:22:32.592] INFO (#9): [Manifests] create (local)
+@sidequest/api:test: [10:22:32.592] INFO (#9): 
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:32.607] INFO (#827): [Api] pre-creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:32.616] INFO (#829): [Manifests] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:32.619] INFO (#828): [Database] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:32.622] INFO (#829): [Manifests] created (local) (6ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:32.629] INFO (#828): [Database] created (local) (10ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:32.635] INFO (#827): [Api] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:32.670] INFO (#827): [Api] ready at http://localhost:8788
+@sidequest/api:test: [10:22:32.671] INFO (#827): [Api] created (local) (65ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:32.682] INFO (#832): [Manifests] created (local) (66ms)
+@sidequest/api:test: [10:22:32.682] INFO (#833): [Database] created (local) (63ms)
+@sidequest/api:test: [10:22:32.683] INFO (#834): [Api] created (local) (77ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:32.684] INFO (#9): 
+@sidequest/api:test: [10:22:32.685] INFO (#9): Done: 3 succeeded (92ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.700] INFO (#909): Plan: 4 to create, 48 binding changes
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api] create (local)
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/AI] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/AI_GATEWAY_API_KEY] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/ATTESTER_PRIVATE_KEY] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/Board] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/Cloudflare.Telemetry] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/Database] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/DEPLOY_STAGE] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/DIRECTORY_DATABASE] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/DirectoryObject] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/GITHUB_APP_ID] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/GITHUB_APP_INSTALLATION_ID] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/GITHUB_APP_PRIVATE_KEY] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/HOSTED_SEND] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/IMAGES] create
+@sidequest/api:test: [10:22:38.700] INFO (#909): [Api/Manifests] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/MONAD_RPC_URL] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/NETWORK] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/PIMLICO_API_KEY] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/PRIVY_APP_ID] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/PRIVY_APP_SECRET] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/PRIVY_POLICY_ID] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/PRIVY_SIGNER_ID] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/PRIVY_SIGNER_KEY] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/PROD_ADMISSION_DRAIN] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/PROD_APPROVED_ACTIONS] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/PROD_APPROVED_BOARDS] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/PROD_APPROVED_WALLETS] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/PUBLIC_ORIGIN] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/RELAY_ADDRESS] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/RELAY_PRIVATE_KEY] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/REQUIRE_POSTER_AGENT] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/SCREENING_BASE_URL] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/SCREENING_MODEL] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/TELEGRAM_BOT_TOKEN] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/TELEGRAM_BOT_USERNAME] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/TELEGRAM_WEBHOOK_SECRET] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Api/TESTNET_PAYMASTER_SIGNER_KEY] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Database] create (local)
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer] create (local)
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer/Cloudflare.Telemetry] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer/Cron(* * * * *)] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer/Database] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer/HYPERSYNC_API_TOKEN] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer/HYPERSYNC_URL] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer/MONAD_RPC_URL] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer/NETWORK] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer/PUBLIC_ORIGIN] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer/RELAY_ADDRESS] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer/TELEGRAM_BOT_TOKEN] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Indexer/TELEGRAM_BOT_USERNAME] create
+@sidequest/api:test: [10:22:38.701] INFO (#909): [Manifests] create (local)
+@sidequest/api:test: [10:22:38.701] INFO (#909): 
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.719] INFO (#1896): [Database] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.721] INFO (#1898): [Api] pre-creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.728] INFO (#1899): [Indexer] pre-creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.730] INFO (#1897): [Manifests] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.734] INFO (#1897): [Manifests] created (local) (4ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.741] INFO (#1896): [Database] created (local) (22ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.744] WARN (#151): Port 8788 is in use by another process; serving on 8789 instead. Stop the other process, pick a different port, or set `strictPort: true` to fail instead.
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.750] INFO (#1898): [Api] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.753] WARN (#157): Port 8789 is in use by another process; serving on 8790 instead. Stop the other process, pick a different port, or set `strictPort: true` to fail instead.
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.761] INFO (#1899): [Indexer] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.769] INFO (#1898): [Api] ready at http://localhost:8789
+@sidequest/api:test: [10:22:38.769] INFO (#1898): [Api] created (local) (48ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.772] INFO (#1899): [Indexer] ready at http://localhost:8790
+@sidequest/api:test: [10:22:38.772] INFO (#1899): [Indexer] created (local) (44ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.783] INFO (#1903): [Manifests] created (local) (53ms)
+@sidequest/api:test: [10:22:38.783] INFO (#1904): [Database] created (local) (64ms)
+@sidequest/api:test: [10:22:38.783] INFO (#1905): [Api] created (local) (62ms)
+@sidequest/api:test: [10:22:38.783] INFO (#1906): [Indexer] created (local) (55ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts
+@sidequest/api:test: [10:22:38.784] INFO (#909): 
+@sidequest/api:test: [10:22:38.784] INFO (#909): Done: 4 succeeded (83ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > the real Worker rejects an oversized chunked API body before JSON parsing
+@sidequest/api:test: [10:22:41.321] INFO (#241): Cloudflare: using environment variables (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN) instead of the profile.
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > the real Worker rejects an oversized chunked API body before JSON parsing
+@sidequest/api:test: [10:22:41.643] ERROR (#247): Unauthorized: Authentication failed (status: 400)
+@sidequest/api:test:     at Object.9106 (/tmp/sidequest-prod-review-check/node_modules/.bun/@distilled.cloud+cloudflare@1.0.0-rc.13+ff18a43d1df18ff8/node_modules/@distilled.cloud/cloudflare/src/protocol.ts:145:22)
+@sidequest/api:test:     at <anonymous> (/tmp/sidequest-prod-review-check/node_modules/.bun/@distilled.cloud+cloudflare@1.0.0-rc.13+ff18a43d1df18ff8/node_modules/@distilled.cloud/cloudflare/src/protocol.ts:407:54)
+@sidequest/api:test:     at Effect.fn (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/remote-bindings/RemoteBindings.ts:74:59)
+@sidequest/api:test:     at Effect.fn (definition) (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/remote-bindings/RemoteWorker.ts:133:20)
+@sidequest/api:test:     at Effect.fn (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/remote-bindings/RemoteBindings.ts:131:39)
+@sidequest/api:test:     at Effect.fn (definition) (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/remote-bindings/RemoteBindings.ts:70:26)
+@sidequest/api:test:     at Effect.fn (/tmp/sidequest-prod-review-check/node_modules/.bun/alchemy@2.0.0-beta.81+5da6ce46bdd29d1b/node_modules/alchemy/src/Cloudflare/Workers/LocalWorkerProvider.ts:799:22)
+@sidequest/api:test:     at Effect.fn (definition) (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/Runtime.ts:162:21)
+@sidequest/api:test:     at Effect.fn (/tmp/sidequest-prod-review-check/node_modules/.bun/alchemy@2.0.0-beta.81+5da6ce46bdd29d1b/node_modules/alchemy/src/Cloudflare/Workers/LocalWorkerProvider.ts:1081:16)
+@sidequest/api:test:     at Effect.fn (definition) (/tmp/sidequest-prod-review-check/node_modules/.bun/alchemy@2.0.0-beta.81+5da6ce46bdd29d1b/node_modules/alchemy/src/Cloudflare/Workers/LocalWorkerProvider.ts:973:40)
+@sidequest/api:test:     at Effect.fn (/tmp/sidequest-prod-review-check/node_modules/.bun/alchemy@2.0.0-beta.81+5da6ce46bdd29d1b/node_modules/alchemy/src/Cloudflare/Workers/LocalWorkerProvider.ts:1466:19)
+@sidequest/api:test:     at Effect.fn (definition) (/tmp/sidequest-prod-review-check/node_modules/.bun/alchemy@2.0.0-beta.81+5da6ce46bdd29d1b/node_modules/alchemy/src/Cloudflare/Workers/LocalWorkerProvider.ts:1039:32)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > the real Worker rejects an oversized chunked API body before JSON parsing
+@sidequest/api:test: [10:22:42.186] INFO (#86): [Api] Started in 9521ms → http://localhost:8788/ (logs: /tmp/sidequest-prod-review-check/apps/api/.alchemy/log/test_kristjan/Api)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > the real Worker rejects an oversized chunked API body before JSON parsing
+@sidequest/api:test: [10:22:42.694] INFO (#196): [Indexer] Started in 3925ms → http://localhost:8790/ (logs: /tmp/sidequest-prod-review-check/apps/api/.alchemy/log/test_kristjan/Indexer)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > the real Worker rejects an oversized chunked API body before JSON parsing
+@sidequest/api:test: [10:22:43.139] INFO (#378): Cloudflare: using environment variables (CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN) instead of the profile.
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > the real Worker rejects an oversized chunked API body before JSON parsing
+@sidequest/api:test: [10:22:43.277] ERROR (#379): Unauthorized: Authentication failed (status: 400)
+@sidequest/api:test:     at Object.9106 (/tmp/sidequest-prod-review-check/node_modules/.bun/@distilled.cloud+cloudflare@1.0.0-rc.13+ff18a43d1df18ff8/node_modules/@distilled.cloud/cloudflare/src/protocol.ts:145:22)
+@sidequest/api:test:     at <anonymous> (/tmp/sidequest-prod-review-check/node_modules/.bun/@distilled.cloud+cloudflare@1.0.0-rc.13+ff18a43d1df18ff8/node_modules/@distilled.cloud/cloudflare/src/protocol.ts:407:54)
+@sidequest/api:test:     at Effect.fn (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/remote-bindings/RemoteWorker.ts:136:11)
+@sidequest/api:test:     at Effect.fn (definition) (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/remote-bindings/RemoteWorker.ts:56:43)
+@sidequest/api:test:     at Effect.fn (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/remote-bindings/RemoteBindings.ts:74:59)
+@sidequest/api:test:     at Effect.fn (definition) (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/remote-bindings/RemoteWorker.ts:133:20)
+@sidequest/api:test:     at Effect.fn (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/remote-bindings/RemoteBindings.ts:131:39)
+@sidequest/api:test:     at Effect.fn (definition) (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/remote-bindings/RemoteBindings.ts:70:26)
+@sidequest/api:test:     at Effect.fn (/tmp/sidequest-prod-review-check/node_modules/.bun/alchemy@2.0.0-beta.81+5da6ce46bdd29d1b/node_modules/alchemy/src/Cloudflare/Workers/LocalWorkerProvider.ts:799:22)
+@sidequest/api:test:     at Effect.fn (definition) (/tmp/sidequest-prod-review-check/node_modules/.bun/@alchemy.run+cloudflare-runtime@2.0.0-beta.81+c04d9ea7ffd9e5dd/node_modules/@alchemy.run/cloudflare-runtime/src/core/Runtime.ts:162:21)
+@sidequest/api:test:     at Effect.fn (/tmp/sidequest-prod-review-check/node_modules/.bun/alchemy@2.0.0-beta.81+5da6ce46bdd29d1b/node_modules/alchemy/src/Cloudflare/Workers/LocalWorkerProvider.ts:1081:16)
+@sidequest/api:test:     at Effect.fn (definition) (/tmp/sidequest-prod-review-check/node_modules/.bun/alchemy@2.0.0-beta.81+5da6ce46bdd29d1b/node_modules/alchemy/src/Cloudflare/Workers/LocalWorkerProvider.ts:973:40)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > the real Worker rejects an oversized chunked API body before JSON parsing
+@sidequest/api:test: [10:22:43.765] INFO (#183): [Api] Started in 5000ms → http://localhost:8789/ (logs: /tmp/sidequest-prod-review-check/apps/api/.alchemy/log/test_kristjan/Api)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > hosted MCP requires OAuth and advertises exact public and tenant protected resources
+@sidequest/api:test: [Api] {"event":"mcp","method":"initialize","protocol":"legacy","status":401,"outcome":"unauthenticated","ms":3}
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > hosted MCP requires OAuth and advertises exact public and tenant protected resources
+@sidequest/api:test: [Api] {"event":"mcp","method":"initialize","protocol":"legacy","status":401,"outcome":"unauthenticated","ms":2}
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > events/stream crosses the real Worker and management object, delivers an appended D1 row and ends on revocation
+@sidequest/api:test: [Api] {"event":"mcp","method":"events/stream","protocol":"legacy","status":200,"outcome":"other","ms":9,"grantId":"local-event-stream-family","clientId":"local-stream-client","setup":false,"listening":false}
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > events/stream crosses the real Worker and management object, delivers an appended D1 row and ends on revocation
+@sidequest/api:test: [Api] {"event":"mcp","method":"events/list","protocol":"legacy","status":200,"outcome":"ok","ms":28,"grantId":"local-event-stream-family","clientId":"local-stream-client","setup":false,"listening":false}
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/stack.test.ts > events/stream crosses the real Worker and management object, delivers an appended D1 row and ends on revocation
+@sidequest/api:test: [10:23:00.062] INFO (#319): [cron:sidequest-indexer-test-kristjan-vctx6dozh4ytw657] "* * * * *" triggered scheduled(): ok
+@sidequest/api:test: 
+@sidequest/api:test:  ✓ |workerd| test/stack.test.ts (16 tests | 3 skipped) 38230ms
+@sidequest/api:test:    ✓ the real Worker rejects an oversized chunked API body before JSON parsing 4922ms
+@sidequest/api:test:    ✓ events/stream crosses the real Worker and management object, delivers an appended D1 row and ends on revocation 24222ms
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:13.967] INFO (#7): Plan: 4 to create, 21 binding changes
+@sidequest/api:test: [10:23:13.968] INFO (#7): [Database] create (local)
+@sidequest/api:test: [10:23:13.970] INFO (#7): [SidequestDirectoryDrainedProbe] create (local)
+@sidequest/api:test: [10:23:13.970] INFO (#7): [SidequestDirectoryDrainedProbe/Board] create
+@sidequest/api:test: [10:23:13.970] INFO (#7): [SidequestDirectoryDrainedProbe/Database] create
+@sidequest/api:test: [10:23:13.970] INFO (#7): [SidequestDirectoryDrainedProbe/DEPLOY_STAGE] create
+@sidequest/api:test: [10:23:13.970] INFO (#7): [SidequestDirectoryDrainedProbe/DIRECTORY_DATABASE] create
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryDrainedProbe/DirectoryObject] create
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryDrainedProbe/NETWORK] create
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryDrainedProbe/PROD_ADMISSION_DRAIN] create
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryMainnetProbe] create (local)
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryMainnetProbe/Board] create
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryMainnetProbe/Database] create
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryMainnetProbe/DEPLOY_STAGE] create
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryMainnetProbe/DIRECTORY_DATABASE] create
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryMainnetProbe/DirectoryObject] create
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryMainnetProbe/NETWORK] create
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryMainnetProbe/PROD_ADMISSION_DRAIN] create
+@sidequest/api:test: [10:23:13.971] INFO (#7): [SidequestDirectoryTestnetProbe] create (local)
+@sidequest/api:test: [10:23:13.972] INFO (#7): [SidequestDirectoryTestnetProbe/Board] create
+@sidequest/api:test: [10:23:13.972] INFO (#7): [SidequestDirectoryTestnetProbe/Database] create
+@sidequest/api:test: [10:23:13.972] INFO (#7): [SidequestDirectoryTestnetProbe/DEPLOY_STAGE] create
+@sidequest/api:test: [10:23:13.972] INFO (#7): [SidequestDirectoryTestnetProbe/DIRECTORY_DATABASE] create
+@sidequest/api:test: [10:23:13.972] INFO (#7): [SidequestDirectoryTestnetProbe/DirectoryObject] create
+@sidequest/api:test: [10:23:13.972] INFO (#7): [SidequestDirectoryTestnetProbe/NETWORK] create
+@sidequest/api:test: [10:23:13.972] INFO (#7): [SidequestDirectoryTestnetProbe/PROD_ADMISSION_DRAIN] create
+@sidequest/api:test: [10:23:13.972] INFO (#7): 
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:13.984] INFO (#747): [SidequestDirectoryMainnetProbe] pre-creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:13.995] INFO (#748): [Database] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:13.997] INFO (#749): [SidequestDirectoryDrainedProbe] pre-creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.001] INFO (#750): [SidequestDirectoryTestnetProbe] pre-creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.010] INFO (#748): [Database] created (local) (15ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.020] INFO (#747): [SidequestDirectoryMainnetProbe] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.022] WARN (#73): Port 1337 is in use by another process; serving on 1338 instead. Stop the other process, pick a different port, or set `strictPort: true` to fail instead.
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.028] INFO (#749): [SidequestDirectoryDrainedProbe] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.032] WARN (#78): Port 1337 is in use by another process; serving on 1339 instead. Stop the other process, pick a different port, or set `strictPort: true` to fail instead.
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.036] INFO (#750): [SidequestDirectoryTestnetProbe] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.045] INFO (#747): [SidequestDirectoryMainnetProbe] ready at http://localhost:1337
+@sidequest/api:test: [10:23:14.046] INFO (#747): [SidequestDirectoryMainnetProbe] created (local) (62ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.078] INFO (#749): [SidequestDirectoryDrainedProbe] ready at http://localhost:1338
+@sidequest/api:test: [10:23:14.078] INFO (#749): [SidequestDirectoryDrainedProbe] created (local) (81ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.079] INFO (#750): [SidequestDirectoryTestnetProbe] ready at http://localhost:1339
+@sidequest/api:test: [10:23:14.079] INFO (#750): [SidequestDirectoryTestnetProbe] created (local) (78ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.090] INFO (#754): [Database] created (local) (94ms)
+@sidequest/api:test: [10:23:14.090] INFO (#755): [SidequestDirectoryMainnetProbe] created (local) (106ms)
+@sidequest/api:test: [10:23:14.090] INFO (#756): [SidequestDirectoryDrainedProbe] created (local) (93ms)
+@sidequest/api:test: [10:23:14.090] INFO (#757): [SidequestDirectoryTestnetProbe] created (local) (89ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts
+@sidequest/api:test: [10:23:14.095] INFO (#7): 
+@sidequest/api:test: [10:23:14.095] INFO (#7): Done: 4 succeeded (122ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts > real mainnet directory reaches identity verification without a session and binds its runtime network
+@sidequest/api:test: [10:23:26.921] INFO (#112): [SidequestDirectoryMainnetProbe] Started in 12886ms → http://localhost:1337/ (logs: /tmp/sidequest-prod-review-check/apps/api/.alchemy/log/test_kristjan/SidequestDirectoryMainnetProbe)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts > real drained directory blocks new ads while revocation and opt-out reach the service
+@sidequest/api:test: [10:23:27.091] INFO (#131): [SidequestDirectoryDrainedProbe] Started in 13018ms → http://localhost:1338/ (logs: /tmp/sidequest-prod-review-check/apps/api/.alchemy/log/test_kristjan/SidequestDirectoryDrainedProbe)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/directory-do.test.ts > direct directory RPC canonicalizes host origins and refuses alternate objects and signed audiences
+@sidequest/api:test: [10:23:27.256] INFO (#138): [SidequestDirectoryTestnetProbe] Started in 13182ms → http://localhost:1339/ (logs: /tmp/sidequest-prod-review-check/apps/api/.alchemy/log/test_kristjan/SidequestDirectoryTestnetProbe)
+@sidequest/api:test: 
+@sidequest/api:test:  ✓ |workerd| test/directory-do.test.ts (5 tests | 1 skipped) 19631ms
+@sidequest/api:test:    ✓ real mainnet directory reaches identity verification without a session and binds its runtime network 12807ms
+@sidequest/api:test:    ✓ real anonymous IP admission limits the 241st call and rejects missing IP or the wrong object 3896ms
+@sidequest/api:test: (node:306979) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/api:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/api:test: stdout | test/agent-offers.test.ts
+@sidequest/api:test: [10:23:36.716] INFO (#7): Plan: 3 to create, 2 binding changes
+@sidequest/api:test: [10:23:36.717] INFO (#7): [AgentOffersProbe] create (local)
+@sidequest/api:test: [10:23:36.718] INFO (#7): [AgentOffersProbe/Manifests] create
+@sidequest/api:test: [10:23:36.718] INFO (#7): [AgentOffersProbe/OfferDatabase] create
+@sidequest/api:test: [10:23:36.718] INFO (#7): [Manifests] create (local)
+@sidequest/api:test: [10:23:36.718] INFO (#7): [OfferDatabase] create (local)
+@sidequest/api:test: [10:23:36.719] INFO (#7): 
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/agent-offers.test.ts
+@sidequest/api:test: [10:23:36.728] INFO (#402): [AgentOffersProbe] pre-creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/agent-offers.test.ts
+@sidequest/api:test: [10:23:36.732] INFO (#404): [Manifests] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/agent-offers.test.ts
+@sidequest/api:test: [10:23:36.736] INFO (#403): [OfferDatabase] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/agent-offers.test.ts
+@sidequest/api:test: [10:23:36.739] INFO (#404): [Manifests] created (local) (8ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/agent-offers.test.ts
+@sidequest/api:test: [10:23:36.743] INFO (#403): [OfferDatabase] created (local) (8ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/agent-offers.test.ts
+@sidequest/api:test: [10:23:36.751] INFO (#402): [AgentOffersProbe] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/agent-offers.test.ts
+@sidequest/api:test: [10:23:36.769] INFO (#402): [AgentOffersProbe] ready at http://localhost:1337
+@sidequest/api:test: [10:23:36.772] INFO (#402): [AgentOffersProbe] created (local) (44ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/agent-offers.test.ts
+@sidequest/api:test: [10:23:36.779] INFO (#407): [Manifests] created (local) (47ms)
+@sidequest/api:test: [10:23:36.779] INFO (#408): [OfferDatabase] created (local) (44ms)
+@sidequest/api:test: [10:23:36.779] INFO (#409): [AgentOffersProbe] created (local) (51ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/agent-offers.test.ts
+@sidequest/api:test: [10:23:36.781] INFO (#7): 
+@sidequest/api:test: [10:23:36.781] INFO (#7): Done: 3 succeeded (62ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/agent-offers.test.ts > managed offer publication verifies real workerd R2 and D1, resumes idempotently and refuses conflicts
+@sidequest/api:test: [10:23:44.062] INFO (#86): [AgentOffersProbe] Started in 7299ms → http://localhost:1337/ (logs: /tmp/sidequest-prod-review-check/apps/api/.alchemy/log/test_kristjan/AgentOffersProbe)
+@sidequest/api:test: 
+@sidequest/api:test:  ✓ |workerd| test/agent-offers.test.ts (2 tests | 1 skipped) 9681ms
+@sidequest/api:test:    ✓ managed offer publication verifies real workerd R2 and D1, resumes idempotently and refuses conflicts 7361ms
+@sidequest/api:test: stdout | test/admission-do.test.ts
+@sidequest/api:test: [10:23:50.578] INFO (#7): Plan: 2 to create, 5 binding changes
+@sidequest/api:test: [10:23:50.580] INFO (#7): [Database] create (local)
+@sidequest/api:test: [10:23:50.580] INFO (#7): [E38AdmissionProbe] create (local)
+@sidequest/api:test: [10:23:50.580] INFO (#7): [E38AdmissionProbe/Board] create
+@sidequest/api:test: [10:23:50.580] INFO (#7): [E38AdmissionProbe/Database] create
+@sidequest/api:test: [10:23:50.580] INFO (#7): [E38AdmissionProbe/DEPLOY_STAGE] create
+@sidequest/api:test: [10:23:50.580] INFO (#7): [E38AdmissionProbe/NETWORK] create
+@sidequest/api:test: [10:23:50.580] INFO (#7): [E38AdmissionProbe/PROD_ADMISSION_DRAIN] create
+@sidequest/api:test: [10:23:50.581] INFO (#7): 
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/admission-do.test.ts
+@sidequest/api:test: [10:23:50.593] INFO (#450): [E38AdmissionProbe] pre-creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/admission-do.test.ts
+@sidequest/api:test: [10:23:50.599] INFO (#451): [Database] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/admission-do.test.ts
+@sidequest/api:test: [10:23:50.611] INFO (#451): [Database] created (local) (12ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/admission-do.test.ts
+@sidequest/api:test: [10:23:50.617] INFO (#450): [E38AdmissionProbe] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/admission-do.test.ts
+@sidequest/api:test: [10:23:50.634] INFO (#450): [E38AdmissionProbe] ready at http://localhost:1337
+@sidequest/api:test: [10:23:50.634] INFO (#450): [E38AdmissionProbe] created (local) (41ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/admission-do.test.ts
+@sidequest/api:test: [10:23:50.641] INFO (#453): [Database] created (local) (42ms)
+@sidequest/api:test: [10:23:50.641] INFO (#454): [E38AdmissionProbe] created (local) (48ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/admission-do.test.ts
+@sidequest/api:test: [10:23:50.643] INFO (#7): 
+@sidequest/api:test: [10:23:50.643] INFO (#7): Done: 2 succeeded (62ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/admission-do.test.ts > real local Durable Object rejects forged caller, board, network, and policy before service construction
+@sidequest/api:test: [10:23:57.226] INFO (#86): [E38AdmissionProbe] Started in 6596ms → http://localhost:1337/ (logs: /tmp/sidequest-prod-review-check/apps/api/.alchemy/log/test_kristjan/E38AdmissionProbe)
+@sidequest/api:test: 
+@sidequest/api:test:  ✓ |workerd| test/admission-do.test.ts (2 tests) 9557ms
+@sidequest/api:test:    ✓ real local Durable Object rejects forged caller, board, network, and policy before service construction 6594ms
+@sidequest/api:test:    ✓ real workerd counters serialize concurrent REST/MCP-equivalent admissions across boards 682ms
+@sidequest/api:test: stdout | test/telegram.test.ts
+@sidequest/api:test: [10:24:03.203] INFO (#7): Plan: 2 to create, 1 binding changes
+@sidequest/api:test: [10:24:03.204] INFO (#7): [SidequestTelegramLocalDatabase] create (local)
+@sidequest/api:test: [10:24:03.204] INFO (#7): [SidequestTelegramLocalDrill] create (local)
+@sidequest/api:test: [10:24:03.204] INFO (#7): [SidequestTelegramLocalDrill/SidequestTelegramLocalDatabase] create
+@sidequest/api:test: [10:24:03.204] INFO (#7): 
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/telegram.test.ts
+@sidequest/api:test: [10:24:03.215] INFO (#389): [SidequestTelegramLocalDrill] pre-creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/telegram.test.ts
+@sidequest/api:test: [10:24:03.218] INFO (#390): [SidequestTelegramLocalDatabase] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/telegram.test.ts
+@sidequest/api:test: [10:24:03.231] INFO (#390): [SidequestTelegramLocalDatabase] created (local) (12ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/telegram.test.ts
+@sidequest/api:test: [10:24:03.236] INFO (#389): [SidequestTelegramLocalDrill] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/telegram.test.ts
+@sidequest/api:test: [10:24:03.252] INFO (#389): [SidequestTelegramLocalDrill] ready at http://localhost:1337
+@sidequest/api:test: [10:24:03.252] INFO (#389): [SidequestTelegramLocalDrill] created (local) (37ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/telegram.test.ts
+@sidequest/api:test: [10:24:03.258] INFO (#392): [SidequestTelegramLocalDatabase] created (local) (40ms)
+@sidequest/api:test: [10:24:03.258] INFO (#393): [SidequestTelegramLocalDrill] created (local) (43ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/telegram.test.ts
+@sidequest/api:test: [10:24:03.261] INFO (#7): 
+@sidequest/api:test: [10:24:03.262] INFO (#7): Done: 2 succeeded (57ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/telegram.test.ts > real local workerd D1 verifies a signature, consumes the webhook once and claims concurrent sends once
+@sidequest/api:test: [10:24:10.089] INFO (#86): [SidequestTelegramLocalDrill] Started in 6842ms → http://localhost:1337/ (logs: /tmp/sidequest-prod-review-check/apps/api/.alchemy/log/test_kristjan/SidequestTelegramLocalDrill)
+@sidequest/api:test: 
+@sidequest/api:test:  ✓ |workerd| test/telegram.test.ts (1 test) 9266ms
+@sidequest/api:test:    ✓ real local workerd D1 verifies a signature, consumes the webhook once and claims concurrent sends once 6909ms
+@sidequest/api:test: stdout | test/recovery.test.ts
+@sidequest/api:test: [10:24:15.148] INFO (#7): Plan: 3 to create, 2 binding changes
+@sidequest/api:test: [10:24:15.149] INFO (#7): [E38DrillRestore] create (local)
+@sidequest/api:test: [10:24:15.149] INFO (#7): [E38DrillSource] create (local)
+@sidequest/api:test: [10:24:15.149] INFO (#7): [E38RecoveryDrill] create (local)
+@sidequest/api:test: [10:24:15.150] INFO (#7): [E38RecoveryDrill/E38DrillRestore] create
+@sidequest/api:test: [10:24:15.150] INFO (#7): [E38RecoveryDrill/E38DrillSource] create
+@sidequest/api:test: [10:24:15.150] INFO (#7): 
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/recovery.test.ts
+@sidequest/api:test: [10:24:15.157] INFO (#400): [E38RecoveryDrill] pre-creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/recovery.test.ts
+@sidequest/api:test: [10:24:15.160] INFO (#401): [E38DrillSource] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/recovery.test.ts
+@sidequest/api:test: [10:24:15.161] INFO (#402): [E38DrillRestore] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/recovery.test.ts
+@sidequest/api:test: [10:24:15.175] INFO (#401): [E38DrillSource] created (local) (15ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/recovery.test.ts
+@sidequest/api:test: [10:24:15.177] INFO (#402): [E38DrillRestore] created (local) (16ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/recovery.test.ts
+@sidequest/api:test: [10:24:15.179] INFO (#400): [E38RecoveryDrill] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/recovery.test.ts
+@sidequest/api:test: [10:24:15.194] INFO (#400): [E38RecoveryDrill] ready at http://localhost:1337
+@sidequest/api:test: [10:24:15.194] INFO (#400): [E38RecoveryDrill] created (local) (37ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/recovery.test.ts
+@sidequest/api:test: [10:24:15.199] INFO (#405): [E38DrillSource] created (local) (39ms)
+@sidequest/api:test: [10:24:15.199] INFO (#406): [E38DrillRestore] created (local) (38ms)
+@sidequest/api:test: [10:24:15.199] INFO (#407): [E38RecoveryDrill] created (local) (42ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/recovery.test.ts
+@sidequest/api:test: [10:24:15.200] INFO (#7): 
+@sidequest/api:test: [10:24:15.201] INFO (#7): Done: 3 succeeded (50ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/recovery.test.ts > disposable local workerd D1 restores and rebuilds synthetic v1 indexed facts without deleting hosted rows
+@sidequest/api:test: [10:24:21.460] INFO (#108): [E38RecoveryDrill] Started in 6272ms → http://localhost:1337/ (logs: /tmp/sidequest-prod-review-check/apps/api/.alchemy/log/test_kristjan/E38RecoveryDrill)
+@sidequest/api:test: 
+@sidequest/api:test:  ✓ |workerd| test/recovery.test.ts (1 test) 8740ms
+@sidequest/api:test:    ✓ disposable local workerd D1 restores and rebuilds synthetic v1 indexed facts without deleting hosted rows 6632ms
+@sidequest/api:test: stdout | test/x402-workerd.test.ts
+@sidequest/api:test: [10:24:26.375] INFO (#7): Plan: 1 to create
+@sidequest/api:test: [10:24:26.377] INFO (#7): [SidequestX402LocalDrill] create (local)
+@sidequest/api:test: [10:24:26.377] INFO (#7): 
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/x402-workerd.test.ts
+@sidequest/api:test: [10:24:26.385] INFO (#377): [SidequestX402LocalDrill] pre-creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/x402-workerd.test.ts
+@sidequest/api:test: [10:24:26.401] INFO (#377): [SidequestX402LocalDrill] creating (local)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/x402-workerd.test.ts
+@sidequest/api:test: [10:24:26.415] INFO (#377): [SidequestX402LocalDrill] ready at http://localhost:1337
+@sidequest/api:test: [10:24:26.416] INFO (#377): [SidequestX402LocalDrill] created (local) (32ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/x402-workerd.test.ts
+@sidequest/api:test: [10:24:26.421] INFO (#378): [SidequestX402LocalDrill] created (local) (37ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/x402-workerd.test.ts
+@sidequest/api:test: [10:24:26.424] INFO (#7): 
+@sidequest/api:test: [10:24:26.424] INFO (#7): Done: 1 succeeded (46ms)
+@sidequest/api:test: 
+@sidequest/api:test: stdout | test/x402-workerd.test.ts > real local workerd pays the x402 demo through verify and settle (VV2-031)
+@sidequest/api:test: [10:24:31.919] INFO (#64): [SidequestX402LocalDrill] Started in 5508ms → http://localhost:1337/ (logs: /tmp/sidequest-prod-review-check/apps/api/.alchemy/log/test_kristjan/SidequestX402LocalDrill)
+@sidequest/api:test: 
+@sidequest/api:test:  ✓ |workerd| test/x402-workerd.test.ts (1 test) 7342ms
+@sidequest/api:test:    ✓ real local workerd pays the x402 demo through verify and settle (VV2-031) 5360ms
+@sidequest/api:test: 
+@sidequest/api:test:  Test Files  90 passed | 2 skipped (92)
+@sidequest/api:test:       Tests  818 passed | 17 skipped (835)
+@sidequest/api:test:    Start at  10:21:15
+@sidequest/api:test:    Duration  196.17s (import 51%, tests 46%, transform 3%)
+@sidequest/api:test: 
+@sidequest/indexer-worker:test: cache hit, replaying logs 316ab056931427bd
+@sidequest/indexer-worker:test: $ vitest run --passWithNoTests
+@sidequest/indexer-worker:test: 
+@sidequest/indexer-worker:test:  RUN  v5.0.3 /tmp/sidequest-prod-review-check/apps/indexer
+@sidequest/indexer-worker:test: 
+@sidequest/indexer-worker:test: (node:294008) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+@sidequest/indexer-worker:test: (Use `node --trace-warnings ...` to show where the warning was created)
+@sidequest/indexer-worker:test:  ✓ src/run-record.test.ts (9 tests) 23ms
+@sidequest/indexer-worker:test: 
+@sidequest/indexer-worker:test:  Test Files  1 passed (1)
+@sidequest/indexer-worker:test:       Tests  9 passed (9)
+@sidequest/indexer-worker:test:    Start at  10:21:11
+@sidequest/indexer-worker:test:    Duration  3.25s (transform 62%, import 37%, tests 1%)
+@sidequest/indexer-worker:test: 
+@sidequest/contracts:test: cache miss, executing 4d640031f693d562
+@sidequest/contracts:test: $ python3 script/test_launch_kit.py && forge test --threads 1
+@sidequest/contracts:test: ...........................
+@sidequest/contracts:test: ----------------------------------------------------------------------
+@sidequest/contracts:test: Ran 27 tests in 56.415s
+@sidequest/contracts:test: 
+@sidequest/contracts:test: OK
+@sidequest/contracts:test: No files changed, compilation skipped
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 12 tests for test/sidequest/AgentSweep.t.sol:AgentSweepTest
+@sidequest/contracts:test: [PASS] testFuzz_sweep_movesExactlyTheAmount(uint256) (runs: 512, μ: 170195, ~: 170255)
+@sidequest/contracts:test: [PASS] test_constructor_refusesZeroIdentity() (gas: 11482)
+@sidequest/contracts:test: [PASS] test_sweep_cannotExceedTheWalletsBalance() (gas: 107740)
+@sidequest/contracts:test: [PASS] test_sweep_needsTheWalletsApproval() (gas: 145567)
+@sidequest/contracts:test: [PASS] test_sweep_paysTheAgentsOwner() (gas: 192521)
+@sidequest/contracts:test: [PASS] test_sweep_paysWhoeverOwnsTheAgentNow() (gas: 265930)
+@sidequest/contracts:test: [PASS] test_sweep_pullsOnlyFromTheCaller() (gas: 297193)
+@sidequest/contracts:test: [PASS] test_sweep_refusesATokenThatIsNoContract() (gas: 92204)
+@sidequest/contracts:test: [PASS] test_sweep_refusesAnUnknownAgent() (gas: 71397)
+@sidequest/contracts:test: [PASS] test_sweep_refusesAnotherAgentsId() (gas: 71883)
+@sidequest/contracts:test: [PASS] test_sweep_refusesEveryoneButTheAgentWallet() (gas: 241489)
+@sidequest/contracts:test: [PASS] test_sweep_refusesZeroAmount() (gas: 53266)
+@sidequest/contracts:test: Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 26.66ms (25.19ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 3 tests for test/sidequest/AgentSweep.t.sol:DeployAgentSweepTest
+@sidequest/contracts:test: [PASS] test_deploysAgainstTheConfiguredRegistry() (gas: 1862857)
+@sidequest/contracts:test: [PASS] test_refusesAChainOtherThanTheConfigs() (gas: 820113)
+@sidequest/contracts:test: [PASS] test_refusesAMissingRegistry() (gas: 836057)
+@sidequest/contracts:test: Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 1.43ms (1.24ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 5 tests for test/sidequest/BondHorizon.t.sol:BondHorizonTest
+@sidequest/contracts:test: [PASS] testFuzz_bondsReservedBeforeExitExpireByUnlock(uint48,uint48) (runs: 512, μ: 1661910, ~: 1661900)
+@sidequest/contracts:test: [PASS] test_publish_andActivateAcceptExactHorizon() (gas: 1437961)
+@sidequest/contracts:test: [PASS] test_publish_blocksUnbondedBypassOfWorkerHorizonAtomically() (gas: 166339)
+@sidequest/contracts:test: [PASS] test_publish_refusesCreatorBondBeyondHorizonAtomically() (gas: 187512)
+@sidequest/contracts:test: [PASS] test_zeroBondsCannotBypassHorizonWithMaximumWindows() (gas: 174399)
+@sidequest/contracts:test: Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 422.50ms (420.09ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 5 tests for test/sidequest/BondHorizon.t.sol:TestnetBondHorizonTest
+@sidequest/contracts:test: [PASS] testFuzz_bondsReservedBeforeExitExpireByUnlock(uint48,uint48) (runs: 512, μ: 1661918, ~: 1661900)
+@sidequest/contracts:test: [PASS] test_publish_andActivateAcceptExactHorizon() (gas: 1437973)
+@sidequest/contracts:test: [PASS] test_publish_blocksUnbondedBypassOfWorkerHorizonAtomically() (gas: 166339)
+@sidequest/contracts:test: [PASS] test_publish_refusesCreatorBondBeyondHorizonAtomically() (gas: 187512)
+@sidequest/contracts:test: [PASS] test_zeroBondsCannotBypassHorizonWithMaximumWindows() (gas: 174399)
+@sidequest/contracts:test: Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 448.54ms (445.67ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 22 tests for test/sidequest/BondPolicy.t.sol:BondPolicyTest
+@sidequest/contracts:test: [PASS] testFuzz_belowFloorHasNoEffects(uint256) (runs: 512, μ: 181941, ~: 181855)
+@sidequest/contracts:test: [PASS] testFuzz_forfeitRoundedDownAndPreservesSupply(uint256,uint16) (runs: 512, μ: 1183822, ~: 1187340)
+@sidequest/contracts:test: [PASS] test_activatedExpiryDoesNotForfeit() (gas: 1864899)
+@sidequest/contracts:test: [PASS] test_cancelAt599IsFree() (gas: 1033429)
+@sidequest/contracts:test: [PASS] test_cancelAt600ForfeitsAndReleasesRemainder() (gas: 1306296)
+@sidequest/contracts:test: [PASS] test_constructorRejectsInvalidPolicy() (gas: 22550)
+@sidequest/contracts:test: [PASS] test_expiryInsideGraceStillForfeits() (gas: 1617544)
+@sidequest/contracts:test: [PASS] test_floorAccepted() (gas: 737618)
+@sidequest/contracts:test: [PASS] test_floorMinusOneRefused() (gas: 182070)
+@sidequest/contracts:test: [PASS] test_invalidTreasuryKeepsReservationUntilFixed() (gas: 1165947)
+@sidequest/contracts:test: [PASS] test_onlyOwnerCanChangePolicy() (gas: 92748)
+@sidequest/contracts:test: [PASS] test_partlyQueuedBackingSharesForfeitProRata() (gas: 1449950)
+@sidequest/contracts:test: [PASS] test_policyCapsAndZeroRate() (gas: 237868)
+@sidequest/contracts:test: [PASS] test_policyChangesOnlyAffectNewListings() (gas: 2112833)
+@sidequest/contracts:test: [PASS] test_rotationUsesLiveTimelockedTreasury() (gas: 1298891)
+@sidequest/contracts:test: [PASS] test_unfilledExpiryForfeitsAfterHorizon() (gas: 1181485)
+@sidequest/contracts:test: [PASS] test_unfilledExpiryForfeitsAtExactExpiry() (gas: 1145934)
+@sidequest/contracts:test: [PASS] test_vaultFullForfeitResetsPoolAndCannotTakeOthersReservation() (gas: 351033)
+@sidequest/contracts:test: [PASS] test_vaultRejectsZeroForfeitRecipient() (gas: 174147)
+@sidequest/contracts:test: [PASS] test_withdrawBlockedUntilExpiryForfeitRuns() (gas: 1396260)
+@sidequest/contracts:test: [PASS] test_zeroBondRefused() (gas: 181997)
+@sidequest/contracts:test: [PASS] test_zeroRateReleasesAll() (gas: 1075595)
+@sidequest/contracts:test: Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 233.43ms (230.75ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 4 tests for test/sidequest/ClockConfig.t.sol:ClockConfigTest
+@sidequest/contracts:test: [PASS] test_143_fastBlockRefusesProductionBlockPasses() (gas: 297537)
+@sidequest/contracts:test: [PASS] test_loadApprovedFastClocks() (gas: 203483)
+@sidequest/contracts:test: [PASS] test_loadOverflowCannotWrap() (gas: 294573)
+@sidequest/contracts:test: [PASS] test_loadPartialAndNullBlockRefuse() (gas: 287513)
+@sidequest/contracts:test: Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 11.93ms (11.73ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 12 tests for test/sidequest/Clocks.t.sol:ClocksTest
+@sidequest/contracts:test: [PASS] test_143_acceptsProductionInAllConstructors() (gas: 147038)
+@sidequest/contracts:test: [PASS] test_143_refusesFeeDelay() (gas: 147979)
+@sidequest/contracts:test: [PASS] test_143_refusesHoldingDelay() (gas: 147847)
+@sidequest/contracts:test: [PASS] test_143_refusesMinArbitrationWindow() (gas: 148397)
+@sidequest/contracts:test: [PASS] test_143_refusesMinDisputeWindow() (gas: 148199)
+@sidequest/contracts:test: [PASS] test_143_refusesMinReviewWindow() (gas: 148146)
+@sidequest/contracts:test: [PASS] test_143_refusesProposalGrace() (gas: 148375)
+@sidequest/contracts:test: [PASS] test_143_refusesUnstakeDelay() (gas: 148059)
+@sidequest/contracts:test: [PASS] test_everyChain_delayAndEpochFloors() (gas: 558080)
+@sidequest/contracts:test: [PASS] test_everyChain_holdingDelayMustOutlastUnstake() (gas: 284093)
+@sidequest/contracts:test: [PASS] test_everyChain_windowsCannotExceedMaximums() (gas: 421498)
+@sidequest/contracts:test: [PASS] test_everyChain_zeroClocksRefuse() (gas: 558737)
+@sidequest/contracts:test: Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 11.67ms (8.50ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 4 tests for test/sidequest/Clocks.t.sol:FastClocksTest
+@sidequest/contracts:test: [PASS] test_fastFeeDelayAndGraceCutoffs() (gas: 669608)
+@sidequest/contracts:test: [PASS] test_fastHoldingGraceCutoff() (gas: 277688)
+@sidequest/contracts:test: [PASS] test_fastUnstakeExitBeforeHoldingAcceptance() (gas: 492919)
+@sidequest/contracts:test: [PASS] test_fastWindowsPublishAtMinimums_belowEachRefuses() (gas: 849922)
+@sidequest/contracts:test: Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 4.12ms (1.19ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 4 tests for test/fork/Erc8004Fork.t.sol:Erc8004ForkTest
+@sidequest/contracts:test: [SKIP] test_ownerCannotRateItself() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_registriesAreWired() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_unregisteredAgentIsRefused() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_workerRegistersAndContractWritesFeedback() (gas: 0)
+@sidequest/contracts:test: Suite result: ok. 0 passed; 0 failed; 4 skipped; finished in 313.65µs (67.97µs CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 3 tests for test/fork/Erc8004RolesFork.t.sol:Erc8004RolesForkTest
+@sidequest/contracts:test: [SKIP] test_agentCannotCertifyItself() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_agentDeclaresRoles_onlyOwnerMaySet() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_projectCertifiesARole_readableByTag() (gas: 0)
+@sidequest/contracts:test: Suite result: ok. 0 passed; 0 failed; 3 skipped; finished in 445.62µs (45.32µs CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 14 tests for test/sidequest/FeeSchedule.t.sol:FeeScheduleTest
+@sidequest/contracts:test: [PASS] testFuzz_feeNeverIncreasesWithStake(uint256,uint256) (runs: 512, μ: 51112, ~: 51197)
+@sidequest/contracts:test: [PASS] test_bounds_firstThresholdZero() (gas: 64221)
+@sidequest/contracts:test: [PASS] test_bounds_rateCap() (gas: 64674)
+@sidequest/contracts:test: [PASS] test_bounds_ratesNonIncreasing() (gas: 213854)
+@sidequest/contracts:test: [PASS] test_bounds_thresholdsStrictlyAscending() (gas: 65490)
+@sidequest/contracts:test: [PASS] test_bounds_treasuryNonzero() (gas: 64084)
+@sidequest/contracts:test: [PASS] test_cancel() (gas: 274965)
+@sidequest/contracts:test: [PASS] test_constructor_heldToTheSameBounds() (gas: 22274)
+@sidequest/contracts:test: [PASS] test_defaultTiers_boundaries() (gas: 140794)
+@sidequest/contracts:test: [PASS] test_handoverDropsTheOldOwnersProposal() (gas: 323924)
+@sidequest/contracts:test: [PASS] test_onlyOwnerProposesAndCancels() (gas: 94687)
+@sidequest/contracts:test: [PASS] test_propose_executeAfterThreeDays_anyone() (gas: 409531)
+@sidequest/contracts:test: [PASS] test_propose_expiresAfterTheGrace() (gas: 251696)
+@sidequest/contracts:test: [PASS] test_replacedProposalIsCancelledVisibly() (gas: 226128)
+@sidequest/contracts:test: Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 16.95ms (16.24ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 14 tests for test/sidequest/GasFloors.t.sol:GasFloorsTest
+@sidequest/contracts:test: [PASS] test_gas_accept() (gas: 8185347)
+@sidequest/contracts:test: [PASS] test_gas_cancel() (gas: 5988847)
+@sidequest/contracts:test: [PASS] test_gas_claimTopUpRefund() (gas: 3650841)
+@sidequest/contracts:test: [PASS] test_gas_completeAfterSilence() (gas: 8794654)
+@sidequest/contracts:test: [PASS] test_gas_delegate() (gas: 1819943)
+@sidequest/contracts:test: [PASS] test_gas_rejectAfterDeliveryDeadline() (gas: 11040909)
+@sidequest/contracts:test: [PASS] test_gas_requestUndelegate() (gas: 1221292)
+@sidequest/contracts:test: [PASS] test_gas_reserve() (gas: 1678556)
+@sidequest/contracts:test: [PASS] test_gas_retryDeferred() (gas: 2809738)
+@sidequest/contracts:test: [PASS] test_gas_ruleWithSignature() (gas: 10784688)
+@sidequest/contracts:test: [PASS] test_gas_ruleWithSlash() (gas: 9759284)
+@sidequest/contracts:test: [PASS] test_gas_settle_afterAccept() (gas: 6064494)
+@sidequest/contracts:test: [PASS] test_gas_settle_worstCase() (gas: 8831333)
+@sidequest/contracts:test: [PASS] test_gas_withdraw() (gas: 1410020)
+@sidequest/contracts:test: Suite result: ok. 14 passed; 0 failed; 0 skipped; finished in 61.52ms (58.52ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 18 tests for test/sidequest/HorizonLateSlash.t.sol:HorizonLateSlashTest
+@sidequest/contracts:test: [PASS] test_creatorBondAtExactExpiryReleases() (gas: 1608540)
+@sidequest/contracts:test: [PASS] test_creatorBondAtExpiryMinusOneStillSlashes() (gas: 1644053)
+@sidequest/contracts:test: [PASS] test_delayedHoldingSettlementReleasesAfterBackerExit() (gas: 2979239)
+@sidequest/contracts:test: [PASS] test_delayedMissedDeliveryReleasesAfterBackerExit() (gas: 2756270)
+@sidequest/contracts:test: [PASS] test_delayedViolationReleasesAfterBackerExit() (gas: 2963395)
+@sidequest/contracts:test: [PASS] test_holdingSettlementAtExactExpiryReleases() (gas: 2073735)
+@sidequest/contracts:test: [PASS] test_horizonNearUint48MaximumDoesNotWrap() (gas: 2107190)
+@sidequest/contracts:test: [PASS] test_missedDeliveryAtExactExpiryReleases() (gas: 1993386)
+@sidequest/contracts:test: [PASS] test_permissionlessReleaseUnblocksFullQueue() (gas: 2122792)
+@sidequest/contracts:test: [PASS] test_queueNearUint48MaximumRefusesOverflow() (gas: 1595067)
+@sidequest/contracts:test: [PASS] test_rulingAfterHorizonRefusedTimeoutDoesNotSlash() (gas: 2174838)
+@sidequest/contracts:test: [PASS] test_rulingAtLatestCutoffPrecedesHorizon() (gas: 2266358)
+@sidequest/contracts:test: [PASS] test_timelyHoldingSettlementSlashesQueuedBacking() (gas: 2634983)
+@sidequest/contracts:test: [PASS] test_timelyMissedDeliverySlashesQueuedBacking() (gas: 2382502)
+@sidequest/contracts:test: [PASS] test_timelyViolationSlashesQueuedBacking() (gas: 2600326)
+@sidequest/contracts:test: [PASS] test_unactivatedExpiryForfeitsAndRefunds() (gas: 1354798)
+@sidequest/contracts:test: [PASS] test_violationAtExactExpiryReleases() (gas: 2211606)
+@sidequest/contracts:test: [PASS] test_zeroWorkerBondKeepsAccountingAndSettlement() (gas: 2099174)
+@sidequest/contracts:test: Suite result: ok. 18 passed; 0 failed; 0 skipped; finished in 22.56ms (19.11ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 18 tests for test/sidequest/HorizonLateSlash.t.sol:TestnetHorizonLateSlashTest
+@sidequest/contracts:test: [PASS] test_creatorBondAtExactExpiryReleases() (gas: 1608528)
+@sidequest/contracts:test: [PASS] test_creatorBondAtExpiryMinusOneStillSlashes() (gas: 1644041)
+@sidequest/contracts:test: [PASS] test_delayedHoldingSettlementReleasesAfterBackerExit() (gas: 2979227)
+@sidequest/contracts:test: [PASS] test_delayedMissedDeliveryReleasesAfterBackerExit() (gas: 2756258)
+@sidequest/contracts:test: [PASS] test_delayedViolationReleasesAfterBackerExit() (gas: 2963383)
+@sidequest/contracts:test: [PASS] test_holdingSettlementAtExactExpiryReleases() (gas: 2073723)
+@sidequest/contracts:test: [PASS] test_horizonNearUint48MaximumDoesNotWrap() (gas: 2107166)
+@sidequest/contracts:test: [PASS] test_missedDeliveryAtExactExpiryReleases() (gas: 1993374)
+@sidequest/contracts:test: [PASS] test_permissionlessReleaseUnblocksFullQueue() (gas: 2122780)
+@sidequest/contracts:test: [PASS] test_queueNearUint48MaximumRefusesOverflow() (gas: 1595055)
+@sidequest/contracts:test: [PASS] test_rulingAfterHorizonRefusedTimeoutDoesNotSlash() (gas: 2174826)
+@sidequest/contracts:test: [PASS] test_rulingAtLatestCutoffPrecedesHorizon() (gas: 2266346)
+@sidequest/contracts:test: [PASS] test_timelyHoldingSettlementSlashesQueuedBacking() (gas: 2634971)
+@sidequest/contracts:test: [PASS] test_timelyMissedDeliverySlashesQueuedBacking() (gas: 2382490)
+@sidequest/contracts:test: [PASS] test_timelyViolationSlashesQueuedBacking() (gas: 2600314)
+@sidequest/contracts:test: [PASS] test_unactivatedExpiryForfeitsAndRefunds() (gas: 1354774)
+@sidequest/contracts:test: [PASS] test_violationAtExactExpiryReleases() (gas: 2211594)
+@sidequest/contracts:test: [PASS] test_zeroWorkerBondKeepsAccountingAndSettlement() (gas: 2099150)
+@sidequest/contracts:test: Suite result: ok. 18 passed; 0 failed; 0 skipped; finished in 21.07ms (18.51ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 1 test for test/sidequest/Invariants.t.sol:SidequestInvariantsTest
+@sidequest/contracts:test: [PASS]
+@sidequest/contracts:test: SidequestInvariantsTest invariants:
+@sidequest/contracts:test: [PASS] invariant_bondsReservedBeforeExitExpireByUnlock
+@sidequest/contracts:test: [PASS] invariant_escrowPerToken
+@sidequest/contracts:test: [PASS] invariant_slashOnlyOnAFinding
+@sidequest/contracts:test: [PASS] invariant_vaultBooks
+@sidequest/contracts:test:  SidequestInvariantsTest invariants (runs: 64, calls: 6144, reverts: 4186)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: ╭------------------+---------------------+-------+---------+----------╮
+@sidequest/contracts:test: | Contract         | Selector            | Calls | Reverts | Discards |
+@sidequest/contracts:test: +=====================================================================+
+@sidequest/contracts:test: | SidequestHandler | accept              | 325   | 250     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | activate            | 309   | 203     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | cancel              | 317   | 217     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | claimRefund         | 334   | 272     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | claimTopUpRefund    | 355   | 285     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | dispute             | 330   | 269     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | progress            | 309   | 232     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | publish             | 331   | 181     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | reject              | 338   | 274     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | requestUnstake      | 325   | 161     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | rule                | 320   | 267     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | settle              | 312   | 237     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | submit              | 357   | 263     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | timeout             | 333   | 260     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | toggleWorkerBlocked | 327   | 0       | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | topUp               | 303   | 204     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | warp                | 308   | 0       | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | withdrawOwed        | 311   | 311     | 0        |
+@sidequest/contracts:test: |------------------+---------------------+-------+---------+----------|
+@sidequest/contracts:test: | SidequestHandler | withdrawStake       | 300   | 300     | 0        |
+@sidequest/contracts:test: ╰------------------+---------------------+-------+---------+----------╯
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.51s (1.50s CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 3 tests for test/LaunchLock.t.sol:LaunchLockTest
+@sidequest/contracts:test: [PASS] test_everyRunTakesTheLockFirst() (gas: 279542)
+@sidequest/contracts:test: [PASS] test_noAnvilHoldsTheLock() (gas: 874822)
+@sidequest/contracts:test: [PASS] test_rehearsalsUseTheirOwnForgePaths() (gas: 428129)
+@sidequest/contracts:test: Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 4.45ms (4.30ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 16 tests for test/MainnetRunbook.t.sol:MainnetRunbookTest
+@sidequest/contracts:test: [PASS] test_acceptPlanUsesReadOnlyChainGuard() (gas: 333383)
+@sidequest/contracts:test: [PASS] test_commandsNameTheirCwdEnvAndRpc() (gas: 2126468)
+@sidequest/contracts:test: [PASS] test_documentedSidequestInputLoads() (gas: 3641251)
+@sidequest/contracts:test: [PASS] test_launchGateReadsTheReviewedSafe() (gas: 1099602)
+@sidequest/contracts:test: [PASS] test_launchKitBindsEveryPlanAndSendToConfigChain() (gas: 1234791)
+@sidequest/contracts:test: [PASS] test_launchKitPersistsBeforePublishAndReconcilesBeforeRetry() (gas: 2242667)
+@sidequest/contracts:test: [PASS] test_launchKitSignsFromPromptedKeystores() (gas: 1920636)
+@sidequest/contracts:test: [PASS] test_mainnetSignsFromKeystores() (gas: 2262427)
+@sidequest/contracts:test: [PASS] test_namedScriptsExist() (gas: 37867)
+@sidequest/contracts:test: [PASS] test_noMainnetRawKeyExamples() (gas: 36253126)
+@sidequest/contracts:test: [PASS] test_r7ChecksAaOnTheForkAndFundsTheArbitrator() (gas: 2846186)
+@sidequest/contracts:test: [PASS] test_repeatedPromotionRechecksTheVerifier() (gas: 16462)
+@sidequest/contracts:test: [PASS] test_runbookAndR7RunTheSameForgeSteps() (gas: 41032222)
+@sidequest/contracts:test: [PASS] test_runbookCarriesBudgetAndFunding() (gas: 1782247)
+@sidequest/contracts:test: [PASS] test_runbookHasNoLegacyPath() (gas: 1064600)
+@sidequest/contracts:test: [PASS] test_runbookSequenceWithGates() (gas: 63298383)
+@sidequest/contracts:test: Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 379.55ms (376.04ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 2 tests for test/sidequest/NoRenounce.t.sol:NoRenounceTest
+@sidequest/contracts:test: [PASS] test_noOwnedContractCanRenounce() (gas: 265114)
+@sidequest/contracts:test: [PASS] test_ownershipStillMovesInTwoSteps() (gas: 538829)
+@sidequest/contracts:test: Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 2.95ms (329.33µs CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 4 tests for test/testnet/OddTokens.t.sol:OddTokensTest
+@sidequest/contracts:test: [PASS] test_blocklist_showsM2() (gas: 2678067)
+@sidequest/contracts:test: [PASS] test_deploy_mintsEveryWallet_ownerOnly() (gas: 152721)
+@sidequest/contracts:test: [PASS] test_deploy_refusesMainnet() (gas: 35432)
+@sidequest/contracts:test: [PASS] test_gasBurner_showsC9001() (gas: 3242322)
+@sidequest/contracts:test: Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 7.25ms (4.82ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 3 tests for test/SafeAcceptSimulation.t.sol:SafeAcceptSimulationTest
+@sidequest/contracts:test: [PASS] test_mainnetPlanSimulatesPendingAcceptancesWithoutGo() (gas: 589054)
+@sidequest/contracts:test: [PASS] test_mainnetSendStillNeedsGo() (gas: 193241)
+@sidequest/contracts:test: [PASS] test_planRefusesWrongChainWithoutGo() (gas: 194024)
+@sidequest/contracts:test: Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 2.04ms (1.28ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 4 tests for test/sidequest/SeedPoolMath.t.sol:SeedPoolMathTest
+@sidequest/contracts:test: [PASS] testFuzz_repairCapRoundsOnlyAtTheRawUnit(uint256,uint256,uint256,bool) (runs: 512, μ: 6129, ~: 6047)
+@sidequest/contracts:test: [PASS] test_committedTestnetRatio_requiresTwentyThousandFactory() (gas: 4524)
+@sidequest/contracts:test: [PASS] test_fractionalRepairCap_factoryFirst() (gas: 4504)
+@sidequest/contracts:test: [PASS] test_fractionalRepairCap_quoteFirst() (gas: 4682)
+@sidequest/contracts:test: Suite result: ok. 4 passed; 0 failed; 0 skipped; finished in 18.32ms (18.19ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 4 tests for test/fork/SideUsdcRoute.fork.t.sol:SideUsdcRouteForkTest
+@sidequest/contracts:test: [SKIP] test_fork_delegatedWalletBuysInOneBatch() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_fork_monSellsForUsdc() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_fork_sideBoughtAndSoldWithUsdc() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_fork_usdcBuysExactMon() (gas: 0)
+@sidequest/contracts:test: Suite result: ok. 0 passed; 0 failed; 4 skipped; finished in 400.66µs (94.35µs CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 2 tests for test/sidequest/SidequestEvaluator.t.sol:SidequestEvaluatorStarvationTest
+@sidequest/contracts:test: [PASS] test_M2_gasStarvationChangesOnlyTheRoute() (gas: 17465218)
+@sidequest/contracts:test: [PASS] test_expensiveTransferDefersAtAnyGasLimit() (gas: 2962978)
+@sidequest/contracts:test: Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 62.03ms (59.33ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 41 tests for test/sidequest/SidequestEvaluator.t.sol:SidequestEvaluatorTest
+@sidequest/contracts:test: [PASS] test_C9001_bothCoreAttemptsBurnTheirBudgets_decisionStillLands() (gas: 9122925)
+@sidequest/contracts:test: [PASS] test_C9001_gasBurningRefundCannotRollBackACreatorRuling() (gas: 3814644)
+@sidequest/contracts:test: [PASS] test_C9001_gasBurningWorkerTransferCannotRollBackAWorkerRuling() (gas: 4544007)
+@sidequest/contracts:test: [PASS] test_C9003_pendingClaimAfterTheDeferral() (gas: 4208949)
+@sidequest/contracts:test: [PASS] test_C9003_pendingClaimBeforeTheDeferral() (gas: 4214524)
+@sidequest/contracts:test: [PASS] test_M1_reentrantSettleDuringRulingForCreatorCannotRecoverWorkerBond() (gas: 3552296)
+@sidequest/contracts:test: [PASS] test_M1_reentrantSettleDuringRulingForWorkerCannotRecoverCreatorBond() (gas: 3795021)
+@sidequest/contracts:test: [PASS] test_M1_reentryIntoTheEvaluatorIsRefused() (gas: 3306100)
+@sidequest/contracts:test: [PASS] test_M2_blocklistedWorker_acceptDefersThenSettlePaysThroughOwed() (gas: 3780709)
+@sidequest/contracts:test: [PASS] test_M2_blocklistedWorker_rulingStands_timeoutCannotRefund() (gas: 3763887)
+@sidequest/contracts:test: [PASS] test_M2_frozenToken_bothCallsFail_claimRefundLaterPaysWorker() (gas: 3398507)
+@sidequest/contracts:test: [PASS] test_M2_rulingForCreatorWithFrozenTokenStillRecordsAndSlashes() (gas: 3359420)
+@sidequest/contracts:test: [PASS] test_acceptRefusedWhileDisputed() (gas: 1846532)
+@sidequest/contracts:test: [PASS] test_alreadyRuled_secondRulingRefused() (gas: 2268989)
+@sidequest/contracts:test: [PASS] test_arbitrationCutoffAndTimeout() (gas: 2218928)
+@sidequest/contracts:test: [PASS] test_cancelRuling_revokesASignedRuling() (gas: 1907046)
+@sidequest/contracts:test: [PASS] test_coreFees_refuseActivation_liveJobPaysThroughHolding() (gas: 3136569)
+@sidequest/contracts:test: [PASS] test_coreGasTooLow_refusesBeforeRecording() (gas: 1738478)
+@sidequest/contracts:test: [PASS] test_customArbitratorRules_defaultCannot() (gas: 2415217)
+@sidequest/contracts:test: [PASS] test_dispute_onlyWorkerWithinWindow() (gas: 1784032)
+@sidequest/contracts:test: [PASS] test_evidence_boundToTheListingsPolicy() (gas: 1817851)
+@sidequest/contracts:test: [PASS] test_evidence_olderStatementCannotReplaceANewerOne() (gas: 2019582)
+@sidequest/contracts:test: [PASS] test_feedbackFailure_copiesAtMost32Bytes() (gas: 1934871)
+@sidequest/contracts:test: [PASS] test_feedback_failureNeverUndoesPayment_andGasFloor() (gas: 3587852)
+@sidequest/contracts:test: [PASS] test_missedDeliveryBurn() (gas: 2109381)
+@sidequest/contracts:test: [PASS] test_pause_deadlineInsideThePauseRefundsWithoutTheSlash() (gas: 2661924)
+@sidequest/contracts:test: [PASS] test_pause_deadlineOutsideEveryIntervalStillBurns() (gas: 2995276)
+@sidequest/contracts:test: [PASS] test_pause_endedBeforeTheDeadlineExcusesNothing() (gas: 2345908)
+@sidequest/contracts:test: [PASS] test_pause_history_boundaries() (gas: 4811617)
+@sidequest/contracts:test: [PASS] test_pause_laterPauseKeepsAnEarlierExemption_settleAfterExpiry() (gas: 2651433)
+@sidequest/contracts:test: [PASS] test_pause_laterPauseKeepsAnEarlierExemption_timeout() (gas: 2554691)
+@sidequest/contracts:test: [PASS] test_pausedCoreDefers_thenRetryPaysTheWorker() (gas: 2889472)
+@sidequest/contracts:test: [PASS] test_reject_onlyApproverWithinItsWindow() (gas: 1693181)
+@sidequest/contracts:test: [PASS] test_retryDeferred_refusesWhatIsNotDeferred() (gas: 1981919)
+@sidequest/contracts:test: [PASS] test_ruleForCreator_slashNeedsANamedViolation() (gas: 1849532)
+@sidequest/contracts:test: [PASS] test_ruleForCreator_upholdsViolationBurnsWorkerBond() (gas: 2464725)
+@sidequest/contracts:test: [PASS] test_ruleForWorker_badFaithBurnsCreatorBond() (gas: 2460954)
+@sidequest/contracts:test: [PASS] test_rulingNonces_perArbitrator() (gas: 5847201)
+@sidequest/contracts:test: [PASS] test_silencePaysAfterTheListingsOwnReviewWindow() (gas: 2143996)
+@sidequest/contracts:test: [PASS] test_thirdPartyApproverJudges() (gas: 1998195)
+@sidequest/contracts:test: [PASS] test_undisputedViolationBurns_noneDoesNot() (gas: 4038870)
+@sidequest/contracts:test: Suite result: ok. 41 passed; 0 failed; 0 skipped; finished in 94.29ms (91.22ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 43 tests for test/sidequest/SidequestHolding.t.sol:SidequestHoldingTest
+@sidequest/contracts:test: [PASS] test_C9002_claimTopUpRefund() (gas: 3139189)
+@sidequest/contracts:test: [PASS] test_C9002_falseAfterTransfer_cancel() (gas: 2901121)
+@sidequest/contracts:test: [PASS] test_C9002_shortReturnAfterTransfer_cancel() (gas: 2900132)
+@sidequest/contracts:test: [PASS] test_C9002_workerBonusAndTreasuryFeePushes() (gas: 3352822)
+@sidequest/contracts:test: [PASS] test_activate_budgetAuthMustNameNet() (gas: 1178330)
+@sidequest/contracts:test: [PASS] test_activate_feePerTier() (gas: 5894622)
+@sidequest/contracts:test: [PASS] test_activate_feeSnapshot_scheduleChangeNeverReachesLiveJob() (gas: 2367221)
+@sidequest/contracts:test: [PASS] test_activate_feeSnapshot_stakeChangeAfterActivationIgnored() (gas: 1564093)
+@sidequest/contracts:test: [PASS] test_activate_onceOnly() (gas: 1463252)
+@sidequest/contracts:test: [PASS] test_activate_reservationsIncludedInTier() (gas: 2152182)
+@sidequest/contracts:test: [PASS] test_activate_reservesWorkerBond_blocksWithdrawal() (gas: 1626894)
+@sidequest/contracts:test: [PASS] test_activate_roleConflicts() (gas: 2135790)
+@sidequest/contracts:test: [PASS] test_activate_selectionChecks() (gas: 1241630)
+@sidequest/contracts:test: [PASS] test_activate_tierCountsDelegatedBackingAndSnapshotsIt() (gas: 2374169)
+@sidequest/contracts:test: [PASS] test_activate_workerBondNeedsStake() (gas: 1103915)
+@sidequest/contracts:test: [PASS] test_activate_workerBondUsesBackingTheWorkerDoesNotOwn() (gas: 1871563)
+@sidequest/contracts:test: [PASS] test_admin_setEvaluatorOnce_defaultArbitratorOwnerOnly() (gas: 125008)
+@sidequest/contracts:test: [PASS] test_bondMovesAreEvaluatorOnly() (gas: 1450446)
+@sidequest/contracts:test: [PASS] test_cancel_onlyCreatorBeforeActivation() (gas: 1448607)
+@sidequest/contracts:test: [PASS] test_cancel_refundsInOneTransaction_noFee_bondReleased() (gas: 1196278)
+@sidequest/contracts:test: [PASS] test_fee_roundsUp_neverTakesTheWholeReward() (gas: 1348554)
+@sidequest/contracts:test: [PASS] test_owed_creatorRefusesRefund_bondsStillSettle() (gas: 1926063)
+@sidequest/contracts:test: [PASS] test_owed_gasBombBonusPushCannotBlockSettle() (gas: 3639020)
+@sidequest/contracts:test: [PASS] test_owed_treasuryRefusesFee_workerStillPaid() (gas: 3355188)
+@sidequest/contracts:test: [PASS] test_publish_M3_frontRunByAnotherCreatorDoesNotBlock() (gas: 2177714)
+@sidequest/contracts:test: [PASS] test_publish_arbitratorConflict() (gas: 569010)
+@sidequest/contracts:test: [PASS] test_publish_creatorBondNeedsUnreservedStake() (gas: 216944)
+@sidequest/contracts:test: [PASS] test_publish_customArbitratorAndDefaultChangeNeverTouchLiveListing() (gas: 1981118)
+@sidequest/contracts:test: [PASS] test_publish_escrowsRewardReservesBondFreezesTerms() (gas: 867582)
+@sidequest/contracts:test: [PASS] test_publish_expiryMustCoverEveryWindowPlusMargin() (gas: 748550)
+@sidequest/contracts:test: [PASS] test_publish_refusals() (gas: 169438)
+@sidequest/contracts:test: [PASS] test_publish_refusesShortfallToken() (gas: 902345)
+@sidequest/contracts:test: [PASS] test_publish_revokedHoldingPublishesNothing() (gas: 253465)
+@sidequest/contracts:test: [PASS] test_publish_windowBounds() (gas: 969560)
+@sidequest/contracts:test: [PASS] test_pushPayment_onlySelf() (gas: 53520)
+@sidequest/contracts:test: [PASS] test_settle_completed_feeToTreasury_bondsReleased() (gas: 2254044)
+@sidequest/contracts:test: [PASS] test_settle_earnedAfterThirdPartyClaimRefund() (gas: 2290117)
+@sidequest/contracts:test: [PASS] test_settle_needsGasForTheFullPushBudget() (gas: 2219548)
+@sidequest/contracts:test: [PASS] test_settle_onlyWhenTerminal_andOnce() (gas: 2297756)
+@sidequest/contracts:test: [PASS] test_termsOf() (gas: 1416643)
+@sidequest/contracts:test: [PASS] test_topUp_onlyWhileActive() (gas: 2068649)
+@sidequest/contracts:test: [PASS] test_topUp_paid_bonusMinusBonusFeeToWorker() (gas: 2667511)
+@sidequest/contracts:test: [PASS] test_topUp_refunded_pullPerContributor() (gas: 3176143)
+@sidequest/contracts:test: Suite result: ok. 43 passed; 0 failed; 0 skipped; finished in 51.38ms (46.76ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 2 tests for test/fork/SidequestRehearsal.t.sol:SidequestRehearsalForkTest
+@sidequest/contracts:test: [SKIP] test_fork_mainnet_freshCore_rolesToSafe_oneHire() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_fork_testnet_freshCore_rolesToSafe_oneHire() (gas: 0)
+@sidequest/contracts:test: Suite result: ok. 0 passed; 0 failed; 2 skipped; finished in 1.70ms (106.05µs CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 3 tests for test/testnet/SidequestTestnetPaymaster.t.sol:DeployTestnetPaymasterTest
+@sidequest/contracts:test: [PASS] test_deploysAgainstTheConfiguredEntryPointAndToken() (gas: 3142976)
+@sidequest/contracts:test: [PASS] test_refusesAChainWithoutTheEntryPoint() (gas: 1839460)
+@sidequest/contracts:test: [PASS] test_refusesMainnetAndOtherChains() (gas: 1848542)
+@sidequest/contracts:test: Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 2.08ms (1.66ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 23 tests for test/testnet/SidequestTestnetPaymaster.t.sol:SidequestTestnetPaymasterTest
+@sidequest/contracts:test: [PASS] testFuzz_postOp_costMath(uint256,uint256,uint256,uint256,uint256,uint256) (runs: 512, μ: 242901, ~: 263042)
+@sidequest/contracts:test: [PASS] testFuzz_validate_packsAnyWindow(uint48,uint48) (runs: 512, μ: 64527, ~: 64527)
+@sidequest/contracts:test: [PASS] test_constructor_recordsItsInputs() (gas: 104664)
+@sidequest/contracts:test: [PASS] test_constructor_refusesMainnet() (gas: 249175)
+@sidequest/contracts:test: [PASS] test_constructor_refusesZeroInputs() (gas: 1395566)
+@sidequest/contracts:test: [PASS] test_deposit_isOpenToAnyone() (gas: 135069)
+@sidequest/contracts:test: [PASS] test_getHash_coversChainAndPaymaster_notTheSignatures() (gas: 75484)
+@sidequest/contracts:test: [PASS] test_onlyTheEntryPoint_validatesAndCharges() (gas: 95956)
+@sidequest/contracts:test: [PASS] test_ownerFunctions_refuseEveryoneElse() (gas: 223756)
+@sidequest/contracts:test: [PASS] test_owner_setsPricing() (gas: 152368)
+@sidequest/contracts:test: [PASS] test_owner_stakesAndWithdraws() (gas: 526864)
+@sidequest/contracts:test: [PASS] test_postOp_chargesAtTheQuotedRate() (gas: 386772)
+@sidequest/contracts:test: [PASS] test_postOp_chargesTheTreasury_whenTheOpSucceededOrReverted() (gas: 269161)
+@sidequest/contracts:test: [PASS] test_postOp_revertsWhenTheSenderCannotPay() (gas: 127097)
+@sidequest/contracts:test: [PASS] test_postOp_zeroCost_movesNothing() (gas: 120690)
+@sidequest/contracts:test: [PASS] test_validate_doesNotRequireFundsYet() (gas: 185564)
+@sidequest/contracts:test: [PASS] test_validate_expiredWindow_isPassedToTheEntryPoint() (gas: 113020)
+@sidequest/contracts:test: [PASS] test_validate_garbageSignature_failsWithoutReverting() (gas: 83665)
+@sidequest/contracts:test: [PASS] test_validate_quoteBindsTheOperation() (gas: 640323)
+@sidequest/contracts:test: [PASS] test_validate_quoteBindsThePaymaster() (gas: 1078248)
+@sidequest/contracts:test: [PASS] test_validate_refusesMalformedPaymasterData() (gas: 97685)
+@sidequest/contracts:test: [PASS] test_validate_signedQuote_returnsWindowAndRateContext() (gas: 65783)
+@sidequest/contracts:test: [PASS] test_validate_wrongSigner_setsFailureBit_keepsWindowAndContext() (gas: 87496)
+@sidequest/contracts:test: Suite result: ok. 23 passed; 0 failed; 0 skipped; finished in 152.38ms (151.30ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 3 tests for test/Signatures.t.sol:SignaturesTest
+@sidequest/contracts:test: [PASS] test_contractWalletFallbackAndRefusals() (gas: 482822)
+@sidequest/contracts:test: [PASS] test_malleableAndInvalidRecoveryAreRefused() (gas: 74712)
+@sidequest/contracts:test: [PASS] test_rawSignatureWorksBeforeAndAfter7702Delegation() (gas: 226212)
+@sidequest/contracts:test: Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 942.74µs (802.44µs CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 39 tests for test/sidequest/StakeVault.t.sol:StakeVaultTest
+@sidequest/contracts:test: [PASS] testFuzz_flowsConserve(uint96,uint96,uint96,uint96,bool) (runs: 512, μ: 676429, ~: 665588)
+@sidequest/contracts:test: [PASS] testFuzz_slashAfterRecipientChange_onlyNewRecipientPaid(uint96) (runs: 512, μ: 597329, ~: 597278)
+@sidequest/contracts:test: [PASS] test_bootstrap_acceptedHoldingAlsoOpensStakingAndClosesBootstrap() (gas: 459580)
+@sidequest/contracts:test: [PASS] test_bootstrap_onceOnly() (gas: 79170)
+@sidequest/contracts:test: [PASS] test_bootstrap_stakingClosedUntilBootstrapThenBootstrapWorks() (gas: 657166)
+@sidequest/contracts:test: [PASS] test_constructor_refusesZeroSlashRecipient() (gas: 20941)
+@sidequest/contracts:test: [PASS] test_delegateWithPermit_backingAnotherAccountKeepsSignerOwnership() (gas: 437176)
+@sidequest/contracts:test: [PASS] test_delegateWithPermit_invalidPermitWithoutAllowanceLeavesBooksUntouched() (gas: 349880)
+@sidequest/contracts:test: [PASS] test_deny_neverStopsExistingReservationsSettling() (gas: 554667)
+@sidequest/contracts:test: [PASS] test_deny_protectsStakeReleasedAfterANewHoldingArrives() (gas: 974141)
+@sidequest/contracts:test: [PASS] test_holdingCannotTouchAnotherHoldingsReservation() (gas: 805353)
+@sidequest/contracts:test: [PASS] test_holding_delayOutlastsCooldown() (gas: 516051)
+@sidequest/contracts:test: [PASS] test_holding_handoverDropsTheOldOwnersProposal() (gas: 314544)
+@sidequest/contracts:test: [PASS] test_holding_onlyOwnerProposesCancelsRevokes() (gas: 126097)
+@sidequest/contracts:test: [PASS] test_holding_proposalExpiresAfterTheGrace() (gas: 133515)
+@sidequest/contracts:test: [PASS] test_holding_proposalRules() (gas: 259519)
+@sidequest/contracts:test: [PASS] test_holding_proposeAcceptAfterEightDays_anyoneAccepts() (gas: 237377)
+@sidequest/contracts:test: [PASS] test_holding_replacedProposalIsCancelledVisibly() (gas: 137606)
+@sidequest/contracts:test: [PASS] test_holding_revokeDropsAPendingProposalForTheSameHolding() (gas: 344480)
+@sidequest/contracts:test: [PASS] test_holding_revokeOfAnAuthorizedHoldingClearsItsProposal() (gas: 290865)
+@sidequest/contracts:test: [PASS] test_ownership_twoStep() (gas: 160825)
+@sidequest/contracts:test: [PASS] test_release_returnsToAvailable_cappedAtOwnReservation() (gas: 543524)
+@sidequest/contracts:test: [PASS] test_reserve_limitedToAvailable() (gas: 515868)
+@sidequest/contracts:test: [PASS] test_reserve_onlyAuthorizedHolding() (gas: 326421)
+@sidequest/contracts:test: [PASS] test_revoke_stopsReservingButExistingReservationsStillSettle() (gas: 749430)
+@sidequest/contracts:test: [PASS] test_setSlashRecipient_emitsPreviousAndRecipient() (gas: 77809)
+@sidequest/contracts:test: [PASS] test_setSlashRecipient_ownerOnly() (gas: 70464)
+@sidequest/contracts:test: [PASS] test_setSlashRecipient_refusesVault() (gas: 70765)
+@sidequest/contracts:test: [PASS] test_setSlashRecipient_refusesZero() (gas: 70328)
+@sidequest/contracts:test: [PASS] test_slash_sendsReservedSideToRecipientOnly() (gas: 769250)
+@sidequest/contracts:test: [PASS] test_stakeFor_paidByCallerCreditsAccount() (gas: 323701)
+@sidequest/contracts:test: [PASS] test_stakeWithPermit_andToleratesAFrontRunPermit() (gas: 438811)
+@sidequest/contracts:test: [PASS] test_stakeWithPermit_plain() (gas: 395412)
+@sidequest/contracts:test: [PASS] test_stake_creditsAndCountsForTier() (gas: 311781)
+@sidequest/contracts:test: [PASS] test_stake_refusesZero() (gas: 61065)
+@sidequest/contracts:test: [PASS] test_undelegate_bondsAllowQueueButBlockWithdrawal() (gas: 719045)
+@sidequest/contracts:test: [PASS] test_unstake_cancelRestoresStake() (gas: 504693)
+@sidequest/contracts:test: [PASS] test_unstake_cooldownSevenDays() (gas: 721937)
+@sidequest/contracts:test: [PASS] test_unstake_secondRequestRestartsCooldown() (gas: 374831)
+@sidequest/contracts:test: Suite result: ok. 39 passed; 0 failed; 0 skipped; finished in 228.69ms (227.32ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 24 tests for test/sidequest/StakeVaultDelegation.t.sol:StakeVaultDelegationTest
+@sidequest/contracts:test: [PASS] testFuzz_depositSlashRedeemCannotCreateValue(uint96,uint96,uint96,uint96) (runs: 512, μ: 1245742, ~: 1249108)
+@sidequest/contracts:test: [PASS] testFuzz_proRataLossWithinOneWei(uint96,uint96,uint96,bool) (runs: 512, μ: 749801, ~: 710654)
+@sidequest/contracts:test: [PASS] test_cancel_eventRestoresSlashedActiveValue() (gas: 622930)
+@sidequest/contracts:test: [PASS] test_delegateFor_additionDoesNotRestartQueueOrChangeOwner() (gas: 441122)
+@sidequest/contracts:test: [PASS] test_delegateFor_payerIsNotDelegatorOrAccount() (gas: 526422)
+@sidequest/contracts:test: [PASS] test_delegate_directTransfersCannotInflateSharePrice() (gas: 455111)
+@sidequest/contracts:test: [PASS] test_delegate_failedTransferRollsBackAllBooks() (gas: 225528)
+@sidequest/contracts:test: [PASS] test_delegate_ownerCanExitButAccountCannotTakePosition() (gas: 632904)
+@sidequest/contracts:test: [PASS] test_delegate_poolsStayIsolated() (gas: 740532)
+@sidequest/contracts:test: [PASS] test_delegate_roundsSharesDownAfterSlash() (gas: 686681)
+@sidequest/contracts:test: [PASS] test_delegate_zeroAddressesRejected() (gas: 125184)
+@sidequest/contracts:test: [PASS] test_fullSlash_resetsGenerationAndNeverRevivesOldPositions() (gas: 1147519)
+@sidequest/contracts:test: [PASS] test_fullSlash_staleQueueCannotCancelOrWithdraw() (gas: 900640)
+@sidequest/contracts:test: [PASS] test_inflatedSharesUseFullPrecisionForBackingAndRedemption() (gas: 1581472)
+@sidequest/contracts:test: [PASS] test_queuedSharesStaySlashableAndStillBondedUntilRelease() (gas: 981576)
+@sidequest/contracts:test: [PASS] test_request_eventTracksWholeQueueAndCurrentValue() (gas: 592020)
+@sidequest/contracts:test: [PASS] test_request_onlyOwnActiveSharesAndNonzero() (gas: 379852)
+@sidequest/contracts:test: [PASS] test_shareCap_isolatedPoolDoesNotPreventOtherBacking() (gas: 1491579)
+@sidequest/contracts:test: [PASS] test_shareCap_nearTotalSlashesStillAllowOneCooldownExitAndRecovery() (gas: 1858466)
+@sidequest/contracts:test: [PASS] test_shareCap_otherHoldingBondSurvivesUntilReleaseThenWholeExitWorks() (gas: 2224081)
+@sidequest/contracts:test: [PASS] test_vetoBelongsToBackedAccountRatherThanDelegator() (gas: 546376)
+@sidequest/contracts:test: [PASS] test_withdraw_dustAndFinalShareDrainExactAssets() (gas: 1306969)
+@sidequest/contracts:test: [PASS] test_withdraw_eventUsesSlashedValueAndPaysOnlyOwner() (gas: 665505)
+@sidequest/contracts:test: [PASS] test_withdraw_keepsExactHeadroomForExistingBond() (gas: 719116)
+@sidequest/contracts:test: Suite result: ok. 24 passed; 0 failed; 0 skipped; finished in 337.97ms (336.48ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 1 test for test/sidequest/StakeVaultInvariants.t.sol:StakeVaultDelegationInvariantsTest
+@sidequest/contracts:test: [PASS]
+@sidequest/contracts:test: StakeVaultDelegationInvariantsTest invariants:
+@sidequest/contracts:test: [PASS] invariant_booksAndPoolSharesBalance
+@sidequest/contracts:test: [PASS] invariant_depositsOnlyReturnExistingAssets
+@sidequest/contracts:test:  StakeVaultDelegationInvariantsTest invariants (runs: 64, calls: 2048, reverts: 0)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: ╭-----------------------+----------------------+-------+---------+----------╮
+@sidequest/contracts:test: | Contract              | Selector             | Calls | Reverts | Discards |
+@sidequest/contracts:test: +===========================================================================+
+@sidequest/contracts:test: | DelegatedVaultHandler | cancel               | 189   | 0       | 0        |
+@sidequest/contracts:test: |-----------------------+----------------------+-------+---------+----------|
+@sidequest/contracts:test: | DelegatedVaultHandler | changeSlashRecipient | 189   | 0       | 0        |
+@sidequest/contracts:test: |-----------------------+----------------------+-------+---------+----------|
+@sidequest/contracts:test: | DelegatedVaultHandler | delegate             | 162   | 0       | 0        |
+@sidequest/contracts:test: |-----------------------+----------------------+-------+---------+----------|
+@sidequest/contracts:test: | DelegatedVaultHandler | forfeit              | 196   | 0       | 0        |
+@sidequest/contracts:test: |-----------------------+----------------------+-------+---------+----------|
+@sidequest/contracts:test: | DelegatedVaultHandler | fullSlash            | 178   | 0       | 0        |
+@sidequest/contracts:test: |-----------------------+----------------------+-------+---------+----------|
+@sidequest/contracts:test: | DelegatedVaultHandler | release              | 183   | 0       | 0        |
+@sidequest/contracts:test: |-----------------------+----------------------+-------+---------+----------|
+@sidequest/contracts:test: | DelegatedVaultHandler | request              | 211   | 0       | 0        |
+@sidequest/contracts:test: |-----------------------+----------------------+-------+---------+----------|
+@sidequest/contracts:test: | DelegatedVaultHandler | reserve              | 178   | 0       | 0        |
+@sidequest/contracts:test: |-----------------------+----------------------+-------+---------+----------|
+@sidequest/contracts:test: | DelegatedVaultHandler | slash                | 177   | 0       | 0        |
+@sidequest/contracts:test: |-----------------------+----------------------+-------+---------+----------|
+@sidequest/contracts:test: | DelegatedVaultHandler | warp                 | 185   | 0       | 0        |
+@sidequest/contracts:test: |-----------------------+----------------------+-------+---------+----------|
+@sidequest/contracts:test: | DelegatedVaultHandler | withdraw             | 200   | 0       | 0        |
+@sidequest/contracts:test: ╰-----------------------+----------------------+-------+---------+----------╯
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 1.03s (1.02s CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 1 test for test/sidequest/StakeVaultLedger.t.sol:StakeVaultLedgerTest
+@sidequest/contracts:test: [PASS] test_eventsReconstructEveryPoolAndPositionAcrossReset() (gas: 4278619)
+@sidequest/contracts:test: Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 3.00ms (1.95ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 5 tests for test/testnet/TestnetFaucet.t.sol:TestnetFaucetTest
+@sidequest/contracts:test: [PASS] test_constructor_refusesMainnet() (gas: 21290)
+@sidequest/contracts:test: [PASS] test_drip_coolsDownPerRecipient() (gas: 744935)
+@sidequest/contracts:test: [PASS] test_drip_givesEveryTokenOnce_anyoneMayPayTheGas() (gas: 385820)
+@sidequest/contracts:test: [PASS] test_drip_refusesWhenEmpty_andZeroRecipient() (gas: 825147)
+@sidequest/contracts:test: [PASS] test_owner_setsAmounts_andWithdraws() (gas: 470159)
+@sidequest/contracts:test: Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 1.36ms (710.15µs CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 6 tests for test/fork/TestnetPaymasterFork.t.sol:TestnetPaymasterForkTest
+@sidequest/contracts:test: [SKIP] test_batchedApprove_paysGasInUsdc() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_postOpGas_fitsTheLimit() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_quoteFromAnotherKey_isRefused() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_revertedCalls_stillPay() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_unpaidOperation_isUndone_andCostsOnlyTheDeposit() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_wiredToTheConfiguredEntryPoint() (gas: 0)
+@sidequest/contracts:test: Suite result: ok. 0 passed; 0 failed; 6 skipped; finished in 500.93µs (74.71µs CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 2 tests for test/fork/UniswapRouterSwap.fork.t.sol:UniswapRouterSwapForkTest
+@sidequest/contracts:test: [SKIP] test_fork_mainnet_routerTakesOriginalLayout() (gas: 0)
+@sidequest/contracts:test: [SKIP] test_fork_testnet_routerTakesMinHopLayout() (gas: 0)
+@sidequest/contracts:test: Suite result: ok. 0 passed; 0 failed; 2 skipped; finished in 494.43µs (36.38µs CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 7 tests for test/sidequest/V1Activation.t.sol:V1ActivationTest
+@sidequest/contracts:test: [PASS] test_activation_activateByMustPrecedeDeliveryDeadline() (gas: 805762)
+@sidequest/contracts:test: [PASS] test_activation_afterRevocationRefused_creatorCanStillCancel() (gas: 1421687)
+@sidequest/contracts:test: [PASS] test_activation_atActivateByAllowed_afterRefused() (gas: 1484734)
+@sidequest/contracts:test: [PASS] test_activation_creatorCannotActivateOnTheWorkersBehalf() (gas: 788460)
+@sidequest/contracts:test: [PASS] test_activation_isAtomic() (gas: 1944440)
+@sidequest/contracts:test: [PASS] test_activation_lapsedSelectionLetsTheNextApplicantActivate() (gas: 1818136)
+@sidequest/contracts:test: [PASS] test_activation_registryWalletChangeAfterwardsLeavesPayoutUnchanged() (gas: 1984536)
+@sidequest/contracts:test: Suite result: ok. 7 passed; 0 failed; 0 skipped; finished in 7.55ms (5.17ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 3 tests for test/sidequest/V1ArbitraryTokens.t.sol:V1ArbitraryTokensTest
+@sidequest/contracts:test: [PASS] test_aTokenWithoutReturnValues_worksEndToEnd() (gas: 2831688)
+@sidequest/contracts:test: [PASS] test_aTransferHookCannotReenterHolding() (gas: 1983918)
+@sidequest/contracts:test: [PASS] test_anyErc20IsAReward_withoutAnAllowlist() (gas: 2779882)
+@sidequest/contracts:test: Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 5.08ms (2.71ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 3 tests for test/sidequest/V1Evidence.t.sol:V1EvidenceTest
+@sidequest/contracts:test: [PASS] test_differingConclusionsStayInspectable() (gas: 1902469)
+@sidequest/contracts:test: [PASS] test_rightSignerWrongPolicyRejected_expiredRefused() (gas: 1848969)
+@sidequest/contracts:test: [PASS] test_twoVerifiersSameStatementBothRecorded_sameVerifierIdempotent() (gas: 2215220)
+@sidequest/contracts:test: Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 6.26ms (4.08ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 27 tests for test/sidequest/V1Lifecycle.t.sol:V1LifecycleTest
+@sidequest/contracts:test: [PASS] testFuzz_ruling_conservesBothAssets(bool,bool,uint96,uint96) (runs: 512, μ: 2995908, ~: 2979104)
+@sidequest/contracts:test: [PASS] test_R114_02_acceptRefused_thenBadFaithRulingBurnsCreatorBond() (gas: 2340639)
+@sidequest/contracts:test: [PASS] test_R114_02_reconsiderBeforeDispute_thenDisputeRefused() (gas: 2101524)
+@sidequest/contracts:test: [PASS] test_R114_02_rulingFirstThenAcceptRefused() (gas: 2172742)
+@sidequest/contracts:test: [PASS] test_R114_03_arbitrationTimeoutAfterExpiryRefundsCreatorBurnsNothing() (gas: 2223568)
+@sidequest/contracts:test: [PASS] test_R114_03_lateSubmissionEarnsNoSilencePayment() (gas: 1747663)
+@sidequest/contracts:test: [PASS] test_R114_03_otherEscrowsUntouched() (gas: 3226264)
+@sidequest/contracts:test: [PASS] test_R114_03_refundFirst_thenSilenceCompletionRefused() (gas: 2132279)
+@sidequest/contracts:test: [PASS] test_R114_03_silenceCompletionFirst_thenRefundRefused() (gas: 2038667)
+@sidequest/contracts:test: [PASS] test_R114_03_undisputedRejectionAfterExpiryRefundsCreator() (gas: 2111552)
+@sidequest/contracts:test: [PASS] test_adversarial_claimRefundCannotPreemptSettlement() (gas: 2284027)
+@sidequest/contracts:test: [PASS] test_adversarial_milestoneClaimCannotBlockRefund() (gas: 2121914)
+@sidequest/contracts:test: [PASS] test_adversarial_noSubmissionBeforeActivation() (gas: 771967)
+@sidequest/contracts:test: [PASS] test_arbitration_ruleAtExactDeadline_lateRuleFails() (gas: 2528419)
+@sidequest/contracts:test: [PASS] test_auth_replayRejected() (gas: 1443220)
+@sidequest/contracts:test: [PASS] test_auth_workerCannotUnderfundThemselves() (gas: 1239587)
+@sidequest/contracts:test: [PASS] test_auth_wrongSignerCannotSetTheBudget() (gas: 1242847)
+@sidequest/contracts:test: [PASS] test_delegatorExitsAfterSuccessfulHireWithoutTakingWorkerPay() (gas: 2633121)
+@sidequest/contracts:test: [PASS] test_happyPath_directWorker() (gas: 2253997)
+@sidequest/contracts:test: [PASS] test_happyPath_relayedSubmission() (gas: 2056170)
+@sidequest/contracts:test: [PASS] test_moneyPath_terminalRejectAfterFundingReturnsBothBonds() (gas: 2230328)
+@sidequest/contracts:test: [PASS] test_moneyPath_thirdPartyClaimRefund_noShowBondExpires() (gas: 1968284)
+@sidequest/contracts:test: [PASS] test_review_acceptStaysOpenLate() (gas: 1953338)
+@sidequest/contracts:test: [PASS] test_review_rejectAtExactDeadline_lateRejectFails() (gas: 1794195)
+@sidequest/contracts:test: [PASS] test_rule_onlyArbitratorAndOnlyWhenDisputed() (gas: 1844548)
+@sidequest/contracts:test: [PASS] test_ruling_matrix() (gas: 9123931)
+@sidequest/contracts:test: [PASS] test_settle_notBeforeTerminal() (gas: 1561000)
+@sidequest/contracts:test: Suite result: ok. 27 passed; 0 failed; 0 skipped; finished in 744.95ms (742.21ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 16 tests for test/sidequest/V1Slashing.t.sol:V1SlashingTest
+@sidequest/contracts:test: [PASS] testFuzz_qualitySlash_proRataAcrossThreeOwners(uint96,uint96) (runs: 512, μ: 2633325, ~: 2633238)
+@sidequest/contracts:test: [PASS] test_arbitrationTimeout_neverBurnsAndWritesNoFeedback() (gas: 2257801)
+@sidequest/contracts:test: [PASS] test_disputeRefusedOnUnactivatedOrSettledJobs() (gas: 2614319)
+@sidequest/contracts:test: [PASS] test_guard_burnThenClaimRefundRefused() (gas: 1999041)
+@sidequest/contracts:test: [PASS] test_guard_claimRefundThenSettleReleasesExpiredNoShow() (gas: 1877950)
+@sidequest/contracts:test: [PASS] test_guard_lateSubmissionThenClaimRefundReleasesExpiredBond() (gas: 1997713)
+@sidequest/contracts:test: [PASS] test_guard_pendingMilestoneClaimDoesNotEscapeTheBurn() (gas: 2025257)
+@sidequest/contracts:test: [PASS] test_late_approverAcceptsBeforeTheBurn() (gas: 2020380)
+@sidequest/contracts:test: [PASS] test_late_burnBeforeTheApproverAccepts() (gas: 2047690)
+@sidequest/contracts:test: [PASS] test_late_noSilencePaymentNoRejection() (gas: 1609729)
+@sidequest/contracts:test: [PASS] test_noShowSlash_sharedProRataIncludingQueuedDelegator() (gas: 2251721)
+@sidequest/contracts:test: [PASS] test_signedRuling_anyRelayerEqualsRule() (gas: 2256668)
+@sidequest/contracts:test: [PASS] test_signedRuling_invalidCombinationRefused() (gas: 1918878)
+@sidequest/contracts:test: [PASS] test_signedRuling_sameCutoffAsRule_atExactCutoffBeatsTheTimeout() (gas: 4087740)
+@sidequest/contracts:test: [PASS] test_timely_submissionCannotBeBurned() (gas: 1628766)
+@sidequest/contracts:test: [PASS] test_undisputed_noneQualityFalsified() (gas: 5904922)
+@sidequest/contracts:test: Suite result: ok. 16 passed; 0 failed; 0 skipped; finished in 642.03ms (638.38ms CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 31 tests for test/sidequest/Recipe.t.sol:RecipeTest
+@sidequest/contracts:test: [PASS] test_guardChain_rpcMustMatchTheConfig() (gas: 208377)
+@sidequest/contracts:test: [PASS] test_load_sidequestInputBlock() (gas: 67127)
+@sidequest/contracts:test: [PASS] test_output_duplicateGetterMismatch_preservesConfig() (gas: 18139487)
+@sidequest/contracts:test: [PASS] test_output_eachInputClockMismatch_preservesConfig() (gas: 19077932)
+@sidequest/contracts:test: [PASS] test_output_mainnetRewardTokensKeepUsdc() (gas: 18652769)
+@sidequest/contracts:test: [PASS] test_output_mainnetShape() (gas: 18241711)
+@sidequest/contracts:test: [PASS] test_output_mainnetShape_refusesFastClocksEvenWhenInputMatches() (gas: 18272495)
+@sidequest/contracts:test: [PASS] test_output_refusesUnknownKeys() (gas: 18353789)
+@sidequest/contracts:test: [PASS] test_output_shippedPromotedTestnet_refusesAnotherDeployment() (gas: 18070729)
+@sidequest/contracts:test: [PASS] test_output_slashRecipientMismatch_preservesConfig() (gas: 18109912)
+@sidequest/contracts:test: [PASS] test_output_testnetShape_recordsFreshCoreAndPair() (gas: 18434007)
+@sidequest/contracts:test: [PASS] test_promotion_candidateRoundTrip() (gas: 18056258)
+@sidequest/contracts:test: [PASS] test_promotion_changedSlashRecipientRefuses() (gas: 18337999)
+@sidequest/contracts:test: [PASS] test_promotion_dustDoesNotBlock() (gas: 18555094)
+@sidequest/contracts:test: [PASS] test_promotion_isIdempotent() (gas: 18784126)
+@sidequest/contracts:test: [PASS] test_promotion_mainnetTreasuryAndSlashRecipientAreTheSafe() (gas: 40520342)
+@sidequest/contracts:test: [PASS] test_promotion_readsEveryImmutableClock() (gas: 20096628)
+@sidequest/contracts:test: [PASS] test_promotion_receiptBlocks() (gas: 18430234)
+@sidequest/contracts:test: [PASS] test_promotion_refusesAnIncompleteHandover() (gas: 17013877)
+@sidequest/contracts:test: [PASS] test_promotion_repeatedRunChecksCurrentCoreState() (gas: 27875700)
+@sidequest/contracts:test: [PASS] test_promotion_verifyLiveState() (gas: 20584991)
+@sidequest/contracts:test: [PASS] test_recipe_checkRefusals() (gas: 803942)
+@sidequest/contracts:test: [PASS] test_recipe_checkRefusesClocksWithNoBondedHire() (gas: 383842)
+@sidequest/contracts:test: [PASS] test_recipe_mainnetDefaultArbitratorIsTheFreshRole() (gas: 40857163)
+@sidequest/contracts:test: [PASS] test_recipe_mainnetPinsTheNadFunToken() (gas: 475595)
+@sidequest/contracts:test: [PASS] test_recipe_mainnetTreasuryAndSlashRecipientAreTheSafe() (gas: 633716)
+@sidequest/contracts:test: [PASS] test_recipe_oneHire() (gas: 20994164)
+@sidequest/contracts:test: [PASS] test_recipe_refusesZeroSlashRecipient() (gas: 92433)
+@sidequest/contracts:test: [PASS] test_recipe_retiredKeysMatchTheApiDenylist() (gas: 87571)
+@sidequest/contracts:test: [PASS] test_recipe_stepsWithThirdPartyGaps_handover() (gas: 18765861)
+@sidequest/contracts:test: [PASS] test_recipe_testnetDefaultArbitratorIsFree() (gas: 278954)
+@sidequest/contracts:test: Suite result: ok. 31 passed; 0 failed; 0 skipped; finished in 3.54s (3.60s CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 1 test for test/fork/SafeAcceptRehearsal.t.sol:SafeAcceptRehearsalForkTest
+@sidequest/contracts:test: [SKIP] test_fork_testnet_safeAcceptsAllFour() (gas: 0)
+@sidequest/contracts:test: Suite result: ok. 0 passed; 0 failed; 1 skipped; finished in 1.23ms (49.70µs CPU time)
+@sidequest/contracts:test: 
+@sidequest/contracts:test: Ran 43 test suites in 6.74s (10.12s CPU time): 436 tests passed, 0 failed, 22 skipped (458 total tests)
+
+ Tasks:    18 successful, 18 total
+Cached:    17 cached, 18 total
+  Time:    1m4.162s 
+
+$ bun tools/test-scripts.ts && bun test scripts/ci crew/bin/crew-wake.test.ts
+TAP version 13
+# Subtest: wallet URI decoder retains CommonJS, plus, Unicode and malformed-input compatibility
+ok 1 - wallet URI decoder retains CommonJS, plus, Unicode and malformed-input compatibility
+  ---
+  duration_ms: 1.994791
+  type: 'test'
+  ...
+# Subtest: malformed percent runs finish without recursive decoding or stack exhaustion
+ok 2 - malformed percent runs finish without recursive decoding or stack exhaustion
+  ---
+  duration_ms: 82.676761
+  type: 'test'
+  ...
+# Subtest: the checked-in Commons App matches its renderer, styles and dependencies
+ok 3 - the checked-in Commons App matches its renderer, styles and dependencies
+  ---
+  duration_ms: 145.934184
+  type: 'test'
+  ...
+# Subtest: public archive reads Explore jobs, offers and recent quote requests without credentials
+ok 4 - public archive reads Explore jobs, offers and recent quote requests without credentials
+  ---
+  duration_ms: 9.436657
+  type: 'test'
+  ...
+# Subtest: stage hosts and output names are explicit and deterministic
+ok 5 - stage hosts and output names are explicit and deterministic
+  ---
+  duration_ms: 1.562205
+  type: 'test'
+  ...
+# Subtest: prod reads the production stage public origin
+ok 6 - prod reads the production stage public origin
+  ---
+  duration_ms: 1.461912
+  type: 'test'
+  ...
+# Subtest: tenant offers and quote requests are captured through public board-prefixed reads
+ok 7 - tenant offers and quote requests are captured through public board-prefixed reads
+  ---
+  duration_ms: 1.100968
+  type: 'test'
+  ...
+# Subtest: deployment drift and a public service failure refuse capture
+ok 8 - deployment drift and a public service failure refuse capture
+  ---
+  duration_ms: 1.215596
+  type: 'test'
+  ...
+# Subtest: known public list limits and duplicate rows refuse a silently incomplete archive
+ok 9 - known public list limits and duplicate rows refuse a silently incomplete archive
+  ---
+  duration_ms: 7.191115
+  type: 'test'
+  ...
+# Subtest: archive output refuses overwrites and writes a reviewable JSON file
+ok 10 - archive output refuses overwrites and writes a reviewable JSON file
+  ---
+  duration_ms: 1.752102
+  type: 'test'
+  ...
+# Subtest: malformed public chain facts fail closed before an archive is written
+ok 11 - malformed public chain facts fail closed before an archive is written
+  ---
+  duration_ms: 0.479508
+  type: 'test'
+  ...
+# Subtest: every action needs an explicit generation label
+ok 12 - every action needs an explicit generation label
+  ---
+  duration_ms: 2.131533
+  type: 'test'
+  ...
+# Subtest: archive keeps every top-level key and only the reward tokens of the old deployment
+ok 13 - archive keeps every top-level key and only the reward tokens of the old deployment
+  ---
+  duration_ms: 0.232954
+  type: 'test'
+  ...
+# Subtest: sending actions refuse without SIDEQUEST_TESTNET_SEND and plans never broadcast
+ok 14 - sending actions refuse without SIDEQUEST_TESTNET_SEND and plans never broadcast
+  ---
+  duration_ms: 0.372541
+  type: 'test'
+  ...
+# Subtest: deploy refuses a promoted config, an existing candidate and a foreign deployer
+ok 15 - deploy refuses a promoted config, an existing candidate and a foreign deployer
+  ---
+  duration_ms: 0.4804
+  type: 'test'
+  ...
+# Subtest: accept signs as the Safe owner; promote and verify use no keystore
+ok 16 - accept signs as the Safe owner; promote and verify use no keystore
+  ---
+  duration_ms: 0.173131
+  type: 'test'
+  ...
+# Subtest: archive, deploy, promote and accept share an exclusive generation operation lock
+ok 17 - archive, deploy, promote and accept share an exclusive generation operation lock
+  ---
+  duration_ms: 2.073204
+  type: 'test'
+  ...
+# Subtest: a pre-existing lock is preserved; errors release only the acquired lock
+ok 18 - a pre-existing lock is preserved; errors release only the acquired lock
+  ---
+  duration_ms: 1.01331
+  type: 'test'
+  ...
+# Subtest: explicit process exit releases the operation lock
+ok 19 - explicit process exit releases the operation lock
+  ---
+  duration_ms: 241.326184
+  type: 'test'
+  ...
+# Subtest: an existing archive refuses without overwriting it or resetting the config
+ok 20 - an existing archive refuses without overwriting it or resetting the config
+  ---
+  duration_ms: 1.819256
+  type: 'test'
+  ...
+# Subtest: the exclusive archive preserves the exact bytes of the single config read
+ok 21 - the exclusive archive preserves the exact bytes of the single config read
+  ---
+  duration_ms: 248.1067
+  type: 'test'
+  ...
+# Subtest: G1d defaults preserve the existing manifest and journal paths; G1e isolates both
+ok 22 - G1d defaults preserve the existing manifest and journal paths; G1e isolates both
+  ---
+  duration_ms: 2.404961
+  type: 'test'
+  ...
+# Subtest: generation/source mismatches cannot reuse checksummed manifests or signed journals
+ok 23 - generation/source mismatches cannot reuse checksummed manifests or signed journals
+  ---
+  duration_ms: 27.865929
+  type: 'test'
+  ...
+# Subtest: path traversal, equal generations and duplicate CLI flags fail closed
+ok 24 - path traversal, equal generations and duplicate CLI flags fail closed
+  ---
+  duration_ms: 0.671097
+  type: 'test'
+  ...
+# Subtest: G1e captures the explicit 20,000 SIDE allocation without reading Kris liquid G1d balance
+ok 25 - G1e captures the explicit 20,000 SIDE allocation without reading Kris liquid G1d balance
+  ---
+  duration_ms: 2.258872
+  type: 'test'
+  ...
+# Subtest: all 15 committed G1d vault event types decode without dropping source logs
+ok 26 - all 15 committed G1d vault event types decode without dropping source logs
+  ---
+  duration_ms: 6.825505
+  type: 'test'
+  ...
+# Subtest: a generation is required and all setup operation IDs change with it
+ok 27 - a generation is required and all setup operation IDs change with it
+  ---
+  duration_ms: 4.535194
+  type: 'test'
+  ...
+# Subtest: the configured Safe is reused after the deployment config is reset
+ok 28 - the configured Safe is reused after the deployment config is reset
+  ---
+  duration_ms: 1.336214
+  type: 'test'
+  ...
+# Subtest: the faucet plan names its sender, constructor arguments, SIDE source and config key
+ok 29 - the faucet plan names its sender, constructor arguments, SIDE source and config key
+  ---
+  duration_ms: 2.041694
+  type: 'test'
+  ...
+# Subtest: faucet without send enabled prints the plan with no RPC, keys, artifact or journal
+ok 30 - faucet without send enabled prints the plan with no RPC, keys, artifact or journal
+  ---
+  duration_ms: 256.246574
+  type: 'test'
+  ...
+# Subtest: a stage run reads that stage key file and a missing file refuses
+ok 31 - a stage run reads that stage key file and a missing file refuses
+  ---
+  duration_ms: 5.079271
+  type: 'test'
+  ...
+# Subtest: a local run reads .env.local and an unknown stage reads no file
+ok 32 - a local run reads .env.local and an unknown stage reads no file
+  ---
+  duration_ms: 0.751383
+  type: 'test'
+  ...
+1..32
+# tests 32
+# suites 0
+# pass 32
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 821.595605
+bun test v1.4.2 (744846f84)
+
+crew/bin/crew-wake.test.ts:
+(pass) a settled rejection no longer wakes the worker, but one it may still dispute does [0.46ms]
+
+scripts/ci/smoke.test.ts:
+ok dev https://dev.sidequest.exchange
+(pass) smoke checks both anonymous method-specific MCP requests [3.87ms]
+(pass) smoke rejects cards replaced by HTML, invalid catalog and missing public proof [1.48ms]
+(pass) smoke refuses an unexpected runtime, closed writes, foreign issuer or missing bearer challenge [0.64ms]
+(pass) a drained mainnet build serves closed writes, and smoke expects exactly what the pin says [0.04ms]
+(pass) smoke refuses an unbuilt or stalled index [0.21ms]
+ok dev https://dev.sidequest.exchange
+(pass) smoke checks the docs: nonced scripts, the linked stylesheet, Markdown on Accept, llms.txt, search and 404 [2.12ms]
+
+scripts/ci/release.test.ts:
+(pass) assembles fixed release settings and maps GitHub app names [0.53ms]
+(pass) local settings do not inherit the box signing/RPC credentials or stale stage controls [0.21ms]
+(pass) a deploy's launch inputs come from its command line or CI, never two different values [0.18ms]
+(pass) refuses unset required values by name [0.15ms]
+(pass) hosted releases on either network require nonempty routine signer and policy IDs [0.31ms]
+(pass) AA secrets are stage-scoped and the testnet signer never reaches a mainnet release [0.28ms]
+(pass) mainnet release needs no relay setting or key and defaults to USDC user operations [25.69ms]
+(pass) plan refusal rules cover destructive and adoption actions [0.39ms]
+(pass) binding deletions and deleted stack actions are refused even when resource counts are safe [0.34ms]
+(pass) post-deploy verification requires no-op resources, bindings and stack actions [0.22ms]
+(pass) first deploy census refuses fixed-name collisions and foreign zones [0.29ms]
+(pass) census follows D1/domain count pagination and R2 cursors, refusing incomplete totals [1.30ms]
+(pass) state-store guard rejects mismatched versions before authenticated state inventory [1.82ms]
+(pass) remote absence needs successful valid inventory, never a failed read [3.51ms]
+(pass) a deferred-adoption create counts as an adoption only during the dev state move [0.30ms]
+
+ 22 pass
+ 0 fail
+ 132 expect() calls
+Ran 22 tests across 3 files. [164.00ms]

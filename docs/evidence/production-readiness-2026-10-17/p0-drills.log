@@ -1,0 +1,2 @@
+$ bun scripts/p0-drills.ts
+{"ok":true,"storage":"disposable SQLite using real D1 schema/adapters","source":"synthetic v1 logs","chainId":10143,"fromBlock":70431065,"nextBlock":70434565,"events":24,"jobs":3,"restored":true,"rebuilt":true,"hostedRowsRetained":true,"elapsedMs":123}

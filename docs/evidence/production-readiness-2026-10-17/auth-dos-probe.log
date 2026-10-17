@@ -1,0 +1,12 @@
+No files changed, compilation skipped
+
+Ran 6 tests for test/sidequest/AuthDosProbe.t.sol:AuthDosProbe
+[PASS] test_existingPauseForfeitRisk() (gas: 1516673)
+[PASS] test_existingTreasurySelfConfigurationBlocksUnfilledSettlement() (gas: 1704512)
+[PASS] test_rulingCannotReplayAcrossChainDomain() (gas: 1849316)
+[PASS] test_selectionCannotReplayAcrossChainDomain() (gas: 961392)
+[PASS] test_unobservedPauseEndExcusesAnUnpausedDeadline() (gas: 2023510)
+[PASS] test_unobservedPauseStartFailsToExcuseMissedDelivery() (gas: 2049989)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 6.36ms (10.15ms CPU time)
+
+Ran 1 test suite in 11.24ms (6.36ms CPU time): 6 tests passed, 0 failed, 0 skipped (6 total tests)
