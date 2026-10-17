@@ -13,7 +13,13 @@ export async function readRequestBody(source: unknown, limit: number): Promise<B
     return tooLarge
   }
   if (source.body === null) return { ok: true, bytes: new Uint8Array() }
-  const reader = source.body.getReader()
+  const unreadable = { ok: false, status: 400, message: 'Request body could not be read' } as const
+  let reader: ReadableStreamDefaultReader<Uint8Array>
+  try {
+    reader = source.body.getReader()
+  } catch {
+    return unreadable
+  }
   const chunks: Uint8Array[] = []
   let size = 0
   try {
@@ -28,7 +34,7 @@ export async function readRequestBody(source: unknown, limit: number): Promise<B
       chunks.push(next.value)
     }
   } catch {
-    return { ok: false, status: 400, message: 'Request body could not be read' }
+    return unreadable
   } finally {
     reader.releaseLock()
   }

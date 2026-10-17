@@ -78,3 +78,14 @@ it('returns a bounded diagnostic for an interrupted upload', async () => {
     message: 'Request body could not be read',
   })
 })
+
+it('answers 400 when the body stream is already locked', async () => {
+  const source = request([new Uint8Array([1])])
+  const held = source.body?.getReader()
+  expect(await readRequestBody(source, 10)).toEqual({
+    ok: false,
+    status: 400,
+    message: 'Request body could not be read',
+  })
+  held?.releaseLock()
+})
