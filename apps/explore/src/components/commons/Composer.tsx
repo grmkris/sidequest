@@ -8,6 +8,7 @@ import { MESSAGE_MAX, type Message, type Viewer, composerGuidance, shortAddress 
 import { usePost } from '../../commons-query.ts'
 import { SideChip } from '../side/SideToken.tsx'
 import { MarkdownEditor } from './MarkdownEditor.tsx'
+import { EnhancementFallback } from './EnhancementFallback.tsx'
 
 const AttachmentEditor = lazy(() => import('./AttachmentEditor.tsx'))
 
@@ -178,9 +179,11 @@ function AttachmentPanel({
         </Button>
       </div>
       {attach && (
-        <Suspense fallback={<output>Opening plan editor…</output>}>
-          <AttachmentEditor disabled={pending} onChange={onChange} />
-        </Suspense>
+        <EnhancementFallback fallback={<p role="status">Plan editor could not load. Reload to try again.</p>}>
+          <Suspense fallback={<output>Opening plan editor…</output>}>
+            <AttachmentEditor disabled={pending} onChange={onChange} />
+          </Suspense>
+        </EnhancementFallback>
       )}
     </>
   )

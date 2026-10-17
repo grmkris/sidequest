@@ -32,6 +32,9 @@ vi.mock('../../api.ts', () => ({
 vi.mock('../../commons-access.ts', () => ({
   anonymousCommonsTool: (_board: string, _name: string, args: unknown) => state.read(args),
 }))
+vi.mock('./AttachmentEditor.tsx', () => {
+  throw new Error('Plan chunk unavailable')
+})
 vi.mock('../side/SideToken.tsx', () => ({ SideChip: () => <span>Get SIDE</span> }))
 
 const message: Message = {
@@ -184,4 +187,20 @@ it('shows a post error after sign-in and retains the draft for retry', async () 
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('Posting failed')
   expect(textarea().value).toBe('Keep this answer')
   expect(button('Post').disabled).toBe(false)
+})
+
+it('contains a failed plan chunk and leaves the message draft editable and postable', async () => {
+  const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  try {
+    await render()
+    await type('Keep my message')
+    await click('Attach interactive plan')
+    await settle()
+    expect(container.textContent).toContain('Plan editor could not load. Reload to try again.')
+    expect(textarea().value).toBe('Keep my message')
+    expect(textarea().disabled).toBe(false)
+    expect(button('Sign in and post').disabled).toBe(false)
+  } finally {
+    error.mockRestore()
+  }
 })
