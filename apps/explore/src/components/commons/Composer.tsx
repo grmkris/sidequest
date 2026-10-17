@@ -23,6 +23,7 @@ interface ComposerProps {
   viewer: Viewer | null
   replyTo: Message | null
   onCancelReply: () => void
+  onPosted: () => void
   placeholder?: string
 }
 
@@ -34,6 +35,7 @@ export function Composer({
   viewer,
   replyTo,
   onCancelReply,
+  onPosted,
   placeholder = 'Write a message',
 }: ComposerProps) {
   const auth = useAuth()
@@ -46,22 +48,23 @@ export function Composer({
   const send = () => {
     const text = body.trim()
     if (text === '' || length > MESSAGE_MAX || post.isPending || attachment.error !== null) return
-    post.mutate(
-      {
+    void post
+      .mutateAsync({
         subject,
         body: text,
         ...(replyTo === null ? {} : { replyTo: replyTo.id }),
         ...(attachment.value === null ? {} : { presentation: attachment.value }),
-      },
-      {
-        onSuccess: () => {
-          setBody('')
+      })
+      .then(
+        () => {
+          onPosted()
           setAttach(false)
           setAttachment({ value: null, error: null })
-          onCancelReply()
         },
-      },
-    )
+        () => {
+          // The mutation exposes the error; retain the draft for a deliberate retry.
+        },
+      )
   }
   if (guidance !== null && auth.signedIn && viewer !== null)
     return (

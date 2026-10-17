@@ -48,6 +48,7 @@
     "@types/three": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "@web3icons/common": "catalog:",
+    "happy-dom": "21.0.3",
     "parse5": "catalog:",
     "playwright-core": "catalog:",
     "tailwindcss": "catalog:",

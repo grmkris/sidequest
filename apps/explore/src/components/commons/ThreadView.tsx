@@ -68,6 +68,10 @@ export function ThreadView({ subject, empty, placeholder }: { subject: string; e
         viewer={page?.viewer ?? null}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
+        onPosted={() => {
+          setBody('')
+          setReplyTo(null)
+        }}
         {...(placeholder === undefined ? {} : { placeholder })}
       />
     </div>

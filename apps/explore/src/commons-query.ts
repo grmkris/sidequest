@@ -42,6 +42,9 @@ export function useThread(subject: string, enabled = true) {
   return useQuery({
     queryKey: commonsKeys.thread(subject, viewer),
     queryFn: () => read<Thread>(viewer, 'list_messages', { subject, limit: 50 }),
+    // A sign-in changes only the viewer key. Keep the public thread and composer mounted,
+    // but never carry another viewer's posting permissions or another subject's messages.
+    placeholderData: (previous) => (previous?.subject === subject ? { ...previous, viewer: null } : undefined),
     refetchInterval: POLL_MS,
     enabled,
   })
