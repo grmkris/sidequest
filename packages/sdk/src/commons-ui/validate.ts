@@ -11,6 +11,12 @@ export function assertSize(value: unknown): void {
     throw new Error('Presentation must be at most 32 KiB')
 }
 
+/**
+ * Documents returned by parsePresentation: encoding a message re-checks its presentation, and a thread page of
+ * 32 KiB attachments would otherwise parse each twice. Callers never mutate a returned document.
+ */
+const validated = new WeakSet<object>()
+
 /** The only document accepted by persistence and renderers. Reject unreachable/duplicated nodes as well as cycles. */
 export function parsePresentation(value: unknown): Presentation {
   assertSize(value)
@@ -35,7 +41,12 @@ export function parsePresentation(value: unknown): Presentation {
   }
   visit(root, 1)
   if (visited.size !== ids.length) throw new Error('Every presentation element must be visible from the root')
+  validated.add(document)
   return document
+}
+
+export function isPresentation(value: unknown): boolean {
+  return (value instanceof Object && validated.has(value)) || readPresentation(value) !== null
 }
 
 /** Reading old/unknown/corrupt attachments must never prevent the Markdown body from being read. */

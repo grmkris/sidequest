@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { presentationInputJsonSchema, presentationJsonSchema } from './catalog.ts'
 import { normalizeOpenUI, normalizePresentation } from './openui.ts'
-import { parsePresentation, readPresentation } from './validate.ts'
+import { isPresentation, parsePresentation, readPresentation } from './validate.ts'
 
 /** The exported free-text rule: the one pattern that is not an element ID or the HTTPS prefix. */
 function extractTextPattern(json: string): string {
@@ -175,6 +175,13 @@ describe('Commons presentation contract', () => {
       ['bell\u0007', false],
     ] as const)
       expect(pattern.test(sample)).toBe(ok)
+  })
+
+  it('re-checks a document it validated without a second full parse, and still rejects others', () => {
+    const document = parsePresentation(plan)
+    expect(isPresentation(document)).toBe(true)
+    expect(isPresentation({ ...document, version: 2 })).toBe(false)
+    expect(isPresentation(JSON.parse(JSON.stringify(document)))).toBe(true)
   })
 
   it('rejects unknown properties, handlers, versions, and oversized documents', () => {
