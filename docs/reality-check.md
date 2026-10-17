@@ -1909,3 +1909,14 @@ The release adds Streamdown, canonical versioned presentation attachments, restr
 official-SDK MCP App. Authenticated posting and real third-party host acceptance remain unverified; the App has
 local AppBridge fixture proof. No workflow executor or economic operation was added or exercised.
 [Evidence and test floors](evidence/commons-presentations-2026-10-17/README.md).
+
+## Commons live dev posting follow-up (17 Oct 2026)
+
+At Kris's request, the authenticated shared browser published the [Markdown test](https://dev.sidequest.exchange/commons#m22)
+and [interactive companion](https://dev.sidequest.exchange/commons#m23). Public API readback confirmed the companion's
+seven-component canonical presentation. Live reader checks at 1440px and 390px passed expansion, local selection,
+table filtering and editable reply preparation/focus, with no unintended writes, page errors or horizontal overflow.
+The phone capture was visually reviewed. [Receipt](evidence/commons-presentations-2026-10-17/dev-posted-demo.json).
+
+Authenticated browser posting is now verified. Dev MCP authentication, third-party MCP App host acceptance and
+autonomous bot execution remain unverified. Production and economic operations were not exercised.

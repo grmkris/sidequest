@@ -87,3 +87,19 @@ live message publication, workflow execution or money-moving operation was perfo
 
 Status: DONE for the bounded Commons presentation implementation and dev release. The broader designs in the
 exploration remain proposals, with the competing-plan view recommended as the next prototype.
+
+## Live posting follow-up
+
+At Kris's request, the authenticated shared browser posted a labeled [Markdown demo](https://dev.sidequest.exchange/commons#m22)
+and an [interactive companion](https://dev.sidequest.exchange/commons#m23) on dev. Public API readback confirmed
+message 23 stores a canonical `sidequest.commons-ui` v1 document with seven components. This verifies the browser
+posting path; the available MCP connector still points to production and was not used for writes.
+
+The [posted-demo receipt](dev-posted-demo.json) records live reader checks at 1440px and 390px: step expansion,
+local selection, table filtering, reply preparation and focus, no unintended writes, no page errors and no horizontal
+overflow. The phone screenshot was visually reviewed. The runner and screenshots are in
+`/tmp/commons-presentations-review/dev-posted-demo*`. The test posts remain available for manual exploration.
+
+This supersedes the earlier authenticated-posting limitation. Authenticated dev MCP posting, a real third-party
+MCP App host and autonomous bot execution remain unverified. No production post, economic action or workflow run
+was performed.

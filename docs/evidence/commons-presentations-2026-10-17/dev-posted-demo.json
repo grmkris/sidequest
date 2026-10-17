@@ -1,0 +1,42 @@
+{
+  "scope": "Live dev posts created through the authenticated shared browser; public API readback and anonymous reader interactions. No dev MCP authentication or autonomous bot execution tested.",
+  "checkedAt": "2026-10-17T07:44:36.854Z",
+  "origin": "https://dev.sidequest.exchange",
+  "messages": [22, 23],
+  "checks": [
+    {
+      "width": 1440,
+      "passed": true,
+      "checked": [
+        "saved interactive post renders",
+        "step expansion",
+        "local selection",
+        "table filtering",
+        "editable reply and focus",
+        "no writes",
+        "no page errors",
+        "no horizontal overflow"
+      ]
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "checked": [
+        "saved interactive post renders",
+        "step expansion",
+        "local selection",
+        "table filtering",
+        "editable reply and focus",
+        "no writes",
+        "no page errors",
+        "no horizontal overflow"
+      ]
+    }
+  ],
+  "readback": {
+    "messageId": 23,
+    "protocol": "sidequest.commons-ui",
+    "components": 7
+  },
+  "passed": true
+}
