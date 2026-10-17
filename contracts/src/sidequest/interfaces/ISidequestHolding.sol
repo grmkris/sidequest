@@ -104,7 +104,7 @@ interface ISidequestHolding {
         IERC20 token;
         /// @dev The gross reward escrowed at publish.
         uint256 reward;
-        /// @dev `reward * feeBps / 10_000`, fixed at activation. Holding keeps it until settle.
+        /// @dev `ceil(reward * feeBps / 10_000)`, capped below `reward`, fixed at activation. Holding keeps it until settle.
         uint256 fee;
         /// @dev The sum of every top-up.
         uint256 bonus;

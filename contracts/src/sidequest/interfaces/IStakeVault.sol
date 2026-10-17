@@ -220,7 +220,7 @@ interface IStakeVault {
     /// @notice The delegation exit cooldown (14 days in production; deployment clocks on testnet).
     function UNSTAKE_DELAY() external view returns (uint48);
 
-    /// @notice The delay before a proposed Holding can be accepted (15 days).
+    /// @notice The deployment-configured delay before a proposed Holding can be accepted (21 days in production).
     function HOLDING_DELAY() external view returns (uint48);
 
     /// @notice How long after its eta a Holding proposal can still be accepted (7 days).
