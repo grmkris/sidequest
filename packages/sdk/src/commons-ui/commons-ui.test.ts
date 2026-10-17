@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
+import { presentationInputJsonSchema, presentationJsonSchema } from './catalog.ts'
 import { normalizeOpenUI } from './openui.ts'
 import { parsePresentation, readPresentation } from './validate.ts'
+
+/** The exported free-text rule: the one pattern that is not an element ID or the HTTPS prefix. */
+function extractTextPattern(json: string): string {
+  const patterns = [...json.matchAll(/"pattern":"((?:[^"\\]|\\.)*)"/gu)].map((match) => JSON.parse(`"${match[1]}"`))
+  const text = patterns.find((pattern: string) => pattern.startsWith('^[^\\u0000'))
+  if (text === undefined) throw new Error('text pattern missing')
+  return text
+}
 
 const plan = {
   protocol: 'sidequest.commons-ui',
@@ -140,6 +149,21 @@ describe('Commons presentation contract', () => {
     ].join('\n')
     const document = normalizeOpenUI(source)
     expect(Object.keys(document.spec.elements)).toHaveLength(2)
+  })
+
+  it('exports tool schemas that strict and non-ECMAScript validators accept', () => {
+    const json = JSON.stringify([presentationJsonSchema, presentationInputJsonSchema])
+    expect(json).not.toContain('$schema')
+    expect(json).not.toContain('starts_with')
+    expect(json).not.toContain('\\\\p{')
+    const pattern = new RegExp(extractTextPattern(json))
+    for (const [sample, ok] of [
+      ['Plain text\n\twith tabs', true],
+      ['zero​width', false],
+      ['bidi‮override', false],
+      ['bell\u0007', false],
+    ] as const)
+      expect(pattern.test(sample)).toBe(ok)
   })
 
   it('rejects unknown properties, handlers, versions, and oversized documents', () => {
