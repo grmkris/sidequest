@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { parseFragment, type DefaultTreeAdapterTypes } from 'parse5'
-import { expect, it } from 'vitest'
+import { expect, it, vi } from 'vitest'
 import { Markdown } from './Markdown.tsx'
 
 function elements(node: DefaultTreeAdapterTypes.Node): DefaultTreeAdapterTypes.Element[] {
@@ -62,7 +62,7 @@ it('renders safe links and reference links while refusing executable URLs', () =
     'mailto:hello@example.com',
     'https://example.com/plan',
   ])
-  expect(links.every((node) => attr(node, 'rel') === 'nofollow ugc noreferrer')).toBe(true)
+  expect(links.every((node) => attr(node, 'rel') === 'nofollow ugc noopener noreferrer')).toBe(true)
 })
 
 it('never executes raw HTML or loads remote images from a public post', () => {
@@ -74,4 +74,20 @@ it('never executes raw HTML or loads remote images from a public post', () => {
   expect(all.filter((node) => node.tagName === 'a').map((node) => attr(node, 'href'))).toEqual([
     'https://example.com/diagram.png',
   ])
+})
+
+it('discloses off-site destinations for misleading text and image labels while keeping local links plain', () => {
+  vi.stubGlobal('location', new URL('https://sidequest.exchange/commons'))
+  try {
+    const html = render(
+      '[https://sidequest.exchange/wallet](https://lookalike.example/wallet) ![Trusted](//images.example/track.png) [Local](https://sidequest.exchange/docs) [Relative](/docs)',
+    )
+    const links = elements(parseFragment(html)).filter((node) => node.tagName === 'a')
+    expect(html).toContain('https://sidequest.exchange/wallet (lookalike.example)')
+    expect(html).toContain('Trusted (images.example)')
+    expect(links.map((node) => attr(node, 'target'))).toEqual(['_blank', '_blank', undefined, undefined])
+    expect(html).not.toContain('Local (sidequest.exchange)')
+  } finally {
+    vi.unstubAllGlobals()
+  }
 })

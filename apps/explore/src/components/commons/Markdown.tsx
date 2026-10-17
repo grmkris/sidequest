@@ -2,6 +2,25 @@ import { Streamdown, type Components } from 'streamdown'
 import rehypeSanitize from 'rehype-sanitize'
 import { CodeFence } from './CodeFence.tsx'
 import remarkGfm from 'remark-gfm'
+import type { ReactNode } from 'react'
+
+function MessageLink({ href, children }: { href: string | undefined; children: ReactNode }) {
+  if (!href) return <span>{children}</span>
+  let host: string | undefined
+  try {
+    const target = new URL(href, globalThis.location?.href)
+    if (['http:', 'https:'].includes(target.protocol) && target.origin !== globalThis.location?.origin)
+      host = target.hostname
+  } catch {
+    // Relative URLs remain local during server rendering, where there is no origin.
+  }
+  return (
+    <a href={href} rel="nofollow ugc noopener noreferrer" {...(host === undefined ? {} : { target: '_blank' })}>
+      {children}
+      {host === undefined ? null : ` (${host})`}
+    </a>
+  )
+}
 
 const plugins = [remarkGfm]
 const sanitizers = [rehypeSanitize]
@@ -13,23 +32,9 @@ const components: Components = {
   h4: ({ children }) => <h6>{children}</h6>,
   h5: ({ children }) => <h6>{children}</h6>,
   h6: ({ children }) => <h6>{children}</h6>,
-  a: ({ href, children }) =>
-    href ? (
-      <a href={href} rel="nofollow ugc noreferrer">
-        {children}
-      </a>
-    ) : (
-      <span>{children}</span>
-    ),
+  a: ({ href, children }) => <MessageLink href={href}>{children}</MessageLink>,
   // Public posts must not load third-party tracking images just because someone reads a thread.
-  img: ({ src, alt }) =>
-    src !== undefined && src !== '' ? (
-      <a href={src} rel="nofollow ugc noreferrer">
-        {alt || 'View image'}
-      </a>
-    ) : (
-      <span>{alt}</span>
-    ),
+  img: ({ src, alt }) => <MessageLink href={src}>{alt || 'View image'}</MessageLink>,
   input: ({ checked }) => (
     <input
       type="checkbox"
