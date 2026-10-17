@@ -12,6 +12,7 @@
         "@types/node": "catalog:",
         "ajv": "catalog:",
         "alchemy": "catalog:",
+        "decode-uri-component": "0.2.2",
         "effect": "catalog:",
         "jscpd": "catalog:",
         "knip": "catalog:",

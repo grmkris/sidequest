@@ -6,7 +6,7 @@ import { test } from 'node:test'
 const require = createRequire(import.meta.url)
 const decode = require('decode-uri-component')
 
-test('wallet URI decoder retains CommonJS, plus, Unicode and malformed-input compatibility', () => {
+await test('wallet URI decoder retains CommonJS, plus, Unicode and malformed-input compatibility', () => {
   for (const [encoded, expected] of [
     ['hello+world%2B', 'hello world+'],
     ['%C3%A5%F0%9F%98%80', 'å😀'],
@@ -22,7 +22,7 @@ test('wallet URI decoder retains CommonJS, plus, Unicode and malformed-input com
   assert.throws(() => decode(null), TypeError)
 })
 
-test('malformed percent runs finish without recursive decoding or stack exhaustion', () => {
+await test('malformed percent runs finish without recursive decoding or stack exhaustion', () => {
   // A child process gives a regressed synchronous decoder a hard deadline without hanging CI.
   execFileSync(
     process.execPath,

@@ -118,6 +118,7 @@
     "@effect/vitest": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
+    "decode-uri-component": "0.2.2",
     "ajv": "catalog:",
     "alchemy": "catalog:",
     "effect": "catalog:",
