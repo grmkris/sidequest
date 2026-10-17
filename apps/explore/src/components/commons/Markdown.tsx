@@ -4,7 +4,20 @@ import { CodeFence } from './CodeFence.tsx'
 import remarkGfm from 'remark-gfm'
 import type { ReactNode } from 'react'
 
-function MessageLink({ href, children }: { href: string | undefined; children: ReactNode }) {
+// remark already prefixes footnote ids; sanitation prefixes them again. Keep one safe prefix so hrefs resolve.
+const sanitizedId = (id: string | undefined) => id?.replace(/^user-content-(?=user-content-)/u, '')
+
+function MessageLink({
+  href,
+  children,
+  id,
+  className,
+}: {
+  href: string | undefined
+  children: ReactNode
+  id?: string
+  className?: string
+}) {
   if (!href) return <span>{children}</span>
   let host: string | undefined
   try {
@@ -15,7 +28,13 @@ function MessageLink({ href, children }: { href: string | undefined; children: R
     // Relative URLs remain local during server rendering, where there is no origin.
   }
   return (
-    <a href={href} rel="nofollow ugc noopener noreferrer" {...(host === undefined ? {} : { target: '_blank' })}>
+    <a
+      href={href}
+      id={sanitizedId(id)}
+      className={className}
+      rel="nofollow ugc noopener noreferrer"
+      {...(host === undefined ? {} : { target: '_blank' })}
+    >
       {children}
       {host === undefined ? null : ` (${host})`}
     </a>
@@ -27,14 +46,26 @@ const sanitizers = [rehypeSanitize]
 const components: Components = {
   // User headings sit below the page title and the containing section.
   h1: ({ children }) => <h3>{children}</h3>,
-  h2: ({ children }) => <h4>{children}</h4>,
+  h2: ({ children, className, id }) => (
+    <h4 id={sanitizedId(id)} className={className}>
+      {children}
+    </h4>
+  ),
   h3: ({ children }) => <h5>{children}</h5>,
   h4: ({ children }) => <h6>{children}</h6>,
   h5: ({ children }) => <h6>{children}</h6>,
   h6: ({ children }) => <h6>{children}</h6>,
-  a: ({ href, children }) => <MessageLink href={href}>{children}</MessageLink>,
+  a: ({ href, children, className, id }) => (
+    <MessageLink href={href} id={sanitizedId(id)} className={className}>
+      {children}
+    </MessageLink>
+  ),
   // Public posts must not load third-party tracking images just because someone reads a thread.
-  img: ({ src, alt }) => <MessageLink href={src}>{alt || 'View image'}</MessageLink>,
+  img: ({ src, alt, className, id }) => (
+    <MessageLink href={src} id={sanitizedId(id)} className={className}>
+      {alt || 'View image'}
+    </MessageLink>
+  ),
   input: ({ checked }) => (
     <input
       type="checkbox"
@@ -58,11 +89,36 @@ const components: Components = {
     return <CodeFence key={`${language}:${source}`} code={source} language={language} />
   },
   code: ({ children }) => <code>{children}</code>,
-  p: ({ children }) => <p>{children}</p>,
-  ul: ({ children, className }) => <ul className={className}>{children}</ul>,
-  ol: ({ children, start }) => <ol start={start}>{children}</ol>,
-  li: ({ children, className }) => <li className={className}>{children}</li>,
-  blockquote: ({ children }) => <blockquote>{children}</blockquote>,
+  p: ({ children, className, id }) => (
+    <p id={sanitizedId(id)} className={className}>
+      {children}
+    </p>
+  ),
+  ul: ({ children, className, id }) => (
+    <ul id={sanitizedId(id)} className={className}>
+      {children}
+    </ul>
+  ),
+  ol: ({ children, start, className, id }) => (
+    <ol id={sanitizedId(id)} className={className} start={start}>
+      {children}
+    </ol>
+  ),
+  li: ({ children, className, id }) => (
+    <li id={sanitizedId(id)} className={className}>
+      {children}
+    </li>
+  ),
+  blockquote: ({ children, className, id }) => (
+    <blockquote id={sanitizedId(id)} className={className}>
+      {children}
+    </blockquote>
+  ),
+  div: ({ children, className, id }) => (
+    <div id={sanitizedId(id)} className={className}>
+      {children}
+    </div>
+  ),
   strong: ({ children }) => <strong>{children}</strong>,
   table: ({ children }) => (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- This named overflow region needs keyboard focus for horizontal scrolling.
@@ -76,7 +132,7 @@ const components: Components = {
 export function Markdown({ children }: { children: string }) {
   return (
     <Streamdown
-      className="commons-markdown"
+      className="commons-markdown whitespace-pre-line!"
       mode="static"
       parseIncompleteMarkdown={false}
       animated={false}

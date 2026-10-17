@@ -91,3 +91,15 @@ it('discloses off-site destinations for misleading text and image labels while k
     vi.unstubAllGlobals()
   }
 })
+
+it('keeps sanitized footnote anchors, screen-reader heading classes, and raw block line breaks', () => {
+  const html = render(
+    '[Read the note][^note]\n\n[^note]: First line\n    Second line\n\n<div>Raw line one\nRaw line two</div>',
+  )
+  expect(html).toContain('href="#user-content-fn-note"')
+  expect(html).toContain('id="user-content-fn-note"')
+  expect(html).toContain('id="user-content-fnref-note"')
+  expect(html).toMatch(/class="[^"]*sr-only[^"]*">Footnotes/)
+  expect(html).toContain('Raw line one\nRaw line two')
+  expect(html).toContain('whitespace-pre-line!')
+})
