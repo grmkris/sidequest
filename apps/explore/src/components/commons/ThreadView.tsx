@@ -3,7 +3,7 @@ import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../ui/empty.tsx'
 import { LoadingRows } from '../kit.tsx'
 import { useAuth } from '../Wallet.tsx'
-import { type Message, threadTree } from '../../commons.ts'
+import { type Message, composerGuidance, threadTree } from '../../commons.ts'
 import { acknowledgeDraft } from '../../commons-app/draft.ts'
 import { useThread } from '../../commons-query.ts'
 import { Composer } from './Composer.tsx'
@@ -35,6 +35,8 @@ export function ThreadView({ subject, empty, placeholder }: { subject: string; e
       </Alert>
     )
   const page = thread.data
+  const viewer = page?.viewer ?? null
+  const canCompose = !(auth.signedIn && viewer !== null && composerGuidance(viewer, auth.signedIn) !== null)
   const tree = threadTree(page?.messages ?? [])
   return (
     <div className="grid min-w-0 gap-6">
@@ -49,14 +51,18 @@ export function ThreadView({ subject, empty, placeholder }: { subject: string; e
         <div className="grid divide-y divide-border">
           {tree.map(({ root, replies }) => (
             <div key={root.id} className="grid">
-              <MessageRow message={root} you={root.author.toLowerCase() === me} onReply={setReplyTo} onDraft={draft} />
+              <MessageRow
+                message={root}
+                you={root.author.toLowerCase() === me}
+                {...(canCompose ? { onReply: setReplyTo, onDraft: draft } : {})}
+              />
               {replies.map((reply) => (
                 <MessageRow
                   key={reply.id}
                   message={reply}
                   you={reply.author.toLowerCase() === me}
                   reply
-                  onDraft={draft}
+                  {...(canCompose ? { onDraft: draft } : {})}
                 />
               ))}
             </div>

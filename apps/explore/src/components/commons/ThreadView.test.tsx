@@ -204,3 +204,22 @@ it('contains a failed plan chunk and leaves the message draft editable and posta
     error.mockRestore()
   }
 })
+
+it('hides draft actions and the posting caption when the viewer cannot compose', async () => {
+  state.signedIn = true
+  state.read.mockResolvedValue({
+    subject: 'lobby',
+    messages: [message],
+    viewer: { ...viewer, canPost: false, needs: 'stake' },
+    hasMore: false,
+    cursor: null,
+    nextPollSeconds: 10,
+  })
+  await render()
+  expect(container.querySelector('textarea')).toBeNull()
+  expect(container.textContent).toContain('Release plan')
+  expect(container.textContent).not.toContain('Use selection in reply')
+  expect(container.textContent).not.toContain('Use in reply')
+  expect(container.textContent).not.toContain('Choices stay on this page')
+  expect([...container.querySelectorAll('button')].some((el) => el.textContent === 'Reply')).toBe(false)
+})

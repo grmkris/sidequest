@@ -57,7 +57,9 @@ function DocumentView({
   }
   return (
     <section className="commons-ui" aria-label="Interactive attachment">
-      <p className="commons-ui-caption">Explore this plan. Choices stay on this page until you post a reply.</p>
+      <p className="commons-ui-caption">
+        Explore this plan.{onDraft === undefined ? '' : ' Choices stay on this page until you post a reply.'}
+      </p>
       {render(document.spec.root)}
     </section>
   )
