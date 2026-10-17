@@ -3,7 +3,7 @@ import { CommonsPresentation } from '@sidequest/react/commons-ui'
 import { createRoot } from 'react-dom/client'
 import type { Dispatch, SetStateAction } from 'react'
 import { useEffect, useState } from 'react'
-import { acknowledgeDraft } from './draft.ts'
+import { acknowledgeDraft, quoteCommonsDraft } from './draft.ts'
 import { parseCommonsAppResult, type CommonsAppView } from './result.ts'
 
 const app = new App({ name: 'Sidequest Commons', version: '1.0.0' }, {}, { strict: true })
@@ -133,7 +133,9 @@ function MessageArticle({
                   .openLink({ url })
                   .catch(() => setStatus('The host could not open this link. Its URL is shown beside the source.'))
               }}
-              onDraft={(text) => setDraft((current) => [current, text].filter(Boolean).join('\n\n'))}
+              onDraft={(text) =>
+                setDraft((current) => [current, quoteCommonsDraft(message, text)].filter(Boolean).join('\n\n'))
+              }
             />
           )}
         </>

@@ -169,10 +169,10 @@ it('acknowledges only the posted snapshot when a choice is added while posting',
   })
   await settle()
   await click('Use selection in reply')
-  expect(textarea().value).toContain('One answer\n\nReady?\n\nShip')
+  expect(textarea().value).toContain('One answer\n\nQuoted from Commons post #1 by ')
   await act(async () => post.resolve({ notified: 0 }))
   await settle()
-  expect(textarea().value).toBe('Ready?\n\nShip')
+  expect(textarea().value).toBe(`Quoted from Commons post #1 by ${message.author}:\n\n> Ready?\n> \n> Ship`)
 
   expect(container.textContent).toContain('Replying to')
 })

@@ -4,7 +4,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../ui/empty.ts
 import { LoadingRows } from '../kit.tsx'
 import { useAuth } from '../Wallet.tsx'
 import { type Message, composerGuidance, threadTree } from '../../commons.ts'
-import { acknowledgeDraft } from '../../commons-app/draft.ts'
+import { acknowledgeDraft, quoteCommonsDraft } from '../../commons-app/draft.ts'
 import { useThread } from '../../commons-query.ts'
 import { Composer } from './Composer.tsx'
 import { MessageRow } from './MessageRow.tsx'
@@ -30,8 +30,9 @@ function ThreadContent({ subject, empty, placeholder }: ThreadProps) {
   const { body, replyTo, revision: draftRevision } = writing
   const setReplyTo = (replyTo: Message | null) => setWriting((current) => ({ ...current, replyTo }))
   const draft = (message: Message, text: string) => {
+    const quote = quoteCommonsDraft(message, text)
     setWriting((current) => ({
-      body: current.body.trim() === '' ? text : `${current.body}\n\n${text}`,
+      body: current.body.trim() === '' ? quote : `${current.body}\n\n${quote}`,
       replyTo: message,
       revision: current.revision + 1,
     }))
