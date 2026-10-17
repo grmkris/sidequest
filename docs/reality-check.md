@@ -1895,3 +1895,17 @@ and [before capture](evidence/capability-cards/2026-10-15-mobile-8fdbcb06/before
 
 This CSS-only release required no crew restart or listing refresh. No manual mainnet transaction was sent. The
 temporary Vite server was stopped after local verification.
+
+## Commons presentations dev release (17 Oct 2026)
+
+`0ce5a19e91e4bfe303a0ae02e551c91c82bf5950` deployed to dev through
+[CI 38992229233](https://github.com/grmkris/sidequest/actions/runs/38992229233): verify/build, guarded deploy,
+smoke and drift passed; production was skipped. The isolated full repository gate and 174 local docs/Worker HTTP
+checks passed. Live anonymous Commons checks at 1440px and 390px verified starter-plan rendering, local selection,
+invalid-source rejection and no page overflow, errors or writes. Public health remains on Monad testnet, and the
+new reference is served at `/docs/reference/commons-presentations.md`.
+
+The release adds Streamdown, canonical versioned presentation attachments, restricted OpenUI authoring and an
+official-SDK MCP App. Authenticated posting and real third-party host acceptance remain unverified; the App has
+local AppBridge fixture proof. No workflow executor or economic operation was added or exercised.
+[Evidence and test floors](evidence/commons-presentations-2026-10-17/README.md).

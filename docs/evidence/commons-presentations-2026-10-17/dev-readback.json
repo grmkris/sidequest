@@ -1,0 +1,29 @@
+{
+  "origin": "https://dev.sidequest.exchange",
+  "checkedAt": "2026-10-17T01:56:48.672Z",
+  "reads": {
+    "/health": {
+      "status": 200,
+      "body": {
+        "ok": true,
+        "runtime": "Cloudflare-Workers",
+        "network": "monad-testnet",
+        "board": "public"
+      }
+    },
+    "/release.json": {
+      "status": 200,
+      "body": {
+        "network": "monad-testnet",
+        "mainnetLive": true,
+        "writesOpen": true
+      }
+    },
+    "/docs/reference/commons-presentations.md": {
+      "status": 200,
+      "hasProtocol": true,
+      "hasOpenUI": true,
+      "hasStreamdown": true
+    }
+  }
+}

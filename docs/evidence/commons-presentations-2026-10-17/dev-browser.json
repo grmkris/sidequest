@@ -1,0 +1,34 @@
+{
+  "scope": "Deployed dev, anonymous reads and local attachment preview only. No posting or authenticated MCP-host acceptance.",
+  "origin": "https://dev.sidequest.exchange",
+  "checkedAt": "2026-10-17T01:55:28.284Z",
+  "checks": [
+    {
+      "width": 1440,
+      "passed": true,
+      "checked": [
+        "live thread loads",
+        "starter plan preview",
+        "local selection",
+        "invalid source rejected",
+        "no page overflow",
+        "no page errors",
+        "no writes"
+      ]
+    },
+    {
+      "width": 390,
+      "passed": true,
+      "checked": [
+        "live thread loads",
+        "starter plan preview",
+        "local selection",
+        "invalid source rejected",
+        "no page overflow",
+        "no page errors",
+        "no writes"
+      ]
+    }
+  ],
+  "passed": true
+}
