@@ -38,12 +38,19 @@ export function nativeBuyCap(input: { balance: bigint; gasCost: bigint; delegate
 }
 
 /** What `amountIn` returns now: SIDE for MON (`buy`) or MON for SIDE (`sell`), after the router's fees and any early-block penalty. */
-export function launcherQuote(ctx: Ctx, l: Launcher, side: 'buy' | 'sell', amountIn: bigint): Promise<bigint> {
+export function launcherQuote(
+  ctx: Ctx,
+  l: Launcher,
+  side: 'buy' | 'sell',
+  amountIn: bigint,
+  blockNumber?: bigint,
+): Promise<bigint> {
   return ctx.publicClient.readContract({
     address: l.router,
     abi: nadRouterAbi,
     functionName: 'getAmountOut',
     args: [l.side, amountIn, side === 'buy'],
+    ...(blockNumber === undefined ? {} : { blockNumber }),
   })
 }
 

@@ -26,7 +26,8 @@ export function agentRoute(method: string, path: string, body: Record<string, un
   if (match === null) return undefined
   const id = match[1]!
   const action = match[2] ?? 'status'
-  if (method === 'GET' && ['status', 'recovery', 'connections'].includes(action)) return { action, id, body }
+  if (method === 'GET' && ['status', 'recovery', 'connections', 'balances'].includes(action))
+    return { action, id, body }
   if (
     method === 'POST' &&
     [

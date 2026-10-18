@@ -29,6 +29,7 @@ import { agentAccess } from './agent-access.ts'
 import { agentProfileManagement } from './agent-profile-management.ts'
 import { hostedUserOpDesk } from './agent-userop.ts'
 import { agentGasAllowance } from './agent-gas-allowance.ts'
+import { agentBalances } from './agent-balances.ts'
 
 function text(body: Record<string, unknown>, key: string): string {
   const value = body[key]
@@ -69,6 +70,16 @@ export async function agentManagement(input: {
   const { action, body } = request
   const id = request.id ?? ''
   const agents = new AgentStore(sql, now)
+  if (action === 'balances') {
+    const agent = agents.owned(id, operator)
+    if (agent.address === null) throw new BoardError('unavailable', 'This agent wallet is not ready')
+    return agentBalances(
+      context,
+      // SAFETY: Database is the Cloudflare D1 binding configured by this Worker.
+      bindings.Database === undefined ? undefined : fromD1(bindings.Database as never),
+      agent.address,
+    )
+  }
   if (action === 'profile' || action === 'avatar' || action === 'avatar-generate') return agentProfileManagement(input)
   if (action === 'registration-record') {
     return new AgentRegistration({ sql, context, now }).record(id, operator, hex(body, 'txHash', 64))

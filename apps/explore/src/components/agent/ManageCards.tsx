@@ -14,6 +14,7 @@ import { localTime } from '../../format.ts'
 import { cn } from '../../lib/cn.ts'
 import { factoryAmount } from '../../stake.ts'
 import { useTokenList } from '../../useTokens.ts'
+import { BalanceSummary } from './BalanceSummary.tsx'
 import { chain, deployment } from '../../wallet.ts'
 import { StartPrompt } from '../AgentStartLink.tsx'
 import { GasAllowanceEditor } from '../GasAllowanceEditor.tsx'
@@ -224,6 +225,7 @@ export function WalletEarnings({ agent, action }: { agent: ManagedAgent; action:
   })
   return (
     <ManageCard title="Wallet & earnings" note="Earnings are held by the agent wallet until you move them.">
+      <BalanceSummary agent={agent} />
       <div className="grid">
         {tokens.map((token, index) => {
           const balance = reads.data?.[index]
