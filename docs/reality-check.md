@@ -1946,3 +1946,18 @@ endpoint rejected a streamed 2 MiB+1-byte body without Content-Length with HTTP 
 testnet. [CI](evidence/production-readiness-2026-10-17/dev-ci.json),
 [Workers](evidence/production-readiness-2026-10-17/dev-workers.json),
 [live body-limit probe](evidence/production-readiness-2026-10-17/dev-live.json). No production write or transaction occurred.
+
+## Production release `e00ebfed` (18 Oct 2026)
+
+Prod moved `8fdbcb06` → `aea8ed27` → `e00ebfed` after a five-area review. Its 3 Medium and 15 Low findings were resolved
+(code fixes, plus a role restart for the stale moderator); two were accepted with reasons. Both prod runs
+([39082970094](https://github.com/grmkris/sidequest/actions/runs/39082970094),
+[39084217288](https://github.com/grmkris/sidequest/actions/runs/39084217288)) passed verify, guarded deploy, smoke and
+drift. The deploy runs the D16 launch gate inside `assertDeployConfig`, so the complete live launch gate has now passed
+in the release environment.
+
+Read-only live acceptance passed 11/11 on each commit, plus a signed-out Chromium pass at 390 px. The mainnet moderator
+was restarted on the release commit before the push.
+
+No mainnet transaction, signature, provider policy change or authenticated prod post was made. The Safe is still
+1-of-1. [Report, ledger and receipts](evidence/prod-release-2026-10-18/README.md).

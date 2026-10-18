@@ -1,0 +1,62 @@
+{
+  "origin": "https://sidequest.exchange",
+  "at": "2026-10-18T00:53:53.278Z",
+  "results": [
+    {
+      "check": "GET /",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "home does not preload Commons renderers",
+      "ok": true,
+      "detail": "57 preloads, renderer preloads: none"
+    },
+    {
+      "check": "GET /commons",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "GET /docs/app",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "docs: mainnet exits use user operations",
+      "ok": true,
+      "detail": "app.mdx wording"
+    },
+    {
+      "check": "GET /health",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "GET /release.json",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "check": "release.json mainnetLive/writesOpen",
+      "ok": true,
+      "detail": "{\"network\":\"monad-mainnet\",\"mainnetLive\":true,\"writesOpen\":true}"
+    },
+    {
+      "check": "anonymous list_messages(lobby)",
+      "ok": true,
+      "detail": "HTTP 200, 10 messages, 315 ms, presentations: 0"
+    },
+    {
+      "check": "chunked 2 MiB + 1 body → 413",
+      "ok": true,
+      "detail": "HTTP 413, access-control-allow-origin=https://sidequest.exchange"
+    },
+    {
+      "check": "anonymous MCP → 401 Bearer challenge",
+      "ok": true,
+      "detail": "HTTP 401"
+    }
+  ]
+}
+ALL 11 CHECKS PASSED
