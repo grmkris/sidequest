@@ -489,16 +489,28 @@
   }
 }
 
+/*
+ * Less motion is gentler motion, not none. Fades and colour changes keep their timing; movement goes (transitions of
+ * transform, translate, scale, size and position stop); entrance keyframes finish at once, and a loop such as a pulse
+ * runs once and rests instead of strobing. A spinner keeps turning, slower, because a still one would read as stuck.
+ */
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
   ::after {
     animation-duration: 1ms !important;
-    transition-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property:
+      opacity, color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, box-shadow !important;
+  }
+  .animate-spin {
+    animation-duration: 1.5s !important;
+    animation-iteration-count: infinite !important;
   }
 }
 
-/* Sheets rise from the bottom edge (and leave the same way); a panel on a wide screen grows in place; toasts drop in. */
+/* Sheets rise from the bottom edge (and leave the same way); a panel on a wide screen grows in place. Toasts drop in
+ * with a transition from @starting-style (Sheet.tsx), so a burst of them retargets instead of restarting. */
 @keyframes sheet-in {
   from {
     transform: translateY(100%);
@@ -519,12 +531,6 @@
   to {
     opacity: 0;
     transform: scale(0.96);
-  }
-}
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(-150%);
   }
 }
 /* A feed row that just arrived: a brief primary tint that fades out. */
@@ -557,7 +563,7 @@
 }
 dialog::backdrop {
   background: var(--overlay);
-  animation: scrim-in 0.3s ease;
+  animation: scrim-in var(--dur-slow) var(--ease-out-strong);
 }
 @keyframes scrim-in {
   from {

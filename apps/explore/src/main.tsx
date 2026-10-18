@@ -336,6 +336,9 @@ const embed = createRoute({
   component: EmbedPage,
 })
 const router = createRouter({
+  // A route's view starts fresh when its params change (one job, then another), as it did when the shell keyed <main>
+  // by pathname; the shell itself no longer remounts on every navigation.
+  defaultRemountDeps: ({ params }) => params,
   routeTree: root.addChildren([
     jobs,
     listings,
