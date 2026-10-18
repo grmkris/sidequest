@@ -50,6 +50,8 @@ const WELCOME_FROM: ReadonlySet<string> = new Set(['/', '/jobs', '/services', '/
 export function shouldWelcome(input: {
   facts: OnboardingFacts
   pathname: string
+  search?: string
+  hash?: string
   /** "Finish later" was pressed for this wallet. */
   dismissed: boolean
   /** Welcome already opened in this tab for this wallet. */
@@ -57,9 +59,13 @@ export function shouldWelcome(input: {
   /** The SIDE sheet is on screen (someone signing in to buy SIDE): Welcome waits rather than taking the page. */
   sideOpen?: boolean
 }): boolean {
+  const accountDestination =
+    input.pathname === '/account' &&
+    (new URLSearchParams(input.search ?? '').get('tab') === 'backing' || input.hash?.replace(/^#/, '') === 'backing')
   return (
     onboardingDone(input.facts) === false &&
     WELCOME_FROM.has(input.pathname) &&
+    !accountDestination &&
     !input.dismissed &&
     !input.shown &&
     input.sideOpen !== true

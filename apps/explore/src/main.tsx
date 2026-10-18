@@ -47,6 +47,7 @@ import { AgentNewPage } from './routes/AgentNew.tsx'
 import { AgentApprovePage } from './routes/AgentApprove.tsx'
 import { recoverOnce } from './app-recovery.ts'
 import { useRouteAccessibility } from './components/RouteAccessibility.tsx'
+import { createBackingRoute } from './backing-route.ts'
 
 function Layout() {
   const location = useLocation()
@@ -223,6 +224,7 @@ const account = createRoute({
   staticData: { measure: 'narrow' },
   component: AccountPage,
 })
+const backing = createBackingRoute(root)
 const admin = createRoute({
   getParentRoute: () => root,
   path: '/admin',
@@ -350,6 +352,7 @@ const router = createRouter({
     wallet,
     connect,
     account,
+    backing,
     agentNew,
     agentApprove,
     agentsAlias,

@@ -30,6 +30,8 @@ describe('onboarding', () => {
       shouldWelcome({ facts: facts(true, false, false), pathname: '/jobs', dismissed: false, shown: false, ...over })
     expect(open({})).toBe(true)
     expect(open({ pathname: '/job/12' })).toBe(false)
+    expect(open({ pathname: '/account', search: '?tab=backing' })).toBe(false)
+    expect(open({ pathname: '/account', hash: '#backing' })).toBe(false)
     expect(open({ pathname: '/agents/approve/abc' })).toBe(false)
     expect(open({ dismissed: true })).toBe(false)
     expect(open({ shown: true })).toBe(false)

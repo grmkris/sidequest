@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accountSearch, accountTab } from './account-route.ts'
+import { accountSearch, accountTab, legacyBackingDestination } from './account-route.ts'
 
 describe('account route', () => {
   it('reads the tab, Wallet otherwise', () => {
@@ -23,5 +23,25 @@ describe('account route', () => {
     expect(accountSearch('?tab=backing&resume=t1', 'wallet')).toBe('?resume=t1')
     expect(accountSearch('', 'wallet')).toBe('')
     expect(accountSearch('?tab=settings', 'notifications')).toBe('?tab=notifications')
+  })
+
+  it('maps bare and unsupported legacy context to the Backing tab', () => {
+    for (const search of [
+      '',
+      '?agent=10401',
+      '?tab=settings',
+      '?next=https://evil.example',
+      '?account=0x0',
+      '?account=0x0000000000000000000000000000000000000000',
+      '?account=0x0000000000000000000000000000000000000001&account=0x0000000000000000000000000000000000000002',
+    ]) {
+      expect(legacyBackingDestination(search)).toBe('/account?tab=backing')
+    }
+  })
+
+  it('preserves a historical account address through the existing wallet/profile resolver', () => {
+    expect(legacyBackingDestination('?account=0x0000000000000000000000000000000000000001')).toBe(
+      '/wallet/0x0000000000000000000000000000000000000001',
+    )
   })
 })

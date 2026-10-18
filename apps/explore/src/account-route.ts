@@ -1,3 +1,5 @@
+import { getAddress, isAddress } from 'viem'
+
 /**
  * Where a link lands on the Account page: the tab (`?tab=`, Wallet otherwise). The section anchors other pages already
  * link to (`#wallet`, `#backing`, `#notifications`) open their tab too, and an explicit `?tab=` wins over them.
@@ -21,4 +23,13 @@ export function accountSearch(search: string, tab: AccountTab): string {
   else params.set('tab', tab)
   const s = params.toString()
   return s === '' ? '' : `?${s}`
+}
+
+/** Old /backing?account=<wallet> links lead to its existing public profile resolver. Unknown context is discarded. */
+export function legacyBackingDestination(search: string): string {
+  const accounts = new URLSearchParams(search).getAll('account')
+  const account = accounts.length === 1 ? accounts[0] : undefined
+  return account !== undefined && isAddress(account) && BigInt(account) !== 0n
+    ? `/wallet/${getAddress(account)}`
+    : '/account?tab=backing'
 }

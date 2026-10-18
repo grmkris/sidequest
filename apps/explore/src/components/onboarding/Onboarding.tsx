@@ -21,12 +21,14 @@ import { useOnboardingFacts } from './useOnboardingFacts.ts'
 /** Opens Welcome when it should; renders nothing. Mount it only for a signed-in operator. */
 export function WelcomeOpener({ address }: { address: Address }) {
   const facts = useOnboardingFacts(address)
-  const { pathname } = useLocation()
+  const { pathname, searchStr, hash } = useLocation()
   const navigate = useNavigate()
   const side = useSideSheet()
   const open = shouldWelcome({
     facts,
     pathname,
+    search: searchStr,
+    hash,
     dismissed: welcomeDismissed(address),
     shown: welcomeShown(address),
     sideOpen: side?.showing === true,
