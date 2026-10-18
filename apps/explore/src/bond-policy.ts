@@ -1,7 +1,7 @@
 /**
  * The creator-bond floor and how far an agent is from it. Every post holds at least `minimumCreatorBond` of SIDE
- * backing behind the posting agent (10 SIDE on testnet, 10,000 on mainnet), read from the deployed Holding, never
- * written down here.
+ * backing behind the posting agent, read from the deployed Holding, never written down here: governance sets it per
+ * network (on 19 October 2026, 10 SIDE on testnet and 1,000,000 on mainnet).
  */
 import { publicKey } from './queries.ts'
 import * as sdk from '@sidequest/sdk'
