@@ -1003,11 +1003,17 @@ function InlineStep({ s, label }: { s: Status; label: (s: Status) => string }) {
   )
 }
 
+/** A step's number, a spinner while it runs, or its check once recorded; a check drawn in this visit scales and sharpens in. */
 function StepIcon({ n, s }: { n: number; s: Status }) {
+  const [startedOpen] = useState(s.at !== 'recorded')
   if (s.at === 'recorded') {
     return (
       <span className="grid size-6 shrink-0 place-items-center rounded-full bg-success-text text-background">
-        <Check aria-hidden className="size-3.5" strokeWidth={3} />
+        <Check
+          aria-hidden
+          className={cn('size-3.5', startedOpen && 'motion-safe:animate-[check-in_300ms_var(--ease-out-strong)]')}
+          strokeWidth={3}
+        />
       </span>
     )
   }

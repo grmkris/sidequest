@@ -49,7 +49,7 @@ export function ServiceWallCard({
           className="col-start-1 row-start-1"
           // A wide tile shows its whole delivery frame: the picture's ground is the tile's colour, so it runs on seamlessly.
           imageClassName={cn(
-            'transition-transform duration-500 ease-(--ease-out-strong) [@media(hover:hover)]:group-hover/tile:scale-103',
+            'transition-[scale] duration-(--dur-slow) ease-(--ease-out-strong) [@media(hover:hover)_and_(pointer:fine)]:group-hover/tile:scale-103',
             wide && 'sm:object-contain',
           )}
         />

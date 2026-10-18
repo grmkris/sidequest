@@ -33,7 +33,7 @@ function PickedTray({ selection, app }: { selection: Selection; app: boolean }) 
       <aside
         aria-label="Picked services"
         className={cn(
-          'pointer-events-none fixed inset-x-0 z-30 flex justify-center ps-[max(1rem,var(--safe-left))] pe-[max(1rem,var(--safe-right))] animate-[step-in_0.3s_var(--ease-out-strong)]',
+          'pointer-events-none fixed inset-x-0 z-30 flex justify-center ps-[max(1rem,var(--safe-left))] pe-[max(1rem,var(--safe-right))] animate-[step-in_var(--dur-slow)_var(--ease-out-strong)]',
           app
             ? 'bottom-[calc(4.25rem+var(--safe-bottom))] lg:bottom-[calc(1rem+var(--safe-bottom))] lg:ps-[calc(15rem+1rem)]'
             : 'bottom-[calc(1rem+var(--safe-bottom))]',

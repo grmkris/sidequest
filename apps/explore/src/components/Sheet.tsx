@@ -348,7 +348,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={t.id}
             className={cn(
-              'pointer-events-auto flex max-w-md animate-[toast-in_0.45s_var(--ease-sheet)] items-center gap-2.5 rounded-full bg-popover px-4 py-2 text-sm font-medium text-popover-foreground shadow-popover',
+              'pointer-events-auto flex max-w-md transition-[opacity,translate] duration-400 ease-(--ease-sheet) starting:-translate-y-[150%] starting:opacity-0 items-center gap-2.5 rounded-full bg-popover px-4 py-2 text-sm font-medium text-popover-foreground shadow-popover',
               t.tone === 'error' && 'text-destructive-text',
             )}
           >

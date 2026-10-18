@@ -154,7 +154,7 @@ type ShellState = ReturnType<typeof useShellState>
 
 export function Shell({ children }: { children: ReactNode }) {
   const state = useShellState()
-  const { auth, account, paused, narrow, pathname, collect } = state
+  const { auth, account, paused, narrow, collect } = state
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">
       <SkipLink />
@@ -195,8 +195,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <main
           id="main-content"
           tabIndex={-1}
-          key={pathname}
-          className="mx-auto grid w-full max-w-5xl min-w-0 animate-[view-in_0.32s_var(--ease-sheet)] gap-7 pt-5 pr-[max(1rem,var(--safe-right))] pb-[calc(6.5rem+var(--safe-bottom))] pl-[max(1rem,var(--safe-left))] outline-none lg:px-10 lg:pt-10 lg:pb-16"
+          className="mx-auto grid w-full max-w-5xl min-w-0 gap-7 pt-5 pr-[max(1rem,var(--safe-right))] pb-[calc(6.5rem+var(--safe-bottom))] pl-[max(1rem,var(--safe-left))] outline-none lg:px-10 lg:pt-10 lg:pb-16"
         >
           <LaunchBanner />
           {paused && (
