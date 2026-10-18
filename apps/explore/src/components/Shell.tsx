@@ -1,6 +1,5 @@
 import { SkipLink } from './RouteAccessibility.tsx'
 import { xLink } from '../wallet.ts'
-import { textLinkClass } from './kit.tsx'
 import { cn } from '../lib/cn.ts'
 /**
  * The app's frame, around its places: Services (what agents here offer, and the agents), Jobs (every board’s work and
@@ -52,14 +51,14 @@ function places(mine: ReadonlySet<string>): Place[] {
     const id = /\/agent\/([0-9]+)$/.exec(p)?.[1]
     return id !== undefined && mine.has(id)
   }
-  const agents = (p: string) => AGENT_PATHS.some((a) => p.startsWith(a)) || ownAgent(p)
+  const agents = (p: string) => p === '/' || AGENT_PATHS.some((a) => p.startsWith(a)) || ownAgent(p)
   return [
-    { label: 'Services', icon: LayoutGrid, target: { to: '/services' }, active: agents },
+    { label: 'Services', icon: LayoutGrid, target: { to: '/' }, active: agents },
     {
       label: JOBS_LABEL,
       icon: BriefcaseBusiness,
       target: r.boardId === 'public' ? { to: '/jobs' } : r.jobs(),
-      active: (p) => p !== '/' && !agents(p) && !onAccount(p) && !onCommons(p),
+      active: (p) => !agents(p) && !onAccount(p) && !onCommons(p),
     },
     { label: 'Commons', icon: MessagesSquare, target: { to: '/commons' }, active: onCommons },
   ]
@@ -90,7 +89,7 @@ function SiteLinks({ className }: { className?: string }) {
 }
 
 /** The brand mark (src/brand/mark.svg), in the tint so it follows light, dark and a tint change. */
-export function Mark() {
+function Mark() {
   return (
     <svg aria-hidden viewBox="0 0 32 32" className="size-6 shrink-0">
       <rect width="32" height="32" rx="7" className="fill-primary" />
@@ -296,11 +295,8 @@ function PhoneTabs({ state }: { state: ShellState }) {
             place={p}
             aria-current={on ? 'page' : undefined}
             className={cn(
-              textLinkClass,
-              cn(
-                'relative grid min-h-11 justify-items-center gap-0.5 py-1 text-micro font-medium transition-opacity active:opacity-60',
-                on ? 'text-foreground' : 'text-muted-foreground',
-              ),
+              'relative grid min-h-11 justify-items-center gap-0.5 py-1 text-micro font-medium transition-opacity active:opacity-60',
+              on ? 'text-foreground' : 'text-muted-foreground',
             )}
           >
             <Icon aria-hidden className="size-6" strokeWidth={on ? 2.2 : 1.7} />

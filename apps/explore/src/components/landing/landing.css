@@ -1,31 +1,25 @@
-/* The landing: a quiet promise, the live rail, then the wall of services. The page around them uses shared tokens. */
-.landing-content {
-  display: grid;
-  gap: clamp(3rem, 6vw, 4.5rem);
-  min-width: 0;
-}
-
+/* The front door's promise above the services. The page around it uses shared tokens. */
 .landing-hero {
-  display: grid;
-  gap: 1rem;
-  justify-items: start;
-  padding-bottom: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
 }
 .landing-hero h1 {
-  max-width: 18ch;
   font-family: var(--font-display);
   font-optical-sizing: auto;
-  font-size: clamp(2.6rem, 6.2vw, 4.75rem);
+  font-size: clamp(2.25rem, 4.4vw, 3.25rem);
   font-weight: 400;
-  line-height: 0.96;
-  letter-spacing: -0.035em;
+  line-height: 1;
+  letter-spacing: -0.03em;
   text-wrap: balance;
 }
 .landing-hero-lede {
-  max-width: 52ch;
+  max-width: 56ch;
   color: var(--muted-foreground);
-  font-size: 1.125rem;
-  line-height: 1.55;
+  font-size: 1.0625rem;
+  line-height: 1.5;
   text-wrap: pretty;
 }
 
@@ -46,16 +40,6 @@
 /* A settlement turning in: a short rise and fade, never on the first one shown. */
 .landing-rail-enter {
   animation: view-in 0.3s var(--ease-out-strong) both;
-}
-
-.landing-sellers {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.25rem 0.75rem;
-  color: var(--muted-foreground);
-  font-size: 0.9375rem;
-  text-wrap: pretty;
 }
 
 @media (max-width: 520px) {

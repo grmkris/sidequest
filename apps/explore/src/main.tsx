@@ -21,7 +21,6 @@ import { ToastProvider } from './components/Sheet.tsx'
 import { AuthProvider, useAuth } from './components/Wallet.tsx'
 import { LaunchGate } from './components/LaunchGate.tsx'
 import { Shell } from './components/Shell.tsx'
-import { LandingShell } from './components/LandingShell.tsx'
 import { SideTokenProvider } from './components/side/SideToken.tsx'
 import { ServicesPage } from './routes/Services.tsx'
 import { ServicePage } from './routes/Service.tsx'
@@ -46,7 +45,6 @@ import { SponsorshipPage } from './routes/Sponsorship.tsx'
 import { useTokenRegistry } from './useTokens.ts'
 import { AgentNewPage } from './routes/AgentNew.tsx'
 import { AgentApprovePage } from './routes/AgentApprove.tsx'
-import { HomePage } from './routes/Home.tsx'
 import { recoverOnce } from './app-recovery.ts'
 import { useRouteAccessibility } from './components/RouteAccessibility.tsx'
 
@@ -56,13 +54,12 @@ function Layout() {
   useRouteAccessibility()
   // The embedded widget (ADR-0008) has no site chrome: the host page is the chrome.
   if (location.pathname.startsWith('/embed/')) return <Outlet />
-  // One SIDE sheet above both shells: a navigation while one of its trades is pending keeps it on screen.
-  const Frame = location.pathname === '/' ? LandingShell : Shell
+  // One SIDE sheet above the shell: a navigation while one of its trades is pending keeps it on screen.
   return (
     <SideTokenProvider>
-      <Frame>
+      <Shell>
         <Outlet />
-      </Frame>
+      </Shell>
     </SideTokenProvider>
   )
 }
@@ -109,7 +106,8 @@ function ErrorPage({ error }: ErrorComponentProps) {
 }
 
 const root = createRootRoute({ component: Layout, notFoundComponent: NotFoundPage, errorComponent: ErrorPage })
-const jobs = createRoute({ getParentRoute: () => root, path: '/', component: HomePage })
+// The front door is Services: arriving lands in the app, on what you can ask agents for.
+const jobs = createRoute({ getParentRoute: () => root, path: '/', component: ServicesPage })
 const listings = createRoute({ getParentRoute: () => root, path: '/jobs', component: ActivityPage })
 const job = createRoute({
   getParentRoute: () => root,
@@ -145,15 +143,13 @@ const agent = createRoute({
   path: '/agent/$agentId',
   component: AgentPage,
 })
-// What agents here offer, and the agents (the operator's own first); each agent opens on its page.
+// Services moved to the front door; shared /services links land there.
 const services = createRoute({
   getParentRoute: () => root,
   path: '/services',
-  component: () => (
-    <LaunchGate title="Services">
-      <ServicesPage />
-    </LaunchGate>
-  ),
+  beforeLoad: () => {
+    throw redirect({ to: '/', replace: true })
+  },
 })
 // One service, to share or come back to: the same card a tile opens, on its own page.
 const service = createRoute({
@@ -178,7 +174,7 @@ const agents = createRoute({
   getParentRoute: () => root,
   path: '/agents',
   beforeLoad: () => {
-    throw redirect({ to: '/services', replace: true })
+    throw redirect({ to: '/', replace: true })
   },
 })
 // A wallet's record spans boards, so its page is one for all of them; an agent's wallet goes to the agent.

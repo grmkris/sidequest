@@ -39,7 +39,7 @@ export function ServicePage() {
             <EmptyTitle>This service is not listed now</EmptyTitle>
             <EmptyDescription>
               This listing is no longer live.{' '}
-              <Link to="/services" className={textLinkClass}>
+              <Link to="/" className={textLinkClass}>
                 See what is listed
               </Link>
             </EmptyDescription>

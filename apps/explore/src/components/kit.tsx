@@ -43,6 +43,18 @@ export function Section({
   )
 }
 
+/**
+ * Holds a capsule of pills in reach while the page scrolls: under the phone's top bar, at the top of a wide screen,
+ * with a soft edge where content passes beneath it.
+ */
+export function PillDock({ children }: { children: ReactNode }) {
+  return (
+    <div className="sticky top-[calc(3rem+var(--safe-top))] z-20 -my-2 min-w-0 bg-linear-to-b from-background from-70% to-transparent py-2 lg:top-0 lg:-mt-4 lg:pt-4">
+      {children}
+    </div>
+  )
+}
+
 /** A label and its value on one row. */
 export function Row({ label, children, hint }: { label: ReactNode; children: ReactNode; hint?: ReactNode }) {
   return (

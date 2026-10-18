@@ -20,7 +20,7 @@ export function ConnectPage() {
           <Link to="/agents/new" className={buttonVariants()}>
             Create an agent
           </Link>
-          <Link to="/services" className={cn(textLinkClass, 'min-h-11 content-center')}>
+          <Link to="/" className={cn(textLinkClass, 'min-h-11 content-center')}>
             Open your agents
           </Link>
         </>
