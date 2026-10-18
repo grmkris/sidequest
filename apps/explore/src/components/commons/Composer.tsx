@@ -2,6 +2,7 @@ import { X } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import type { AttachmentDraft } from './AttachmentEditor.tsx'
 
+import { cn } from '../../lib/cn.ts'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
 import { useAuth } from '../Wallet.tsx'
@@ -12,43 +13,44 @@ import { MarkdownEditor } from './MarkdownEditor.tsx'
 import { EnhancementFallback } from './EnhancementFallback.tsx'
 
 const AttachmentEditor = lazy(() => import('./AttachmentEditor.tsx'))
+// Declared here, not imported, so the plan editor's chunk loads only when a plan is attached.
+const NO_ATTACHMENT: AttachmentDraft = { source: '', value: null, error: null }
 
 /**
  * Writing in a thread. The board decides who may post; the composer only explains its answer (sign in, or the SIDE it
  * needs) and keeps the draft when a post fails, so nothing typed is lost.
  */
 interface ComposerProps {
-  subject: string
+  /** The post in flight and its attached plan, kept by the thread so a composer that moves under a post keeps them. */
+  posting: ComposerPosting
   body: string
   onBodyChange: (body: string) => void
   draftRevision: number
   viewer: Viewer | null
   replyTo: Message | null
   onCancelReply: () => void
-  onPosted: (submittedBody: string, submittedReplyTo: number | null) => void
   placeholder?: string
+  /** Start as one line, opening into the full editor once someone writes. */
+  compact?: boolean
 }
 
 export function Composer({
-  subject,
+  posting,
   body,
   onBodyChange: setBody,
   draftRevision,
   viewer,
   replyTo,
   onCancelReply,
-  onPosted,
   placeholder = 'Write a message',
+  compact = false,
 }: ComposerProps) {
   const auth = useAuth()
-  const { post, attach, setAttach, attachment, setAttachment, send } = useComposerPost({
-    subject,
-    body,
-    replyTo,
-    onPosted,
-  })
+  const { post, attach, setAttach, attachment, setAttachment, send } = posting
   const guidance = composerGuidance(viewer, auth.signedIn)
   const length = body.length
+  const [engaged, setEngaged] = useState(false)
+  const collapsed = compact && !engaged && body === '' && !attach
 
   if (guidance !== null && auth.signedIn && viewer !== null)
     return (
@@ -58,7 +60,12 @@ export function Composer({
     )
   return (
     <form
-      className="grid min-w-0 grid-cols-1 gap-3 rounded-2xl border border-border bg-card p-4"
+      className={cn(
+        'min-w-0 rounded-2xl bg-card shadow-chip transition-shadow duration-(--dur-fast)',
+        collapsed
+          ? 'flex items-center gap-2 py-1.5 ps-3 pe-1.5 focus-within:ring-3 focus-within:ring-ring/40'
+          : 'grid grid-cols-1 gap-3 p-4',
+      )}
       onSubmit={(event) => {
         event.preventDefault()
         send()
@@ -74,36 +81,49 @@ export function Composer({
         disabled={post.isPending}
         {...(replyTo === null ? {} : { replyId: replyTo.id })}
         focusRevision={draftRevision}
+        collapsed={collapsed}
+        onFocus={() => setEngaged(true)}
       />
       <ComposerActions
         guidance={guidance}
         signedIn={auth.signedIn}
         pending={post.isPending}
-        disabled={body.trim() === '' || length > MESSAGE_MAX || attachment.error !== null}
+        disabled={collapsed || body.trim() === '' || length > MESSAGE_MAX || attachment.error !== null}
         error={post.error?.message}
+        collapsed={collapsed}
       />
-      <AttachmentPanel
-        attach={attach}
-        pending={post.isPending}
-        onChange={setAttachment}
-        onToggle={() => {
-          setAttach(!attach)
-          setAttachment({ value: null, error: null })
-        }}
-      />
+      {!collapsed && (
+        <AttachmentPanel
+          attach={attach}
+          pending={post.isPending}
+          draft={attachment}
+          onChange={setAttachment}
+          onToggle={() => {
+            setAttach(!attach)
+            setAttachment(NO_ATTACHMENT)
+          }}
+        />
+      )}
     </form>
   )
 }
 
-function useComposerPost({
+type ComposerPosting = ReturnType<typeof useComposerPost>
+
+export function useComposerPost({
   subject,
   body,
   replyTo,
   onPosted,
-}: Pick<ComposerProps, 'subject' | 'body' | 'replyTo' | 'onPosted'>) {
+}: {
+  subject: string
+  body: string
+  replyTo: Message | null
+  onPosted: (submittedBody: string, submittedReplyTo: number | null) => void
+}) {
   const post = usePost()
   const [attach, setAttach] = useState(false)
-  const [attachment, setAttachment] = useState<AttachmentDraft>({ value: null, error: null })
+  const [attachment, setAttachment] = useState<AttachmentDraft>(NO_ATTACHMENT)
   const send = () => {
     const snapshotBody = body
     const snapshotReplyTo = replyTo?.id ?? null
@@ -121,7 +141,7 @@ function useComposerPost({
         () => {
           onPosted(snapshotBody, snapshotReplyTo)
           setAttach(false)
-          setAttachment({ value: null, error: null })
+          setAttachment(NO_ATTACHMENT)
         },
         () => {
           /* The mutation exposes the error; retain the draft for a deliberate retry. */
@@ -153,19 +173,30 @@ function ComposerActions({
   pending,
   disabled,
   error,
+  collapsed,
 }: {
   guidance: string | null
   signedIn: boolean
   pending: boolean
   disabled: boolean
   error: string | undefined
+  collapsed: boolean
 }) {
+  const label = signedIn ? 'Post' : 'Sign in and post'
+  // One line: the button beside the empty message, waiting for words.
+  if (collapsed)
+    return (
+      // Concentric with the composer: its 16 px corner less the 6 px inset.
+      <Button type="submit" className="min-h-11 shrink-0 rounded-[10px]" disabled>
+        {label}
+      </Button>
+    )
   return (
     <>
       <div className="flex flex-wrap items-center gap-3">
         {guidance !== null && <span className="text-ui text-muted-foreground">{guidance}</span>}
         <Button type="submit" className="ms-auto min-h-11" busy={pending} disabled={disabled}>
-          {signedIn ? 'Post' : 'Sign in and post'}
+          {label}
         </Button>
       </div>
       {error !== undefined && (
@@ -180,11 +211,13 @@ function ComposerActions({
 function AttachmentPanel({
   attach,
   pending,
+  draft,
   onChange,
   onToggle,
 }: {
   attach: boolean
   pending: boolean
+  draft: AttachmentDraft
   onChange: (value: AttachmentDraft) => void
   onToggle: () => void
 }) {
@@ -198,7 +231,7 @@ function AttachmentPanel({
       {attach && (
         <EnhancementFallback fallback={<output>Plan editor could not load. Reload to try again.</output>}>
           <Suspense fallback={<output>Opening plan editor…</output>}>
-            <AttachmentEditor disabled={pending} onChange={onChange} />
+            <AttachmentEditor disabled={pending} draft={draft} onChange={onChange} />
           </Suspense>
         </EnhancementFallback>
       )}

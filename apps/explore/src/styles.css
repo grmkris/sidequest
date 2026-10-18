@@ -22,6 +22,12 @@
     border: 0;
     border-radius: 0;
   }
+  /* A long post's opening in a thread: cut at a fixed height, fading out above its "Show more". */
+  .post-opening {
+    max-block-size: 16rem;
+    overflow: clip;
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 4.5rem), transparent);
+  }
   .commons-markdown {
     min-inline-size: 0;
     max-inline-size: 72ch;

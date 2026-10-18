@@ -123,6 +123,13 @@ describe('threadTree', () => {
       [4, []],
     ])
   })
+  it("reads newest post first as a feed, keeping each post's replies in the order they were written", () => {
+    const tree = threadTree([message(1), message(2, 1), message(3), message(5, 1)], 'newest')
+    expect(tree.map((t) => [t.root.id, t.replies.map((r) => r.id)])).toEqual([
+      [3, []],
+      [1, [2, 5]],
+    ])
+  })
 })
 
 describe('commons route', () => {

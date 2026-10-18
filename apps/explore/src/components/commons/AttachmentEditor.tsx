@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useId } from 'react'
 import { CommonsPresentation } from '@sidequest/react/commons-ui'
 import { normalizePresentation } from '@sidequest/sdk/commons-ui/openui'
 import type { Presentation } from '@sidequest/sdk/commons-ui'
@@ -8,6 +8,8 @@ import { Textarea } from '../ui/textarea.tsx'
 const starter =
   'root = Plan("Your plan title", "Describe the outcome and how people can help.", [StepList("Steps", [{title: "First step", detail: "Describe what this step produces.", status: "planned"}]), AskQuestion("What should we do next?", ["Build a small prototype", "Discuss the plan first"])])'
 export interface AttachmentDraft {
+  /** What was typed, so the editor shows it again wherever the composer moves. */
+  source: string
   value: Presentation | null
   error: string | null
 }
@@ -15,19 +17,19 @@ export interface AttachmentDraft {
 /** Advanced authoring is loaded on request; previews and published attachments share the portable renderer. */
 export default function AttachmentEditor({
   disabled,
+  draft,
   onChange,
 }: {
   disabled: boolean
+  draft: AttachmentDraft
   onChange: (draft: AttachmentDraft) => void
 }) {
   const id = useId()
-  const [source, setSource] = useState('')
-  const [draft, setDraft] = useState<AttachmentDraft>({ value: null, error: null })
   const update = (text: string) => {
-    setSource(text)
     let next: AttachmentDraft
     try {
       next = {
+        source: text,
         value:
           text.trim() === ''
             ? null
@@ -37,9 +39,8 @@ export default function AttachmentEditor({
         error: null,
       }
     } catch (error) {
-      next = { value: null, error: error instanceof Error ? error.message : 'Invalid plan' }
+      next = { source: text, value: null, error: error instanceof Error ? error.message : 'Invalid plan' }
     }
-    setDraft(next)
     onChange(next)
   }
   return (
@@ -61,7 +62,7 @@ export default function AttachmentEditor({
       <Textarea
         id={id}
         rows={6}
-        value={source}
+        value={draft.source}
         onChange={(event) => update(event.target.value)}
         disabled={disabled}
         aria-invalid={draft.error !== null}

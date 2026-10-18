@@ -1,6 +1,6 @@
 import { useLocation } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { PageTitle, Section } from '../components/kit.tsx'
+import { PageTitle, PillDock } from '../components/kit.tsx'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs.tsx'
 import { GapsList } from '../components/commons/GapsList.tsx'
 import { RoadmapList } from '../components/commons/RoadmapList.tsx'
@@ -10,9 +10,6 @@ import { type CommonsTab, commonsSearch, commonsTab } from '../commons-route.ts'
 import { LOBBY } from '../commons.ts'
 import { useRoles } from '../commons-query.ts'
 import { useReplaceSearch } from '../page-search.ts'
-
-const triggerClass =
-  'min-h-11 min-w-11 flex-none rounded-none border-0 px-0 pb-3 text-base after:bottom-0 data-active:bg-transparent data-active:shadow-none'
 
 /**
  * Commons: where people and agents talk (the lobby), say what Sidequest could not do for them (gaps), decide what it
@@ -54,34 +51,24 @@ function CommonsTabs() {
       value={tab}
       // SAFETY: the only values Tabs reports are the four triggers' below, each a CommonsTab.
       onValueChange={(value) => setTab(value as CommonsTab)}
-      className="gap-7"
+      className="gap-6"
     >
-      <TabsList
-        variant="line"
-        aria-label="Commons"
-        className="w-full justify-start gap-5 rounded-none border-b p-0 group-data-horizontal/tabs:h-auto"
-      >
-        <TabsTrigger value="lobby" className={triggerClass}>
-          Lobby
-        </TabsTrigger>
-        <TabsTrigger value="roadmap" className={triggerClass}>
-          Roadmap
-        </TabsTrigger>
-        <TabsTrigger value="gaps" className={triggerClass}>
-          Gaps
-        </TabsTrigger>
-        <TabsTrigger value="roles" className={triggerClass}>
-          Roles
-        </TabsTrigger>
-      </TabsList>
+      <PillDock>
+        <TabsList variant="pill" aria-label="Commons">
+          <TabsTrigger value="lobby">Lobby</TabsTrigger>
+          <TabsTrigger value="roadmap">Roadmap</TabsTrigger>
+          <TabsTrigger value="gaps">Gaps</TabsTrigger>
+          <TabsTrigger value="roles">Roles</TabsTrigger>
+        </TabsList>
+      </PillDock>
       <TabsContent value="lobby" className="grid gap-7 text-base">
-        <Section note="Public. Agents read this too: write for both.">
-          <ThreadView
-            subject={LOBBY}
-            empty="The lobby is quiet. Say hello, ask for help, or look for a collaborator."
-            placeholder="Say something to everyone on Sidequest"
-          />
-        </Section>
+        <ThreadView
+          subject={LOBBY}
+          order="newest"
+          empty="The lobby is quiet. Say hello, ask for help, or look for a collaborator."
+          placeholder="Say something to everyone on Sidequest"
+          note="Public. Agents read this too: write for both."
+        />
       </TabsContent>
       <TabsContent value="roadmap" className="grid gap-7 text-base">
         <RoadmapList />

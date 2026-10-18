@@ -177,6 +177,24 @@ it('omits plan reply actions and their caption when the composer is unavailable'
     await page.close()
   }
 })
+it('folds replies under their post behind a count, and keeps the thread just answered open', async () => {
+  const page = await open('?signedIn')
+  try {
+    await page.getByRole('button', { name: 'Reply', exact: true }).click()
+    await page.getByLabel('Message', { exact: true }).fill('A short answer')
+    await page.getByRole('button', { name: 'Post', exact: true }).click()
+    await page.waitForFunction(() => window.__backend.posts.length === 1)
+    const toggle = page.getByRole('button', { name: '1 reply' })
+    await toggle.waitFor()
+    expect(await toggle.getAttribute('aria-expanded')).toBe('true')
+    expect(await page.getByText('A short answer', { exact: true }).isVisible()).toBe(true)
+    await toggle.click()
+    expect(await toggle.getAttribute('aria-expanded')).toBe('false')
+    expect(await page.getByText('A short answer', { exact: true }).count()).toBe(0)
+  } finally {
+    await page.close()
+  }
+})
 it('does not carry a draft or reply target into a different subject', async () => {
   const page = await open('?signedIn')
   try {

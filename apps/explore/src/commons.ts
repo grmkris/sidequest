@@ -313,9 +313,16 @@ export const GAP_LABEL: Record<GapType, string> = {
   unclear_docs: 'Unclear docs',
 }
 
-/** Replies under their parent, in post order; a reply whose parent is off this page stands on its own. */
-export function threadTree(messages: readonly Message[]): { root: Message; replies: Message[] }[] {
+/**
+ * Replies under their parent, in post order; a reply whose parent is off this page stands on its own. `newest` puts the
+ * latest post first, as a feed reads; replies under a post stay in the order they were written either way.
+ */
+export function threadTree(
+  messages: readonly Message[],
+  order: 'oldest' | 'newest' = 'oldest',
+): { root: Message; replies: Message[] }[] {
   const ids = new Set(messages.map((m) => m.id))
   const roots = messages.filter((m) => m.replyTo === null || !ids.has(m.replyTo))
-  return roots.map((root) => ({ root, replies: messages.filter((m) => m.replyTo === root.id) }))
+  const tree = roots.map((root) => ({ root, replies: messages.filter((m) => m.replyTo === root.id) }))
+  return order === 'newest' ? tree.toReversed() : tree
 }

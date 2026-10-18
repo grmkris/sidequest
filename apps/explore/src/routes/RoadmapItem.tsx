@@ -102,6 +102,7 @@ function ItemBody({ detail }: { detail: RoadmapItemDetail }) {
       <Section title="Discussion">
         <ThreadView
           subject={thread.subject}
+          order="newest"
           empty="No discussion yet. Say why this matters, or how it should work."
           placeholder="Discuss this item"
         />

@@ -2,6 +2,7 @@ import { useEffect, useId, useRef } from 'react'
 import { Field, FieldDescription, FieldLabel } from '../ui/field.tsx'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs.tsx'
 import { Textarea } from '../ui/textarea.tsx'
+import { cn } from '../../lib/cn.ts'
 import { Markdown } from './Markdown.tsx'
 
 interface EditorProps {
@@ -14,6 +15,9 @@ interface EditorProps {
   disabled?: boolean
   replyId?: number
   focusRevision?: number
+  /** One quiet line until someone starts writing: no label, tabs, count or help on screen. */
+  collapsed?: boolean
+  onFocus?: () => void
 }
 
 /** Preview matches published content; switching tabs never changes the draft. */
@@ -27,6 +31,8 @@ export function MarkdownEditor({
   disabled,
   replyId,
   focusRevision,
+  collapsed = false,
+  onFocus,
 }: EditorProps) {
   const id = useId()
   const input = useRef<HTMLTextAreaElement>(null)
@@ -36,10 +42,12 @@ export function MarkdownEditor({
   }, [replyId, focusRevision])
   return (
     <Field data-invalid={invalid} className="min-w-0">
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <FieldLabel htmlFor={id} className={cn(collapsed && 'sr-only')}>
+        {label}
+      </FieldLabel>
       {description !== undefined && <FieldDescription>{description}</FieldDescription>}
       <Tabs key={`${replyId ?? ''}:${focusRevision ?? 0}`} defaultValue="write" className="min-w-0 gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className={cn('flex flex-wrap items-center justify-between gap-2', collapsed && 'hidden')}>
           <TabsList aria-label={`${label} editor`} className="group-data-horizontal/tabs:h-11">
             <TabsTrigger value="write" className="min-w-16 px-3">
               Write
@@ -58,12 +66,18 @@ export function MarkdownEditor({
             id={id}
             value={value}
             onChange={(event) => onChange(event.target.value)}
+            onFocus={onFocus}
             placeholder={placeholder}
             disabled={disabled}
-            rows={4}
+            rows={collapsed ? 1 : 4}
             aria-invalid={invalid}
             aria-describedby={`${id}-help ${id}-count${invalid ? ` ${id}-error` : ''}`}
-            className="min-h-32 max-h-96"
+            className={cn(
+              'max-h-96',
+              collapsed
+                ? 'min-h-11 resize-none border-0 bg-transparent px-1 focus-visible:ring-0 dark:bg-transparent'
+                : 'min-h-32',
+            )}
           />
         </TabsContent>
         <TabsContent
@@ -78,14 +92,23 @@ export function MarkdownEditor({
           )}
         </TabsContent>
       </Tabs>
-      <p id={`${id}-help`} className="text-ui text-muted-foreground">
+      <EditorHelp id={id} over={value.length - limit} quiet={collapsed} />
+    </Field>
+  )
+}
+
+/** What Markdown does here, and how much to cut when the draft is over its limit. */
+function EditorHelp({ id, over, quiet }: { id: string; over: number; quiet: boolean }) {
+  return (
+    <>
+      <p id={`${id}-help`} className={cn('text-ui text-muted-foreground', quiet && 'sr-only')}>
         Markdown supported: <code>**bold**</code>, <code>[link](url)</code>, <code>- [ ] task</code>.
       </p>
-      {invalid && (
+      {over > 0 && (
         <p id={`${id}-error`} className="text-sm text-destructive-text">
-          Remove {value.length - limit} {value.length - limit === 1 ? 'character' : 'characters'} to continue.
+          Remove {over} {over === 1 ? 'character' : 'characters'} to continue.
         </p>
       )}
-    </Field>
+    </>
   )
 }
