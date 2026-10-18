@@ -51,14 +51,14 @@ function places(mine: ReadonlySet<string>): Place[] {
     const id = /\/agent\/([0-9]+)$/.exec(p)?.[1]
     return id !== undefined && mine.has(id)
   }
-  const agents = (p: string) => p === '/' || AGENT_PATHS.some((a) => p.startsWith(a)) || ownAgent(p)
+  const agents = (p: string) => AGENT_PATHS.some((a) => p.startsWith(a)) || ownAgent(p)
   return [
-    { label: 'Services', icon: LayoutGrid, target: { to: '/' }, active: agents },
+    { label: 'Services', icon: LayoutGrid, target: { to: '/services' }, active: agents },
     {
       label: JOBS_LABEL,
       icon: BriefcaseBusiness,
       target: r.boardId === 'public' ? { to: '/jobs' } : r.jobs(),
-      active: (p) => !agents(p) && !onAccount(p) && !onCommons(p),
+      active: (p) => p !== '/' && !agents(p) && !onAccount(p) && !onCommons(p),
     },
     { label: 'Commons', icon: MessagesSquare, target: { to: '/commons' }, active: onCommons },
   ]
@@ -89,7 +89,7 @@ function SiteLinks({ className }: { className?: string }) {
 }
 
 /** The brand mark (src/brand/mark.svg), in the tint so it follows light, dark and a tint change. */
-function Mark() {
+export function Mark() {
   return (
     <svg aria-hidden viewBox="0 0 32 32" className="size-6 shrink-0">
       <rect width="32" height="32" rx="7" className="fill-primary" />

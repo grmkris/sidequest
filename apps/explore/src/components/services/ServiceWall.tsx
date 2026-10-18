@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { Search } from 'lucide-react'
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react'
 import { cn } from '../../lib/cn.ts'
@@ -7,7 +8,7 @@ import { useServices, type ServiceCategory, type ServiceListing } from '../../se
 import type { useServiceSelection } from '../../useServiceSelection.ts'
 import { useSettled } from '../../useSettled.ts'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
-import { Button } from '../ui/button.tsx'
+import { Button, buttonVariants } from '../ui/button.tsx'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../ui/empty.tsx'
 import { PillDock } from '../kit.tsx'
 import { ServiceWallCard } from './ServiceWallCard.tsx'
@@ -15,27 +16,47 @@ import { ServiceWallCard } from './ServiceWallCard.tsx'
 type Selection = ReturnType<typeof useServiceSelection>
 
 /**
- * The services, as a wall of pictures: a search, the live rail, the categories, and the tiles, with services that can
- * prove a delivery first and wide. The category bar stays in reach as a glass capsule while the wall scrolls.
+ * The services, as a wall of pictures: a search, the categories, and the tiles, with services that can prove a
+ * delivery first and wide. One wall for the front door (`landing`: the hero and the live rail around the search, the
+ * category bar held under the header while the wall scrolls, a link to all of them) and the full directory.
  */
-export function ServiceWall({ selection, rail }: { selection: Selection; rail?: ReactNode }) {
+export function ServiceWall({
+  selection,
+  limit,
+  landing = false,
+  intro,
+  rail,
+}: {
+  selection: Selection
+  limit?: number
+  landing?: boolean
+  intro?: ReactNode
+  rail?: ReactNode
+}) {
   const [q, setQ] = useState('')
   const [category, setCategory] = useState<ServiceCategory | null>(null)
   const query = useSettled(q)
   const read = useServices(query)
-  const services = filterServices(read.services, query, category)
+  const matching = filterServices(read.services, query, category)
+  const services = matching.slice(0, limit)
   return (
-    <section aria-label="Services" className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
+    <section aria-label="Services" className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
+      {intro}
       <ServiceSearch value={q} onChange={setQ} />
       {rail}
-      <CategoryBar categories={categoriesOf(read.services)} selected={category} onChange={setCategory} />
+      <CategoryBar
+        categories={categoriesOf(read.services)}
+        selected={category}
+        onChange={setCategory}
+        landing={landing}
+      />
       <WallBody read={read} services={services} filtered={query !== '' || category !== null} selection={selection} />
       {read.error !== null && read.services.length > 0 && (
         <Alert>
           <AlertDescription>Services could not be refreshed. Showing the services already read.</AlertDescription>
         </Alert>
       )}
-      {read.hasNextPage && (
+      {!landing && read.hasNextPage && (
         <Button
           variant="secondary"
           className="min-h-10 justify-self-center"
@@ -44,6 +65,14 @@ export function ServiceWall({ selection, rail }: { selection: Selection; rail?: 
         >
           More services
         </Button>
+      )}
+      {landing && (read.hasNextPage || matching.length > services.length) && (
+        <Link
+          to="/services"
+          className={buttonVariants({ variant: 'outline', size: 'lg', className: 'justify-self-center rounded-full' })}
+        >
+          See all services
+        </Link>
       )}
     </section>
   )
@@ -99,15 +128,17 @@ function CategoryBar({
   categories,
   selected,
   onChange,
+  landing,
 }: {
   categories: ReturnType<typeof categoriesOf>
   selected: ServiceCategory | null
   onChange: (category: ServiceCategory | null) => void
+  landing: boolean
 }) {
   if (categories.length === 0 && selected === null) return null
   const total = categories.reduce((sum, item) => sum + item.count, 0)
   return (
-    <PillDock>
+    <PillDock landing={landing}>
       <fieldset className="w-fit max-w-full min-w-0 rounded-full p-1 shadow-chip material-chrome">
         <legend className="sr-only">Service categories</legend>
         <div className="flex snap-x gap-1 overflow-x-auto rounded-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

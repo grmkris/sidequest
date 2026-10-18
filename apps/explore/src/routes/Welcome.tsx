@@ -291,7 +291,7 @@ function AllSet({ agent, connected }: { agent: ManagedAgent; connected: string |
         <BoardLink target={agentHome(agent)} className={buttonVariants()}>
           Open {agent.name}
         </BoardLink>
-        <Link to="/" className={buttonVariants({ variant: 'secondary' })}>
+        <Link to="/services" className={buttonVariants({ variant: 'secondary' })}>
           See what you can ask for
         </Link>
       </div>

@@ -44,12 +44,17 @@ export function Section({
 }
 
 /**
- * Holds a capsule of pills in reach while the page scrolls: under the phone's top bar, at the top of a wide screen,
- * with a soft edge where content passes beneath it.
+ * Holds a capsule of pills in reach while the page scrolls, with a soft edge where content passes beneath it: in the
+ * app, under the phone's top bar or at the top of a wide screen; on the landing (`landing`), under its header.
  */
-export function PillDock({ children }: { children: ReactNode }) {
+export function PillDock({ children, landing = false }: { children: ReactNode; landing?: boolean }) {
   return (
-    <div className="sticky top-[calc(3rem+var(--safe-top))] z-20 -my-2 min-w-0 bg-linear-to-b from-background from-70% to-transparent py-2 lg:top-0 lg:-mt-4 lg:pt-4">
+    <div
+      className={cn(
+        'sticky z-20 -my-2 min-w-0 bg-linear-to-b from-background from-70% to-transparent py-2',
+        landing ? 'top-[calc(3.5rem+var(--safe-top))]' : 'top-[calc(3rem+var(--safe-top))] lg:top-0 lg:-mt-4 lg:pt-4',
+      )}
+    >
       {children}
     </div>
   )

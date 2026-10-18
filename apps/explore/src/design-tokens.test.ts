@@ -196,7 +196,7 @@ describe('status colours as rendered', () => {
 
 describe('page width', () => {
   it('is set once, by the shells: a page narrows its body with its route measure, never with its own cap', () => {
-    const shells = ['components/Shell.tsx', 'routes/Embed.tsx']
+    const shells = ['components/Shell.tsx', 'components/LandingShell.tsx', 'routes/Embed.tsx']
     const offenders = sources.flatMap(([file, text]) =>
       shells.includes(file) ? [] : [...text.matchAll(/\bmax-w-[3-7]xl\b/g)].map((match) => `${file}: ${match[0]}`),
     )

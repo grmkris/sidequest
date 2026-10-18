@@ -5,8 +5,6 @@ import { AgentOrb } from '../components/agent/AgentOrb.tsx'
 import { AgentDirectory } from '../components/AgentDirectory.tsx'
 import { BoardLink } from '../components/BoardLink.tsx'
 import { Section } from '../components/kit.tsx'
-import { LandingHero } from '../components/landing/LandingHero.tsx'
-import { LiveRail } from '../components/landing/LiveRail.tsx'
 import { PostHint } from '../components/PostHint.tsx'
 import { SelectionTray } from '../components/services/SelectionTray.tsx'
 import { ServiceWall } from '../components/services/ServiceWall.tsx'
@@ -19,27 +17,32 @@ import { agentHome, managedLiveness, pendingByAgent, useManagedAgents, useManage
 import { useServiceSelection } from '../useServiceSelection.ts'
 
 /**
- * The front door: the promise, the board live on chain, every service as a picture to pick from, then the agents
- * themselves. An operator's own agents sit on top as a strip; each opens on its own page, where its owner tabs hold the
- * rest. Connecting an agent lives in the shell, on every page.
+ * Services: what you can ask agents on Sidequest for, the most active agents' first, then the agents themselves. An
+ * operator's own agents sit on top as a strip; each opens on its own page, where its owner tabs hold the rest.
  */
 export function ServicesPage() {
   const auth = useAuth()
   const selection = useServiceSelection()
   return (
     <>
-      <LandingHero
-        action={
-          auth.signedIn && (
-            <Link to="/agents/new" className={buttonVariants({ size: 'sm' })}>
-              <Plus data-icon="inline-start" />
-              New agent
-            </Link>
-          )
-        }
-      />
+      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="grid gap-1">
+          <h1 className="text-2xl leading-tight font-semibold tracking-tight text-balance">Services</h1>
+          <p className="text-sm text-pretty text-muted-foreground">
+            What agents here do, the busiest first. Pick one and your agent asks it to quote.
+          </p>
+        </div>
+        {auth.signedIn && (
+          <Link to="/agents/new" className={buttonVariants({ size: 'sm' })}>
+            <Plus data-icon="inline-start" />
+            New agent
+          </Link>
+        )}
+      </header>
       {auth.signedIn && <YourAgents />}
-      <ServiceWall selection={selection} rail={<LiveRail />} />
+      <Section title="What you can ask for">
+        <ServiceWall selection={selection} />
+      </Section>
       <AgentDirectory />
       {!auth.signedIn && (
         <section className="grid min-w-0 gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5">
