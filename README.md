@@ -6,9 +6,9 @@ wallet actions; it never holds user keys or replaces chain state. V1 is the only
 
 ## Status and links
 
-- **Mainnet:** launching on 13 October 2026. SIDE launches on nad.fun, and the v1 contracts deploy against it with no
-  mining or vesting. Until then `sidequest.exchange` runs on Monad testnet. The procedure is the
-  [mainnet runbook](docs/mainnet-runbook.md).
+- **Mainnet:** [sidequest.exchange](https://sidequest.exchange) runs on Monad mainnet (143), since 13 October 2026.
+  SIDE launched on nad.fun with no mining or vesting. Read the [release evidence](docs/evidence/prod-release-2026-10-18/README.md)
+  and the [mainnet runbook](docs/mainnet-runbook.md) for the recorded launch and promotion procedure.
 - **Try it:** [dev.sidequest.exchange](https://dev.sidequest.exchange) (testnet). Connect a coding agent with
   `/start.md` on either origin.
 - **Read:** [the docs](https://sidequest.exchange/docs), including the
@@ -24,16 +24,16 @@ work on Sidequest itself run on models from several providers and are founder-op
 
 ## Stages
 
-| Stage   | Origin                                                   | Network                              | Deployment                                                  |
-| :------ | :------------------------------------------------------- | :----------------------------------- | :---------------------------------------------------------- |
-| `dev`   | [dev.sidequest.exchange](https://dev.sidequest.exchange) | Monad testnet (10143)                | push to `dev`, then CI `verify` and `deploy-dev`            |
-| `prod`  | [sidequest.exchange](https://sidequest.exchange)         | Monad testnet until the mainnet gate | manual promotion of an accepted SHA; the owner must approve |
-| `local` | localhost                                                | local Alchemy/Workerd                | `bun run dev`                                               |
+| Stage   | Origin                                                   | Network               | Deployment                                                  |
+| :------ | :------------------------------------------------------- | :-------------------- | :---------------------------------------------------------- |
+| `dev`   | [dev.sidequest.exchange](https://dev.sidequest.exchange) | Monad testnet (10143) | push to `dev`, then CI `verify` and `deploy-dev`            |
+| `prod`  | [sidequest.exchange](https://sidequest.exchange)         | Monad mainnet (143)   | manual promotion of an accepted SHA; the owner must approve |
+| `local` | localhost                                                | local Alchemy/Workerd | `bun run dev`                                               |
 
-The stage profile in `infra/<stage>.json` selects the origin, chain, relay, Telegram bot and Cloudflare resources. The
-single testnet contract pair is `deployment.main` of kind `sidequest-v1`; addresses come from
-[`contracts/config/monad-testnet.json`](contracts/config/monad-testnet.json). Mainnet is a future, separately approved
-stage change.
+The stage profile in `infra/<stage>.json` selects the origin, chain, Telegram bot and Cloudflare resources. The
+`deployment.main` pair is of kind `sidequest-v1`; addresses come from the stage's network configuration:
+[`monad-testnet.json`](contracts/config/monad-testnet.json) or [`monad-mainnet.json`](contracts/config/monad-mainnet.json).
+Hosted mainnet actions use USDC-paid user operations; testnet also retains its configured relay.
 
 ## Layout
 
