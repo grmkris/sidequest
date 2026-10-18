@@ -1961,3 +1961,14 @@ was restarted on the release commit before the push.
 
 No mainnet transaction, signature, provider policy change or authenticated prod post was made. The Safe is still
 1-of-1. [Report, ledger and receipts](evidence/prod-release-2026-10-18/README.md).
+
+## Patch recovery and balances release `3d852468` (18 Oct 2026)
+
+Patch PRs #11 and #12 are merged and live on dev and prod at `3d8524684145d42ab1cfdef0369f1ab842c23787`.
+Both exact-head CI runs passed verify, deploy, smoke and drift. The isolated full check passed 18/18 tasks and build 2/2;
+API passed 832 tests (17 skipped), Explore 621, Arbiter 69, and Contracts 436 (22 skipped), with no workspace floor drop.
+Patch's authenticated Work-only `get_balances` read succeeds on prod with mainnet identity, decimals, source timestamps,
+USD estimates and payment receipts. The affected crew and Commons processes now run that released source with persistent
+state preserved. The mainnet arbiters were not restarted. Public health/Commons checks passed; authenticated owner-browser
+and live recovery fault-injection acceptance are not claimed. The separate recurring OAuth refresh failure remains a
+follow-up. [Report and live receipts](evidence/production-iteration-2026-10-18/README.md).

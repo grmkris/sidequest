@@ -1,0 +1,157 @@
+{
+  "wallet": "0x4437fd60d4dac2c321476e71e4c2229ee9a18eb0",
+  "network": "monad-mainnet",
+  "chainId": 143,
+  "observedAt": 1792316091,
+  "blockNumber": "114435230",
+  "blockTimestamp": 1792316090,
+  "index": {
+    "next_block": 114435187,
+    "updated_at": 1792316077
+  },
+  "priceMaxAgeSeconds": 120,
+  "currencies": [
+    {
+      "token": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+      "symbol": "USDC",
+      "decimals": 6,
+      "wallet": "197150",
+      "owed": "0",
+      "price": {
+        "perUnit": 1,
+        "source": "Configured USD peg (estimate)",
+        "observedAt": 1792316091,
+        "sourceAt": 1792316090
+      },
+      "amounts": {
+        "wallet": "197150",
+        "owed": "0",
+        "escrow": "0",
+        "paid": "0",
+        "pending": "0"
+      },
+      "usd": {
+        "wallet": 0.19715,
+        "owed": 0,
+        "escrow": 0,
+        "paid": 0,
+        "pending": 0
+      }
+    },
+    {
+      "token": "0x7a07aa88861f3f2cfb34ed5bec8f05dac4fd7777",
+      "symbol": "SIDE",
+      "decimals": 18,
+      "wallet": "270000000000000000000000",
+      "owed": "0",
+      "price": {
+        "perUnit": 3.530590253018242e-06,
+        "source": "nad.fun 1,000 SIDE sale quote \u00d7 native USD pool price",
+        "observedAt": 1792316091,
+        "sourceAt": 1792316090
+      },
+      "amounts": {
+        "wallet": "270000000000000000000000",
+        "owed": "0",
+        "escrow": "0",
+        "paid": "270000000000000000000000",
+        "pending": "0"
+      },
+      "usd": {
+        "wallet": 0.9532593683149253,
+        "owed": 0,
+        "escrow": 0,
+        "paid": 0.9532593683149253,
+        "pending": 0
+      }
+    },
+    {
+      "token": null,
+      "symbol": "MON",
+      "decimals": 18,
+      "wallet": "0",
+      "owed": "0",
+      "price": {
+        "perUnit": 0.0215297595,
+        "source": "Uniswap v4 pool 0x18a9fc874581f3ba12b7898f80a683c66fd5877fd74b26a85ba9a3a79c549954",
+        "observedAt": 1792316091,
+        "sourceAt": 1792316090
+      },
+      "amounts": {
+        "wallet": "0",
+        "owed": "0",
+        "escrow": "0",
+        "paid": "0",
+        "pending": "0"
+      },
+      "usd": {
+        "wallet": 0,
+        "owed": 0,
+        "escrow": 0,
+        "paid": 0,
+        "pending": 0
+      }
+    }
+  ],
+  "receipts": [
+    {
+      "recipient": "0x4437Fd60d4dAc2c321476e71e4c2229EE9A18eB0",
+      "token": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+      "amount": "90000000000000000000000",
+      "jobId": "10",
+      "txHash": "0xabeb4c7c8a5c0baaf000409fc57eb21b3e3a40165fc3299a2ad0d3637e462bd9",
+      "block": 113517407,
+      "kind": "paid"
+    },
+    {
+      "recipient": "0x4437Fd60d4dAc2c321476e71e4c2229EE9A18eB0",
+      "token": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+      "amount": "0",
+      "jobId": "10",
+      "txHash": "0xc93545fed90db3aaff7f5cf1f6c6f4f7815538b1327942de3caff7c6d6408ebd",
+      "block": 113518516,
+      "kind": "paid"
+    },
+    {
+      "recipient": "0x4437Fd60d4dAc2c321476e71e4c2229EE9A18eB0",
+      "token": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+      "amount": "99000000000000000000000",
+      "jobId": "12",
+      "txHash": "0x666b7c74f639f6a17159ea90684c837310f17cb639888ff658c9ac36716cee6f",
+      "block": 113814173,
+      "kind": "paid"
+    },
+    {
+      "recipient": "0x4437Fd60d4dAc2c321476e71e4c2229EE9A18eB0",
+      "token": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+      "amount": "0",
+      "jobId": "12",
+      "txHash": "0x31dbe7ce2b7fcca582dfb890768a5b665115830d64b8a8fe992b49b163ec5052",
+      "block": 113814336,
+      "kind": "paid"
+    },
+    {
+      "recipient": "0x4437Fd60d4dAc2c321476e71e4c2229EE9A18eB0",
+      "token": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+      "amount": "81000000000000000000000",
+      "jobId": "11",
+      "txHash": "0xe9288b58e0eb2ec1b9b659f6526a78921c088fc191988bb623b3ad1e0fd604be",
+      "block": 113818038,
+      "kind": "paid"
+    },
+    {
+      "recipient": "0x4437Fd60d4dAc2c321476e71e4c2229EE9A18eB0",
+      "token": "0x7A07aA88861f3f2Cfb34ED5BEC8F05dAc4Fd7777",
+      "amount": "0",
+      "jobId": "11",
+      "txHash": "0xb2f839e5c66624422bd6a3dc58ec1b166b1e89d98020fe1cd2695a31271e6177",
+      "block": 113818190,
+      "kind": "paid"
+    }
+  ],
+  "notes": [
+    "Wallet quantities alone are spendable; escrow, paid history, pending and owed are separate and are never added to wallet funds.",
+    "Escrow is the remaining creator-funded gross amount still held until Holding settlement, including unpaid fees. Pending is unsettled worker net rewards, contingent on outcome. Owed is the live pooled Holding balance, which can include refunds.",
+    "Paid earnings include direct worker payment receipts and attributable owed withdrawals. Mixed refund/earnings withdrawals remain separate receipts, without guessed job allocation."
+  ]
+}

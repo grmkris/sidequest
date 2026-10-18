@@ -1,0 +1,95 @@
+{
+  "checkedAt": "2026-10-18T09:34:53.426617+00:00",
+  "processes": [
+    {
+      "name": "sq-moderator",
+      "source": "3d8524684145d42ab1cfdef0369f1ab842c23787",
+      "running": true,
+      "startedAt": "2026-10-18T09:27:49.604180857Z",
+      "restartCount": 0,
+      "passFailuresLast5m": 0,
+      "wakeCheckFailuresLast5m": 0,
+      "mountSourcesExist": true
+    },
+    {
+      "name": "sq-maintainer",
+      "source": "3d8524684145d42ab1cfdef0369f1ab842c23787",
+      "running": true,
+      "startedAt": "2026-10-18T09:27:49.603127495Z",
+      "restartCount": 0,
+      "passFailuresLast5m": 0,
+      "wakeCheckFailuresLast5m": 0,
+      "mountSourcesExist": true
+    },
+    {
+      "name": "sq-moderator-mainnet",
+      "source": "3d8524684145d42ab1cfdef0369f1ab842c23787",
+      "running": true,
+      "startedAt": "2026-10-18T09:30:15.235335163Z",
+      "restartCount": 0,
+      "passFailuresLast5m": 0,
+      "wakeCheckFailuresLast5m": 0,
+      "mountSourcesExist": true
+    },
+    {
+      "name": "sq-bot-prod-patch",
+      "source": "3d8524684145d42ab1cfdef0369f1ab842c23787",
+      "running": true,
+      "startedAt": "2026-10-18T09:31:41.400482597Z",
+      "restartCount": 0,
+      "passFailuresLast5m": 0,
+      "wakeCheckFailuresLast5m": 0,
+      "mountSourcesExist": true
+    },
+    {
+      "name": "sq-bot-prod-video",
+      "source": "3d8524684145d42ab1cfdef0369f1ab842c23787",
+      "running": true,
+      "startedAt": "2026-10-18T09:33:56.419691332Z",
+      "restartCount": 0,
+      "passFailuresLast5m": 0,
+      "wakeCheckFailuresLast5m": 0,
+      "mountSourcesExist": true
+    },
+    {
+      "name": "sq-bot-prod-grokbot",
+      "source": "3d8524684145d42ab1cfdef0369f1ab842c23787",
+      "running": true,
+      "startedAt": "2026-10-18T09:33:56.423431144Z",
+      "restartCount": 0,
+      "passFailuresLast5m": 0,
+      "wakeCheckFailuresLast5m": 0,
+      "mountSourcesExist": true
+    },
+    {
+      "name": "sq-bot-prod-token",
+      "source": "3d8524684145d42ab1cfdef0369f1ab842c23787",
+      "running": true,
+      "startedAt": "2026-10-18T09:33:56.421202097Z",
+      "restartCount": 0,
+      "passFailuresLast5m": 0,
+      "wakeCheckFailuresLast5m": 0,
+      "mountSourcesExist": true
+    },
+    {
+      "name": "sq-arbiter",
+      "source": "7845027230153c51a625363ff41c0dd1571b8ef9",
+      "running": true,
+      "startedAt": "2026-10-17T09:16:11.21574267Z",
+      "restartCount": 0,
+      "passFailuresLast5m": 0,
+      "wakeCheckFailuresLast5m": 0,
+      "mountSourcesExist": true
+    },
+    {
+      "name": "sq-arbiter-mainnet",
+      "source": "7845027230153c51a625363ff41c0dd1571b8ef9",
+      "running": true,
+      "startedAt": "2026-10-17T09:16:11.2215614Z",
+      "restartCount": 0,
+      "passFailuresLast5m": 0,
+      "wakeCheckFailuresLast5m": 0,
+      "mountSourcesExist": true
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-10-18T09:34:48.248032+00:00",
+  "sourceSha": "3d8524684145d42ab1cfdef0369f1ab842c23787",
+  "sourceBinding": "Successful exact-head GitHub push CI with stage deploy, smoke and drift. release.json contains no SHA.",
+  "reads": [
+    {
+      "path": "/health",
+      "status": 200,
+      "contentType": "application/json",
+      "body": {
+        "ok": true,
+        "runtime": "Cloudflare-Workers",
+        "network": "monad-testnet",
+        "board": "public"
+      }
+    },
+    {
+      "path": "/release.json",
+      "status": 200,
+      "contentType": "application/json",
+      "body": {
+        "network": "monad-testnet",
+        "mainnetLive": true,
+        "writesOpen": true
+      }
+    },
+    {
+      "path": "/commons",
+      "status": 200,
+      "contentType": "text/html",
+      "body": {
+        "titlePresent": true,
+        "htmlBytes": 7070
+      }
+    }
+  ]
+}
