@@ -42,7 +42,31 @@ function MessageLink({
 }
 
 const plugins = [remarkGfm]
-const sanitizers = [rehypeSanitize]
+/** The rendered tree's element and text nodes; other node kinds pass through untouched. */
+interface TreeNode {
+  type: string
+  tagName?: string
+  value?: string
+  children?: TreeNode[]
+}
+const BLOCKS = new Set(['p', 'ul', 'ol', 'li', 'blockquote', 'pre', 'table', 'thead', 'tbody', 'tr', 'hr'])
+const HEADINGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'section', 'details'])
+const isBlock = (node: TreeNode | undefined) =>
+  node?.type === 'element' && (BLOCKS.has(node.tagName ?? '') || HEADINGS.has(node.tagName ?? ''))
+const isSeparator = (node: TreeNode) => node.type === 'text' && /^[ \t]*\n\s*$/u.test(node.value ?? '')
+function pruneBlockSeparators(node: TreeNode): void {
+  if (node.children === undefined) return
+  node.children = node.children.filter(
+    (child, index, all) => !(isSeparator(child) && (isBlock(all[index - 1]) || isBlock(all[index + 1]))),
+  )
+  node.children.forEach(pruneBlockSeparators)
+}
+/**
+ * The container keeps raw text's line breaks (pre-line), so the newline text Markdown leaves between blocks would render
+ * as blank lines. Drop only newline-only text beside a block; soft breaks and raw text keep theirs.
+ */
+const dropBlockSeparators = () => pruneBlockSeparators
+const sanitizers = [rehypeSanitize, dropBlockSeparators]
 const components: Components = {
   // User headings sit below the page title and the containing section.
   h1: ({ children }) => <h3>{children}</h3>,

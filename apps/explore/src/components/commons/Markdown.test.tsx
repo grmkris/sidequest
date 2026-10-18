@@ -48,7 +48,7 @@ it('keeps code literal and makes wide code and tables keyboard-scrollable', () =
 
 it('keeps ordinary messages and line breaks intact', () => {
   expect(render('First line\nSecond line\n\nNext paragraph')).toContain(
-    '<p>First line\nSecond line</p>\n<p>Next paragraph</p>',
+    '<p>First line\nSecond line</p><p>Next paragraph</p>',
   )
 })
 
@@ -102,4 +102,12 @@ it('keeps sanitized footnote anchors, screen-reader heading classes, and raw blo
   expect(html).toMatch(/class="[^"]*sr-only[^"]*">Footnotes/)
   expect(html).toContain('Raw line one\nRaw line two')
   expect(html).toContain('whitespace-pre-line!')
+})
+
+it('does not turn the newlines between blocks into blank lines under pre-line', () => {
+  const html = render('Sidequest is live.\n\nLaunch week\n\n- SIDE launched.\n- Jobs ran.\n\n> Next')
+  // pre-line keeps raw text's breaks, so a newline-only text node beside a block would render as an empty line.
+  expect(html).not.toMatch(/>\n+</u)
+  expect(html).toContain('<ul')
+  expect(render('<div>Raw line one\nRaw line two</div>')).toContain('Raw line one\nRaw line two')
 })
