@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import type { AttachmentDraft } from './AttachmentEditor.tsx'
+
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
 import { useAuth } from '../Wallet.tsx'
@@ -40,35 +41,15 @@ export function Composer({
   placeholder = 'Write a message',
 }: ComposerProps) {
   const auth = useAuth()
-  const post = usePost()
-  const [attach, setAttach] = useState(false)
-  const [attachment, setAttachment] = useState<AttachmentDraft>({ value: null, error: null })
+  const { post, attach, setAttach, attachment, setAttachment, send } = useComposerPost({
+    subject,
+    body,
+    replyTo,
+    onPosted,
+  })
   const guidance = composerGuidance(viewer, auth.signedIn)
-  // UTF-16 length is never below the board's code-point count, so this limit can only be stricter than the board's.
   const length = body.length
-  const send = () => {
-    const snapshotBody = body
-    const snapshotReplyTo = replyTo?.id ?? null
-    const text = body.trim()
-    if (text === '' || length > MESSAGE_MAX || post.isPending || attachment.error !== null) return
-    void post
-      .mutateAsync({
-        subject,
-        body: text,
-        ...(replyTo === null ? {} : { replyTo: replyTo.id }),
-        ...(attachment.value === null ? {} : { presentation: attachment.value }),
-      })
-      .then(
-        () => {
-          onPosted(snapshotBody, snapshotReplyTo)
-          setAttach(false)
-          setAttachment({ value: null, error: null })
-        },
-        () => {
-          // The mutation exposes the error; retain the draft for a deliberate retry.
-        },
-      )
-  }
+
   if (guidance !== null && auth.signedIn && viewer !== null)
     return (
       <p className="text-sm text-muted-foreground">
@@ -112,6 +93,42 @@ export function Composer({
       />
     </form>
   )
+}
+
+function useComposerPost({
+  subject,
+  body,
+  replyTo,
+  onPosted,
+}: Pick<ComposerProps, 'subject' | 'body' | 'replyTo' | 'onPosted'>) {
+  const post = usePost()
+  const [attach, setAttach] = useState(false)
+  const [attachment, setAttachment] = useState<AttachmentDraft>({ value: null, error: null })
+  const send = () => {
+    const snapshotBody = body
+    const snapshotReplyTo = replyTo?.id ?? null
+    const text = body.trim()
+    // UTF-16 length is a conservative bound for the board's code-point limit.
+    if (text === '' || body.length > MESSAGE_MAX || post.isPending || attachment.error !== null) return
+    void post
+      .mutateAsync({
+        subject,
+        body: text,
+        ...(replyTo === null ? {} : { replyTo: replyTo.id }),
+        ...(attachment.value === null ? {} : { presentation: attachment.value }),
+      })
+      .then(
+        () => {
+          onPosted(snapshotBody, snapshotReplyTo)
+          setAttach(false)
+          setAttachment({ value: null, error: null })
+        },
+        () => {
+          /* The mutation exposes the error; retain the draft for a deliberate retry. */
+        },
+      )
+  }
+  return { post, attach, setAttach, attachment, setAttachment, send }
 }
 
 function ReplyContext({ replyTo, onCancel }: { replyTo: Message; onCancel: () => void }) {
@@ -179,7 +196,7 @@ function AttachmentPanel({
         </Button>
       </div>
       {attach && (
-        <EnhancementFallback fallback={<p role="status">Plan editor could not load. Reload to try again.</p>}>
+        <EnhancementFallback fallback={<output>Plan editor could not load. Reload to try again.</output>}>
           <Suspense fallback={<output>Opening plan editor…</output>}>
             <AttachmentEditor disabled={pending} onChange={onChange} />
           </Suspense>

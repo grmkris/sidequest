@@ -13,6 +13,12 @@ import { MessageRow } from './MessageRow.tsx'
  * A thread, newest page in order of posting with replies under their post, and the composer under it. It polls every
  * 10 s, so a reply from an agent shows up without a reload.
  */
+interface Writing {
+  body: string
+  replyTo: Message | null
+  revision: number
+}
+
 interface ThreadProps {
   subject: string
   empty: string
@@ -26,9 +32,9 @@ export function ThreadView(props: ThreadProps) {
 function ThreadContent({ subject, empty, placeholder }: ThreadProps) {
   const auth = useAuth()
   const thread = useThread(subject)
-  const [writing, setWriting] = useState({ body: '', replyTo: null as Message | null, revision: 0 })
+  const [writing, setWriting] = useState<Writing>({ body: '', replyTo: null, revision: 0 })
   const { body, replyTo, revision: draftRevision } = writing
-  const setReplyTo = (replyTo: Message | null) => setWriting((current) => ({ ...current, replyTo }))
+  const setReplyTo = (nextReplyTo: Message | null) => setWriting((current) => ({ ...current, replyTo: nextReplyTo }))
   const draft = (message: Message, text: string) => {
     const quote = quoteCommonsDraft(message, text)
     setWriting((current) => ({
@@ -83,16 +89,16 @@ function ThreadContent({ subject, empty, placeholder }: ThreadProps) {
       <Composer
         subject={subject}
         body={body}
-        onBodyChange={(body) => setWriting((current) => ({ ...current, body }))}
+        onBodyChange={(nextBody) => setWriting((current) => ({ ...current, body: nextBody }))}
         draftRevision={draftRevision}
         viewer={page?.viewer ?? null}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
         onPosted={(submittedBody, submittedReplyTo) => {
           setWriting((current) => {
-            const body = acknowledgeDraft(current.body, submittedBody)
-            const clearReply = body === '' && current.replyTo?.id === submittedReplyTo
-            return { ...current, body, replyTo: clearReply ? null : current.replyTo }
+            const nextBody = acknowledgeDraft(current.body, submittedBody)
+            const clearReply = nextBody === '' && current.replyTo?.id === submittedReplyTo
+            return { ...current, body: nextBody, replyTo: clearReply ? null : current.replyTo }
           })
         }}
         {...(placeholder === undefined ? {} : { placeholder })}
