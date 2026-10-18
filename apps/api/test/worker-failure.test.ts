@@ -1,8 +1,9 @@
+import { Effect } from 'effect'
 import { DirectoryError, SessionError, TenantError } from '@sidequest/board'
 import { describe, expect, it, vi } from 'vitest'
 import { DirectoryCallError } from '../src/directory.ts'
 import { TelegramError } from '../src/telegram.ts'
-import { workerFailure } from '../src/worker-failure.ts'
+import { readFailureBoundary, workerFailure } from '../src/worker-failure.ts'
 
 const credentials = [
   new Error('Authorization: Bearer SECRETKEY'),
@@ -71,4 +72,37 @@ describe('API worker failures', () => {
       log.mockRestore()
     }
   })
+})
+
+it.each(['list_tasks', 'get_task'])('gives transient %s failures safe read-only retry guidance', (tool) => {
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    const reply = workerFailure(new Error('Authorization: Bearer SECRETKEY'), tool)
+    expect(reply).toMatchObject({ ok: false, code: 'unavailable', retry: 'read', reason: 'internal' })
+    expect(reply.message).toContain('retry this read with the same arguments')
+    expect(JSON.stringify([reply, log.mock.calls])).not.toMatch(/operationKey|Authorization|Bearer|SECRETKEY/)
+  } finally {
+    log.mockRestore()
+  }
+})
+
+it('catches a read transport defect before the HTTP response while preserving write failure behavior', async () => {
+  const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    const transport = Effect.die(new Error('SECRET_RPC_URL'))
+    expect(await Effect.runPromise(transport.pipe(readFailureBoundary('list_tasks')))).toMatchObject({
+      ok: false,
+      code: 'unavailable',
+      retry: 'read',
+    })
+    expect(
+      await Effect.runPromise(Effect.succeed({ ok: true, result: [] }).pipe(readFailureBoundary('list_tasks'))),
+    ).toEqual({ ok: true, result: [] })
+    await expect(Effect.runPromise(transport.pipe(readFailureBoundary('submit_work')))).rejects.toThrow()
+    expect(await Effect.runPromise(Effect.succeed('internal refusal').pipe(readFailureBoundary('release_pick')))).toBe(
+      'internal refusal',
+    )
+  } finally {
+    log.mockRestore()
+  }
 })

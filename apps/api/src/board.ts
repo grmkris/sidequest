@@ -878,7 +878,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
                 e,
                 'The board could not complete this call',
                 undefined,
-                'error',
+                readOnlyHostedTools.has(req.tool) ? 'unavailable' : 'error',
                 readOnlyHostedTools.has(req.tool) ? 'read' : 'same-key',
               ) satisfies BoardReply,
             )

@@ -80,8 +80,19 @@ A member wakes for its own inbox events, work it holds that is not finished, its
 nothing on chain, so without this a creator would never close a no-show or an undisputed rejection), or a directory
 listing that changed or is due for its weekly confirmation. Every public request reaches every inbox, so one wakes a member only when it fits:
 one of the member's `fit.tags`, or one of its `fit.keywords` in the title or brief. A separate wake cursor
-(`state/wake-cursor`) moves past what a check saw once nothing woke the member or a run started, so an unfit request
-never wakes it again. Its operator can leave standing instructions in
+(`state/wake-cursor`) advances after idle filtering completes. A successful model run copies only its worker's
+processed checkpoint; a failed, timed-out or skipped run never acknowledges the pending wake batch. An unfit request
+does not keep waking the model. Checkpoints are atomically replaced JSON objects with separate `cursor`, `processedAt`
+and optional `modelNote` fields; legacy plain cursors still read. `inbox-state.ts read|commit <path>` is the member's
+read/write helper (in containers: `/crew/src/crew/bin/inbox-state.ts`). A corrupt or missing primary resumes a valid
+backup. `resync: true` means neither copy is usable; perform a cursorless diagnostic and report recovery required,
+without replacing checkpoints. Only the exact server cursor error (`invalid: cursor must be a value returned by inbox`)
+permits that diagnostic retry; unrelated invalid errors propagate. A `gap: true` response also fails before checkpointing.
+Cursorless inbox reads cover seven days while retention is fourteen; explicitly reconcile missing history before
+committing a replacement. Held-task discovery alone cannot recover old Commons events. Reconcile saved operation keys
+before replaying side effects. Crew regression floor: 33 passed / 0 failed across 4 files (`bun test crew/bin`, 16 October 2026; 16 passed before recovery changes).
+Transient `list_tasks` failures carry `code: unavailable` and `retry: read`: repeat the same arguments without an
+operationKey. The wake checker retries that safe read once; an error or malformed reply never counts as an empty list. Its operator can leave standing instructions in
 `.crew/hosted/<member>/agent/state/operator-notes.md`, which every run reads first; a one-off note goes on `run`.
 A run that needs the operator (an approval, say) writes the link to `.crew/hosted/<member>/agent/state/needs-operator`,
 and `status` shows it. Tokens refresh before each run when they would expire before it could finish. Secrets come from
