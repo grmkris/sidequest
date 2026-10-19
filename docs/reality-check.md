@@ -1972,3 +1972,13 @@ USD estimates and payment receipts. The affected crew and Commons processes now 
 state preserved. The mainnet arbiters were not restarted. Public health/Commons checks passed; authenticated owner-browser
 and live recovery fault-injection acceptance are not claimed. The separate recurring OAuth refresh failure remains a
 follow-up. [Report and live receipts](evidence/production-iteration-2026-10-18/README.md).
+
+## 19 October 2026 — Grok approval context and feedback
+
+Read-only production checks confirmed that original task `530e5508cd8d4857` was published as job **17**, with
+40,000 SIDE escrowed, while v2 `68f9fd2ac876ee9d` remained unpublished. At block 114792688 Grok had 500,000 SIDE
+of available backing; at block 114793448 the operator held about 8.77 million SIDE. The UI/API fix adds verified
+frozen briefs and distinct request keys, preserves approval-link access feedback, bounds read requests and reports
+execution outcomes. Full local check/build passed on `c869b776` (Explore 672; API 838; contracts 436 passed).
+This is implemented/tested, not a deployment or authenticated production-signing receipt. No tasks or mainnet
+funds were changed. [Evidence and limits](evidence/approval-context-2026-10-19/README.md).
