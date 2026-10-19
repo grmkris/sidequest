@@ -4,15 +4,17 @@ import { Link } from '@tanstack/react-router'
 import { boardPrefix, type ManagedAgent } from '../api.ts'
 import { useManagedAgents } from '../managed.ts'
 import { writesOpen } from '../wallet.ts'
-import { appendQuoteBrief, publicQuotePrompt } from '../quote-handoff.ts'
+import { appendQuoteBrief } from '../quote-handoff.ts'
 import { ConnectionCard } from './ConnectionCard.tsx'
 import { LaunchingSoon } from './LaunchGate.tsx'
 import { Sheet } from './Sheet.tsx'
+import { usePrivyModalOpen } from './Privy.tsx'
 import { CopyButton, textLinkClass } from './kit.tsx'
 import { SignIn } from './SignIn.tsx'
 import { Button } from './ui/button.tsx'
 import { useAuth } from './Wallet.tsx'
 import { BondHorizonNotice } from './BondHorizonNotice.tsx'
+import { BoardLink, boardRoutes } from './BoardLink.tsx'
 
 type CreationContext = 'quotes' | 'hire' | 'again' | 'pick'
 
@@ -26,6 +28,8 @@ interface CreationDraft {
 
 interface CreationProps extends CreationDraft {
   publisherAddress?: string
+  details?: ReactNode
+  onOpenChange?: (open: boolean) => void
   children?: ReactNode
   className?: string | undefined
   variant?: 'default' | 'secondary' | 'outline' | 'ghost'
@@ -56,14 +60,9 @@ function creationIntent({ context = 'quotes', agentId, jobId, requestId }: Creat
 }
 
 /** A handoff to the human's coding client. Copying this instruction performs no board or wallet action. */
-function creationPrompt(publisher: ManagedAgent | undefined, draft: CreationDraft): string | null {
+function creationPrompt(publisher: ManagedAgent, draft: CreationDraft): string {
   const origin = window.location.origin
   const resource = `${origin}${boardPrefix()}/mcp`
-  if (publisher === undefined) {
-    if ((draft.context ?? 'quotes') === 'quotes' && draft.brief?.trim())
-      return publicQuotePrompt(origin, resource, draft.brief)
-    return null
-  }
   return appendQuoteBrief(
     [
       `Read ${origin}/start.md, ${origin}/skills/connector/SKILL.md and ${origin}/skills/publisher/SKILL.md.`,
@@ -87,13 +86,40 @@ function creationTitle(context: CreationContext): string {
   )
 }
 
+export function eligiblePublishers(agents: readonly ManagedAgent[], publisherAddress?: string): ManagedAgent[] {
+  return agents.filter(
+    (agent) =>
+      agent.state === 'active' &&
+      agent.agent_id !== null &&
+      agent.address !== null &&
+      agent.roles?.includes('hire') === true &&
+      (publisherAddress === undefined || agent.address.toLowerCase() === publisherAddress.toLowerCase()),
+  )
+}
+
 export function CreateWithAgent(props: CreationProps) {
   const [open, setOpen] = useState(false)
+  const [requiredAfter, setRequiredAfter] = useState(0)
+  const [signingIn, setSigningIn] = useState(false)
+  const privyModal = usePrivyModalOpen()
+  function changeOpen(value: boolean) {
+    setOpen(value)
+    props.onOpenChange?.(value)
+  }
   const auth = useAuth()
   const managed = useManagedAgents()
+  const signIn: typeof auth.signIn = async (options) => {
+    setSigningIn(true)
+    try {
+      await auth.signIn(options)
+    } finally {
+      setSigningIn(false)
+    }
+  }
   const title = creationTitle(props.context ?? 'quotes')
   function openSheet() {
-    setOpen(true)
+    setRequiredAfter(Date.now())
+    changeOpen(true)
     if (auth.signedIn && writesOpen) void managed.refetch()
   }
   return (
@@ -104,66 +130,134 @@ export function CreateWithAgent(props: CreationProps) {
         disabled={props.disabled ?? false}
         className={props.className}
         onClick={openSheet}
+        aria-haspopup="dialog"
+        aria-expanded={open}
       >
         {props.children ?? 'Create with agent'}
       </Button>
-      <Sheet open={open} onClose={() => setOpen(false)} title={title} className="sm:w-[36rem]">
-        {writesOpen ? open && <CreationContents {...props} /> : <LaunchingSoon title={title} />}
+      <Sheet
+        open={open}
+        onClose={() => changeOpen(false)}
+        title={title}
+        className="sm:w-[36rem]"
+        walletPrompt={open && (signingIn || privyModal)}
+      >
+        {writesOpen ? (
+          open && <CreationContents {...props} requiredAfter={requiredAfter} signIn={signIn} />
+        ) : (
+          <LaunchingSoon title={title} />
+        )}
       </Sheet>
     </>
   )
 }
 
-function usePublisherChoice(publisherAddress: string | undefined) {
+function usePublisherChoice(publisherAddress: string | undefined, requiredAfter: number) {
   const [selected, setSelected] = useState('')
   const auth = useAuth()
   const managed = useManagedAgents()
-  const fresh = auth.signedIn && managed.isSuccess && !managed.isFetching && !managed.isError
-  const available = fresh
-    ? (managed.data?.agents ?? []).filter(
-        (agent) =>
-          agent.state === 'active' &&
-          agent.agent_id !== null &&
-          agent.address !== null &&
-          (publisherAddress === undefined || agent.address.toLowerCase() === publisherAddress.toLowerCase()),
-      )
-    : []
+  const fresh =
+    auth.signedIn &&
+    managed.isSuccess &&
+    !managed.isFetching &&
+    !managed.isError &&
+    managed.dataUpdatedAt >= requiredAfter
+  const available = fresh ? eligiblePublishers(managed.data?.agents ?? [], publisherAddress) : []
   const publisher = available.length === 1 ? available[0] : available.find((agent) => agent.id === selected)
-  return { auth, managed, available, publisher, selected, setSelected }
+  return { auth, managed, fresh, available, publisher, selected, setSelected }
 }
 
 type PublisherChoice = ReturnType<typeof usePublisherChoice>
 
-function CreationContents(props: CreationProps) {
-  const choice = usePublisherChoice(props.publisherAddress)
-  const prompt = creationPrompt(choice.publisher, props)
-  const showSetup =
-    choice.available.length === 0 && (!choice.auth.signedIn || (!choice.managed.isFetching && !choice.managed.isError))
+function CreationContents(
+  props: CreationProps & { requiredAfter: number; signIn: ReturnType<typeof useAuth>['signIn'] },
+) {
+  const choice = usePublisherChoice(props.publisherAddress, props.requiredAfter)
+  const prompt = choice.publisher === undefined ? null : creationPrompt(choice.publisher, props)
+  const showSetup = choice.available.length === 0 && (!choice.auth.signedIn || choice.fresh)
   return (
     <>
       <p className="-mt-2 leading-relaxed text-muted-foreground">
         Paste the instruction into your coding client. Choose or set up your hiring agent, then confirm the brief and
         obtain any required approval before publishing or funding.
       </p>
+      {props.details}
       <BondHorizonNotice bonded tone="fix" />
       <PublisherCheck choice={choice} />
       {choice.available.length > 1 && <PublisherPicker choice={choice} />}
       {choice.publisher !== undefined && <SelectedPublisher publisher={choice.publisher} agentId={props.agentId} />}
       {prompt !== null && <PromptInstruction prompt={prompt} />}
-      {showSetup && <PublisherSetup auth={choice.auth} originalPublisher={props.publisherAddress !== undefined} />}
+      {choice.fresh && <UnavailablePublishers choice={choice} publisherAddress={props.publisherAddress} />}
+      {showSetup && (
+        <PublisherSetup
+          auth={{ ...choice.auth, signIn: props.signIn }}
+          originalPublisher={props.publisherAddress !== undefined}
+        />
+      )}
       <ConnectionCard />
     </>
   )
 }
 
-function PublisherCheck({ choice: { auth, managed } }: { choice: PublisherChoice }) {
+function PublisherCheck({ choice: { auth, managed, fresh } }: { choice: PublisherChoice }) {
   if (!auth.signedIn) return null
-  if (managed.isFetching) return <output className="text-muted-foreground">Checking your publishers…</output>
+  if (!managed.isError && !fresh) return <output className="text-muted-foreground">Checking your publishers…</output>
   if (!managed.isError) return null
   return (
     <div role="alert" className="grid gap-2 text-destructive-text">
       <p>Your publishers could not be verified. Retry before choosing one.</p>
       <Button variant="secondary" onClick={() => void managed.refetch()}>
+        Retry publishers
+      </Button>
+    </div>
+  )
+}
+
+function UnavailablePublishers({
+  choice,
+  publisherAddress,
+}: {
+  choice: PublisherChoice
+  publisherAddress: string | undefined
+}) {
+  const unavailable = (choice.managed.data?.agents ?? []).filter(
+    (agent) =>
+      !choice.available.includes(agent) &&
+      (publisherAddress === undefined || agent.address?.toLowerCase() === publisherAddress.toLowerCase()),
+  )
+  if (unavailable.length === 0) return null
+  return (
+    <div className="grid gap-2 rounded-xl bg-muted/60 p-3 text-sm">
+      <p>These agents are unavailable for hiring:</p>
+      {unavailable.map((agent) => (
+        <div key={agent.id} className="grid gap-1">
+          <p>
+            {agent.name}:{' '}
+            {agent.state !== 'active'
+              ? 'setup incomplete or access revoked'
+              : agent.agent_id === null || agent.address === null
+                ? 'publisher identity is unavailable'
+                : agent.roles === undefined
+                  ? 'Hire access could not be verified'
+                  : 'Hire access is not enabled'}
+            .
+          </p>
+          {agent.agent_id === null ? (
+            <Link to="/agents/new" search={{ resume: agent.id }} className={textLinkClass}>
+              Resume setup
+            </Link>
+          ) : (
+            <BoardLink
+              target={{ ...boardRoutes().agent(agent.agent_id), search: { tab: 'manage' } }}
+              className={textLinkClass}
+            >
+              Manage access and connections
+            </BoardLink>
+          )}
+        </div>
+      ))}
+      <p>Enable “Hire other agents” on the agent’s Manage tab, or reconnect with Hire access. Then retry.</p>
+      <Button variant="secondary" onClick={() => void choice.managed.refetch()}>
         Retry publishers
       </Button>
     </div>

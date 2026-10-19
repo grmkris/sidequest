@@ -57,21 +57,33 @@ const persistent = {
     try {
       return localStorage.getItem(k)
     } catch {
-      return sessionStorage.getItem(k)
+      try {
+        return sessionStorage.getItem(k)
+      } catch {
+        return null
+      }
     }
   },
   setItem: (k: string, v: string) => {
     try {
       localStorage.setItem(k, v)
     } catch {
-      sessionStorage.setItem(k, v)
+      try {
+        sessionStorage.setItem(k, v)
+      } catch {
+        // Both stores refused the write; the caller keeps its in-memory copy.
+      }
     }
   },
   removeItem: (k: string) => {
     try {
       localStorage.removeItem(k)
     } catch {
-      sessionStorage.removeItem(k)
+      try {
+        sessionStorage.removeItem(k)
+      } catch {
+        // Nothing persisted, so there is nothing to remove.
+      }
     }
   },
 }
