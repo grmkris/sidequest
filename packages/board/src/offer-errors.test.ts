@@ -88,7 +88,8 @@ it('create_task and request_quotes pass a failed bounds read to the boundary, no
     expect(failure).toBeInstanceOf(Error)
     expect(failure).not.toBeInstanceOf(BoardError)
     const reply = agentFailureReply(failure, 'The board could not complete this call', vi.fn(), 'error')
-    expect(reply).toMatchObject({ code: 'error', reason: 'internal', retry: 'same-key' })
+    // An RPC endpoint that failed the read is an outage: retryable with the same key, and not an owner page.
+    expect(reply).toMatchObject({ code: 'unavailable', reason: 'transient', retry: 'same-key' })
     expect(JSON.stringify(reply)).not.toMatch(/SECRETKEY|monad\.example|short-secret|HTTP request/)
   }
 })

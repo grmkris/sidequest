@@ -50,6 +50,7 @@ import { type NextAction, publisherFunding, publisherNextAction, settlementNote 
 import { assertAgentEnvelope, assertExactAgentTypedData } from './agent-signing-scope.ts'
 import { typedDataJson } from './typed-data.ts'
 import { BoardError } from './board-error.ts'
+import { StoredDataError } from './agent-failure.ts'
 import type { HostedCreatorFacts, HostedCreatorQuery } from './hosted-creators.ts'
 import {
   type ApplicationRow,
@@ -1463,7 +1464,7 @@ export class Board {
     // after an unsigned selection row is already in place.
     const agentId = storedAgentId(app.agent_id)
     if (agentId === undefined)
-      throw new BoardError('invalid', `application ${app.id} has a malformed agent id; the worker must apply again`)
+      throw new StoredDataError(`application ${app.id} has a malformed stored agent id; the worker must apply again`)
     if (agentId !== app.agent_id)
       this.#sql.run('UPDATE applications SET agent_id = ? WHERE id = ? AND task_id = ?', agentId, app.id, task.id)
     const activateBy = input.activateBy ?? Math.min(this.#now() + 24 * 3600, terms.deliveryDeadline - 60)
