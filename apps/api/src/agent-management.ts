@@ -30,6 +30,7 @@ import { agentProfileManagement } from './agent-profile-management.ts'
 import { hostedUserOpDesk } from './agent-userop.ts'
 import { agentGasAllowance } from './agent-gas-allowance.ts'
 import { agentBalances } from './agent-balances.ts'
+import { approvalDetails } from './approval-details.ts'
 
 function text(body: Record<string, unknown>, key: string): string {
   const value = body[key]
@@ -110,7 +111,8 @@ export async function agentManagement(input: {
     return {
       agents: agents.list(operator, context.deployment.chainId).map((row) => ({ ...row, roles: agentRoles(row) })),
     }
-  if (action === 'approvals') return { approvals: agents.approvals(operator) }
+  if (action === 'approvals')
+    return { approvals: agents.approvals(operator).map((row) => approvalDetails(agents, row)) }
   if (action === 'status') return lifecycle.status(id, operator)
   if (action === 'recovery') {
     const agent = agents.owned(id, operator)

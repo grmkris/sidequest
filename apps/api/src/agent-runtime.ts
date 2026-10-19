@@ -41,6 +41,7 @@ import { objectFor } from './commons/route.ts'
 import { hostedUserOpDesk } from './agent-userop.ts'
 import { agentGasAllowance } from './agent-gas-allowance.ts'
 import { agentBalances } from './agent-balances.ts'
+import { approvalDetails } from './approval-details.ts'
 
 const key32 = (key: string) => /^0x[0-9a-fA-F]{64}$/.test(key)
 
@@ -191,7 +192,12 @@ export async function runAgent(runtime: {
   if (req.tool === 'list_approvals')
     return toJson({
       ok: true,
-      result: { approvals: agents.approvals(agent.operator).filter((row) => row.agent_id === agent.id) },
+      result: {
+        approvals: agents
+          .approvals(agent.operator)
+          .filter((row) => row.agent_id === agent.id)
+          .map((row) => approvalDetails(agents, row)),
+      },
     })
   if (
     ['prepare_gas_allowance', 'edit_gas_allowance', 'confirm_gas_allowance', 'revoke_gas_allowance'].includes(req.tool)
