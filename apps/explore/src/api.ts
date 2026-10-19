@@ -190,10 +190,12 @@ export async function agentEndpoint<T>(
   method: 'GET' | 'POST' = 'GET',
   body?: Record<string, unknown>,
   privyToken?: string,
+  signal?: AbortSignal,
 ): Promise<T> {
   if (method === 'POST' && !writesOpen) throw new ApiError('launching', LAUNCH_MESSAGE)
   const response = await fetch(boardPrefix() + path, {
     method,
+    ...(signal === undefined ? {} : { signal }),
     headers: {
       ...(method === 'POST' ? { 'content-type': 'application/json' } : {}),
       ...(session() === null ? {} : { authorization: 'Bearer ' + session() }),

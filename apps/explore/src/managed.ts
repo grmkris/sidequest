@@ -32,10 +32,18 @@ export function useManagedAgents() {
   const auth = useAuth()
   const query = useQuery({
     queryKey: managedKey('managed-agents', auth.address, auth.signedIn),
-    queryFn: () => agentEndpoint<{ agents: ManagedAgent[] }>('/api/agents'),
+    queryFn: ({ signal }) =>
+      agentEndpoint<{ agents: ManagedAgent[] }>(
+        '/api/agents',
+        'GET',
+        undefined,
+        undefined,
+        AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
+      ),
     // Before a network's launch there are no managed agents to read.
     enabled: auth.signedIn && writesOpen,
     refetchInterval: 15_000,
+    retry: false,
   })
   return usePrivate(query, auth.signedIn && writesOpen)
 }
@@ -44,10 +52,18 @@ export function useManagedApprovals() {
   const auth = useAuth()
   const query = useQuery({
     queryKey: managedKey('managed-approvals', auth.address, auth.signedIn),
-    queryFn: () => agentEndpoint<{ approvals: AgentApproval[] }>('/api/approvals'),
+    queryFn: ({ signal }) =>
+      agentEndpoint<{ approvals: AgentApproval[] }>(
+        '/api/approvals',
+        'GET',
+        undefined,
+        undefined,
+        AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
+      ),
     // Before a network's launch there are no managed agents to read.
     enabled: auth.signedIn && writesOpen,
     refetchInterval: 15_000,
+    retry: false,
   })
   return usePrivate(query, auth.signedIn && writesOpen)
 }

@@ -1,25 +1,21 @@
 import { managedKey } from '../../queries.ts'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { type ReactNode, useEffect, useRef, useState } from 'react'
-import type { Address } from 'viem'
+import { useQuery } from '@tanstack/react-query'
+import { type ReactNode, useEffect, useState } from 'react'
 import type { ManagedAgent } from '../../api.ts'
 import { agentStatus } from '../../agent-api.ts'
 import { needsYou } from '../../agent-stats.ts'
-import { splitApprovals, unfinishedApproval } from '../../approval-view.ts'
+import { unfinishedApproval } from '../../approval-view.ts'
 import { useManagedApprovals } from '../../managed.ts'
-import { type OwnerTab, approvalAnchor, focusedApproval, ownerSearch, ownerTab } from '../../owner-route.ts'
+import { type OwnerTab, focusedApproval, ownerSearch, ownerTab } from '../../owner-route.ts'
 import type { RecordJob } from '../../routes/Agent.tsx'
-import { deployment } from '../../wallet.ts'
 import { useNow } from '../Time.tsx'
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../ui/empty.tsx'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs.tsx'
 import { useAuth } from '../Wallet.tsx'
-import { Approval } from './Approval.tsx'
 import { AccessCards } from './AccessCards.tsx'
 import { ManagedAgentCard } from './ManagedAgentCard.tsx'
 import { NeedsYouStrip } from './NeedsYouStrip.tsx'
-import { PastApprovals } from './PastApprovals.tsx'
 import { useReplaceSearch } from '../../page-search.ts'
+import { AgentApprovals } from './AgentApprovals.tsx'
 
 const triggerClass = 'flex-none px-0 min-h-9 pointer-coarse:min-h-11 group-data-horizontal/tabs:after:bottom-[-1px]'
 
@@ -117,89 +113,12 @@ export function OwnerTabs({
         {overview}
       </TabsContent>
       <TabsContent value="approvals" className="grid gap-7 text-base">
-        <Approvals managed={managed} posted={posted} focus={focus} />
+        <AgentApprovals managed={managed} posted={posted} focus={focus} />
       </TabsContent>
       <TabsContent value="manage" className="grid gap-7 text-base">
         <AccessCards agent={managed} />
         <ManagedAgentCard agent={managed} onBack={onBack} />
       </TabsContent>
     </Tabs>
-  )
-}
-
-/**
- * This agent's decisions: approved operations that did not finish and the waiting ones as full cards, oldest first,
- * then the decided ones as one-line rows. The one
- * a link points at is scrolled into view once the list has loaded, ringed if it waits and unfolded if it is past.
- */
-function Approvals({
-  managed,
-  posted,
-  focus,
-}: {
-  managed: ManagedAgent
-  posted: readonly RecordJob[] | undefined
-  focus: string | null
-}) {
-  const auth = useAuth()
-  const queryClient = useQueryClient()
-  const approvals = useManagedApprovals()
-  const mine = (approvals.data?.approvals ?? []).filter((a) => a.agent_id === managed.id)
-  const { waiting, recovering, past } = splitApprovals(mine)
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['managed-approvals', auth.address?.toLowerCase()] })
-  const shown = useRef(false)
-  const loaded = approvals.data !== undefined
-  useEffect(() => {
-    if (focus === null || !loaded || shown.current) return
-    shown.current = true
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    document
-      .getElementById(approvalAnchor(focus))
-      ?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' })
-  }, [focus, loaded])
-  if (approvals.error !== null)
-    return (
-      <p className="text-ui text-destructive-text">Approval records are unavailable. No decision has been submitted.</p>
-    )
-  if (approvals.isLoading) return <p className="text-muted-foreground">Reading this agent’s decisions…</p>
-  const card = (approval: (typeof mine)[number]) => (
-    <div
-      key={approval.id}
-      id={approvalAnchor(approval.id)}
-      data-focus={approval.id === focus || undefined}
-      className="scroll-mt-24 rounded-xl data-focus:-m-3 data-focus:bg-card data-focus:p-3 data-focus:shadow-sm data-focus:ring-2 data-focus:ring-ring/50"
-    >
-      <Approval approval={approval} agent={managed} operator={auth.address as Address} refresh={refresh} />
-    </div>
-  )
-  return (
-    <>
-      {recovering.length > 0 && (
-        // Approved, but the operation did not finish: each card continues the same operation (VV2-032).
-        <div className="grid gap-7">
-          <h2 className="px-1 text-ui font-medium text-muted-foreground">
-            Approved, not finished · {recovering.length}
-          </h2>
-          {recovering.map(card)}
-        </div>
-      )}
-      {waiting.length === 0 && recovering.length > 0 ? null : waiting.length === 0 ? (
-        <Empty className="border border-dashed py-8">
-          <EmptyHeader>
-            <EmptyTitle>Nothing waiting for you</EmptyTitle>
-            <EmptyDescription>
-              Hires within the weekly budget go ahead without asking. Bigger spends wait here for you.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        // Not a <section>: the harness finds each waiting card as the one section holding its operation id.
-        <div className="grid gap-7">
-          <h2 className="px-1 text-ui font-medium text-muted-foreground">Waiting · {waiting.length}</h2>
-          {waiting.map(card)}
-        </div>
-      )}
-      <PastApprovals approvals={past} factory={deployment.factory} posted={posted} focus={focus} />
-    </>
   )
 }
