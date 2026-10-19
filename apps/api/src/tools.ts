@@ -791,7 +791,7 @@ export const tools: Record<string, Tool> = {
 
   prepare_activation: {
     description:
-      'Selected worker: the creator’s signed Selection, any SIDE approval, and the budget authorisation to sign.',
+      'Selected worker: the creator’s signed Selection and the net budget authorisation to sign. Own wallet over REST: sign it, then build_activation; hosted MCP runs that step for you.',
     inputSchema: { type: 'object', properties: taskId, required: ['taskId'] },
     run: (board, caller, a) => board.prepareActivation(caller, { taskId: s(a, 'taskId') }),
   },
