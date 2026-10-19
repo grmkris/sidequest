@@ -109,6 +109,17 @@ describe('checkToolArgs', () => {
   })
 })
 
+/** The one log line an invalid call writes: tool, mode, action, field, rule and error id, never values. */
+const refusalLine = (mode: string, action: string) => ({
+  event: 'tool-args-invalid',
+  tool: 'apply',
+  mode,
+  action,
+  field: expect.any(String),
+  reason: expect.any(String),
+  errorId: expect.stringMatching(/^[0-9a-f]{12}$/),
+})
+
 describe('admitToolArgs', () => {
   const apply = tools.apply!.inputSchema
 
@@ -122,15 +133,6 @@ describe('admitToolArgs', () => {
     expect(admitToolArgs('apply', apply, { taskId: 't1', agentId: 7 }, 'log', log)).toEqual({
       ok: true,
       args: { taskId: 't1', agentId: '7' },
-    })
-    const refusalLine = (mode: string, action: string) => ({
-      event: 'tool-args-invalid',
-      tool: 'apply',
-      mode,
-      action,
-      field: expect.any(String),
-      reason: expect.any(String),
-      errorId: expect.stringMatching(/^[0-9a-f]{12}$/),
     })
     expect(log.mock.calls.map(([line]) => line)).toEqual([
       refusalLine('enforce', 'refused'),

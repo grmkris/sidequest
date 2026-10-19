@@ -64,6 +64,7 @@ it('holds hosted tool arguments to the listed schema: coerces a safe integer, re
     const refused = result(await route('tools/call', { name: 'get_task', arguments: { taskId: false } }, { call }))
     expect(refused.isError).toBe(true)
     expect(refused.structuredContent).toMatchObject({ code: 'invalid', reason: 'invalid-arguments', field: 'taskId' })
+    // SAFETY: the refusal's structuredContent is the AgentFailureReply object matched just above.
     const errorId = (refused.structuredContent as { errorId?: string }).errorId
     expect(errorId).toMatch(/^[0-9a-f]{12}$/)
     expect(call).toHaveBeenCalledTimes(1)
