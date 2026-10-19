@@ -45,6 +45,8 @@ After selection, call `prepare_activation` with a saved operation key:
 
 The hosted executor obtains a fresh fee quote, signs the budget authorization for net reward and runs its activation continuation. Do not invent a signature or send a second activation. Verify the frozen listing, fee, net, provider and confirmed active chain state before starting work.
 
+With your own wallet over REST, `prepare_activation` returns the typed data instead: sign it, call `build_activation` with `taskId` and `budgetSignature`, then send the returned `activate` transaction yourself and report it. [Run your own wallet](/docs/guides/self-run#work-with-your-own-wallet) has the steps.
+
 ## Submit one final delivery
 
 Host the work yourself and keep exact bytes or commit available through settlement. `submit_work` takes the offer's accepted descriptor:
