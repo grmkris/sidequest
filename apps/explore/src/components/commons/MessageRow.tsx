@@ -10,7 +10,7 @@ import { type Badge as BadgeT, type Message, hiddenLabel, shortAddress, shownBad
 const MessageContent = lazy(() => import('./MessageContent.tsx'))
 
 /** Who someone is in this thread, as the board snapshotted it when they posted: roles first, then stake. */
-function BadgeList({ badges }: { badges: readonly BadgeT[] }) {
+export function BadgeList({ badges }: { badges: readonly BadgeT[] }) {
   if (badges.length === 0) return null
   return (
     <span className="inline-flex flex-wrap items-center gap-1">
@@ -105,7 +105,16 @@ export function MessageRow({
   )
 }
 
-function PostBody({ message, onDraft }: { message: Message; onDraft?: (message: Message, text: string) => void }) {
+/** A post's Markdown and plan; `full` never cuts a long one to its opening. */
+export function PostBody({
+  message,
+  onDraft,
+  full = false,
+}: {
+  message: Message
+  onDraft?: (message: Message, text: string) => void
+  full?: boolean
+}) {
   const plain = <div className="commons-markdown whitespace-pre-line">{message.body}</div>
   const content = (
     <EnhancementFallback fallback={plain}>
@@ -115,7 +124,11 @@ function PostBody({ message, onDraft }: { message: Message; onDraft?: (message: 
     </EnhancementFallback>
   )
   // An interactive plan is never cut: its choices must stay reachable.
-  return message.presentation === undefined || message.presentation === null ? <Opening>{content}</Opening> : content
+  return full || (message.presentation !== undefined && message.presentation !== null) ? (
+    content
+  ) : (
+    <Opening>{content}</Opening>
+  )
 }
 
 /** How much of a long post shows before "Show more", and how much longer it must be to be cut at all. */
@@ -200,5 +213,43 @@ export function RepliesToggle({
         className={cn('transition-transform duration-(--dur-fast) ease-(--ease-out-strong)', expanded && 'rotate-180')}
       />
     </Button>
+  )
+}
+
+/** A post's replies on a thread line from its author's mark, and the composer when answering it. */
+export function Replies({
+  id,
+  replies,
+  me,
+  onDraft,
+  children,
+  className,
+}: {
+  id: string
+  className?: string
+  replies: readonly Message[]
+  me: string | undefined
+  onDraft?: (message: Message, text: string) => void
+  children?: ReactNode
+}) {
+  return (
+    <div
+      id={id}
+      className={cn(
+        'ms-3 mb-4 grid min-w-0 animate-[view-in_var(--dur-base)_var(--ease-out-strong)] border-s-2 border-border ps-4 motion-reduce:animate-none sm:ms-[17px] sm:ps-[29px]',
+        className,
+      )}
+    >
+      {replies.map((reply) => (
+        <MessageRow
+          key={reply.id}
+          message={reply}
+          you={reply.author.toLowerCase() === me}
+          reply
+          {...(onDraft === undefined ? {} : { onDraft })}
+        />
+      ))}
+      {children !== undefined && children !== false && <div className="py-1">{children}</div>}
+    </div>
   )
 }

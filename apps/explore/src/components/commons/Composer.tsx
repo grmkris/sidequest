@@ -32,6 +32,8 @@ interface ComposerProps {
   placeholder?: string
   /** Start as one line, opening into the full editor once someone writes. */
   compact?: boolean
+  /** Say what the reply answers, with a way to cancel; a post's own page answers that post and says neither. */
+  replyContext?: boolean
 }
 
 export function Composer({
@@ -44,6 +46,7 @@ export function Composer({
   onCancelReply,
   placeholder = 'Write a message',
   compact = false,
+  replyContext = true,
 }: ComposerProps) {
   const auth = useAuth()
   const { post, attach, setAttach, attachment, setAttachment, send } = posting
@@ -71,7 +74,7 @@ export function Composer({
         send()
       }}
     >
-      {replyTo !== null && <ReplyContext replyTo={replyTo} onCancel={onCancelReply} />}
+      {replyTo !== null && replyContext && <ReplyContext replyTo={replyTo} onCancel={onCancelReply} />}
       <MarkdownEditor
         label="Message"
         value={body}
@@ -79,7 +82,8 @@ export function Composer({
         limit={MESSAGE_MAX}
         placeholder={placeholder}
         disabled={post.isPending}
-        {...(replyTo === null ? {} : { replyId: replyTo.id })}
+        // Focus follows a Reply someone chose, never a page whose every reply answers its post.
+        {...(replyTo === null || !replyContext ? {} : { replyId: replyTo.id })}
         focusRevision={draftRevision}
         collapsed={collapsed}
         onFocus={() => setEngaged(true)}

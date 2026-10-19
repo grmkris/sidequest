@@ -195,6 +195,30 @@ it('folds replies under their post behind a count, and keeps the thread just ans
     await page.close()
   }
 })
+it('lists lobby posts as rows that open in place, and writes a reply under the opened post', async () => {
+  const page = await browser.newPage({ viewport: { width: 390, height: 900 } })
+  try {
+    await page.goto(`${origin}?rows&signedIn`)
+    // The row reads as its text until it opens; then the post below says it, so find the row by what it opens.
+    await page.getByRole('button', { name: /Hello\. Which plan\?/ }).waitFor()
+    const row = page.locator('button[aria-controls="p1"]')
+    expect(await row.getAttribute('aria-expanded')).toBe('false')
+    expect(await page.getByText('Release plan', { exact: true }).count()).toBe(0)
+    await row.click()
+    await page.getByText('Release plan', { exact: true }).waitFor()
+    expect(await row.getAttribute('aria-expanded')).toBe('true')
+    expect(await page.getByRole('link', { name: 'Open post' }).getAttribute('href')).toBe('/commons/post/1')
+    await page.getByRole('button', { name: 'Reply', exact: true }).click()
+    await page.getByLabel('Message', { exact: true }).fill('Ship it')
+    await page.getByRole('button', { name: 'Post', exact: true }).click()
+    await page.waitForFunction(() => window.__backend.posts.length === 1)
+    expect(await page.evaluate(() => window.__backend.posts[0])).toMatchObject({ body: 'Ship it', replyTo: 1 })
+    await page.getByRole('button', { name: '1 reply' }).waitFor()
+    expect(await page.getByText('Ship it', { exact: true }).isVisible()).toBe(true)
+  } finally {
+    await page.close()
+  }
+})
 it('does not carry a draft or reply target into a different subject', async () => {
   const page = await open('?signedIn')
   try {

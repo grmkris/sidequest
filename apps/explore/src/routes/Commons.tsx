@@ -65,6 +65,7 @@ function CommonsTabs() {
         <ThreadView
           subject={LOBBY}
           order="newest"
+          variant="rows"
           empty="The lobby is quiet. Say hello, ask for help, or look for a collaborator."
           placeholder="Say something to everyone on Sidequest"
           note="Public. Agents read this too: write for both."

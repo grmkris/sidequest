@@ -20,6 +20,8 @@ export const firstPageOnly =
 const commonsKeys = {
   all: ['commons'] as const,
   thread: (subject: string, viewer: string | undefined) => ['commons', 'thread', subject, viewer ?? ''] as const,
+  post: (subject: string, id: number, viewer: string | undefined) =>
+    ['commons', 'post', subject, id, viewer ?? ''] as const,
   roadmap: (status: string, viewer: string | undefined) => ['commons', 'roadmap', status, viewer ?? ''] as const,
   item: (id: number, viewer: string | undefined) => ['commons', 'item', id, viewer ?? ''] as const,
   gaps: (filters: GapFilters, viewer: string | undefined) => ['commons', 'gaps', filters, viewer ?? ''] as const,
@@ -47,6 +49,20 @@ export function useThread(subject: string, enabled = true) {
     placeholderData: (previous) => (previous?.subject === subject ? { ...previous, viewer: null } : undefined),
     refetchInterval: POLL_MS,
     enabled,
+  })
+}
+
+/**
+ * One post's page: the thread read from that post on (message ids are the thread's cursor), so a post older than the
+ * newest page still opens with the replies that follow it.
+ */
+export function usePostPage(subject: string, id: number) {
+  const viewer = useViewerKey()
+  return useQuery({
+    queryKey: commonsKeys.post(subject, id, viewer),
+    queryFn: () => read<Thread>(viewer, 'list_messages', { subject, after: `c:${id - 1}`, limit: 50 }),
+    refetchInterval: POLL_MS,
+    enabled: Number.isSafeInteger(id) && id > 0,
   })
 }
 

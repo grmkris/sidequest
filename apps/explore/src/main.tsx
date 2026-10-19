@@ -31,6 +31,7 @@ import { JobLinkPage } from './routes/JobLink.tsx'
 import { ActivityPage } from './routes/Activity.tsx'
 import { CommonsPage } from './routes/Commons.tsx'
 import { RoadmapItemPage } from './routes/RoadmapItem.tsx'
+import { CommonsPostPage } from './routes/CommonsPost.tsx'
 import { GapPage } from './routes/Gap.tsx'
 import './styles.css'
 import { chain, wagmiConfig } from './wallet.ts'
@@ -260,6 +261,13 @@ const roadmapItem = createRoute({
   staticData: { measure: 'narrow' },
   component: RoadmapItemPage,
 })
+// One lobby post on its own page, to share or come back to.
+const commonsPost = createRoute({
+  getParentRoute: () => root,
+  path: '/commons/post/$postId',
+  staticData: { measure: 'narrow' },
+  component: CommonsPostPage,
+})
 const gap = createRoute({
   getParentRoute: () => root,
   path: '/commons/gaps/$gapId',
@@ -361,6 +369,7 @@ const router = createRouter({
     sponsorship,
     commons,
     roadmapItem,
+    commonsPost,
     gap,
     boards,
     boardNew,
