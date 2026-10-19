@@ -40,6 +40,8 @@ describe('API worker failures', () => {
           errorId: reply.errorId,
           name: ['Error', 'TypeError', 'string'][index],
           ...(index === 1 ? { code: 'rate-limited', status: 429 } : {}),
+          // An unexpected failure is marked for the owner alert.
+          alert: 'internal_error',
         })
         // Where it was thrown, as function names only.
         if (at !== undefined) for (const frame of at as string[]) expect(frame).toMatch(/^[\w$#.<>]+$/)

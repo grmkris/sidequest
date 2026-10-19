@@ -32,6 +32,7 @@ import * as Effect from 'effect/Effect'
 import { type Hex, getAddress, decodeFunctionData, isAddress } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { type ToolContext, toJson, tools } from './tools.ts'
+import { admitToolArgs, toolArgsMode } from './tool-args.ts'
 import {
   admissionIdentity,
   admissionIpHash,
@@ -894,11 +895,14 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               mcpSession: req.mcpSession,
               ...(commonsToolNames.has(req.tool) ? { commons: commonsHost(req.env) } : {}),
             }
-            const toolResult = await tool.run(board, caller, req.args, ctx)
+            // REST, website and hosted calls all reach a handler here, so this one check holds them to the schema.
+            const admitted = admitToolArgs(req.tool, tool.inputSchema, req.args, toolArgsMode(bindings))
+            if (!admitted.ok) return toJson(agentFailureReply(admitted.error, 'Invalid arguments') satisfies BoardReply)
+            const toolResult = await tool.run(board, caller, admitted.args, ctx)
             // Inbox feed and Telegram notices for website, REST and managed calls alike; never fails the tool.
             await recordBoardEvent(fromDurableObjectSql(state.storage.sql.raw), fromD1(bindings.Database as never), {
               tool: req.tool,
-              args: req.args,
+              args: admitted.args,
               result: toolResult,
               network,
               boardId: req.env.boardId,

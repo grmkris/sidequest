@@ -357,13 +357,13 @@ it('select_worker reads a legacy REAL-text agent id ("10415.0", prod job 17) ins
   )
 })
 
-it('select_worker refuses a malformed stored agent id as invalid before writing a selection', async () => {
+it('select_worker refuses a malformed stored agent id as stored data, without a retry, before writing a selection', async () => {
   const f = fixture(1n),
     board = f.boot()
   f.sql.run("UPDATE applications SET agent_id = '7001.5' WHERE id = 'app-1'")
   await expect(
     board.selectWorker({ address: creator }, { taskId: f.terms.taskId, applicationId: 'app-1' }),
-  ).rejects.toMatchObject({ code: 'invalid' })
+  ).rejects.toMatchObject({ code: 'conflict', reason: 'stored-data', retry: 'none' })
   expect(f.sql.all('SELECT * FROM selections')).toHaveLength(1)
 })
 

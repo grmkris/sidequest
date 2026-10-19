@@ -1,7 +1,15 @@
 import * as sdk from '@sidequest/sdk'
 import { ContractFunctionRevertedError, encodeErrorResult, parseAbi } from 'viem'
 import { describe, expect, it, vi } from 'vitest'
-import { AgentFailure, agentFailureReply, errorDiagnostics, errorSite, failureFromReply } from './agent-failure.ts'
+import {
+  AgentFailure,
+  agentFailureReply,
+  errorDiagnostics,
+  errorSite,
+  failureFromReply,
+  failureKind,
+  StoredDataError,
+} from './agent-failure.ts'
 import { BoardError } from './board-error.ts'
 
 function verifyOneOffAllowance(): never {
@@ -185,5 +193,74 @@ describe('the tenant boundary (VV2-017)', () => {
     })
     const boardReply = agentFailureReply(floor, 'fallback', vi.fn(), 'error')
     expect(agentFailureReply(failureFromReply(boardReply), 'fallback', vi.fn())).toEqual(boardReply)
+  })
+})
+
+describe('typed failure kinds', () => {
+  it('says a deterministic server fault is not worth retrying and names its class, never its message', () => {
+    const log = vi.fn()
+    let thrown: unknown
+    try {
+      BigInt('10415.0')
+    } catch (e) {
+      thrown = e
+    }
+    const reply = agentFailureReply(thrown, 'The board could not complete this call', log, 'error', 'same-key')
+    expect(reply).toMatchObject({
+      ok: false,
+      code: 'error',
+      reason: 'internal',
+      retry: 'none',
+      errorClass: 'SyntaxError',
+    })
+    expect(reply.message).not.toMatch(/operationKey|10415/)
+    expect(reply.errorId).toMatch(/^[0-9a-f]{12}$/)
+  })
+
+  it('reports a timeout anywhere in the cause chain as a transient outage with the caller retry', () => {
+    const timeout = new Error('outer', {
+      cause: Object.assign(new Error('rpc https://x/KEY'), { name: 'TimeoutError' }),
+    })
+    expect(agentFailureReply(timeout, 'Read failed', vi.fn(), 'error', 'read')).toMatchObject({
+      code: 'unavailable',
+      reason: 'transient',
+      retry: 'read',
+      errorClass: 'Error',
+    })
+    expect(failureKind(timeout)).toBe('transient')
+  })
+
+  it('keeps stored-data refusals and argument fields through the reply and its round trip', () => {
+    const stored = agentFailureReply(new StoredDataError('application a has a malformed stored agent id'), 'fallback')
+    expect(stored).toEqual({
+      ok: false,
+      code: 'conflict',
+      message: 'application a has a malformed stored agent id',
+      reason: 'stored-data',
+      retry: 'none',
+    })
+    const field = Object.assign(new AgentFailure('invalid', 'agentId: bad', 'invalid-arguments', 'none'), {
+      field: 'invite.agentId',
+    })
+    const reply = agentFailureReply(field, 'fallback')
+    expect(reply).toMatchObject({ field: 'invite.agentId', retry: 'none' })
+    expect(agentFailureReply(failureFromReply(reply), 'fallback')).toEqual(reply)
+  })
+
+  it('marks a server fault for the owner alert in the default sink, but not an outage', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      agentFailureReply(new SyntaxError('Cannot convert 10415.0 to a BigInt'), 'fallback')
+      agentFailureReply(Object.assign(new Error('slow'), { name: 'TimeoutError' }), 'fallback')
+      // SAFETY: the default sink writes one JSON object per line.
+      const lines = spy.mock.calls.map(([line]) => JSON.parse(String(line)) as { name: string; alert?: string })
+      expect(lines).toEqual([
+        expect.objectContaining({ name: 'SyntaxError', alert: 'internal_error' }),
+        expect.not.objectContaining({ alert: expect.anything() }),
+      ])
+      expect(spy.mock.calls.join('\n')).not.toContain('10415')
+    } finally {
+      spy.mockRestore()
+    }
   })
 })

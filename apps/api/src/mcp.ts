@@ -23,6 +23,7 @@ import { hiringTools, hiringResource, renderHiring } from './mcp-hiring.ts'
 import { commonsResource } from './mcp-commons.ts'
 import { docsResources, readDoc, searchDocs } from './mcp-docs.ts'
 import { MCP_LEGACY_PROTOCOL_VERSIONS, MCP_PROTOCOL_VERSION, MCP_SERVER_INFO } from './mcp-metadata.ts'
+import { admitToolArgs, type ToolArgsMode } from './tool-args.ts'
 
 const PROTOCOLS = MCP_LEGACY_PROTOCOL_VERSIONS
 export const MODERN_LANE = true
@@ -100,6 +101,8 @@ export async function mcpRoute(input: {
   readonly call: (tool: string, args: Record<string, unknown>, agentId: string) => Promise<unknown>
   readonly origin: string
   readonly publicDirectory?: boolean
+  /** How tool arguments are held to their published schema (tool-args.ts); enforce when unset. */
+  readonly toolArgsMode?: ToolArgsMode
 }): Promise<McpReply> {
   const { method, pathname, body, grant, call, origin } = input
   const publicDirectory = input.publicDirectory === true
@@ -193,7 +196,15 @@ export async function mcpRoute(input: {
   // A notification sent with an id is answered leniently rather than as an unknown method.
   if (methodName === 'ping' || methodName.startsWith('notifications/')) return respond({})
   if (publicDirectory)
-    return publicDirectoryProtocol({ methodName, params, tools: input.tools, call, respond, rpcError })
+    return publicDirectoryProtocol({
+      methodName,
+      params,
+      tools: input.tools,
+      call,
+      respond,
+      rpcError,
+      toolArgsMode: input.toolArgsMode ?? 'enforce',
+    })
   if (grant === undefined) return rpcError(-32603, 'OAuth grant unavailable')
   if (modern && methodName === 'subscriptions/listen') {
     if (!Schema.is(Listen)(body)) return rpcError(-32602, 'subscriptions/listen needs a request id and notifications')
@@ -378,10 +389,11 @@ export async function mcpRoute(input: {
   if (methodName === 'tools/call') {
     const name = typeof params.name === 'string' ? params.name : ''
     const tool = tools[name]
-    const args =
+    const sent =
       typeof params.arguments === 'object' && params.arguments !== null
         ? (params.arguments as Record<string, unknown>)
         : {}
+    const args = sent
     // A new agent's approval landed while the client waited on its native prompt: the same call now completes.
     const settled = modern ? settledCreation(params, name, grant) : undefined
     if (settled !== undefined) return respond(settled)
@@ -426,9 +438,20 @@ export async function mcpRoute(input: {
     }
     if (tool === undefined)
       return respond({ content: [{ type: 'text', text: `not-found: no tool ${name}` }], isError: true })
+    // The schema this client was shown in tools/list is the one its arguments are held to, after scope and grant checks.
+    const admitted = admitToolArgs(name, tool.inputSchema, sent, input.toolArgsMode ?? 'enforce')
+    if (!admitted.ok) {
+      const failure = agentFailureReply(admitted.error, 'Invalid arguments')
+      return respond({
+        content: [{ type: 'text', text: JSON.stringify(failure) }],
+        structuredContent: failure,
+        isError: true,
+      })
+    }
+    const callArgs = admitted.args
     const agentId =
-      typeof args.managedAgentId === 'string'
-        ? args.managedAgentId
+      typeof callArgs.managedAgentId === 'string'
+        ? callArgs.managedAgentId
         : grant.agentIds.length === 1
           ? grant.agentIds[0]!
           : ''
@@ -436,10 +459,10 @@ export async function mcpRoute(input: {
       return respond({ content: [{ type: 'text', text: 'forbidden: select one granted agent' }], isError: true })
     try {
       const run = () =>
-        Object.hasOwn(hiringTools, name) ? renderHiring(name, args, agentId, call) : call(name, args, agentId)
+        Object.hasOwn(hiringTools, name) ? renderHiring(name, callArgs, agentId, call) : call(name, callArgs, agentId)
       const setupStatus = (agentKey: string) => call('setup_status', { agentKey }, agentId)
       const round = modern
-        ? await approvalRound({ params, tool: name, agentId, args, run, setupStatus })
+        ? await approvalRound({ params, tool: name, agentId, args: callArgs, run, setupStatus })
         : { kind: 'output' as const, output: await run() }
       // ADR-0021: an approval the client can open asks for it natively, then the client retries the same call.
       if (round.kind === 'input') return json({ jsonrpc: '2.0', id: id ?? null, result: round.result })
