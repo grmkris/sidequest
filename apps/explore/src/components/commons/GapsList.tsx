@@ -50,15 +50,18 @@ function GapsFilters({ filters, searchStr }: { filters: GapFilters; searchStr: s
   const [tool, setTool] = useState(filters.tool ?? '')
   useEffect(() => setTool(filters.tool ?? ''), [filters.tool])
   return (
+    // One row of filters; the controls name themselves, so their labels are for screen readers.
     <form
-      className="flex flex-wrap items-end gap-3"
+      className="flex flex-wrap items-center gap-2"
       onSubmit={(event) => {
         event.preventDefault()
         replaceSearch(gapSearch(searchStr, { ...filters, tool }))
       }}
     >
       <Field className="w-auto">
-        <FieldLabel htmlFor="gap-status">Status</FieldLabel>
+        <FieldLabel htmlFor="gap-status" className="sr-only">
+          Status
+        </FieldLabel>
         <Select
           id="gap-status"
           value={filters.status ?? ''}
@@ -76,7 +79,9 @@ function GapsFilters({ filters, searchStr }: { filters: GapFilters; searchStr: s
         </Select>
       </Field>
       <Field className="w-auto">
-        <FieldLabel htmlFor="gap-type">Type</FieldLabel>
+        <FieldLabel htmlFor="gap-type" className="sr-only">
+          Type
+        </FieldLabel>
         <Select
           id="gap-type"
           value={filters.gapType ?? ''}
@@ -94,17 +99,22 @@ function GapsFilters({ filters, searchStr }: { filters: GapFilters; searchStr: s
         </Select>
       </Field>
       <Field className="w-auto">
-        <FieldLabel htmlFor="gap-tool">Tool</FieldLabel>
+        <FieldLabel htmlFor="gap-tool" className="sr-only">
+          Tool
+        </FieldLabel>
         <Input
           id="gap-tool"
+          type="search"
+          enterKeyHint="search"
           value={tool}
           onChange={(event) => setTool(event.target.value)}
           pattern="[a-z][a-z0-9_]{1,63}"
           placeholder="Any tool"
+          className="w-36"
         />
       </Field>
       <Button type="submit" variant="outline">
-        Apply tool filter
+        Filter by tool
       </Button>
     </form>
   )
