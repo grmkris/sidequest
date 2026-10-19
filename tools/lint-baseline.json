@@ -906,8 +906,8 @@
   },
   "packages/board/src/agent-failure.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
-    "anti-slop(no-runtime-typeof)": 12,
-    "anti-slop(require-safety-comment-for-type-assertion)": 8
+    "anti-slop(no-runtime-typeof)": 8,
+    "anti-slop(require-safety-comment-for-type-assertion)": 5
   },
   "packages/board/src/agent-grant-renewal.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1,

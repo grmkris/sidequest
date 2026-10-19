@@ -300,6 +300,8 @@ async function route(method: string, params: Record<string, unknown>, output: un
       body: { jsonrpc: '2.0', id: 1, method, params },
       tools: registry,
       call: async () => output,
+      // This suite checks success outputs; its fixture calls carry only an operationKey, so input checks only log.
+      toolArgsMode: 'log',
     }),
   )
 }

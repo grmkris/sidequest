@@ -28,6 +28,7 @@
       "@types/react-dom": "19.3.0",
       "@types/three": "0.186.0",
       "ajv": "8.20.0",
+      "@cfworker/json-schema": "4.1.1",
       "viem": "2.56.9",
       "@base-ui/react": "1.8.0",
       "three": "0.186.1",
