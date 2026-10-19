@@ -15,6 +15,7 @@ import {
   welcomeDismissed,
   welcomeShown,
 } from '../../onboarding.ts'
+import { useJobPosting } from '../PostJob.tsx'
 import { useSideSheet } from '../side/SideToken.tsx'
 import { useOnboardingFacts } from './useOnboardingFacts.ts'
 
@@ -24,13 +25,16 @@ export function WelcomeOpener({ address }: { address: Address }) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const side = useSideSheet()
-  const open = shouldWelcome({
-    facts,
-    pathname,
-    dismissed: welcomeDismissed(address),
-    shown: welcomeShown(address),
-    sideOpen: side?.showing === true,
-  })
+  const posting = useJobPosting()
+  const open =
+    !posting.open &&
+    shouldWelcome({
+      facts,
+      pathname,
+      dismissed: welcomeDismissed(address),
+      shown: welcomeShown(address),
+      sideOpen: side?.showing === true,
+    })
   useEffect(() => {
     if (!open) return
     markWelcomeShown(address)

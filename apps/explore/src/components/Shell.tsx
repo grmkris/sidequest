@@ -1,3 +1,4 @@
+import { JobPostingProvider } from './PostJob.tsx'
 import { SkipLink } from './RouteAccessibility.tsx'
 import { xLink } from '../wallet.ts'
 import { cn } from '../lib/cn.ts'
@@ -155,68 +156,70 @@ export function Shell({ children }: { children: ReactNode }) {
   const state = useShellState()
   const { auth, account, paused, narrow, collect } = state
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">
-      <SkipLink />
-      {auth.signedIn && auth.address !== undefined && <WelcomeOpener address={auth.address} />}
-      <aside
-        className="sticky top-0 hidden h-dvh flex-col gap-1 overflow-y-auto border-r bg-sidebar px-3 pt-4 pb-4 text-sidebar-foreground lg:flex"
-        aria-label="Sections"
-      >
-        <div className="px-2 pb-4">
-          <Brand stacked />
-        </div>
-        <SidebarPlaces state={state} />
-        <div className="mt-auto grid gap-3 pt-6">
-          {auth.signedIn && auth.address !== undefined && <SetupPill address={auth.address} className="mx-1" />}
-          {auth.signedIn ? (
-            <AccountLink collect={collect} />
-          ) : (
-            <div className="px-1">
-              <AccountControl auth={auth} account={account} full />
-            </div>
-          )}
-          <SideChip className="mx-1 justify-self-start" />
-          <ConnectAgent variant="sidebar" />
-          <SiteLinks className="px-1" />
-        </div>
-      </aside>
-
-      <div className="min-w-0">
-        <header className="material-chrome material-edge-bottom sticky top-0 z-30 pt-[var(--safe-top)] lg:hidden">
-          <div className="flex min-h-12 items-center justify-between gap-3 pr-[max(1rem,var(--safe-right))] pl-[max(1rem,var(--safe-left))]">
-            <Brand />
-            <span className="flex items-center gap-1">
-              <ConnectAgent variant="icon" />
-              {auth.signedIn ? <AccountAvatar collect={collect} /> : <AccountControl auth={auth} account={account} />}
-            </span>
-          </div>
-        </header>
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className="mx-auto grid w-full max-w-5xl min-w-0 gap-7 pt-5 pr-[max(1rem,var(--safe-right))] pb-[calc(6.5rem+var(--safe-bottom))] pl-[max(1rem,var(--safe-left))] outline-none lg:px-10 lg:pt-10 lg:pb-16"
+    <JobPostingProvider>
+      <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">
+        <SkipLink />
+        {auth.signedIn && auth.address !== undefined && <WelcomeOpener address={auth.address} />}
+        <aside
+          className="sticky top-0 hidden h-dvh flex-col gap-1 overflow-y-auto border-r bg-sidebar px-3 pt-4 pb-4 text-sidebar-foreground lg:flex"
+          aria-label="Sections"
         >
-          <LaunchBanner />
-          {paused && (
-            <div role="alert" className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive-text">
-              The contracts are paused by their admin: nothing can be published, delivered, paid or spent until they are
-              unpaused, and deadlines keep running.{' '}
-              <a
-                className="underline"
-                href="https://github.com/grmkris/sidequest#trust"
-                target="_blank"
-                rel="noreferrer"
-              >
-                What the admin can do
-              </a>
-            </div>
-          )}
-          <div className={cn('grid min-w-0 gap-7', narrow && '[&>*:not(header)]:max-w-2xl')}>{children}</div>
-        </main>
-      </div>
+          <div className="px-2 pb-4">
+            <Brand stacked />
+          </div>
+          <SidebarPlaces state={state} />
+          <div className="mt-auto grid gap-3 pt-6">
+            {auth.signedIn && auth.address !== undefined && <SetupPill address={auth.address} className="mx-1" />}
+            {auth.signedIn ? (
+              <AccountLink collect={collect} />
+            ) : (
+              <div className="px-1">
+                <AccountControl auth={auth} account={account} full />
+              </div>
+            )}
+            <SideChip className="mx-1 justify-self-start" />
+            <ConnectAgent variant="sidebar" />
+            <SiteLinks className="px-1" />
+          </div>
+        </aside>
 
-      <PhoneTabs state={state} />
-    </div>
+        <div className="min-w-0">
+          <header className="material-chrome material-edge-bottom sticky top-0 z-30 pt-[var(--safe-top)] lg:hidden">
+            <div className="flex min-h-12 items-center justify-between gap-3 pr-[max(1rem,var(--safe-right))] pl-[max(1rem,var(--safe-left))]">
+              <Brand />
+              <span className="flex items-center gap-1">
+                <ConnectAgent variant="icon" />
+                {auth.signedIn ? <AccountAvatar collect={collect} /> : <AccountControl auth={auth} account={account} />}
+              </span>
+            </div>
+          </header>
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className="mx-auto grid w-full max-w-5xl min-w-0 gap-7 pt-5 pr-[max(1rem,var(--safe-right))] pb-[calc(6.5rem+var(--safe-bottom))] pl-[max(1rem,var(--safe-left))] outline-none lg:px-10 lg:pt-10 lg:pb-16"
+          >
+            <LaunchBanner />
+            {paused && (
+              <div role="alert" className="rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive-text">
+                The contracts are paused by their admin: nothing can be published, delivered, paid or spent until they
+                are unpaused, and deadlines keep running.{' '}
+                <a
+                  className="underline"
+                  href="https://github.com/grmkris/sidequest#trust"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  What the admin can do
+                </a>
+              </div>
+            )}
+            <div className={cn('grid min-w-0 gap-7', narrow && '[&>*:not(header)]:max-w-2xl')}>{children}</div>
+          </main>
+        </div>
+
+        <PhoneTabs state={state} />
+      </div>
+    </JobPostingProvider>
   )
 }
 

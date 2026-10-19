@@ -1,8 +1,9 @@
+import { boardPrefix } from '../api.ts'
 import { boardsQuery } from '../queries.ts'
 import { useQuery } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { useRouterState } from '@tanstack/react-router'
 import { boardRoutes } from './BoardLink.tsx'
-import { CreateWithAgent } from './CreateWithAgent.tsx'
+import { PostJob } from './PostJob.tsx'
 import { JOBS_LABEL } from '../places.ts'
 
 /** Every hosted board (ADR-0008), shared with the Boards page. */
@@ -13,19 +14,15 @@ const useBoards = () => useQuery({ ...boardsQuery(), refetchInterval: 60_000 })
  * Inside an embed only the title shows; the host page explains itself.
  */
 export function JobsHeader({ title = JOBS_LABEL }: { title?: string }) {
-  const embedded = window.location.pathname.startsWith('/embed/')
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const embedded = pathname.startsWith('/embed/')
   return (
     <header className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
         <h1 className="text-2xl leading-tight font-semibold tracking-tight text-balance">{title}</h1>
         <BoardName />
       </div>
-      {!embedded && (
-        <CreateWithAgent context="quotes" collectBrief>
-          <Plus aria-hidden />
-          Post a job
-        </CreateWithAgent>
-      )}
+      {!embedded && <PostJob key={boardPrefix()} />}
     </header>
   )
 }

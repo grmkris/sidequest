@@ -4,10 +4,11 @@ import { Link } from '@tanstack/react-router'
 import { boardPrefix, type ManagedAgent } from '../api.ts'
 import { useManagedAgents } from '../managed.ts'
 import { writesOpen } from '../wallet.ts'
-import { appendQuoteBrief, publicQuotePrompt } from '../quote-handoff.ts'
+import { appendQuoteBrief } from '../quote-handoff.ts'
 import { ConnectionCard } from './ConnectionCard.tsx'
 import { LaunchingSoon } from './LaunchGate.tsx'
 import { Sheet } from './Sheet.tsx'
+import { usePrivyModalOpen } from './Privy.tsx'
 import { CopyButton, textLinkClass } from './kit.tsx'
 import { SignIn } from './SignIn.tsx'
 import { Button } from './ui/button.tsx'
@@ -27,7 +28,8 @@ interface CreationDraft {
 
 interface CreationProps extends CreationDraft {
   publisherAddress?: string
-  collectBrief?: boolean
+  details?: ReactNode
+  onOpenChange?: (open: boolean) => void
   children?: ReactNode
   className?: string | undefined
   variant?: 'default' | 'secondary' | 'outline' | 'ghost'
@@ -58,14 +60,9 @@ function creationIntent({ context = 'quotes', agentId, jobId, requestId }: Creat
 }
 
 /** A handoff to the human's coding client. Copying this instruction performs no board or wallet action. */
-function creationPrompt(publisher: ManagedAgent | undefined, draft: CreationDraft): string | null {
+function creationPrompt(publisher: ManagedAgent, draft: CreationDraft): string {
   const origin = window.location.origin
   const resource = `${origin}${boardPrefix()}/mcp`
-  if (publisher === undefined) {
-    if ((draft.context ?? 'quotes') === 'quotes' && draft.brief?.trim())
-      return publicQuotePrompt(origin, resource, draft.brief)
-    return null
-  }
   return appendQuoteBrief(
     [
       `Read ${origin}/start.md, ${origin}/skills/connector/SKILL.md and ${origin}/skills/publisher/SKILL.md.`,
@@ -103,28 +100,26 @@ export function eligiblePublishers(agents: readonly ManagedAgent[], publisherAdd
 export function CreateWithAgent(props: CreationProps) {
   const [open, setOpen] = useState(false)
   const [requiredAfter, setRequiredAfter] = useState(0)
-  const [brief, setBrief] = useState(() => {
-    if (!props.collectBrief) return props.brief ?? ''
-    try {
-      return sessionStorage.getItem(`sidequest:quote-brief:${boardPrefix()}`) ?? props.brief ?? ''
-    } catch {
-      return props.brief ?? ''
-    }
-  })
-  function updateBrief(value: string) {
-    setBrief(value)
-    try {
-      sessionStorage.setItem(`sidequest:quote-brief:${boardPrefix()}`, value)
-    } catch {
-      // Storage can be unavailable; the draft still survives sign-in and retry in this sheet.
-    }
+  const [signingIn, setSigningIn] = useState(false)
+  const privyModal = usePrivyModalOpen()
+  function changeOpen(value: boolean) {
+    setOpen(value)
+    props.onOpenChange?.(value)
   }
   const auth = useAuth()
   const managed = useManagedAgents()
+  const signIn: typeof auth.signIn = async (options) => {
+    setSigningIn(true)
+    try {
+      await auth.signIn(options)
+    } finally {
+      setSigningIn(false)
+    }
+  }
   const title = creationTitle(props.context ?? 'quotes')
   function openSheet() {
     setRequiredAfter(Date.now())
-    setOpen(true)
+    changeOpen(true)
     if (auth.signedIn && writesOpen) void managed.refetch()
   }
   return (
@@ -140,16 +135,15 @@ export function CreateWithAgent(props: CreationProps) {
       >
         {props.children ?? 'Create with agent'}
       </Button>
-      <Sheet open={open} onClose={() => setOpen(false)} title={title} className="sm:w-[36rem]">
+      <Sheet
+        open={open}
+        onClose={() => changeOpen(false)}
+        title={title}
+        className="sm:w-[36rem]"
+        walletPrompt={open && (signingIn || privyModal)}
+      >
         {writesOpen ? (
-          open && (
-            <CreationContents
-              {...props}
-              brief={props.collectBrief ? brief : props.brief}
-              requiredAfter={requiredAfter}
-              updateBrief={updateBrief}
-            />
-          )
+          open && <CreationContents {...props} requiredAfter={requiredAfter} signIn={signIn} />
         ) : (
           <LaunchingSoon title={title} />
         )}
@@ -175,9 +169,11 @@ function usePublisherChoice(publisherAddress: string | undefined, requiredAfter:
 
 type PublisherChoice = ReturnType<typeof usePublisherChoice>
 
-function CreationContents(props: CreationProps & { requiredAfter: number; updateBrief: (value: string) => void }) {
+function CreationContents(
+  props: CreationProps & { requiredAfter: number; signIn: ReturnType<typeof useAuth>['signIn'] },
+) {
   const choice = usePublisherChoice(props.publisherAddress, props.requiredAfter)
-  const prompt = props.collectBrief && choice.publisher === undefined ? null : creationPrompt(choice.publisher, props)
+  const prompt = choice.publisher === undefined ? null : creationPrompt(choice.publisher, props)
   const showSetup = choice.available.length === 0 && (!choice.auth.signedIn || choice.fresh)
   return (
     <>
@@ -185,29 +181,19 @@ function CreationContents(props: CreationProps & { requiredAfter: number; update
         Paste the instruction into your coding client. Choose or set up your hiring agent, then confirm the brief and
         obtain any required approval before publishing or funding.
       </p>
-      {props.collectBrief && (
-        <label className="grid gap-2 font-medium">
-          Job brief
-          <textarea
-            aria-label="Job brief"
-            value={props.brief ?? ''}
-            onChange={(event) => props.updateBrief(event.target.value)}
-            rows={4}
-            placeholder="What do you need, and how will you check it?"
-            className="w-full resize-y rounded-xl border border-input bg-background p-3 text-sm font-normal"
-          />
-          <span className="text-xs font-normal text-muted-foreground">
-            Your brief stays in this tab for sign-in, setup and retry. Return to Post a job after setup.
-          </span>
-        </label>
-      )}
+      {props.details}
       <BondHorizonNotice bonded tone="fix" />
       <PublisherCheck choice={choice} />
       {choice.available.length > 1 && <PublisherPicker choice={choice} />}
       {choice.publisher !== undefined && <SelectedPublisher publisher={choice.publisher} agentId={props.agentId} />}
       {prompt !== null && <PromptInstruction prompt={prompt} />}
       {choice.fresh && <UnavailablePublishers choice={choice} publisherAddress={props.publisherAddress} />}
-      {showSetup && <PublisherSetup auth={choice.auth} originalPublisher={props.publisherAddress !== undefined} />}
+      {showSetup && (
+        <PublisherSetup
+          auth={{ ...choice.auth, signIn: props.signIn }}
+          originalPublisher={props.publisherAddress !== undefined}
+        />
+      )}
       <ConnectionCard />
     </>
   )

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appendQuoteBrief, publicQuotePrompt } from './quote-handoff.ts'
+import { appendQuoteBrief } from './quote-handoff.ts'
 
 describe('quote draft handoff', () => {
   it('preserves multiline and quoted input as task data', () => {
@@ -12,12 +12,5 @@ describe('quote draft handoff', () => {
   it('leaves existing non-draft handoffs unchanged', () => {
     expect(appendQuoteBrief('Existing hire flow', undefined)).toBe('Existing hire flow')
     expect(appendQuoteBrief('Existing hire flow', '  ')).toBe('Existing hire flow')
-  })
-  it('retains the draft before a visitor has a publisher', () => {
-    const prompt = publicQuotePrompt('https://example.test', 'https://example.test/b/project/mcp', 'Plan my trip')
-    expect(prompt).toContain('https://example.test/b/project/mcp')
-    expect(prompt).toContain('"Plan my trip"')
-    expect(prompt).toContain('set up or choose')
-    expect(prompt).toContain('A quote request commits no reward')
   })
 })

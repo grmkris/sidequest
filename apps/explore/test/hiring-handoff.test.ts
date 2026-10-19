@@ -26,6 +26,12 @@ const appRoot = fileURLToPath(new URL('../', import.meta.url))
 const virtualRoot = path.join(appRoot, 'test/fixtures/virtual')
 const sourceRoot = path.join(appRoot, 'src')
 const aliases = new Map([
+  [path.join(sourceRoot, 'components/Privy.tsx'), path.join(virtualRoot, 'Privy.tsx')],
+  [
+    path.join(sourceRoot, 'components/onboarding/useOnboardingFacts.ts'),
+    path.join(virtualRoot, 'useOnboardingFacts.ts'),
+  ],
+  [path.join(sourceRoot, 'components/side/SideToken.tsx'), path.join(virtualRoot, 'SideToken.tsx')],
   [path.join(sourceRoot, 'components/Wallet.tsx'), path.join(virtualRoot, 'Wallet.tsx')],
   [path.join(sourceRoot, 'wallet.ts'), path.join(virtualRoot, 'wallet.ts')],
   [path.join(sourceRoot, 'components/BondHorizonNotice.tsx'), path.join(virtualRoot, 'BondHorizonNotice.tsx')],
@@ -50,6 +56,7 @@ beforeAll(async () => {
         name: 'hiring-test-transport',
         enforce: 'pre',
         async resolveId(source, importer, options) {
+          if (source === '@privy-io/react-auth') return path.join(virtualRoot, 'privy-auth.tsx')
           if (modules.has(source)) return source
           if (importer?.startsWith(virtualRoot) && source.startsWith('.'))
             return path.resolve(path.dirname(importer), source)
@@ -119,6 +126,7 @@ it('keeps the brief through sign-in, copies the verified public instruction and 
     await page.getByLabel('Job brief', { exact: true }).fill('Build a report with tests')
     expect(await page.getByLabel('Agent instruction').count()).toBe(0)
     await page.getByRole('button', { name: 'Sign in to choose a publisher' }).click()
+    await page.getByRole('button', { name: 'Confirm wallet sign-in', exact: true }).click()
     const prompt = page.getByLabel('Agent instruction')
     await prompt.waitFor()
     expect(await page.getByLabel('Job brief', { exact: true }).inputValue()).toBe('Build a report with tests')
@@ -151,6 +159,14 @@ it('offers setup for no agents and retains a board-scoped draft after leaving an
     expect(await page.getByRole('link', { name: 'Set up an agent', exact: true }).getAttribute('href')).toBe(
       '/agents/new',
     )
+    await page.keyboard.press('Escape')
+    await page.getByRole('link', { name: 'Tenant jobs', exact: true }).click()
+    await page.locator('button').filter({ hasText: 'Post a job' }).click()
+    expect(await page.getByLabel('Job brief', { exact: true }).inputValue()).toBe('')
+    await page.keyboard.press('Escape')
+    await page.getByRole('link', { name: 'Public jobs', exact: true }).click()
+    await page.locator('button').filter({ hasText: 'Post a job' }).click()
+    expect(await page.getByLabel('Job brief', { exact: true }).inputValue()).toBe('Keep this draft')
     await page.goto(origin + 'agents/new')
     await page.goto(origin + '?signedIn&mode=none')
     await page.locator('button').filter({ hasText: 'Post a job' }).click()
@@ -255,6 +271,111 @@ it.each([1280, 390])('supports keyboard opening, editing and closing at %ipx wit
       await page.screenshot({ path: `${process.env.HIRING_EVIDENCE_DIR}/${width}.png`, fullPage: true })
     await page.keyboard.press('Escape')
     await trigger.waitFor()
+    expect(await page.evaluate(() => window.__hiring.writes)).toEqual([])
+  } finally {
+    await page.close()
+  }
+})
+
+it.each([1280, 390])('keeps first-sign-in login and Welcome on the active handoff at %ipx', async (width) => {
+  const page = await open('?login&firstSignIn', width)
+  try {
+    await page.getByLabel('Job brief', { exact: true }).fill('First login draft')
+    await page.getByRole('button', { name: 'Sign in to choose a publisher' }).click()
+    const confirm = page.getByRole('button', { name: 'Confirm login', exact: true })
+    await confirm.waitFor()
+    expect(await page.locator('dialog:modal').count()).toBe(0)
+    expect(await page.getByRole('button', { name: 'Close', exact: true }).isDisabled()).toBe(true)
+    // A real pointer click, without force: a modal dialog would intercept this page-level portal.
+    await confirm.click()
+    await page.getByLabel('Agent instruction').waitFor()
+    expect(new URL(page.url()).pathname).toBe('/')
+    expect(await page.locator('dialog:modal').count()).toBe(1)
+    expect(await page.getByLabel('Job brief', { exact: true }).inputValue()).toBe('First login draft')
+    await page.getByRole('button', { name: 'Close', exact: true }).click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/welcome')
+    expect(await page.evaluate(() => window.__hiring.writes)).toEqual([])
+  } finally {
+    await page.close()
+  }
+})
+
+it.each([
+  [1280, 'Cancel wallet sign-in', 'User cancelled sign-in'],
+  [390, 'Cancel wallet sign-in', 'User cancelled sign-in'],
+  [1280, 'Fail wallet sign-in', 'Wallet connection failed'],
+  [390, 'Fail wallet sign-in', 'Wallet connection failed'],
+] as const)('retains the draft after %s px %s and permits a successful retry', async (width, action, error) => {
+  const page = await open('?firstSignIn&storageWrite', width)
+  try {
+    await page.getByLabel('Job brief', { exact: true }).fill('In-memory signature draft')
+    const signIn = page.getByRole('button', { name: 'Sign in to choose a publisher' })
+    await signIn.click()
+    await page.getByRole('button', { name: action, exact: true }).click()
+    await page.getByRole('alert').filter({ hasText: error }).waitFor()
+    expect(await page.locator('dialog:modal').count()).toBe(1)
+    expect(await page.getByLabel('Agent instruction').count()).toBe(0)
+    expect(await page.getByLabel('Job brief', { exact: true }).inputValue()).toBe('In-memory signature draft')
+    await signIn.click()
+    await page.getByRole('button', { name: 'Confirm wallet sign-in', exact: true }).click()
+    await page.getByLabel('Agent instruction').waitFor()
+    expect(new URL(page.url()).pathname).toBe('/')
+    expect(await page.getByLabel('Agent instruction').inputValue()).toContain('In-memory signature draft')
+    expect(await page.locator('dialog:modal').count()).toBe(1)
+    expect(await page.getByRole('alert').filter({ hasText: error }).count()).toBe(0)
+    expect(await page.evaluate(() => window.__hiring.writes)).toEqual([])
+  } finally {
+    await page.close()
+  }
+})
+
+it.each([
+  [1280, 'storageRead'],
+  [390, 'storageRead'],
+  [1280, 'storageWrite'],
+  [390, 'storageWrite'],
+] as const)('reports %s px %s rejection and offers a copy before setup', async (width, storage) => {
+  const page = await open(`?signedIn&mode=none&${storage}`, width)
+  try {
+    if (storage === 'storageRead') await page.getByRole('alert').filter({ hasText: 'cannot be saved' }).waitFor()
+    await page.getByLabel('Job brief', { exact: true }).fill('Copy before setup')
+    await page.getByRole('alert').filter({ hasText: 'cannot be saved for navigation or reload' }).waitFor()
+    expect(await page.getByText('It is saved in this tab', { exact: false }).count()).toBe(0)
+    await page.getByRole('button', { name: 'Copy brief', exact: true }).click()
+    await page.getByRole('button', { name: 'Copy brief copied', exact: true }).waitFor()
+    expect(await page.evaluate(() => window.__hiring.copied)).toBe('Copy before setup')
+    await page.keyboard.press('Escape')
+    await page.locator('button').filter({ hasText: 'Post a job' }).click()
+    expect(await page.getByLabel('Job brief', { exact: true }).inputValue()).toBe('Copy before setup')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
+    await page.getByRole('link', { name: 'Set up an agent', exact: true }).click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/agents/new')
+    expect(await page.evaluate(() => window.__hiring.writes)).toEqual([])
+    await page.goto(origin + `?signedIn&mode=none&${storage}`)
+    await page.locator('button').filter({ hasText: 'Post a job' }).click()
+    expect(await page.getByLabel('Job brief', { exact: true }).inputValue()).toBe('')
+  } finally {
+    await page.close()
+  }
+})
+
+it.each([1280, 390])('lets Welcome open after navigation away from an open Post a job sheet at %ipx', async (width) => {
+  const page = await open('?login&firstSignIn&mode=none', width)
+  try {
+    await page.getByLabel('Job brief', { exact: true }).fill('Handoff stays put')
+    await page.getByRole('button', { name: 'Sign in to choose a publisher' }).click()
+    const confirm = page.getByRole('button', { name: 'Confirm login', exact: true })
+    await confirm.waitFor()
+    expect(await page.locator('dialog:modal').count()).toBe(0)
+    await confirm.click()
+    await page.getByRole('link', { name: 'Set up an agent', exact: true }).waitFor()
+    expect(new URL(page.url()).pathname).toBe('/')
+    expect(await page.locator('dialog:modal').count()).toBe(1)
+    expect(await page.getByLabel('Job brief', { exact: true }).inputValue()).toBe('Handoff stays put')
+    await page.getByRole('link', { name: 'Set up an agent', exact: true }).click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/agents/new')
+    await page.getByRole('link', { name: 'Public jobs', exact: true }).click()
+    await expect.poll(() => new URL(page.url()).pathname).toBe('/welcome')
     expect(await page.evaluate(() => window.__hiring.writes)).toEqual([])
   } finally {
     await page.close()
