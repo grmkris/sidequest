@@ -7,8 +7,9 @@
  * string (and not number or integer). Nothing else is coerced. Envelope keys (operationKey, managedAgentId,
  * idempotencyKey) pass through unchecked: the transports and the hosted runtime own them.
  *
- * `enforce` refuses an invalid call with code invalid and the failing field path; `log` (production default until the
- * would-refuse rate is known) logs the same finding and runs the call with the coerced arguments.
+ * `enforce` (the default on every stage, production included) refuses an invalid call with code invalid, the failing
+ * field path and an error id, and logs one `tool-args-invalid` line with that id; `log` (an explicit opt-out) logs the
+ * same line and runs the call with the coerced arguments.
  */
 import { Validator, type OutputUnit, type Schema } from '@cfworker/json-schema'
 import { AgentFailure } from '@sidequest/board'
@@ -24,21 +25,26 @@ const isRecord = (value: unknown): value is Args => typeof value === 'object' &&
 const isText = (value: unknown): value is string => typeof value === 'string'
 const isNumber = (value: unknown): value is number => typeof value === 'number'
 
-/**
- * The mode for this runtime: an explicit `TOOL_ARGS_MODE` of enforce or log wins; otherwise production (the prod
- * stage or Monad mainnet) logs and every other stage, local Worker and test enforces.
- */
+/** The mode for this runtime: an explicit `TOOL_ARGS_MODE` of log opts out; anything else, production included, enforces. */
 export function toolArgsMode(bindings: Args): ToolArgsMode {
-  const explicit = bindings.TOOL_ARGS_MODE
-  if (explicit === 'enforce' || explicit === 'log') return explicit
-  return bindings.DEPLOY_STAGE === 'prod' || bindings.NETWORK === 'monad-mainnet' ? 'log' : 'enforce'
+  return bindings.TOOL_ARGS_MODE === 'log' ? 'log' : 'enforce'
 }
 
-/** A refused call: code invalid, the JSON path of the first failing field, and no retry with the same arguments. */
+/** A 12-hex id that ties a refusal the caller sees to the one log line the server wrote for it. */
+const newErrorId = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(6)), (byte) => byte.toString(16).padStart(2, '0')).join('')
+
+/**
+ * A refused call: code invalid, the JSON path of the first failing field, the schema keyword it broke (`type`,
+ * `required`, ...), an error id, and no retry with the same arguments.
+ */
 export class ToolArgsError extends AgentFailure {
+  readonly errorId: string = newErrorId()
+
   constructor(
     message: string,
     readonly field: string,
+    readonly keyword: string,
   ) {
     super('invalid', message, 'invalid-arguments', 'none')
   }
@@ -134,12 +140,14 @@ export function checkToolArgs(schema: object, args: Args): ToolArgsCheck {
     ? '; send it as a decimal string (numbers with a fraction or above 2^53 are not converted)'
     : ''
   const message = `${field === '' ? 'arguments' : field}: ${leaf.error.replace(/^Instance\s*/i, '')}${hint}`
-  return { ok: false, error: new ToolArgsError(message, field), args: next }
+  return { ok: false, error: new ToolArgsError(message, field, leaf.keyword), args: next }
 }
 
 /**
- * Checks a call and applies the mode: the coerced arguments when it may run, or the refusal to return. Findings are
- * logged with the tool and field only, never argument values.
+ * Checks a call and applies the mode: the coerced arguments when it may run, or the refusal to return. Every invalid
+ * call logs one structured line, `{event: 'tool-args-invalid', tool, mode, action, field, reason, errorId}`, where
+ * action is `refused` (enforce) or `allowed` (log) and reason is the schema keyword. Argument values are never logged:
+ * they can carry signatures, keys or private notes.
  */
 export function admitToolArgs(
   tool: string,
@@ -154,7 +162,16 @@ export function admitToolArgs(
     if (checked.coerced.length > 0) log({ event: 'tool-args-coerced', tool, fields: checked.coerced })
     return { ok: true, args: checked.args }
   }
-  log({ event: 'tool-args-invalid', tool, mode, field: checked.error.field })
+  const { field, keyword, errorId } = checked.error
+  log({
+    event: 'tool-args-invalid',
+    tool,
+    mode,
+    action: mode === 'enforce' ? 'refused' : 'allowed',
+    field,
+    reason: keyword,
+    errorId,
+  })
   // Log mode still applies the safe coercion; only the refusal waits for enforce.
   return mode === 'enforce' ? checked : { ok: true, args: checked.args }
 }

@@ -218,7 +218,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
       PROD_ADMISSION_DRAIN: admissionDrainBinding(process.env.PROD_ADMISSION_DRAIN),
       // ADR-0019, from the stage profile: '1' when hosted boards accept posts only from agents.
       REQUIRE_POSTER_AGENT: stageProfile()?.boards?.requirePosterAgent === true ? '1' : '0',
-      // tool-args.ts: 'enforce' or 'log' at deploy; empty means log on prod/mainnet and enforce everywhere else.
+      // tool-args.ts: 'log' at deploy opts out of refusing invalid calls; empty or anything else enforces, prod included.
       TOOL_ARGS_MODE: process.env.TOOL_ARGS_MODE ?? '',
     },
   },

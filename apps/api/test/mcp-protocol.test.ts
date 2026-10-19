@@ -58,16 +58,33 @@ it('holds hosted tool arguments to the listed schema: coerces a safe integer, re
   const call = vi.fn(async () => ({ ok: true, result: { taskId: 't1' } }))
   await route('tools/call', { name: 'get_task', arguments: { taskId: 7 } }, { call })
   expect(call).toHaveBeenCalledWith('get_task', { taskId: '7' }, 'a1')
-  const refused = result(await route('tools/call', { name: 'get_task', arguments: { taskId: false } }, { call }))
-  expect(refused.isError).toBe(true)
-  expect(refused.structuredContent).toMatchObject({ code: 'invalid', reason: 'invalid-arguments', field: 'taskId' })
-  expect(call).toHaveBeenCalledTimes(1)
-  // Log mode (the production default for now) runs the call and only logs the finding.
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
   try {
+    // Enforce (the default everywhere, production included) refuses and logs one line carrying the reply's error id.
+    const refused = result(await route('tools/call', { name: 'get_task', arguments: { taskId: false } }, { call }))
+    expect(refused.isError).toBe(true)
+    expect(refused.structuredContent).toMatchObject({ code: 'invalid', reason: 'invalid-arguments', field: 'taskId' })
+    const errorId = (refused.structuredContent as { errorId?: string }).errorId
+    expect(errorId).toMatch(/^[0-9a-f]{12}$/)
+    expect(call).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(String(warn.mock.calls[0]![0]))).toEqual({
+      event: 'tool-args-invalid',
+      tool: 'get_task',
+      mode: 'enforce',
+      action: 'refused',
+      field: 'taskId',
+      reason: 'type',
+      errorId,
+    })
+    // An explicit log mode runs the call and only logs the finding.
     await route('tools/call', { name: 'get_task', arguments: { taskId: false } }, { call, toolArgsMode: 'log' })
     expect(call).toHaveBeenCalledTimes(2)
-    expect(JSON.parse(String(warn.mock.calls[0]![0]))).toMatchObject({ event: 'tool-args-invalid', field: 'taskId' })
+    expect(JSON.parse(String(warn.mock.calls[1]![0]))).toMatchObject({
+      event: 'tool-args-invalid',
+      mode: 'log',
+      action: 'allowed',
+      field: 'taskId',
+    })
   } finally {
     warn.mockRestore()
   }

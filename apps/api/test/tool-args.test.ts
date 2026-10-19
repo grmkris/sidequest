@@ -123,9 +123,18 @@ describe('admitToolArgs', () => {
       ok: true,
       args: { taskId: 't1', agentId: '7' },
     })
+    const refusalLine = (mode: string, action: string) => ({
+      event: 'tool-args-invalid',
+      tool: 'apply',
+      mode,
+      action,
+      field: expect.any(String),
+      reason: expect.any(String),
+      errorId: expect.stringMatching(/^[0-9a-f]{12}$/),
+    })
     expect(log.mock.calls.map(([line]) => line)).toEqual([
-      { event: 'tool-args-invalid', tool: 'apply', mode: 'enforce', field: expect.any(String) },
-      { event: 'tool-args-invalid', tool: 'apply', mode: 'log', field: expect.any(String) },
+      refusalLine('enforce', 'refused'),
+      refusalLine('log', 'allowed'),
       { event: 'tool-args-coerced', tool: 'apply', fields: ['agentId'] },
     ])
     expect(JSON.stringify(log.mock.calls)).not.toContain('7.5')
@@ -138,13 +147,49 @@ describe('admitToolArgs', () => {
 })
 
 describe('toolArgsMode', () => {
-  it('logs on production, enforces elsewhere, and an explicit mode wins', () => {
-    expect(toolArgsMode({ DEPLOY_STAGE: 'prod', NETWORK: 'monad-mainnet' })).toBe('log')
-    expect(toolArgsMode({ NETWORK: 'monad-mainnet' })).toBe('log')
+  it('enforces on every stage, production included, unless log is set explicitly', () => {
+    expect(toolArgsMode({ DEPLOY_STAGE: 'prod', NETWORK: 'monad-mainnet' })).toBe('enforce')
+    expect(toolArgsMode({ NETWORK: 'monad-mainnet', TOOL_ARGS_MODE: '' })).toBe('enforce')
     expect(toolArgsMode({ DEPLOY_STAGE: 'dev', NETWORK: 'monad-testnet' })).toBe('enforce')
     expect(toolArgsMode({})).toBe('enforce')
     expect(toolArgsMode({ DEPLOY_STAGE: 'prod', TOOL_ARGS_MODE: 'enforce' })).toBe('enforce')
+    expect(toolArgsMode({ DEPLOY_STAGE: 'prod', TOOL_ARGS_MODE: 'yes' })).toBe('enforce')
     expect(toolArgsMode({ DEPLOY_STAGE: 'dev', TOOL_ARGS_MODE: 'log' })).toBe('log')
-    expect(toolArgsMode({ DEPLOY_STAGE: 'prod', TOOL_ARGS_MODE: 'yes' })).toBe('log')
+  })
+})
+
+describe('a refusal in enforce mode', () => {
+  it('returns code invalid with the field and an error id, and logs one line with that same id and no values', () => {
+    const log = vi.fn()
+    const secret = 'sig-0xdeadbeefcafe'
+    const admitted = admitToolArgs(
+      'get_task',
+      tools.get_task!.inputSchema,
+      { taskId: { nested: secret } },
+      'enforce',
+      log,
+    )
+    expect(admitted.ok).toBe(false)
+    if (admitted.ok) return
+    const reply = agentFailureReply(admitted.error, 'unused')
+    expect(reply).toMatchObject({
+      ok: false,
+      code: 'invalid',
+      reason: 'invalid-arguments',
+      retry: 'none',
+      field: 'taskId',
+    })
+    expect(reply.errorId).toMatch(/^[0-9a-f]{12}$/)
+    expect(log).toHaveBeenCalledTimes(1)
+    expect(log).toHaveBeenCalledWith({
+      event: 'tool-args-invalid',
+      tool: 'get_task',
+      mode: 'enforce',
+      action: 'refused',
+      field: 'taskId',
+      reason: 'type',
+      errorId: reply.errorId,
+    })
+    expect(JSON.stringify(log.mock.calls)).not.toContain(secret)
   })
 })
