@@ -3,7 +3,7 @@
 `@sidequest/board` owns board domain and persistence contracts and runs as the `shared` runtime class declared in [tools/graph.ts](../../tools/graph.ts).
 
 - **Check**: `bun run check:files packages/board`; `bun run --cwd packages/board typecheck`; `bun run --cwd packages/board test`.
-- **Test floor**: 68 files (60 passed, 8 skipped) / 618 passed (52 skipped) — recorded from the full `heavy bun run check` gate at `0c9ce138` on 15 October 2026, with the per-agent directory mutation quota on top of durable service listings (613 before). Do not set an RPC variable for this unit suite.
+- **Test floor**: 69 files (61 passed, 8 skipped) / 635 passed (52 skipped) — recorded on 19 October 2026 from `bun run test` (Node 22) with public applicants, the hosted-operator view, same-operator apply refusal and select_worker row reuse and chain-read timeouts (previous recorded floor 618). Do not set an RPC variable for this unit suite.
 - **Contract**: Pure board schemas, durable operations, permissions and chain action preparation.
 - **Landmines**: The board never funds or settles; persist before economic effects, reconcile retries, and keep unknown tokens and owed payouts bounded.
 - **Read**: [protocol](../../docs/protocol.md), [migrations rule](../../.claude/rules/databases-and-migrations.md).

@@ -59,7 +59,7 @@ function fixture(workerBond = 0n, expiredAt = 260200) {
   databases.push(database)
   const sql = fromNodeSqlite(database)
   let now = 1_000
-  const boot = () =>
+  const boot = (extra: Partial<ConstructorParameters<typeof Board>[1]> = {}) =>
     new Board(sql, {
       network: 'monad-testnet',
       contexts: { main: ctx },
@@ -67,6 +67,7 @@ function fixture(workerBond = 0n, expiredAt = 260200) {
       uri: 'https://fixture.test',
       manifestBaseUrl: 'https://fixture.test/offers',
       now: () => now,
+      ...extra,
     })
   const board = boot()
   const terms: OfferTerms = {
@@ -387,4 +388,138 @@ it('apply refuses the task creator applying to its own task', async () => {
     code: 'forbidden',
   })
   expect(f.sql.all('SELECT * FROM applications WHERE lower(worker) = ?', creator.toLowerCase())).toHaveLength(0)
+})
+
+const operator = '0x4444444444444444444444444444444444444444' as const
+const sibling = '0x5555555555555555555555555555555555555555' as const
+/** The creator is a hosted agent run by `operator`; so is `sibling`. Anyone else is not hosted. */
+const hostedOperators = vi.fn(async (addresses: readonly Address[]) =>
+  [
+    { address: creator, operator },
+    { address: sibling, operator },
+  ].filter((agent) => addresses.some((a) => a.toLowerCase() === agent.address.toLowerCase())),
+)
+
+describe('applicants: public facts, the operator view and same-operator applications', () => {
+  it('get_task shows anyone the count, agent IDs and times, never notes or wallets', async () => {
+    const f = fixture()
+    for (const address of [undefined, curator]) {
+      const task = await f.get(address)
+      expect(task).toMatchObject({ applicationCount: 1, applicants: [{ agentId: '7001', appliedAt: 0 }] })
+      expect(JSON.stringify(task.applicants)).not.toMatch(/Test only|0x2222/)
+    }
+  })
+
+  it('get_task names the signed, unexpired selection publicly, and drops it once activateBy passes', async () => {
+    const f = fixture()
+    expect((await f.get()).pendingSelection).toEqual({ agentId: '7001', activateBy: 1_100 })
+    f.setNow(1_101)
+    expect((await f.get()).pendingSelection).toBeNull()
+  })
+
+  it("lets a hosted creator's operator read list_applications, and nobody else but the creator", async () => {
+    const f = fixture()
+    const board = f.boot({ hostedOperators })
+    expect(await board.listApplications({ address: operator }, { taskId: f.terms.taskId })).toHaveLength(1)
+    expect(await board.listApplications({ address: creator }, { taskId: f.terms.taskId })).toHaveLength(1)
+    await expect(board.listApplications({ address: curator }, { taskId: f.terms.taskId })).rejects.toMatchObject({
+      code: 'forbidden',
+    })
+    // A sibling agent of the same operator is not the operator.
+    await expect(board.listApplications({ address: sibling }, { taskId: f.terms.taskId })).rejects.toMatchObject({
+      code: 'forbidden',
+    })
+  })
+
+  it('fails closed when the operator lookup is absent or does not answer', async () => {
+    const f = fixture()
+    await expect(f.boot().listApplications({ address: operator }, { taskId: f.terms.taskId })).rejects.toMatchObject({
+      code: 'forbidden',
+    })
+    const broken = f.boot({ hostedOperators: async () => Promise.reject(new Error('down')) })
+    await expect(broken.listApplications({ address: operator }, { taskId: f.terms.taskId })).rejects.toMatchObject({
+      code: 'forbidden',
+    })
+  })
+
+  it("refuses an application from the creator's operator or its sibling agent, and admits an outsider", async () => {
+    const f = fixture(1n)
+    const board = f.boot({ hostedOperators })
+    for (const wallet of [operator, sibling]) {
+      vi.mocked(sdk.agentWallet).mockResolvedValue(wallet)
+      await expect(board.apply({ address: wallet }, { taskId: f.terms.taskId, agentId: '7003' })).rejects.toMatchObject(
+        { code: 'forbidden' },
+      )
+    }
+    vi.mocked(sdk.agentWallet).mockResolvedValue(worker)
+    await board.apply({ address: worker }, { taskId: f.terms.taskId, agentId: 7001 })
+    expect(f.sql.all('SELECT * FROM applications')).toHaveLength(1)
+    const down = f.boot({ hostedOperators: async () => Promise.reject(new Error('down')) })
+    await expect(down.apply({ address: worker }, { taskId: f.terms.taskId, agentId: '7001' })).rejects.toMatchObject({
+      code: 'unavailable',
+    })
+  })
+})
+
+const unsigned = (f: ReturnType<typeof fixture>) =>
+  f.sql.all<{ nonce: string; activate_by: number }>('SELECT nonce, activate_by FROM selections WHERE signature IS NULL')
+
+describe('select_worker unsigned selections and chain reads', () => {
+  it('hands a repeat call the same unsigned selection instead of piling up rows', async () => {
+    const f = fixture(1n),
+      board = f.boot()
+    const first = await board.selectWorker({ address: creator }, { taskId: f.terms.taskId, applicationId: 'app-1' })
+    f.setNow(1_030)
+    const again = await board.selectWorker({ address: creator }, { taskId: f.terms.taskId, applicationId: 'app-1' })
+    expect(again.nonce).toBe(first.nonce)
+    expect(again.sign.typedData).toBe(first.sign.typedData)
+    expect(unsigned(f)).toHaveLength(1)
+    // An explicit, different activateBy is a different message: a new row.
+    const explicit = await board.selectWorker(
+      { address: creator },
+      { taskId: f.terms.taskId, applicationId: 'app-1', activateBy: 1_120 },
+    )
+    expect(explicit.nonce).not.toBe(first.nonce)
+    expect(unsigned(f)).toHaveLength(2)
+  })
+
+  it('drops unsigned selections that can no longer be signed', async () => {
+    const f = fixture(1n),
+      board = f.boot()
+    f.sql.run(
+      'INSERT INTO selections (task_id, nonce, application_id, worker, agent_id, activate_by, signature, created_at) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)',
+      f.terms.taskId,
+      '99',
+      'app-1',
+      worker,
+      '7001',
+      999,
+      5,
+    )
+    await board.selectWorker({ address: creator }, { taskId: f.terms.taskId, applicationId: 'app-1' })
+    expect(unsigned(f).map((r) => r.nonce)).not.toContain('99')
+    // The signed selection is kept.
+    expect(f.sql.all('SELECT * FROM selections WHERE signature IS NOT NULL')).toHaveLength(1)
+  })
+
+  it('answers retryably instead of hanging when a chain read stalls', async () => {
+    vi.useFakeTimers()
+    try {
+      const f = fixture(1n),
+        board = f.boot()
+      // The RPC never answers the listing read.
+      f.read.mockImplementation(() => new Promise(() => {}))
+      const pending = board.selectWorker({ address: creator }, { taskId: f.terms.taskId, applicationId: 'app-1' })
+      const settled = expect(pending).rejects.toMatchObject({
+        code: 'unavailable',
+        reason: 'chain-timeout',
+        retry: 'same-key',
+      })
+      await vi.advanceTimersByTimeAsync(8_000)
+      await settled
+      expect(unsigned(f)).toHaveLength(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

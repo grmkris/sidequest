@@ -47,3 +47,25 @@ export async function hostedCreatorFacts(
   }
   return { agents: rows.map((r) => ({ address: getAddress(r.address), agentId: r.agent_id })), allowances }
 }
+
+/** A hosted agent's wallet and the operator that runs it. */
+export interface HostedOperator {
+  readonly address: Address
+  readonly operator: Address
+}
+
+/**
+ * Board-internal authorization facts: which of these wallets are active hosted agents, and who operates each. Used
+ * only to decide access (an operator reading its agent's applicants, an operator's agents applying to each other's
+ * tasks); a board never returns them to a caller. At most 90 wallets.
+ */
+export function hostedOperatorFacts(
+  sql: Sql,
+  deployment: Pick<sdk.Deployment, 'chainId' | 'identity'>,
+  addresses: readonly Address[],
+  now: number,
+): HostedOperator[] {
+  return new AgentStore(sql, () => now)
+    .activeByAddress(deployment.chainId, deployment.identity, addresses)
+    .map((r) => ({ address: getAddress(r.address), operator: getAddress(r.operator) }))
+}

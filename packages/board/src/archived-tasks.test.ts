@@ -127,7 +127,7 @@ it('direct archived reads and action preparations refuse before any RPC, includi
     await expect(f.board.prepareActivation({ address: creator }, { taskId })).rejects.toMatchObject({
       code: 'unavailable',
     })
-    expect(() => f.board.listApplications({ address: creator }, { taskId })).toThrow('archived task')
+    await expect(f.board.listApplications({ address: creator }, { taskId })).rejects.toThrow('archived task')
   }
   expect(f.read).not.toHaveBeenCalled()
   f.boot()

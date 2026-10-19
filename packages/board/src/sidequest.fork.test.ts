@@ -53,9 +53,9 @@ fork('Sidequest board on a local Monad fork', () => {
   async function listed() {
     const created = await board.createTask({ address: f.creator.account.address }, offer())
     expect(created.applicationId).toBeDefined()
-    expect(board.listApplications({ address: f.creator.account.address }, { taskId: created.taskId })[0]).toMatchObject(
-      { worker: f.worker.account.address, agent_id: agentId.toString() },
-    )
+    expect(
+      (await board.listApplications({ address: f.creator.account.address }, { taskId: created.taskId }))[0],
+    ).toMatchObject({ worker: f.worker.account.address, agent_id: agentId.toString() })
     const publish = decodeFunctionData({ abi: sdk.sidequestHoldingAbi, data: created.transactions.at(-1)!.data })
     expect(publish.functionName).toBe('publish')
     expect(publish.args[0]).toMatchObject({
