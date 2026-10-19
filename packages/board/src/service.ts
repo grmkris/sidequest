@@ -50,8 +50,8 @@ import { type NextAction, publisherFunding, publisherNextAction, settlementNote 
 import { assertAgentEnvelope, assertExactAgentTypedData } from './agent-signing-scope.ts'
 import { typedDataJson } from './typed-data.ts'
 import { BoardError } from './board-error.ts'
-import { StoredDataError } from './agent-failure.ts'
-import type { HostedCreatorFacts, HostedCreatorQuery } from './hosted-creators.ts'
+import { AgentFailure, StoredDataError } from './agent-failure.ts'
+import type { HostedCreatorFacts, HostedCreatorQuery, HostedOperator } from './hosted-creators.ts'
 import {
   type ApplicationRow,
   type OperationRow,
