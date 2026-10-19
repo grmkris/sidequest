@@ -51,40 +51,41 @@ export function boardPrefix(): string {
 
 const apis = new Map<string, BoardApi>()
 
-/** localStorage where the browser allows it (private windows and blocked storage can throw), else this tab only. */
+/**
+ * localStorage where the browser allows it (private windows and blocked storage can throw), else this tab only, else
+ * this page: a session set when both stores refuse still signs this page's requests, and is gone on reload.
+ */
+const inPage = new Map<string, string>()
+const readFrom = (store: () => Storage, k: string) => {
+  try {
+    return store().getItem(k)
+  } catch {
+    return null
+  }
+}
 const persistent = {
-  getItem: (k: string) => {
-    try {
-      return localStorage.getItem(k)
-    } catch {
-      try {
-        return sessionStorage.getItem(k)
-      } catch {
-        return null
-      }
-    }
-  },
+  // The page's copy is the newest: it exists only after both stores refused a later write.
+  getItem: (k: string) => inPage.get(k) ?? readFrom(() => localStorage, k) ?? readFrom(() => sessionStorage, k),
   setItem: (k: string, v: string) => {
+    inPage.delete(k)
     try {
       localStorage.setItem(k, v)
     } catch {
       try {
         sessionStorage.setItem(k, v)
       } catch {
-        // Both stores refused the write; the caller keeps its in-memory copy.
+        inPage.set(k, v)
       }
     }
   },
   removeItem: (k: string) => {
-    try {
-      localStorage.removeItem(k)
-    } catch {
+    inPage.delete(k)
+    for (const store of [() => localStorage, () => sessionStorage])
       try {
-        sessionStorage.removeItem(k)
+        store().removeItem(k)
       } catch {
-        // Nothing persisted, so there is nothing to remove.
+        // A store that refuses writes holds nothing of ours to remove.
       }
-    }
   },
 }
 
