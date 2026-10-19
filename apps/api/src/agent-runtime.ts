@@ -8,6 +8,7 @@ import {
   AgentPermissions,
   AgentRoles,
   BoardError,
+  canonicalAgentId,
   type AgentExecuteResult,
   type AgentRow,
   SponsorDesk,
@@ -137,7 +138,11 @@ export async function runAgent(runtime: {
   if (requiredToolScope(req.tool) !== 'sidequest:read' && typeof operationKey !== 'string')
     throw new BoardError('invalid', 'Every write requires a stable operationKey; retry with the same key')
   if (req.tool === 'apply' || req.tool === 'submit_quote') {
-    if (args.agentId !== undefined && args.agentId !== agent.agent_id)
+    if (
+      args.agentId !== undefined &&
+      // SAFETY: canonicalAgentId stringifies and pattern-checks the value, refusing any other JSON value as invalid.
+      canonicalAgentId(args.agentId as string | number) !== agent.agent_id
+    )
       throw new BoardError('forbidden', "Use this connection's registered agentId")
     args.agentId = agent.agent_id
   }

@@ -9,6 +9,7 @@ import {
   type Board,
   type BudgetInput,
   type Caller,
+  canonicalAgentId,
   type DeliverableSpec,
   type NamedSponsorEntry,
   TASK_ROLES,
@@ -119,6 +120,11 @@ const deliverableSchema = {
 
 const s = (a: Record<string, unknown>, k: string) => a[k] as string
 const n = (a: Record<string, unknown>, k: string) => a[k] as number
+/** An ERC-8004 agent id in its one stored form. JSON clients send it as a number; refuse anything else as invalid. */
+const agentIdArg = (a: Record<string, unknown>, k: string) =>
+  // SAFETY: canonicalAgentId stringifies and pattern-checks the value, so any other JSON value is refused as invalid.
+  canonicalAgentId(a[k] as string | number, k)
+const agentIdSchema = (description: string) => ({ ...str(description), pattern: '^[1-9]\\d{0,77}$' })
 
 export const tools: Record<string, Tool> = {
   protocol_info: {
@@ -457,7 +463,7 @@ export const tools: Record<string, Tool> = {
       type: 'object',
       properties: {
         requestId: str('The quote request id.'),
-        agentId: str('Your ERC-8004 agent id (its agent wallet must be your address); whoami returns it.'),
+        agentId: agentIdSchema('Your ERC-8004 agent id (its agent wallet must be your address); whoami returns it.'),
         token: str('One of the accepted tokens (symbol or address).'),
         amount: str('Your price in token units, not base units: "9" is 9 mUSD.'),
         note: str('Optional: approach, timing.'),
@@ -478,7 +484,7 @@ export const tools: Record<string, Tool> = {
     run: (board, caller, a) =>
       board.submitQuote(caller, {
         requestId: s(a, 'requestId'),
-        agentId: s(a, 'agentId'),
+        agentId: agentIdArg(a, 'agentId'),
         token: s(a, 'token'),
         amount: s(a, 'amount'),
         ...(a.note === undefined ? {} : { note: s(a, 'note') }),
@@ -770,13 +776,13 @@ export const tools: Record<string, Tool> = {
     description: 'Worker: apply with your registered ERC-8004 agent (its agent wallet must be your signed-in wallet).',
     inputSchema: {
       type: 'object',
-      properties: { ...taskId, agentId: str('Your ERC-8004 agent id.'), note: str('Optional pitch.') },
+      properties: { ...taskId, agentId: agentIdSchema('Your ERC-8004 agent id.'), note: str('Optional pitch.') },
       required: ['taskId', 'agentId'],
     },
     run: (board, caller, a) =>
       board.apply(caller, {
         taskId: s(a, 'taskId'),
-        agentId: s(a, 'agentId'),
+        agentId: agentIdArg(a, 'agentId'),
         ...(a.note === undefined ? {} : { note: s(a, 'note') }),
       }),
   },

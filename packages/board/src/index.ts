@@ -5,6 +5,7 @@
 export * from './roles.ts'
 export * from './terms.ts'
 export * from './store.ts'
+export * from './agent-id.ts'
 export * from './directory.ts'
 export * from './service.ts'
 export * from './github.ts'

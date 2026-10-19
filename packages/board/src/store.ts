@@ -353,6 +353,21 @@ export function migrate(sql: Sql): void {
     if (!columns.includes(column)) sql.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`)
   }
   dropRetiredBudgets(sql)
+  canonicalizeAgentIds(sql)
+}
+
+/**
+ * Agent ids bound as JS numbers landed as REAL text ("10415.0") in TEXT columns, which BigInt refuses (select_worker
+ * failed with reason internal on prod job 17). Rewrites them to their integer text. A no-op once done.
+ */
+const AGENT_ID_TABLES = ['applications', 'selections', 'candidates', 'quotes'] as const
+function canonicalizeAgentIds(sql: Sql): void {
+  for (const table of AGENT_ID_TABLES)
+    sql.run(
+      `UPDATE ${table} SET agent_id = substr(agent_id, 1, instr(agent_id, '.') - 1)
+       WHERE agent_id GLOB '[1-9]*.0' AND rtrim(substr(agent_id, instr(agent_id, '.') + 1), '0') = ''
+         AND substr(agent_id, 1, instr(agent_id, '.') - 1) NOT GLOB '*[^0-9]*'`,
+    )
 }
 
 export interface TaskRow {
