@@ -341,3 +341,50 @@ it('select_worker and prepare_activation allow the exact horizon', async () => {
   expect(await board.prepareActivation({ address: worker }, { taskId: f.terms.taskId })).toHaveProperty('sign')
   expect(f.sql.all('SELECT * FROM activation_preps')).toHaveLength(1)
 })
+
+it('select_worker reads a legacy REAL-text agent id ("10415.0", prod job 17) instead of failing internal', async () => {
+  const f = fixture(1n),
+    board = f.boot()
+  f.sql.run("UPDATE applications SET agent_id = CAST(7001 AS REAL) WHERE id = 'app-1'")
+  expect(f.sql.all<{ agent_id: string }>("SELECT agent_id FROM applications WHERE id = 'app-1'")[0]!.agent_id).toBe(
+    '7001.0',
+  )
+  const signed = await board.selectWorker({ address: creator }, { taskId: f.terms.taskId, applicationId: 'app-1' })
+  expect(JSON.parse(signed.sign.typedData).message.agentId).toBe('7001')
+  expect(f.sql.all<{ agent_id: string }>("SELECT agent_id FROM applications WHERE id = 'app-1'")[0]!.agent_id).toBe(
+    '7001',
+  )
+})
+
+it('select_worker refuses a malformed stored agent id as invalid before writing a selection', async () => {
+  const f = fixture(1n),
+    board = f.boot()
+  f.sql.run("UPDATE applications SET agent_id = '7001.5' WHERE id = 'app-1'")
+  await expect(
+    board.selectWorker({ address: creator }, { taskId: f.terms.taskId, applicationId: 'app-1' }),
+  ).rejects.toMatchObject({ code: 'invalid' })
+  expect(f.sql.all('SELECT * FROM selections')).toHaveLength(1)
+})
+
+it('apply stores a numeric agent id canonically, so select_worker can sign it', async () => {
+  const f = fixture(1n),
+    board = f.boot()
+  // A JSON client (e.g. Python) that sends the id as a number; bound raw it became "7001.0" on Workers SQLite.
+  await board.apply({ address: worker }, { taskId: f.terms.taskId, agentId: 7001 })
+  expect(f.sql.all<{ agent_id: string }>("SELECT agent_id FROM applications WHERE id = 'app-1'")[0]!.agent_id).toBe(
+    '7001',
+  )
+  await expect(board.apply({ address: worker }, { taskId: f.terms.taskId, agentId: '7001.0' })).rejects.toMatchObject({
+    code: 'invalid',
+  })
+})
+
+it('apply refuses the task creator applying to its own task', async () => {
+  const f = fixture(1n),
+    board = f.boot()
+  vi.mocked(sdk.agentWallet).mockResolvedValue(creator)
+  await expect(board.apply({ address: creator }, { taskId: f.terms.taskId, agentId: '7002' })).rejects.toMatchObject({
+    code: 'forbidden',
+  })
+  expect(f.sql.all('SELECT * FROM applications WHERE lower(worker) = ?', creator.toLowerCase())).toHaveLength(0)
+})

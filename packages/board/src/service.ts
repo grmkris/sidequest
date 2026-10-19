@@ -11,6 +11,7 @@
  * authorisation nonce).
  */
 import * as sdk from '@sidequest/sdk'
+import { canonicalAgentId, storedAgentId } from './agent-id.ts'
 import { delegationPositions, positionFilters, type DelegationSnapshot, type PositionFilters } from './staking.ts'
 import {
   type Address,
@@ -1458,6 +1459,13 @@ export class Board {
       task.id,
     )
     if (app === undefined) throw new BoardError('not-found', 'no such application')
+    // Checked before anything is written: a malformed stored id must refuse, not throw a SyntaxError (reason internal)
+    // after an unsigned selection row is already in place.
+    const agentId = storedAgentId(app.agent_id)
+    if (agentId === undefined)
+      throw new BoardError('invalid', `application ${app.id} has a malformed agent id; the worker must apply again`)
+    if (agentId !== app.agent_id)
+      this.#sql.run('UPDATE applications SET agent_id = ? WHERE id = ? AND task_id = ?', agentId, app.id, task.id)
     const activateBy = input.activateBy ?? Math.min(this.#now() + 24 * 3600, terms.deliveryDeadline - 60)
     if (activateBy >= terms.deliveryDeadline)
       throw new BoardError('invalid', 'activateBy must precede the delivery deadline')
@@ -1471,14 +1479,14 @@ export class Board {
       nonce.toString(),
       app.id,
       app.worker,
-      app.agent_id,
+      agentId,
       activateBy,
       this.#now(),
     )
     const selection: sdk.Selection = {
       jobId: BigInt(task.job_id),
       worker: getAddress(app.worker),
-      agentId: BigInt(app.agent_id),
+      agentId: BigInt(agentId),
       termsHash: task.terms_hash as Hex,
       activateBy,
       nonce,
@@ -2199,6 +2207,7 @@ export class Board {
     },
   ) {
     const me = this.#requireCaller(caller)
+    input = { ...input, agentId: canonicalAgentId(input.agentId) }
     const req = this.#quoteRequest(input.requestId)
     if (req.task_id !== null) throw new BoardError('conflict', 'a quote was already picked')
     if (this.#now() >= req.quote_deadline) throw new BoardError('conflict', 'the quote deadline has passed')
@@ -2561,16 +2570,18 @@ export class Board {
   }
 
   /** Applies with a registered ERC-8004 agent whose agent wallet is the signed-in wallet. */
-  async apply(caller: Caller, input: { taskId: string; agentId: string; note?: string }) {
+  async apply(caller: Caller, input: { taskId: string; agentId: string | number; note?: string }) {
     const me = this.#requireCaller(caller)
+    const agentId = canonicalAgentId(input.agentId)
     const task = this.#task(input.taskId)
     if (task.job_id === null && (await this.#recoverPublish(task)) === null)
       throw new BoardError('conflict', 'this offer is not funded on-chain yet')
+    if (eq(task.creator, me)) throw new BoardError('forbidden', 'the creator cannot apply to its own task')
     await this.#requireListingMatches(task)
     const ctx = this.#taskCtx(task)
-    const agentWallet = await sdk.agentWallet(ctx, BigInt(input.agentId)).catch(() => zeroAddress)
+    const agentWallet = await sdk.agentWallet(ctx, BigInt(agentId)).catch(() => zeroAddress)
     if (!eq(agentWallet, me)) {
-      throw new BoardError('forbidden', `agent ${input.agentId}'s registered wallet is ${agentWallet}, not ${me}`)
+      throw new BoardError('forbidden', `agent ${agentId}'s registered wallet is ${agentWallet}, not ${me}`)
     }
     const id = randomId(8)
     this.#sql.run(
@@ -2578,7 +2589,7 @@ export class Board {
       id,
       task.id,
       me,
-      input.agentId,
+      agentId,
       input.note ?? '',
       this.#now(),
     )
