@@ -54,6 +54,25 @@ const route = (
 const result = (value: Awaited<ReturnType<typeof mcpRoute>>) =>
   (value.body as { result: Record<string, unknown> }).result
 
+it('holds hosted tool arguments to the listed schema: coerces a safe integer, refuses the rest with the field', async () => {
+  const call = vi.fn(async () => ({ ok: true, result: { taskId: 't1' } }))
+  await route('tools/call', { name: 'get_task', arguments: { taskId: 7 } }, { call })
+  expect(call).toHaveBeenCalledWith('get_task', { taskId: '7' }, 'a1')
+  const refused = result(await route('tools/call', { name: 'get_task', arguments: { taskId: false } }, { call }))
+  expect(refused.isError).toBe(true)
+  expect(refused.structuredContent).toMatchObject({ code: 'invalid', reason: 'invalid-arguments', field: 'taskId' })
+  expect(call).toHaveBeenCalledTimes(1)
+  // Log mode (the production default for now) runs the call and only logs the finding.
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  try {
+    await route('tools/call', { name: 'get_task', arguments: { taskId: false } }, { call, toolArgsMode: 'log' })
+    expect(call).toHaveBeenCalledTimes(2)
+    expect(JSON.parse(String(warn.mock.calls[0]![0]))).toMatchObject({ event: 'tool-args-invalid', field: 'taskId' })
+  } finally {
+    warn.mockRestore()
+  }
+})
+
 it('gives failed reads argument retry guidance and keeps operation-key reconciliation for writes', async () => {
   const fail = vi.fn(async () => {
     throw new Error('SECRET_FIXTURE')
@@ -71,6 +90,8 @@ it('gives failed reads argument retry guidance and keeps operation-key reconcili
           tools: registry,
           grant: { ...grant, scopes: ['sidequest:read', 'sidequest:hire'] },
           call: fail,
+          // This checks a failed write's retry guidance, so the call is admitted without a full create_task.
+          toolArgsMode: 'log',
         },
       ),
     )

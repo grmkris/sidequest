@@ -11,9 +11,11 @@ import * as Config from 'effect/Config'
 import * as Effect from 'effect/Effect'
 import * as Layer from 'effect/Layer'
 import * as Redacted from 'effect/Redacted'
+import * as Schema from 'effect/Schema'
 import * as HttpServerRequest from 'effect/http/HttpServerRequest'
 import * as HttpServerResponse from 'effect/http/HttpServerResponse'
 import {
+  agentFailureReply,
   BoardError,
   parseHostedAdmission,
   PUBLIC_BOARD_ID,
@@ -65,6 +67,8 @@ import { hostedCallFailure } from './hosted-admission.ts'
 import { enforceHostedRate } from './admission-rate.ts'
 import { configurePublicSite, handleTelegramWebhook, migrateTelegram } from './telegram.ts'
 import { feedTools } from './feed.ts'
+import { admitToolArgs, toolArgsMode } from './tool-args.ts'
+import { tools as boardTools } from './tools.ts'
 import { telegramTools } from './tools-telegram.ts'
 import type { OAuthReply, OAuthGrant } from './oauth.ts'
 import { agentFirstMcpRoute as mcpRoute } from './mcp-agent-setup.ts'
@@ -95,6 +99,21 @@ const STATUS: Record<string, number> = {
   'rate-limited': 429,
   unavailable: 503,
   chain: 502,
+}
+
+/** Board tools the Worker answers itself; every other board tool is checked by the board object it is forwarded to. */
+const WORKER_BOARD_TOOLS: ReadonlySet<string> = new Set(['auth_challenge', 'auth_login'])
+
+/** The published input schema of a tool this Worker runs without forwarding to a board, if it has one. */
+function workerLocalSchema(tool: string): object | undefined {
+  const local: Record<string, { readonly inputSchema?: object }> = {
+    ...directoryTools,
+    ...telegramTools,
+    ...tenantTools,
+    ...feedTools,
+  }
+  if (Object.hasOwn(local, tool)) return local[tool]!.inputSchema
+  return WORKER_BOARD_TOOLS.has(tool) ? boardTools[tool]?.inputSchema : undefined
 }
 
 /** A secret from the Worker env; the deploy placeholder "unset" reads as empty (the feature is unavailable). */
@@ -199,6 +218,8 @@ export default class Api extends Cloudflare.Worker<Api>()(
       PROD_ADMISSION_DRAIN: admissionDrainBinding(process.env.PROD_ADMISSION_DRAIN),
       // ADR-0019, from the stage profile: '1' when hosted boards accept posts only from agents.
       REQUIRE_POSTER_AGENT: stageProfile()?.boards?.requirePosterAgent === true ? '1' : '0',
+      // tool-args.ts: 'enforce' or 'log' at deploy; empty means log on prod/mainnet and enforce everywhere else.
+      TOOL_ARGS_MODE: process.env.TOOL_ARGS_MODE ?? '',
     },
   },
   Effect.gen(function* () {
@@ -372,6 +393,8 @@ export default class Api extends Cloudflare.Worker<Api>()(
         const cors = corsHeaders(origin, allowed)
         const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
           jsonResponse(body, { status, headers: { ...cors, ...headers } })
+        // SAFETY: runtimeEnv holds this Worker's configured bindings (TOOL_ARGS_MODE, DEPLOY_STAGE, NETWORK).
+        const argsMode = toolArgsMode(runtimeEnv as Record<string, unknown>)
 
         if (request.method === 'OPTIONS') return HttpServerResponse.empty({ status: 204, headers: cors })
         if (tenant === undefined) return json({ ok: false, code: 'not-found', message: `no board "${boardId}"` }, 404)
@@ -450,8 +473,12 @@ export default class Api extends Cloudflare.Worker<Api>()(
          * Calls one tool: sign-in and registry tools in the Worker, everything else in the board's Durable Object with
          * the shared session's wallet as caller. A new offer's manifest goes to R2 and its board to the registry.
          */
-        const call = (tool: string, args: Record<string, unknown>, mcpSession?: string, oauthCaller?: string) =>
+        const call = (tool: string, sent: Record<string, unknown>, mcpSession?: string, oauthCaller?: string) =>
           Effect.gen(function* () {
+            // Tools answered in this Worker are checked here; board tools are checked once, in the board object.
+            const admitted = admitToolArgs(tool, workerLocalSchema(tool), sent, argsMode)
+            if (!admitted.ok) return agentFailureReply(admitted.error, 'Invalid arguments')
+            const args = admitted.args
             const pre = yield* Effect.promise(
               async (): Promise<
                 { reply: BoardReply } | { forward: { args: Record<string, unknown>; caller: string | undefined } }
@@ -635,6 +662,8 @@ export default class Api extends Cloudflare.Worker<Api>()(
         const avatarBytes = avatarUpload ? incoming?.bytes : undefined
         // Hosted MCP OAuth is deliberately separate from the legacy website SIWE session.
         const rawBody = incoming !== undefined && !avatarUpload ? new TextDecoder().decode(incoming.bytes) : ''
+        // A body that does not parse is remembered, so a tool never runs on the empty arguments it used to become.
+        let bodyUnparsed = false
         const oauthBody: Record<string, unknown> =
           rawBody === ''
             ? {}
@@ -644,9 +673,29 @@ export default class Api extends Cloudflare.Worker<Api>()(
                 try {
                   return JSON.parse(rawBody) as Record<string, unknown>
                 } catch {
+                  bodyUnparsed = true
                   return {}
                 }
               })()
+        if (request.method === 'POST' && path.startsWith('/api/') && avatarBytes === undefined) {
+          if (bodyUnparsed || !Schema.is(Schema.Record(Schema.String, Schema.Unknown))(oauthBody))
+            return json(
+              {
+                ok: false,
+                code: 'invalid',
+                reason: 'invalid-json',
+                retry: 'none',
+                message: 'The request body must be one JSON object of tool arguments',
+              },
+              400,
+              { 'cache-control': 'no-store' },
+            )
+        }
+        if (request.method === 'POST' && (path === '/mcp' || path === '/mcp/directory') && bodyUnparsed)
+          return json(
+            { jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error: the body is not valid JSON' } },
+            400,
+          )
         const lifecycleRequest =
           avatarBytes === undefined
             ? (agentRoute(request.method, path, oauthBody) ?? approvalRoute(request.method, path, oauthBody))
@@ -698,6 +747,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
           const reply = yield* Effect.promise(() =>
             mcpRoute({
               method: request.method,
+              toolArgsMode: argsMode,
               pathname: url.pathname,
               body: oauthBody,
               origin: url.origin,
@@ -724,6 +774,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
           const reply = yield* Effect.promise(() =>
             mcpRoute({
               method: request.method,
+              toolArgsMode: argsMode,
               pathname: url.pathname,
               body: oauthBody,
               origin: url.origin,

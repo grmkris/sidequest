@@ -1,10 +1,11 @@
 import { Schema } from 'effect'
 import { directoryTypedDataJson, type DirectoryEnvelope } from '@sidequest/sdk'
-import { DirectoryError } from '@sidequest/board'
+import { agentFailureReply, DirectoryError } from '@sidequest/board'
 import { DirectoryCallError } from './directory.ts'
 import { PUBLIC_DIRECTORY_TOOLS } from './mcp-policy.ts'
 import type { mcpRoute, McpReply, McpTool } from './mcp.ts'
 import { toolWireMetadata } from './mcp-tool-metadata.ts'
+import { admitToolArgs, type ToolArgsMode } from './tool-args.ts'
 
 export const PUBLIC_DIRECTORY_INSTRUCTIONS =
   'These directory tools need no sign-in. Each prepare tool returns {record, typedData}: sign typedData with your ERC-8004 agent wallet (eth_signTypedData_v4), then call the matching submit tool with {record, signature} within 10 seconds of issuedAt. The signature is the credential. Retry an uncertain submission with the exact same record and signature.'
@@ -58,6 +59,7 @@ export async function publicDirectoryProtocol(input: {
   call: Parameters<typeof mcpRoute>[0]['call']
   respond: (result: Record<string, unknown>) => McpReply
   rpcError: (code: number, message: string) => McpReply
+  toolArgsMode: ToolArgsMode
 }): Promise<McpReply> {
   const { methodName, params, respond, rpcError } = input
   if (methodName === 'tools/list')
@@ -78,7 +80,21 @@ export async function publicDirectoryProtocol(input: {
       content: [{ type: 'text', text: `not-found: no public directory tool ${params.name}` }],
       isError: true,
     })
-  const structuredContent = await directoryOutput(input.call, params.name, params.arguments ?? {})
+  const admitted = admitToolArgs(
+    params.name,
+    input.tools[params.name]!.inputSchema,
+    params.arguments ?? {},
+    input.toolArgsMode,
+  )
+  if (!admitted.ok) {
+    const failure = agentFailureReply(admitted.error, 'Invalid arguments')
+    return respond({
+      content: [{ type: 'text', text: JSON.stringify(failure) }],
+      structuredContent: failure,
+      isError: true,
+    })
+  }
+  const structuredContent = await directoryOutput(input.call, params.name, admitted.args)
   return respond({
     content: [{ type: 'text', text: JSON.stringify(structuredContent) }],
     structuredContent,
