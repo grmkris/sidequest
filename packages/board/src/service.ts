@@ -50,8 +50,8 @@ import { type NextAction, publisherFunding, publisherNextAction, settlementNote 
 import { assertAgentEnvelope, assertExactAgentTypedData } from './agent-signing-scope.ts'
 import { typedDataJson } from './typed-data.ts'
 import { BoardError } from './board-error.ts'
-import { StoredDataError } from './agent-failure.ts'
-import type { HostedCreatorFacts, HostedCreatorQuery } from './hosted-creators.ts'
+import { AgentFailure, StoredDataError } from './agent-failure.ts'
+import type { HostedCreatorFacts, HostedCreatorQuery, HostedOperator } from './hosted-creators.ts'
 import {
   type ApplicationRow,
   type OperationRow,
@@ -153,6 +153,12 @@ export interface BoardConfig {
    */
   readonly hostedCreators?: (query: HostedCreatorQuery) => Promise<HostedCreatorFacts>
   /**
+   * Which of these wallets are active hosted agents, with their operators. Authorization only, never returned:
+   * a hosted creator's operator reads its applicants, and one operator's agents cannot apply to each other's tasks.
+   * Absent: no wallet is hosted (local and test boards).
+   */
+  readonly hostedOperators?: (addresses: readonly Address[]) => Promise<readonly HostedOperator[]>
+  /**
    * ADR-0019: accept quote requests and offers only from agents, a hosted agent's wallet or the wallet of the ERC-8004
    * agent the caller names. Off: anyone may post, and the posting agent is still recorded when it resolves.
    */
@@ -199,6 +205,33 @@ async function settleWithin<T>(read: Promise<T>, ms: number): Promise<T | undefi
   })
   try {
     return await Promise.race([read.catch(() => undefined), late])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/** How long select_worker waits on each chain read before it answers retryably instead of hanging the caller. */
+const SELECT_READ_MS = 8000
+
+/** A read that must answer: its value, or a retryable unavailable refusal once it outlasts `ms`. */
+async function answerWithin<T>(read: Promise<T>, ms: number, what: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () =>
+        reject(
+          new AgentFailure(
+            'unavailable',
+            `${what} did not answer within ${ms / 1000}s; retry the same call`,
+            'chain-timeout',
+            'same-key',
+          ),
+        ),
+      ms,
+    )
+  })
+  try {
+    return await Promise.race([read, late])
   } finally {
     clearTimeout(timer)
   }
@@ -1440,11 +1473,69 @@ export class Board {
     return this.getTask(caller, { taskId: input.taskId })
   }
 
-  listApplications(caller: Caller, input: { taskId: string }) {
+  /** The creator's full applicant list (notes included). A hosted creator's operator may read it too. */
+  async listApplications(caller: Caller, input: { taskId: string }) {
     const me = this.#requireCaller(caller)
     const task = this.#task(input.taskId)
-    if (!this.#actsForCreator(task, me)) throw new BoardError('forbidden', 'only the creator sees applications')
+    if (!this.#actsForCreator(task, me) && !(await this.#operatesCreator(task, me)))
+      throw new BoardError('forbidden', 'only the creator or its operator sees applications')
     return this.#sql.all<ApplicationRow>('SELECT * FROM applications WHERE task_id = ? ORDER BY created_at', task.id)
+  }
+
+  /** Public applicant facts: how many applied, and each one's agent ID and time. No wallet note or worker text. */
+  #applicants(task: TaskRow): { applicationCount: number; applicants: { agentId: string; appliedAt: number }[] } {
+    const rows = this.#sql.all<{ agent_id: string; created_at: number }>(
+      'SELECT agent_id, created_at FROM applications WHERE task_id = ? ORDER BY created_at',
+      task.id,
+    )
+    return {
+      applicationCount: rows.length,
+      applicants: rows.map((r) => ({ agentId: storedAgentId(r.agent_id) ?? r.agent_id, appliedAt: r.created_at })),
+    }
+  }
+
+  /**
+   * The newest signed, unexpired Selection, public: which agent was picked and by when it must activate. It is not
+   * an assignment; the chain's provider is, once the worker activates.
+   */
+  #publicSelection(task: TaskRow): { agentId: string; activateBy: number } | null {
+    const [row] = this.#sql.all<SelectionRow>(
+      'SELECT * FROM selections WHERE task_id = ? AND signature IS NOT NULL AND activate_by >= ? ORDER BY created_at DESC LIMIT 1',
+      task.id,
+      this.#now(),
+    )
+    return row === undefined
+      ? null
+      : { agentId: storedAgentId(row.agent_id) ?? row.agent_id, activateBy: row.activate_by }
+  }
+
+  /** Hosted agents and their operators among these wallets; undefined when the lookup did not answer in time. */
+  async #operators(wallets: readonly Address[]): Promise<readonly HostedOperator[] | undefined> {
+    if (this.#config.hostedOperators === undefined) return []
+    return settleWithin(this.#config.hostedOperators(wallets), POSTER_READ_MS)
+  }
+
+  /** True only when `me` is the operator of the hosted agent that created this task. Fails closed. */
+  async #operatesCreator(task: TaskRow, me: Address): Promise<boolean> {
+    const facts = await this.#operators([getAddress(task.creator)])
+    const creator = facts?.find((f) => eq(f.address, task.creator))
+    return creator !== undefined && eq(creator.operator, me)
+  }
+
+  /**
+   * Refuses an application from the creator's own operator, or from another hosted agent of that operator: a
+   * self-hire would pay the operator's own wallets and inflate its agents' records. Unknown (lookup timed out) refuses
+   * retryably rather than letting a self-application through.
+   */
+  async #refuseSameOperator(task: TaskRow, me: Address): Promise<void> {
+    const facts = await this.#operators([getAddress(task.creator), me])
+    if (facts === undefined)
+      throw new BoardError('unavailable', 'the hosted agent lookup did not answer; retry the same call')
+    const creator = facts.find((f) => eq(f.address, task.creator))
+    if (creator === undefined) return
+    const applicant = facts.find((f) => eq(f.address, me))
+    if (eq(creator.operator, me) || (applicant !== undefined && eq(applicant.operator, creator.operator)))
+      throw new BoardError('forbidden', "an agent cannot apply to a task its own operator's agent posted")
   }
 
   /** The Selection the creator signs to pick one applicant. Nothing is on-chain until the worker activates. */
@@ -1471,25 +1562,25 @@ export class Board {
     if (activateBy >= terms.deliveryDeadline)
       throw new BoardError('invalid', 'activateBy must precede the delivery deadline')
     const ctx = this.#taskCtx(task)
-    const nonce = randomUint(16)
-    const listing = await sdk.getV1Listing(ctx, BigInt(task.job_id))
-    await sidequest.requireBondHorizon(ctx, listing.expiredAt, 0n, listing.workerBond)
-    this.#sql.run(
-      'INSERT INTO selections (task_id, nonce, application_id, worker, agent_id, activate_by, signature, created_at) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)',
-      task.id,
-      nonce.toString(),
-      app.id,
-      app.worker,
+    const listing = await answerWithin(sdk.getV1Listing(ctx, BigInt(task.job_id)), SELECT_READ_MS, 'The listing read')
+    await answerWithin(
+      sidequest.requireBondHorizon(ctx, listing.expiredAt, 0n, listing.workerBond),
+      SELECT_READ_MS,
+      'The bond horizon read',
+    )
+    const { nonce, activateBy: frozenBy } = this.#unsignedSelection(
+      task,
+      app,
       agentId,
       activateBy,
-      this.#now(),
+      input.activateBy === undefined,
     )
     const selection: sdk.Selection = {
       jobId: BigInt(task.job_id),
       worker: getAddress(app.worker),
       agentId: BigInt(agentId),
       termsHash: task.terms_hash as Hex,
-      activateBy,
+      activateBy: frozenBy,
       nonce,
     }
     return {
@@ -1504,6 +1595,48 @@ export class Board {
         ),
       } satisfies SignRequest,
     }
+  }
+
+  /**
+   * The nonce of the unsigned Selection to hand out. Unsigned rows that can no longer be signed (activateBy passed)
+   * are dropped; a repeat call for the same applicant and activateBy (or, with the default activateBy, within ten
+   * minutes) gets the same unsigned row back instead of a new one, so retries stop piling up rows.
+   */
+  #unsignedSelection(
+    task: TaskRow,
+    app: ApplicationRow,
+    agentId: string,
+    activateBy: number,
+    defaulted: boolean,
+  ): { nonce: bigint; activateBy: number } {
+    const now = this.#now()
+    this.#sql.run('DELETE FROM selections WHERE task_id = ? AND signature IS NULL AND activate_by < ?', task.id, now)
+    const [reusable] = this.#sql.all<SelectionRow>(
+      `SELECT * FROM selections WHERE task_id = ? AND application_id = ? AND worker = ? AND agent_id = ?
+       AND signature IS NULL AND (activate_by = ? OR (? = 1 AND created_at >= ? AND activate_by >= ?))
+       ORDER BY created_at DESC LIMIT 1`,
+      task.id,
+      app.id,
+      app.worker,
+      agentId,
+      activateBy,
+      defaulted ? 1 : 0,
+      now - 600,
+      now + 3600,
+    )
+    if (reusable !== undefined) return { nonce: BigInt(reusable.nonce), activateBy: reusable.activate_by }
+    const nonce = randomUint(16)
+    this.#sql.run(
+      'INSERT INTO selections (task_id, nonce, application_id, worker, agent_id, activate_by, signature, created_at) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)',
+      task.id,
+      nonce.toString(),
+      app.id,
+      app.worker,
+      agentId,
+      activateBy,
+      now,
+    )
+    return { nonce, activateBy }
   }
 
   /** Stores the creator's signed Selection after checking it recovers to the creator. */
@@ -2578,6 +2711,7 @@ export class Board {
     if (task.job_id === null && (await this.#recoverPublish(task)) === null)
       throw new BoardError('conflict', 'this offer is not funded on-chain yet')
     if (eq(task.creator, me)) throw new BoardError('forbidden', 'the creator cannot apply to its own task')
+    await this.#refuseSameOperator(task, me)
     await this.#requireListingMatches(task)
     const ctx = this.#taskCtx(task)
     const agentWallet = await sdk.agentWallet(ctx, BigInt(agentId)).catch(() => zeroAddress)
@@ -3823,6 +3957,8 @@ export class Board {
     return {
       ...summary,
       terms: JSON.parse(task.terms_json) as unknown,
+      ...this.#applicants(task),
+      pendingSelection: this.#publicSelection(task),
       mine,
       ...(creatorSelection === undefined ? {} : { selection: creatorSelection }),
       deliverables,

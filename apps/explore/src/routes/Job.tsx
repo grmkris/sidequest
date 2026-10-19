@@ -38,13 +38,13 @@ import type { TimelineEvent } from '../components/job/Timeline.tsx'
 import { DeliveryHero, JobStory, Parties } from '../components/job/JobParts.tsx'
 import { Thread } from '../components/job/Thread.tsx'
 import { WalletLink } from '../components/WalletLink.tsx'
-import { useAgentName } from '../components/agent/AgentChip.tsx'
+import { AgentLabel, useAgentName } from '../components/agent/AgentChip.tsx'
 import { PhaseBadge, Sentence } from '../components/Phase.tsx'
 import { useNow } from '../components/Time.tsx'
 
 import type { useSignedIn } from '../components/Wallet.tsx'
 import { TokenAmount } from '../components/token/TokenAmount.tsx'
-import { amount, budgetCap, span, tokenInfo } from '../format.ts'
+import { amount, budgetCap, relative, span, tokenInfo } from '../format.ts'
 import { StakePair } from '../components/job/RequestTerms.tsx'
 import { sidequest } from '../sidequest.ts'
 import { percent } from '../stake.ts'
@@ -119,6 +119,11 @@ interface BoardTask extends FrozenTask {
   }
   you: string[] | null
   selection?: ActionJob['selection']
+  /** Public: how many agents applied, and who (agent ID, time; never the note). */
+  applicationCount?: number
+  applicants?: ActionJob['applicants']
+  /** Public: the newest signed, unexpired selection, waiting for the agent to activate. */
+  pendingSelection?: { agentId: string; activateBy: number } | null
   deliverables?: Array<{
     repo: string
     branch: string
@@ -227,7 +232,8 @@ export function JobPage({
     !chain.isError &&
     phase?.key === 'hire-open' &&
     t?.chain.provider === null &&
-    selection?.some((record) => record.state === 'signed') === true
+    (selection?.some((record) => record.state === 'signed') === true || (t?.pendingSelection ?? null) !== null)
+  const picked = t?.pendingSelection ?? null
 
   const offer = jobOfferFields({
     jobId,
@@ -372,10 +378,19 @@ export function JobPage({
 
       {waitingForActivation ? (
         <div role="status" className="grid gap-1 rounded-xl bg-card px-4 py-3.5">
-          <p className="font-semibold">Selected — waiting for worker activation</p>
+          <p className="font-semibold">
+            {picked === null ? (
+              'Selected — waiting for worker activation'
+            ) : (
+              <>
+                Selected: <AgentLabel id={picked.agentId} />, waiting for activation
+              </>
+            )}
+          </p>
           <p className="text-sm text-muted-foreground">
-            Your signed selection is saved. The worker must activate before its cutoff; the job remains Open on-chain
-            until then.
+            {selection?.some((record) => record.state === 'signed') === true
+              ? 'Your signed selection is saved. The worker must activate before its cutoff; the job remains Open on-chain until then.'
+              : `The creator signed this selection. The agent must activate ${picked === null ? 'before its cutoff' : relative(picked.activateBy)}; the job remains Open on-chain until then.`}
           </p>
         </div>
       ) : (
@@ -518,6 +533,7 @@ export function JobPage({
             disputeSeconds: t.terms.windows?.disputeSeconds ?? null,
             charge: chargeOf(d),
             selection,
+            applicants: t.applicants,
           }}
           phase={phase}
           roles={roles}

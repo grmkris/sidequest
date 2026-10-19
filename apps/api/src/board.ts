@@ -19,8 +19,10 @@ import {
   failureFromReply,
   type AgentRetry,
   hostedCreatorFacts,
+  hostedOperatorFacts,
   type HostedCreatorFacts,
   type HostedCreatorQuery,
+  type HostedOperator,
   readOnlyHostedTools,
 } from '@sidequest/board'
 import { fromD1 } from '@sidequest/indexer'
@@ -128,6 +130,18 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
     let limits: AdmissionRateLimits | undefined
     // Serialize across awaits and service/config replacement, including callers from different tenants.
     const callQueue = observedQueue('call')
+    /** The sponsor object's agent store, refused anywhere else or for another network. */
+    const sponsorStore = (network: string) => {
+      // SAFETY: the worker's env bindings; Board is the namespace binding and only idFromName is used.
+      const bindings = runtimeEnv as Record<string, unknown>
+      // SAFETY: as above, the Board namespace binding.
+      const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
+      if (namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString() || network !== bindings.NETWORK)
+        throw new Error('management object identity mismatch')
+      const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
+      migrateAgentSchema(sql)
+      return sql
+    }
     // Management execution may await a tenant object. Keep that queue separate from relay sends, which can be
     // requested by the tenant while the management object is waiting.
     const managementQueue = observedQueue('management')
@@ -207,6 +221,26 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               )
             }
             return JSON.parse(await namespace.get(id).hostedCreators({ env, query })) as HostedCreatorFacts
+          },
+          // Authorization facts only (operator of a hosted creator, same-operator applications); never returned.
+          hostedOperators: async (addresses) => {
+            // SAFETY: the Board namespace binding, as alchemy declares it; only these two methods are used.
+            const namespace = (runtimeEnv as Record<string, unknown>).Board as {
+              idFromName(name: string): { toString(): string }
+              get(id: unknown): {
+                hostedOperators(req: { env: BoardCall['env']; addresses: readonly string[] }): Promise<string>
+              }
+            }
+            const id = namespace.idFromName(SPONSOR_OBJECT_NAME)
+            if (id.toString() === state.id.toString()) {
+              const sql = fromDurableObjectSql(state.storage.sql.raw, (write) =>
+                state.raw.storage.transactionSync(write),
+              )
+              migrateAgentSchema(sql)
+              return hostedOperatorFacts(sql, sdk.deployment(env.network), addresses, Math.floor(Date.now() / 1000))
+            }
+            // SAFETY: the sponsor object's own hostedOperators RPC serialised this array just above.
+            return JSON.parse(await namespace.get(id).hostedOperators({ env, addresses })) as HostedOperator[]
           },
           // ADR-0023: the board signs the attestation and the worker attaches it in its own submit; no relay sends it.
           ...(key32(env.attesterKey)
@@ -624,15 +658,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
       /** Public quote-request facts about hosted posters: agent IDs and one grant's headroom. No operator, grant or approval data. */
       hostedCreators: (req: { env: BoardCall['env']; query: HostedCreatorQuery }) =>
         Effect.promise(async () => {
-          const bindings = runtimeEnv as Record<string, unknown>
-          const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
-          if (
-            namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString() ||
-            req.env.network !== bindings.NETWORK
-          )
-            throw new Error('management object identity mismatch')
-          const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
-          migrateAgentSchema(sql)
+          const sql = sponsorStore(req.env.network)
           const query = {
             addresses: req.query.addresses.filter((a) => isAddress(a)).slice(0, 90),
             allowances: req.query.allowances.filter((a) => isAddress(a.address) && isAddress(a.token)).slice(0, 50),
@@ -644,6 +670,15 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               query,
               Math.floor(Date.now() / 1000),
             ),
+          )
+        }),
+      /** Which wallets are active hosted agents, with operators; boards use it to authorize and never return it. */
+      hostedOperators: (req: { env: BoardCall['env']; addresses: readonly string[] }) =>
+        Effect.sync(() => {
+          const sql = sponsorStore(req.env.network)
+          const addresses = req.addresses.filter((a) => isAddress(a)).slice(0, 90)
+          return toJson(
+            hostedOperatorFacts(sql, sdk.deployment(req.env.network), addresses, Math.floor(Date.now() / 1000)),
           )
         }),
       /** Private management storage remains in the existing reserved object. */
