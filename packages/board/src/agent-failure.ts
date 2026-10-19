@@ -26,6 +26,45 @@ export interface AgentFailureReply {
   readonly retry?: AgentRetry
   readonly retryAfter?: number
   readonly errorId?: string
+  /** A refused argument's JSON path, e.g. `invite.agentId`. */
+  readonly field?: string
+  /** The JavaScript class of an unexpected failure, e.g. `SyntaxError`: safe to show, never its message. */
+  readonly errorClass?: string
+}
+
+/**
+ * Stored board data that no longer parses (a row written before a canonical form existed). Retrying the same call reads
+ * the same row, so it never says retry; the operator repairs the row.
+ */
+export class StoredDataError extends AgentFailure {
+  constructor(message: string) {
+    super('conflict', message, 'stored-data', 'none')
+  }
+}
+
+/**
+ * JavaScript errors a retry of the same call reproduces: a server fault, never worth the caller retrying. TypeError is
+ * not among them: a failed fetch throws one.
+ */
+const DETERMINISTIC_ERRORS: ReadonlySet<string> = new Set(['SyntaxError', 'RangeError', 'ReferenceError', 'URIError'])
+
+/** Transport failures that are worth retrying: a timeout, an abort or an RPC endpoint that did not answer. */
+const TRANSIENT_ERRORS: ReadonlySet<string> = new Set([
+  'TimeoutError',
+  'AbortError',
+  'HttpRequestError',
+  'WebSocketRequestError',
+  'SocketClosedError',
+  'ChainReadTimeoutError',
+])
+
+/** How an unexpected (non-board) error is reported: a server fault, a transient outage, or unknown. */
+export function failureKind(error: unknown): 'deterministic' | 'transient' | 'internal' {
+  for (let current = error, depth = 0; current instanceof Error && depth < 8; depth++, current = current.cause) {
+    if (TRANSIENT_ERRORS.has(current.name)) return 'transient'
+  }
+  const { name } = errorDiagnostics(error)
+  return DETERMINISTIC_ERRORS.has(name) ? 'deterministic' : 'internal'
 }
 
 const RETRIES = new Set<string>(['same-key', 'new-key', 'after-operator', 'none', 'read'])
@@ -42,20 +81,7 @@ export function agentFailureReply(
   fallbackCode = 'unavailable',
   fallbackRetry: 'same-key' | 'read' = 'same-key',
 ): AgentFailureReply {
-  if (error instanceof BoardError) {
-    const extra = error as unknown as { reason?: unknown; retry?: unknown; retryAfter?: unknown; errorId?: unknown }
-    return {
-      ok: false,
-      code: error.code,
-      message: error.message,
-      ...(typeof extra.reason === 'string' ? { reason: extra.reason } : {}),
-      ...(typeof extra.retry === 'string' && RETRIES.has(extra.retry) ? { retry: extra.retry as AgentRetry } : {}),
-      ...(typeof extra.retryAfter === 'number' && Number.isFinite(extra.retryAfter) && extra.retryAfter > 0
-        ? { retryAfter: Math.ceil(extra.retryAfter) }
-        : {}),
-      ...(typeof extra.errorId === 'string' && /^[0-9a-f]{12}$/.test(extra.errorId) ? { errorId: extra.errorId } : {}),
-    }
-  }
+  if (error instanceof BoardError) return boardFailureReply(error)
   const revert = revertName(error)
   if (revert !== undefined)
     return {
@@ -69,13 +95,55 @@ export function agentFailureReply(
     byte.toString(16).padStart(2, '0'),
   ).join('')
   log(errorId, error)
+  const kind = failureKind(error)
+  const errorClass = errorDiagnostics(error).name
+  if (kind === 'deterministic')
+    return {
+      ok: false,
+      code: 'error',
+      message: `${fallback} (error ${errorId}): a server fault that a retry of the same call repeats; report the error id`,
+      reason: 'internal',
+      retry: 'none',
+      errorId,
+      errorClass,
+    }
   return {
     ok: false,
-    code: fallbackCode,
+    code: kind === 'transient' ? 'unavailable' : fallbackCode,
     message: `${fallback} (error ${errorId}); ${fallbackRetry === 'read' ? 'retry this read with the same arguments' : 'retry the same operationKey'}`,
-    reason: 'internal',
+    reason: kind === 'transient' ? 'transient' : 'internal',
     retry: fallbackRetry,
     errorId,
+    errorClass,
+  }
+}
+
+const isText = (value: unknown): value is string => typeof value === 'string'
+const isPositive = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0
+
+/** A board refusal keeps its code and message, plus each attached field that is well formed. */
+function boardFailureReply(error: BoardError): AgentFailureReply {
+  // SAFETY: sponsor refusals and AgentFailure attach these optional fields to a BoardError; each is checked below.
+  const extra = error as unknown as {
+    reason?: unknown
+    retry?: unknown
+    retryAfter?: unknown
+    errorId?: unknown
+    field?: unknown
+    errorClass?: unknown
+  }
+  const { reason, retry, retryAfter, errorId, field, errorClass } = extra
+  return {
+    ok: false,
+    code: error.code,
+    message: error.message,
+    ...(isText(reason) ? { reason } : {}),
+    // SAFETY: RETRIES holds exactly the AgentRetry values.
+    ...(isText(retry) && RETRIES.has(retry) ? { retry: retry as AgentRetry } : {}),
+    ...(isPositive(retryAfter) ? { retryAfter: Math.ceil(retryAfter) } : {}),
+    ...(isText(errorId) && /^[0-9a-f]{12}$/.test(errorId) ? { errorId } : {}),
+    ...(isText(field) && field.length <= 200 ? { field } : {}),
+    ...(isText(errorClass) && /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(errorClass) ? { errorClass } : {}),
   }
 }
 
@@ -90,12 +158,16 @@ export function failureFromReply(reply: {
   retry?: unknown
   retryAfter?: unknown
   errorId?: unknown
+  field?: unknown
+  errorClass?: unknown
 }): BoardError {
   return Object.assign(new BoardError(reply.code as BoardError['code'], reply.message), {
     reason: reply.reason,
     retry: reply.retry,
     retryAfter: reply.retryAfter,
     errorId: reply.errorId,
+    field: reply.field,
+    errorClass: reply.errorClass,
   })
 }
 
@@ -131,7 +203,17 @@ function revertName(error: unknown): string | undefined {
 }
 
 function defaultLog(errorId: string, error: unknown): void {
-  console.error(JSON.stringify({ event: 'agent-failure', errorId, ...errorDiagnostics(error), ...errorSite(error) }))
+  // `alert` pages the owner (a Workers Logs alert on alert=internal_error) for a server fault or an unknown failure;
+  // a transient outage does not page.
+  console.error(
+    JSON.stringify({
+      event: 'agent-failure',
+      errorId,
+      ...errorDiagnostics(error),
+      ...errorSite(error),
+      ...(failureKind(error) === 'transient' ? {} : { alert: 'internal_error' }),
+    }),
+  )
 }
 
 /**

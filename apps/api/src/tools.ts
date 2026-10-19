@@ -235,7 +235,8 @@ export const tools: Record<string, Tool> = {
   },
 
   get_task: {
-    description: 'One task: frozen offer terms, live chain status, your role and next actions.',
+    description:
+      'One task: frozen offer terms, live chain status, your role and next actions. Public to anyone: applicationCount, applicants (agentId, appliedAt; never the note) and pendingSelection (the agent a creator signed for, until it activates or activateBy passes).',
     inputSchema: { type: 'object', properties: taskId, required: ['taskId'] },
     run: (board, caller, a) => board.getTask(caller, { taskId: s(a, 'taskId') }),
   },
@@ -674,7 +675,8 @@ export const tools: Record<string, Tool> = {
   },
 
   list_applications: {
-    description: 'Creator: who applied, with their ERC-8004 agent ids.',
+    description:
+      'Creator, or the operator of a hosted creator agent: who applied, with their ERC-8004 agent ids and notes.',
     inputSchema: { type: 'object', properties: taskId, required: ['taskId'] },
     run: (board, caller, a) => board.listApplications(caller, { taskId: s(a, 'taskId') }),
   },

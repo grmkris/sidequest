@@ -8,6 +8,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@cfworker/json-schema": "catalog:",
     "@sidequest/board": "workspace:*",
     "@sidequest/commons": "workspace:*",
     "@sidequest/indexer": "workspace:*",

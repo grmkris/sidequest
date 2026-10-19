@@ -19,8 +19,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { type ReactNode, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { prompts, useSignTypedDataWithPrompt } from '../../wallet-prompt.ts'
-import { type TxRequest, boardApi } from '../../api.ts'
-import { amount, bond, span } from '../../format.ts'
+import { ApiError, type TxRequest, boardApi } from '../../api.ts'
+import { amount, bond, relative, span } from '../../format.ts'
 import { percent } from '../../stake.ts'
 import { friendlyError } from '../../txErrors.ts'
 import { typedDataArgs } from '../../typed-data.ts'
@@ -61,6 +61,8 @@ export interface ActionJob {
       }[]
     | null
     | undefined
+  /** Public applicant facts from get_task: who applied (agent ID) and when. Notes are creator-only. */
+  applicants?: { agentId: string; appliedAt: number }[] | undefined
 }
 
 type Pending =
@@ -238,6 +240,9 @@ export function JobActions({
           signedIn={signedIn}
           onSelect={(applicationId, agentId) => setPending({ kind: 'select', applicationId, agentId })}
         />
+      )}
+      {txs === null && sourceAvailable && !(signedIn && phase.actions.includes('select')) && (
+        <PublicApplicants job={job} signedIn={signedIn} address={address} />
       )}
 
       {(bar.length > 0 || canDispute) && (
@@ -564,7 +569,9 @@ function Applications({
           Selection verification is unavailable. A stored signature is not proof the worker can still activate.
         </p>
       )}
-      {apps.isLoading ? null : list.length === 0 ? (
+      {apps.isLoading ? null : apps.isError ? (
+        <ApplicationsError error={apps.error} count={job.applicants?.length} />
+      ) : list.length === 0 ? (
         <Empty>
           <EmptyHeader>
             <EmptyTitle>No applications yet</EmptyTitle>
@@ -597,6 +604,86 @@ function Applications({
                   Select
                 </Button>
               )}
+            </Item>
+          ))}
+        </ItemGroup>
+      )}
+    </Section>
+  )
+}
+
+/** A failed applicant read says so, with the public count when known, instead of claiming nobody applied. */
+function ApplicationsError({ error, count }: { error: Error; count: number | undefined }) {
+  return (
+    <Alert variant="destructive">
+      <AlertDescription>
+        Could not load the applications{count === undefined ? '' : ` (${count} on this job)`}: {friendlyError(error)}
+      </AlertDescription>
+    </Alert>
+  )
+}
+
+/**
+ * Applicants for everyone who cannot select: the public list from get_task (agent and time). A signed-in operator of
+ * the creating agent also gets each note, from list_applications; anyone else's forbidden read falls back silently.
+ */
+function PublicApplicants({
+  job,
+  signedIn,
+  address,
+}: {
+  job: ActionJob
+  signedIn: boolean
+  address: string | undefined
+}) {
+  const full = useQuery({
+    queryKey: boardKey(job.boardId, 'applications', job.boardId, job.taskId, address?.toLowerCase(), signedIn),
+    queryFn: () =>
+      boardApi(job.boardId).tool<Array<{ id: string; agent_id: string; note: string }>>('list_applications', {
+        taskId: job.taskId,
+      }),
+    enabled: signedIn && address !== undefined,
+    retry: false,
+    refetchInterval: 30_000,
+  })
+  const notes = new Map((full.data ?? []).map((a) => [a.agent_id, a.note]))
+  const list = job.applicants ?? []
+  const now = Date.now() / 1000
+  const failed = full.isError && !(full.error instanceof ApiError && full.error.code === 'forbidden')
+  return (
+    <Section
+      title={`Applications${list.length > 0 ? ` · ${list.length}` : ''}`}
+      note="Agents apply over MCP; the creator selects one."
+    >
+      {failed && <ApplicationsError error={full.error} count={list.length} />}
+      {list.length === 0 ? (
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>No applications yet</EmptyTitle>
+            <EmptyDescription>Agents that apply show up here with their record.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <ItemGroup>
+          {list.map((a) => (
+            <Item key={`${a.agentId}-${a.appliedAt}`} className="before:left-14">
+              <ItemMedia>
+                <AgentOrb agentId={a.agentId} />
+              </ItemMedia>
+              <ItemContent className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <BoardLink target={boardRoutes().agent(a.agentId)} className="font-medium">
+                    <AgentLabel id={a.agentId} />
+                  </BoardLink>
+                  <span className="text-ui text-muted-foreground">applied {relative(a.appliedAt, now)}</span>
+                </span>
+                <ItemDescription className="block text-ui text-muted-foreground">
+                  <AgentRecord agentId={a.agentId} />
+                </ItemDescription>
+                {(notes.get(a.agentId) ?? '') !== '' && (
+                  <span className="block text-sm text-muted-foreground">“{notes.get(a.agentId)}”</span>
+                )}
+              </ItemContent>
             </Item>
           ))}
         </ItemGroup>

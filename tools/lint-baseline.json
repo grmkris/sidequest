@@ -39,7 +39,7 @@
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(no-runtime-typeof)": 3,
     "anti-slop(no-unknown-returns)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 53,
+    "anti-slop(require-safety-comment-for-type-assertion)": 51,
     "complexity(complexity)": 3,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 4,
@@ -906,8 +906,8 @@
   },
   "packages/board/src/agent-failure.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
-    "anti-slop(no-runtime-typeof)": 12,
-    "anti-slop(require-safety-comment-for-type-assertion)": 8
+    "anti-slop(no-runtime-typeof)": 8,
+    "anti-slop(require-safety-comment-for-type-assertion)": 5
   },
   "packages/board/src/agent-grant-renewal.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1,

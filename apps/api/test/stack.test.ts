@@ -91,6 +91,37 @@ test(
 )
 
 test(
+  'the real Worker refuses malformed JSON and holds REST arguments to the published schema, coercing safe integers',
+  Effect.gen(function* () {
+    const { apiUrl } = yield* stack
+    const raw = (tool: string, body: string) =>
+      Effect.promise(() =>
+        fetch(`${apiUrl}/api/${tool}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body }),
+      )
+    const broken = yield* raw('list_directory', '{"limit": 5')
+    expect(broken.status).toBe(400)
+    expect(yield* Effect.promise(() => broken.json())).toMatchObject({ code: 'invalid', reason: 'invalid-json' })
+    const list = yield* raw('list_directory', '[1]')
+    expect(list.status).toBe(400)
+    // Worker-local tool (sign-in): a wrong type is refused with its field, before any session work.
+    const local = yield* raw('auth_challenge', JSON.stringify({ address: true }))
+    expect(local.status).toBe(400)
+    expect(yield* Effect.promise(() => local.json())).toMatchObject({
+      code: 'invalid',
+      reason: 'invalid-arguments',
+      retry: 'none',
+      field: 'address',
+    })
+    // Board-object tool: a JSON integer id is coerced to its string and the call runs (no such task); a boolean is not.
+    const coerced = yield* raw('get_task', JSON.stringify({ taskId: 5 }))
+    expect(yield* Effect.promise(() => coerced.json())).toMatchObject({ ok: false, code: 'not-found' })
+    const refused = yield* raw('get_task', JSON.stringify({ taskId: true }))
+    expect(refused.status).toBe(400)
+    expect(yield* Effect.promise(() => refused.json())).toMatchObject({ code: 'invalid', field: 'taskId' })
+  }),
+)
+
+test(
   'the real local Worker serves the testnet x402 proof challenge without calling the facilitator',
   Effect.gen(function* () {
     const { apiUrl } = yield* stack
