@@ -188,7 +188,7 @@ function OperationApproval({
   }
   return (
     <Section title={`${agent.name} · ${approval.kind === 'unstake' ? 'Leave agent-owned position' : 'Hire approval'}`}>
-      <HireContext approval={approval} />
+      <HireContext approval={approval} screening />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xl font-semibold">
           {request.token === undefined ? (
