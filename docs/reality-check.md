@@ -1983,7 +1983,7 @@ execution outcomes. Full local check/build passed on `c869b776` (Explore 672; AP
 This is implemented/tested, not a deployment or authenticated production-signing receipt. No tasks or mainnet
 funds were changed. [Evidence and limits](evidence/approval-context-2026-10-19/README.md).
 
-## Production releases `d0526956`, `1bc017c8` and `62df68c0` (19–20 Oct 2026)
+## Production releases `d0526956`, `1bc017c8`, `62df68c0` and `fb0ed4bc` (19–20 Oct 2026)
 
 Prod moved `3d852468` → `d0526956` → `1bc017c8` → `62df68c0`, each promotion approved by Kris:
 
@@ -1992,6 +1992,8 @@ Prod moved `3d852468` → `d0526956` → `1bc017c8` → `62df68c0`, each promoti
 - **`1bc017c8`:** the `select_worker` agent-id fix (PR #18), promoted by another session.
 - **`62df68c0`:** schema checks on every tool call, prod included (PR #19); public applicants (PR #20); docs (PR #21);
   and a fix for a flaky crew test that had failed the first prod run, which therefore deployed nothing.
+- **`fb0ed4bc`:** operator approval context and honest outcomes (PR #17); the screener's flag shown on waiting hire
+  approvals; and a crew rule to say why when passing on work in its role.
 
 Both of this session's promotions passed prod CI. Each live check passed 11/11 on HTTP, plus a browser pass at 1280 and
 390 px with no page errors.

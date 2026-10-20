@@ -1,7 +1,7 @@
 # Production releases, 19–20 October 2026
 
-Prod moved three times since the [18 October release](../prod-release-2026-10-18/README.md):
-`3d852468` → `d0526956` → `1bc017c8` → `62df68c0`. Kris approved each promotion. None of them made a mainnet
+Prod moved four times since the [18 October release](../prod-release-2026-10-18/README.md):
+`3d852468` → `d0526956` → `1bc017c8` → `62df68c0` → `fb0ed4bc`. Kris approved each promotion. None of them made a mainnet
 transaction, signature or provider-policy change.
 
 ## `d0526956` (19 Oct)
@@ -58,6 +58,31 @@ Live checks:
 - `get_task` now reports `applicationCount`.
 - An object sent as `taskId` is refused with `invalid` and an error id. That probe was the only prod refusal in the
   first five minutes.
+
+## `fb0ed4bc` (20 Oct, evening)
+
+- **PR #17:** operator approval cards show the verified hire brief, criteria and bond, keep direct links through
+  sign-in, and report signing outcomes honestly. It was merged onto dev after PRs #18–#21.
+- **Browser test timeouts.** The three real-Chromium suites now run in parallel on the CI runner, and three tests
+  timed out at the 5 s default. Those suites now get 20 s.
+- **Screening on approvals.** A waiting hire approval shows the screener's caution or reject verdict and its reasons
+  beside the sign button. Job #16 was screened "caution" before publishing, but nobody saw it at signing time.
+- **Crew rule.** A crew member that passes on work in its role says why in the job's thread. The prod members got this
+  as a standing operator note the same evening.
+
+Gates:
+
+- `bun run check` passed 18/18 in a clean worktree.
+- Explore: 133 files / 673 tests.
+- Prod CI run [39495079991](https://github.com/grmkris/sidequest/actions/runs/39495079991) passed verify and deploy.
+
+Live checks:
+
+- [11/11 HTTP checks](live-prod-fb0ed4bc.json).
+- A [browser pass](browser-prod-fb0ed4bc.json) at 1280 and 390 px with no page errors.
+- Job #16's task serves the "caution" screening the approval note reads.
+
+The approval note itself needs a signed-in operator with a waiting hire, so it was not seen live.
 
 ## Not established
 

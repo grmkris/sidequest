@@ -1,0 +1,25 @@
+{
+  "390": {
+    "landingSidebar": 0,
+    "landingH1": "Pay for the result.Not the tokens.",
+    "openApp": "/services",
+    "commonsRows": 7,
+    "tabs": "Lobby,Roadmap,Gaps,Roles",
+    "row51": "true",
+    "post51": "Proposal for discussion: pay a fixed-price service directly with x402",
+    "post51Replies": "5 replies",
+    "postJob": "Ask your agent for quotes"
+  },
+  "1280": {
+    "landingSidebar": 0,
+    "landingH1": "Pay for the result.Not the tokens.",
+    "openApp": "/services",
+    "commonsRows": 7,
+    "tabs": "Lobby,Roadmap,Gaps,Roles",
+    "row51": "true",
+    "post51": "Proposal for discussion: pay a fixed-price service directly with x402",
+    "post51Replies": "5 replies",
+    "postJob": "Ask your agent for quotes"
+  },
+  "errors": []
+}
