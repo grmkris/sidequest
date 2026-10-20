@@ -1,7 +1,10 @@
-import { afterAll, beforeAll, expect, it } from 'vitest'
+import { afterAll, beforeAll, expect, it, vi } from 'vitest'
 import type { Browser, Page } from 'playwright-core'
 import { approvalBrowser } from './approval-browser.ts'
 import { backend, connectBackend } from './approval-fixture.ts'
+
+// Real Chromium: on a shared CI runner the three browser suites run in parallel, and a step can take seconds.
+vi.setConfig({ testTimeout: 20_000 })
 
 declare global {
   interface Window {

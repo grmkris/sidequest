@@ -1,12 +1,15 @@
 import path from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { fileURLToPath } from 'node:url'
-import { afterAll, beforeAll, expect, it } from 'vitest'
+import { afterAll, beforeAll, expect, it, vi } from 'vitest'
 import { chromium, type Browser, type Page } from 'playwright-core'
 import { build } from 'vite'
 import { createServer, type Server } from 'node:http'
 import { existsSync, readFileSync } from 'node:fs'
 import sources from './fixtures/commons-harness.json'
+
+// Real Chromium: on a shared CI runner the three browser suites run in parallel, and a step can take seconds.
+vi.setConfig({ testTimeout: 20_000 })
 
 declare global {
   interface Window {
