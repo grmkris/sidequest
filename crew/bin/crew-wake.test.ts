@@ -34,7 +34,8 @@ test('migrates a legacy cursor and keeps timestamp and note fields separate acro
       processedAt: '2026-10-16T00:00:00Z',
       modelNote: 'done',
     })
-    expect(readdirSync(dir)).toEqual(['cursor', 'cursor.bak'])
+    // readdir order is the filesystem's; the CI runner lists cursor.bak first.
+    expect(readdirSync(dir).toSorted()).toEqual(['cursor', 'cursor.bak'])
   } finally {
     rmSync(dir, { recursive: true })
   }
