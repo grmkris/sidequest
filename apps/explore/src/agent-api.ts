@@ -48,6 +48,20 @@ export interface AgentApproval {
   created_at?: number
   decision_json?: string | null
   decided_at?: number | null
+  /** Frozen operation context, validated by the API from the prepared offer. */
+  context?: {
+    operationKey: string
+    boardId: string
+    tool: string
+    hire: {
+      taskId: string
+      title: string
+      brief: string
+      acceptanceCriteria: string[]
+      termsHash: string
+      creatorBond: string
+    } | null
+  }
 }
 
 const agentPath = (id: string, action = '') =>

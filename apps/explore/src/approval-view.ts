@@ -110,7 +110,9 @@ export function approvalLine(approval: AgentApproval, factory: string): Approval
     }
   return {
     ...base,
-    title: request?.reason === 'unknown-token' ? 'Hire in an unlisted token' : 'Hire over the weekly budget',
+    title:
+      approval.context?.hire?.title ??
+      (request?.reason === 'unknown-token' ? 'Hire in an unlisted token' : 'Hire over the weekly budget'),
     amount:
       request?.amount === undefined || request.token === undefined
         ? null

@@ -3,7 +3,7 @@ import { Button } from '../ui/button.tsx'
 import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Details, Section } from '../kit.tsx'
 import * as sdk from '@sidequest/sdk'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { type Address, decodeFunctionData } from 'viem'
 import { agentEndpoint, type ManagedAgent } from '../../api.ts'
 import type { AgentApproval } from '../../agent-api.ts'
@@ -19,6 +19,8 @@ import { typedDataArgs } from '../../typed-data.ts'
 import { deployment } from '../../wallet.ts'
 import { prompts, useSignTypedDataWithPrompt } from '../../wallet-prompt.ts'
 import { tokenAmountText } from '../../permission-review.ts'
+import { HireContext } from './HireContext.tsx'
+import { approvalResult } from '../../approval-result.ts'
 
 /** One decision a managed agent waits on; a requested permission and a requested role have their own cards. */
 export function Approval(props: Parameters<typeof OperationApproval>[0]) {
@@ -66,20 +68,37 @@ function RejectButton({
   )
 }
 
-/**
- * One decision a managed agent waits on: an over-limit hire (the operator signs an exact one-off allowance) or an
- * agent-owned position leaving the vault (exact shares, once). Shown in the agent's Approvals tab and on /approvals.
- */
+function ApprovalProgress({ message }: { message: string }) {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 10_000)
+    return () => clearTimeout(timer)
+  }, [])
+  return (
+    <output className="grid gap-1 text-sm text-muted-foreground">
+      <span>{message}</span>
+      {slow && (
+        <span>
+          This is taking longer than usual. Refresh approvals checks the saved state without sending another decision.
+        </span>
+      )}
+    </output>
+  )
+}
+
+/** An exact hire budget or agent-owned position leaving the vault, with explicit progress and readback. */
 function OperationApproval({
   approval,
   agent,
   operator,
   refresh,
+  onResult,
 }: {
   approval: AgentApproval
   agent: ManagedAgent
   operator: Address
   refresh: () => Promise<unknown>
+  onResult?: (message: string) => void
 }) {
   const request = JSON.parse(approval.request_json) as {
     token?: Address
@@ -93,19 +112,33 @@ function OperationApproval({
   const [review, setReview] = useState<ReturnType<typeof reviewAgentGrant> | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [progress, setProgress] = useState<string | null>(null)
   async function run(action: () => Promise<void>) {
     setBusy(true)
     setError(null)
     try {
       await action()
-      await refresh()
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Decision is unavailable; retry this operation')
+      const message =
+        failure instanceof Error
+          ? failure.message
+          : 'The decision response is unavailable. Refresh this request to check its state.'
+      setError(message)
+      onResult?.(message)
     } finally {
+      // Even a lost response may have saved the decision. Read it back without sending another action.
+      try {
+        await refresh()
+      } catch {
+        onResult?.('The approval records could not refresh. Check this same request before trying again.')
+      }
       setBusy(false)
+      setProgress(null)
     }
   }
   async function prepare() {
+    setProgress('Reading the exact one-off budget…')
+    if (approval.context?.hire == null) throw new Error('The exact hire brief is unavailable; reload before signing')
     if (request.publish === undefined || request.token === undefined || agent.address === null)
       throw new Error('The exact hire request is incomplete')
     const decoded = decodeFunctionData({ abi: sdk.sidequestHoldingAbi, data: request.publish })
@@ -139,19 +172,23 @@ function OperationApproval({
     let signature: string | undefined
     if (approved && approval.kind === 'hire-over-limit') {
       if (review === null) throw new Error('Review the exact one-off budget first')
+      setProgress('Waiting for your wallet signature…')
       signature = await signTypedDataAsync(
         typedDataArgs(review.typedData),
         prompts.hire(agent.name, tokenAmountText(request.amount, request.token!)),
       )
     }
-    await agentEndpoint(`/api/approvals/${approval.id}/decide`, 'POST', {
+    setProgress(approved ? 'Saving approval and waiting for execution…' : 'Saving your rejection…')
+    const result = await agentEndpoint(`/api/approvals/${approval.id}/decide`, 'POST', {
       approved,
       ...(signature === undefined ? {} : { signature }),
     })
+    onResult?.(approvalResult(result))
     setReview(null)
   }
   return (
     <Section title={`${agent.name} · ${approval.kind === 'unstake' ? 'Leave agent-owned position' : 'Hire approval'}`}>
+      <HireContext approval={approval} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xl font-semibold">
           {request.token === undefined ? (
@@ -178,10 +215,12 @@ function OperationApproval({
         <p className="break-all font-mono text-micro text-muted-foreground">Operation {approval.operation_id}</p>
       </Details>
       {review !== null && <AgentGrantReview description={review.description} />}
+      {progress !== null && <ApprovalProgress key={progress} message={progress} />}
       {approval.status === 'pending' && (
         <div className="flex flex-wrap gap-2">
           <Button
             busy={busy}
+            disabled={approval.kind === 'hire-over-limit' && approval.context?.hire == null}
             onClick={() =>
               void run(approval.kind === 'hire-over-limit' && review === null ? prepare : () => decide(true))
             }
@@ -205,7 +244,9 @@ function OperationApproval({
           busy={busy}
           onClick={() =>
             void run(async () => {
-              await agentEndpoint(`/api/approvals/${approval.id}/retry`, 'POST')
+              setProgress('Reconciling the original approved operation…')
+              const result = await agentEndpoint(`/api/approvals/${approval.id}/retry`, 'POST')
+              onResult?.(approvalResult(result))
             })
           }
         >

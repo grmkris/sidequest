@@ -29,6 +29,8 @@ import { chain, deployment } from '../wallet.ts'
 import type { AgentSummary } from '../agent-summary.ts'
 import { backAmount, withoutBack } from '../backing-refusal.ts'
 import { useReplaceSearch } from '../page-search.ts'
+import { ownerTab } from '../owner-route.ts'
+import { ApprovalAccess } from '../components/agent/ApprovalAccess.tsx'
 
 /** The ERC-8004 identity registry's reads the operator console needs (the SDK's ABI has no `tokenURI`). */
 const identityAbi = [
@@ -361,6 +363,7 @@ function Profile({ id }: { id: string }) {
       )}
     </>
   )
+  const publicView = ownerTab(window.location.search) === 'approvals' ? <ApprovalAccess /> : overview
   return (
     <>
       <ProfileHeader
@@ -373,7 +376,7 @@ function Profile({ id }: { id: string }) {
         onBack={openBacking}
       />
       {managed === undefined ? (
-        overview
+        publicView
       ) : (
         <OwnerTabs
           managed={managed}

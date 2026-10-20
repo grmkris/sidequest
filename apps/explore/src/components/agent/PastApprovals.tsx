@@ -13,6 +13,7 @@ import { BoardLink, boardRoutes } from '../BoardLink.tsx'
 import { Section } from '../kit.tsx'
 import { TokenAmount } from '../token/TokenAmount.tsx'
 import { Badge } from '../ui/badge.tsx'
+import { HireContext } from './HireContext.tsx'
 
 const OUTCOME: Record<ApprovalLine['status'], { words: string; variant: 'success' | 'info' | 'neutral' | 'warning' }> =
   {
@@ -55,7 +56,14 @@ export function PastApprovals({
                   aria-hidden
                   className="size-4 shrink-0 text-muted-foreground transition-transform duration-(--dur-fast) group-open/past:rotate-90"
                 />
-                <span className="min-w-0 flex-1 truncate">{line.title}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate">{line.title}</span>
+                  {approval.context !== undefined && approval.kind === 'hire-over-limit' && (
+                    <span className="block break-all text-xs text-muted-foreground">
+                      {approval.context.operationKey}
+                    </span>
+                  )}
+                </span>
                 {line.amount !== null && (
                   <TokenAmount value={line.amount.value} token={line.amount.token} static className="font-medium" />
                 )}
@@ -71,6 +79,7 @@ export function PastApprovals({
                 )}
               </summary>
               <div className="grid gap-1.5 px-11 pb-3 text-sm text-muted-foreground">
+                <HireContext approval={approval} />
                 {line.detail !== null && <p>{line.detail}</p>}
                 {line.adjusted && <p>You narrowed this request before granting it.</p>}
                 {job !== undefined && (

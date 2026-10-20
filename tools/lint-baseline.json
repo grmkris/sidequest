@@ -559,7 +559,7 @@
     "eslint(max-lines-per-function)": 1
   },
   "apps/explore/src/components/agent/OwnerTabs.tsx": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
     "eslint(max-lines-per-function)": 1
   },
   "apps/explore/src/components/agent/PermissionApproval.tsx": {

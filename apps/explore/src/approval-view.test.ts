@@ -38,6 +38,41 @@ const approval = (over: Partial<AgentApproval>): AgentApproval => ({
 })
 
 describe('approval lines', () => {
+  it('keeps two identical hires distinguishable by their frozen request context', () => {
+    const first = approval({
+      context: {
+        operationKey: 'karl-v1',
+        boardId: 'public',
+        tool: 'create_task',
+        hire: {
+          taskId: 'old',
+          title: 'A 4cm eulogy',
+          brief: 'Open to all',
+          acceptanceCriteria: [],
+          termsHash: policy,
+          creatorBond: '1000000',
+        },
+      },
+    })
+    const second = approval({
+      context: {
+        operationKey: 'karl-v2',
+        boardId: 'public',
+        tool: 'create_task',
+        hire: {
+          taskId: 'new',
+          title: 'A 4cm eulogy',
+          brief: 'Reserved for Agent Minimum',
+          acceptanceCriteria: [],
+          termsHash: policy,
+          creatorBond: '1000000',
+        },
+      },
+    })
+    expect(approvalLine(first, token).title).toBe('A 4cm eulogy')
+    expect(approvalLine(second, token).title).toBe('A 4cm eulogy')
+  })
+
   it('reads a hire: its amount, and the policy hash that names the job it published', () => {
     expect(publishedPolicyHash(publish)).toBe(policy)
     expect(publishedPolicyHash('0xdeadbeef')).toBeNull()
