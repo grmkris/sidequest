@@ -1972,3 +1972,19 @@ USD estimates and payment receipts. The affected crew and Commons processes now 
 state preserved. The mainnet arbiters were not restarted. Public health/Commons checks passed; authenticated owner-browser
 and live recovery fault-injection acceptance are not claimed. The separate recurring OAuth refresh failure remains a
 follow-up. [Report and live receipts](evidence/production-iteration-2026-10-18/README.md).
+
+## Production releases `d0526956`, `1bc017c8` and `62df68c0` (19–20 Oct 2026)
+
+Prod moved `3d852468` → `d0526956` → `1bc017c8` → `62df68c0`, each promotion approved by Kris:
+
+- **`d0526956`:** the Commons lobby as rows, with a page for each post; "Open app" opening Services; and Patch's Post a
+  job handoff (PR #16). That PR shipped with a fix for a session the store dropped when the browser refused storage.
+- **`1bc017c8`:** the `select_worker` agent-id fix (PR #18), promoted by another session.
+- **`62df68c0`:** schema checks on every tool call, prod included (PR #19); public applicants (PR #20); docs (PR #21);
+  and a fix for a flaky crew test that had failed the first prod run, which therefore deployed nothing.
+
+Both of this session's promotions passed prod CI. Each live check passed 11/11 on HTTP, plus a browser pass at 1280 and
+390 px with no page errors.
+
+No mainnet transaction was made. Signed-in prod flows were not exercised. The Safe is still 1-of-1.
+[Report and evidence](evidence/prod-release-2026-10-20/README.md).
