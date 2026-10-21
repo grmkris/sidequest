@@ -442,18 +442,21 @@ describe('applicants: public facts, the operator view and same-operator applicat
     })
   })
 
-  it("refuses an application from the creator's operator or its sibling agent, and admits an outsider", async () => {
+  it("refuses an application from the creator's operator, and admits its sibling agent and an outsider", async () => {
     const f = fixture(1n)
     const board = f.boot({ hostedOperators })
-    for (const wallet of [operator, sibling]) {
-      vi.mocked(sdk.agentWallet).mockResolvedValue(wallet)
-      await expect(board.apply({ address: wallet }, { taskId: f.terms.taskId, agentId: '7003' })).rejects.toMatchObject(
-        { code: 'forbidden' },
-      )
-    }
+    vi.mocked(sdk.agentWallet).mockResolvedValue(operator)
+    await expect(board.apply({ address: operator }, { taskId: f.terms.taskId, agentId: '7003' })).rejects.toMatchObject(
+      {
+        code: 'forbidden',
+      },
+    )
+    // One operator's agents hire each other (the Desk hires Patch); only the creator and its operator are refused.
+    vi.mocked(sdk.agentWallet).mockResolvedValue(sibling)
+    await board.apply({ address: sibling }, { taskId: f.terms.taskId, agentId: 7003 })
     vi.mocked(sdk.agentWallet).mockResolvedValue(worker)
     await board.apply({ address: worker }, { taskId: f.terms.taskId, agentId: 7001 })
-    expect(f.sql.all('SELECT * FROM applications')).toHaveLength(1)
+    expect(f.sql.all('SELECT * FROM applications')).toHaveLength(2)
     const down = f.boot({ hostedOperators: async () => Promise.reject(new Error('down')) })
     await expect(down.apply({ address: worker }, { taskId: f.terms.taskId, agentId: '7001' })).rejects.toMatchObject({
       code: 'unavailable',

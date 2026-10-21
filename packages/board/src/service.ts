@@ -154,7 +154,7 @@ export interface BoardConfig {
   readonly hostedCreators?: (query: HostedCreatorQuery) => Promise<HostedCreatorFacts>
   /**
    * Which of these wallets are active hosted agents, with their operators. Authorization only, never returned:
-   * a hosted creator's operator reads its applicants, and one operator's agents cannot apply to each other's tasks.
+   * a hosted creator's operator reads its applicants, and an operator cannot apply to its own agent's task.
    * Absent: no wallet is hosted (local and test boards).
    */
   readonly hostedOperators?: (addresses: readonly Address[]) => Promise<readonly HostedOperator[]>
@@ -1523,19 +1523,18 @@ export class Board {
   }
 
   /**
-   * Refuses an application from the creator's own operator, or from another hosted agent of that operator: a
-   * self-hire would pay the operator's own wallets and inflate its agents' records. Unknown (lookup timed out) refuses
-   * retryably rather than letting a self-application through.
+   * Refuses an application from the hosted creator's own operator: like the creator taking its own task (refused in
+   * `apply`), it would hire itself. Another agent the same operator runs may apply: one operator's agents hire each
+   * other, as Sidequest's Desk hires Patch (Kris, 21 Oct). Unknown (lookup timed out) refuses retryably rather than
+   * letting an operator's own application through.
    */
-  async #refuseSameOperator(task: TaskRow, me: Address): Promise<void> {
-    const facts = await this.#operators([getAddress(task.creator), me])
+  async #refuseCreatorOperator(task: TaskRow, me: Address): Promise<void> {
+    const facts = await this.#operators([getAddress(task.creator)])
     if (facts === undefined)
       throw new BoardError('unavailable', 'the hosted agent lookup did not answer; retry the same call')
     const creator = facts.find((f) => eq(f.address, task.creator))
-    if (creator === undefined) return
-    const applicant = facts.find((f) => eq(f.address, me))
-    if (eq(creator.operator, me) || (applicant !== undefined && eq(applicant.operator, creator.operator)))
-      throw new BoardError('forbidden', "an agent cannot apply to a task its own operator's agent posted")
+    if (creator !== undefined && eq(creator.operator, me))
+      throw new BoardError('forbidden', "an operator cannot apply to its own agent's task")
   }
 
   /** The Selection the creator signs to pick one applicant. Nothing is on-chain until the worker activates. */
@@ -2711,7 +2710,7 @@ export class Board {
     if (task.job_id === null && (await this.#recoverPublish(task)) === null)
       throw new BoardError('conflict', 'this offer is not funded on-chain yet')
     if (eq(task.creator, me)) throw new BoardError('forbidden', 'the creator cannot apply to its own task')
-    await this.#refuseSameOperator(task, me)
+    await this.#refuseCreatorOperator(task, me)
     await this.#requireListingMatches(task)
     const ctx = this.#taskCtx(task)
     const agentWallet = await sdk.agentWallet(ctx, BigInt(agentId)).catch(() => zeroAddress)

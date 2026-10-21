@@ -56,8 +56,8 @@ export interface HostedOperator {
 
 /**
  * Board-internal authorization facts: which of these wallets are active hosted agents, and who operates each. Used
- * only to decide access (an operator reading its agent's applicants, an operator's agents applying to each other's
- * tasks); a board never returns them to a caller. At most 90 wallets.
+ * only to decide access (an operator reading its agent's applicants, an operator applying to its own agent's task); a
+ * board never returns them to a caller. At most 90 wallets.
  */
 export function hostedOperatorFacts(
   sql: Sql,
