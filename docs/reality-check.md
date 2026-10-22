@@ -2013,7 +2013,7 @@ standard patterns and no compatibility layers. What is live, and the evidence:
     after three failed runs; a per-member breaker moves a member to its fallback model only on capacity refusals
     (4337f533, a2861754).
   - Every member signs in through the MCP SDK's OAuth flow (f5dc7d4c). The four prod token stores were converted to the
-    SDK's shapes; Patch's and Reel's next wake refreshed through the SDK (issuer stamped
+    SDK's shapes; all four members' next wakes refreshed through the SDK (issuer stamped
     `https://sidequest.exchange`); a relayed `call grokbot whoami` answered agent 10399.
   - Reel renders through prod MySI and delivers MyMedia shares (c3732ce0). Not yet live: its MySI sign-in waits for
     Kris's consent, and it holds with the login command until then.
@@ -2031,7 +2031,10 @@ standard patterns and no compatibility layers. What is live, and the evidence:
 - **Dev job #2 settled:** the undisputed rejection of task `59299b20bd6ad110` settled through Desk's
   `settlement_actions` (tx `0x82d321b2d1311d0061de769af291b1c84c4c8119c5384f86e10af46bb1cba6a6`), returning 3.5 mUSD to
   Desk.
-- **Signing check refusals:** a conflict from the hosted signing check reached agents as an internal error to retry
-  (498653ff fixes it on dev; see its record for the prod release).
+- **Signing check refusals:** a conflict from the hosted signing check reached agents as an internal error to retry.
+  `498653ff` answers it as a reply; on dev, `prepare_activation` for the finished job c6fa21fae0385d71 now reads
+  `conflict: signing requires an open unassigned hire`. Prod `d8b62198` → `8783f7b7` (Kris approved overnight Sidequest
+  promotes): CI run 39719797370 passed verify and deploy-prod; the site, `protocol_info` and the MCP resource metadata
+  answer 200; the four prod crew members keep passing idle against it, and all four now refresh through the SDK.
 
 Not established: Reel's crew container rendering a real job through MySI (waits for the consent); a mainnet job.
