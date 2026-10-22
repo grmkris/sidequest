@@ -111,7 +111,7 @@
     "check:files": "bun scripts/check-files.ts",
     "migrations:check": "bun scripts/migrations-lock.ts check",
     "migrations:record": "bun scripts/migrations-lock.ts record",
-    "test:scripts": "bun tools/test-scripts.ts && bun test scripts/ci crew/bin/crew-wake.test.ts"
+    "test:scripts": "bun tools/test-scripts.ts && bun test scripts/ci crew/bin"
   },
   "devDependencies": {
     "@effect/platform-bun": "catalog:",

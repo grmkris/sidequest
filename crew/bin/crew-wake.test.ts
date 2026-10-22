@@ -1,9 +1,9 @@
 /** `bun test crew/bin/crew-wake.test.ts`: which held jobs wake a crew worker. */
 import { expect, test } from 'bun:test'
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { checkpointPath, finishWake, readCheckpoint, saveCheckpoint } from './inbox-state.ts'
+import { checkpointPath, finishWake, readCheckpoint, saveCheckpoint, settleNudge, takeNudge } from './inbox-state.ts'
 import { openHeld, publicOffers, wakeInbox } from './crew-wake.ts'
 
 test('a settled rejection no longer wakes the worker, but one it may still dispute does', () => {
@@ -194,6 +194,47 @@ test('backup-only corruption returns a recovery wake reason without a candidate 
     expect(result.cursor).toBeUndefined()
     finishWake(wake, result.cursor)
     expect(readFileSync(`${wake}.bak`, 'utf8')).toBe('{broken')
+  } finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
+test('a nudge is consumed only by a run that finished its work', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crew-nudge-'))
+  try {
+    const nudge = join(dir, 'nudge')
+    expect(takeNudge(nudge)).toBeUndefined()
+    writeFileSync(nudge, 'apply to job 18\n')
+    const note = takeNudge(nudge)
+    expect(note).toBe('apply to job 18')
+    // Set aside while the run goes, so a second pass does not start another run for it.
+    expect(existsSync(nudge)).toBe(false)
+    settleNudge(nudge, note, 1) // refused for capacity
+    expect(readFileSync(nudge, 'utf8')).toBe('apply to job 18\n')
+    settleNudge(nudge, takeNudge(nudge), null) // did not start
+    expect(readFileSync(nudge, 'utf8')).toBe('apply to job 18\n')
+    settleNudge(nudge, takeNudge(nudge), 0)
+    expect(existsSync(nudge)).toBe(false)
+    // An empty nudge still wakes the member once, then is gone.
+    writeFileSync(nudge, '')
+    const empty = takeNudge(nudge)
+    expect(empty).toBe('')
+    settleNudge(nudge, empty, 0)
+    expect(existsSync(nudge)).toBe(false)
+  } finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
+test('a nudge written during a failed run is kept beside the one put back', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crew-nudge-'))
+  try {
+    const nudge = join(dir, 'nudge')
+    writeFileSync(nudge, 'first\n')
+    const note = takeNudge(nudge)
+    writeFileSync(nudge, 'second\n')
+    settleNudge(nudge, note, 1)
+    expect(readFileSync(nudge, 'utf8')).toBe('second\nfirst\n')
   } finally {
     rmSync(dir, { recursive: true })
   }

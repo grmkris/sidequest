@@ -16,7 +16,6 @@
 import { spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import {
-  appendFileSync,
   chmodSync,
   chownSync,
   copyFileSync,
@@ -25,7 +24,6 @@ import {
   readFileSync,
   readdirSync,
   realpathSync,
-  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -36,7 +34,8 @@ import { stageProfile } from '../../infra/stage.ts'
 import * as hosted from './hosted-mcp.ts'
 import { type ConnectionFiles, type Token, readToken } from './hosted-mcp.ts'
 import { type HeldTask, type Offers, openHeld, wakeInbox } from './crew-wake.ts'
-import { finishWake } from './inbox-state.ts'
+import { finishWake, settleNudge, takeNudge } from './inbox-state.ts'
+import { type RunResult, afterRun, onFallback, readBreaker, runResult, saveBreaker } from './model-breaker.ts'
 
 const crewDir = resolve(import.meta.dir, '..')
 const repo = resolve(crewDir, '..')
@@ -70,7 +69,7 @@ interface Member {
   scopes?: string
   /** The CLI that runs the member: Codex (default) or Grok's own CLI, both against cliproxy. */
   harness?: 'codex' | 'grok'
-  /** Used after `harness.fallbackAfter` failed runs in a row (cliproxy models come and go). */
+  /** Serves while the primary is at capacity (model-breaker.ts): cliproxy models come and go. */
   fallbackModel?: string
   effort: string
   resources?: Resources
@@ -103,7 +102,10 @@ interface Crew {
     cpuShares: number
     resources: Resources
     relayFloorMon: number
+    /** Capacity refusals in a row on a member's primary model that open its breaker (model-breaker.ts). */
     fallbackAfter: number
+    /** How long an open breaker sends runs to the fallback before it probes the primary again. */
+    fallbackCooldownMinutes: number
     /** The cost guard: model runs per member per UTC day (idle checks are free and do not count). */
     maxRunsPerDay: number
   }
@@ -430,7 +432,14 @@ async function promptFor(id: string, m: Member, token: Token, note: string): Pro
     .join('\n')
 }
 
-async function run(id: string, note = '', model?: string): Promise<number | null> {
+/** A finished run: its exit code (null: killed, as on its timeout) and how it ended, as the model breaker counts it. */
+interface Run {
+  code: number | null
+  result: RunResult
+}
+
+/** One run of a member; null when it did not start because one is already going. */
+async function run(id: string, note = '', model?: string): Promise<Run | null> {
   const [, base] = memberOf(id)
   const m = model === undefined ? base : { ...base, model, effort: 'high' }
   // One run per member at a time.
@@ -466,13 +475,15 @@ async function run(id: string, note = '', model?: string): Promise<number | null
   clearTimeout(timer)
   await out.end()
   rmSync(marker, { force: true })
-  writeFileSync(join(runs, `${stamp}.err`), `${Buffer.concat(err).toString()}\nexit ${code}\n`, { mode: 0o600 })
+  const stderr = Buffer.concat(err).toString()
+  writeFileSync(join(runs, `${stamp}.err`), `${stderr}\nexit ${code}\n`, { mode: 0o600 })
   chmodSync(join(runs, `${stamp}.jsonl`), 0o600)
   own(join(runs, `${stamp}.jsonl`), join(runs, `${stamp}.err`))
   const operator = join(agent, 'state', 'needs-operator')
   if (existsSync(operator)) console.log(`${m.name} needs the operator: ${readFileSync(operator, 'utf8').trim()}`)
   console.log(`${m.name}: exit ${code}`)
-  return code
+  const result = runResult(code, () => readFileSync(join(runs, `${stamp}.jsonl`), 'utf8'), stderr)
+  return { code, result }
 }
 
 /** The sponsor relay's MON: below the floor the board refuses sponsored sends, so a run would only fail. */
@@ -748,17 +759,17 @@ function fileSlot(id: string): Slot {
 }
 
 /**
- * One run, started for a reason. A nudge's text becomes its operator note and is set aside as the run starts, so it
- * acts once; a run that did not start (one already going) puts it back for the next pass.
+ * One run, started for a reason. A nudge's text becomes its operator note; it is consumed only when the run finishes
+ * its work, so a run refused for capacity or one that did not start leaves it for the next pass.
  */
-async function wake(id: string, reason: string, model: string | undefined): Promise<number | null> {
+async function wake(id: string, reason: string, model: string | undefined): Promise<Run | null> {
   const nudgePath = join(home(id), 'agent', 'state', 'nudge')
-  const nudge = existsSync(nudgePath) ? readFileSync(nudgePath, 'utf8').trim() : ''
-  if (nudge !== '') renameSync(nudgePath, `${nudgePath}.${Date.now()}`)
+  const nudge = takeNudge(nudgePath)
   console.log(`${crew.members[id]?.name ?? id}: waking, ${reason}${model === undefined ? '' : ` (on ${model})`}`)
-  const code = await run(id, nudge, model)
-  if (code === null && nudge !== '') appendFileSync(nudgePath, `${nudge}\n`)
-  return code
+  const outcome = await run(id, nudge ?? '', model)
+  settleNudge(nudgePath, nudge, outcome?.code ?? null)
+  own(nudgePath)
+  return outcome
 }
 
 /** Why a member should not wake although it has a reason: the relay's gas or its daily run cap. */
@@ -776,39 +787,58 @@ async function holdReason(id: string, m: Member, reason: string): Promise<string
   return null
 }
 
-/** A member's routine, forever: check for work, wake when there is a reason and nothing holds it back, sleep. */
+/** How long a member's breaker keeps it on its fallback model, and after how many capacity refusals it opens. */
+const breakerPolicy = {
+  threshold: crew.harness.fallbackAfter,
+  cooldownMs: crew.harness.fallbackCooldownMinutes * 60_000,
+}
+
+/** Why a member should run now, or null: its wake reason, unless the relay's gas or its daily run cap holds it. */
+async function checkMember(id: string, m: Member): Promise<string | null> {
+  let reason: string | null
+  try {
+    wakeCursors.delete(id)
+    reason = await wakeReason(id)
+  } catch (error) {
+    // A failed check is not a reason to spend a model run; the next pass checks again.
+    console.log(`${m.name}: wake check failed (${String(error).slice(0, 80)}); not waking`)
+    return null
+  }
+  if (reason === null) {
+    console.log(`${m.name}: idle`)
+    commitWakeCursor(id)
+    return null
+  }
+  const blocked = await holdReason(id, m, reason)
+  if (blocked !== null) console.log(blocked)
+  return blocked === null ? reason : null
+}
+
+/** One run for `reason` within the crew's run cap, on the model the member's breaker picks. */
+async function runMember(id: string, m: Member, reason: string, slot: Slot) {
+  const breakerPath = join(home(id), 'model-breaker.json')
+  await slot.take()
+  try {
+    const breaker = readBreaker(breakerPath)
+    const fallback = m.fallbackModel !== undefined && onFallback(breaker, breakerPolicy, Date.now())
+    const outcome = await wake(id, reason, fallback ? m.fallbackModel : undefined)
+    if (outcome === null) return
+    const next = afterRun(breaker, { result: outcome.result, onPrimary: !fallback }, breakerPolicy, Date.now())
+    saveBreaker(breakerPath, next)
+    own(breakerPath)
+    commitWakeCursor(id, outcome.code)
+  } catch (error) {
+    console.error(`${id}: ${String(error)}`)
+  } finally {
+    slot.give()
+  }
+}
+
+/** A member's routine, forever: check for work, run when there is a reason and nothing holds it back, sleep. */
 async function memberLoop(id: string, m: Member, minutes: number, slot: Slot) {
-  let failures = 0
   for (;;) {
-    let reason: string | null = null
-    try {
-      wakeCursors.delete(id)
-      reason = await wakeReason(id)
-      if (reason === null) {
-        console.log(`${m.name}: idle`)
-        commitWakeCursor(id)
-      }
-    } catch (error) {
-      // A failed check is not a reason to spend a model run; the next pass checks again.
-      console.log(`${m.name}: wake check failed (${String(error).slice(0, 80)}); not waking`)
-    }
-    const blocked = reason === null ? null : await holdReason(id, m, reason)
-    if (blocked !== null) console.log(blocked)
-    else if (reason !== null) {
-      await slot.take()
-      try {
-        const code = await wake(id, reason, failures >= crew.harness.fallbackAfter ? m.fallbackModel : undefined)
-        if (code !== null) {
-          failures = code === 0 ? 0 : failures + 1
-          commitWakeCursor(id, code)
-        }
-      } catch (error) {
-        failures++
-        console.error(`${id}: ${String(error)}`)
-      } finally {
-        slot.give()
-      }
-    }
+    const reason = await checkMember(id, m)
+    if (reason !== null) await runMember(id, m, reason, slot)
     await Bun.sleep(minutes * 60_000)
   }
 }

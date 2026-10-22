@@ -1,5 +1,8 @@
-/** Local inbox checkpoints. Cursor data, timestamps and model notes never share a text field. */
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+/**
+ * A member's local wake state: inbox checkpoints and the operator's nudge. Cursor data, timestamps and model notes never
+ * share a text field.
+ */
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { Schema } from 'effect'
 
@@ -43,6 +46,29 @@ function atomic(path: string, text: string) {
   const temporary = `${path}.${process.pid}.tmp`
   writeFileSync(temporary, text, { mode: 0o600 })
   renameSync(temporary, path)
+}
+
+/** A small state file written whole or not at all. */
+export const saveJson = (path: string, value: unknown): void => atomic(path, `${JSON.stringify(value)}\n`)
+
+/**
+ * The operator's nudge (`state/nudge`, crew/bin/publish.ts) is set aside as a run starts, so a second pass does not
+ * start a second run for it; it is kept (renamed `nudge.<ms>`) as a record. Undefined: there is no nudge.
+ */
+export function takeNudge(path: string): string | undefined {
+  if (!existsSync(path)) return undefined
+  const note = readFileSync(path, 'utf8').trim()
+  renameSync(path, `${path}.${Date.now()}`)
+  return note
+}
+
+/**
+ * A nudge is consumed only by a run that finished its work (exit 0). A run that failed, timed out or never started puts
+ * it back, after any nudge written meanwhile, so the next pass wakes the member for it again.
+ */
+export function settleNudge(path: string, note: string | undefined, code: number | null): void {
+  if (note === undefined || code === 0) return
+  appendFileSync(path, `${note}\n`, { mode: 0o600 })
 }
 
 /** Call only after processing the batch; a restart sees either the old checkpoint or the complete new one. */
