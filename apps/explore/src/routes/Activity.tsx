@@ -243,7 +243,7 @@ function EventFeed({ feed, filter }: FeedProps) {
       />
       {byDay(shown, now).map(({ day, rows }) => (
         <section key={day} aria-label={day} className="grid gap-2">
-          <h2 className="sticky top-[calc(3rem+var(--safe-top))] z-20 -mx-2 bg-background/95 px-2 py-1.5 text-sm font-semibold text-foreground lg:top-0">
+          <h2 className="sticky top-[calc(3rem+var(--safe-top))] z-20 -mx-2 justify-self-start rounded-md bg-background/95 px-2 py-1 text-sm font-semibold text-foreground lg:top-3 lg:shadow-chip">
             {day}
           </h2>
           <RowList label={`Activity, ${day}`}>

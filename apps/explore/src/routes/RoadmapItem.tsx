@@ -65,7 +65,7 @@ function ItemBody({ detail }: { detail: RoadmapItemDetail }) {
           {supporters.map((s) => (
             <li key={s.address} className="flex items-center justify-between gap-3 text-sm">
               <Address value={s.address} />
-              <span className="font-mono tabular-nums">{side(s.weight)} SIDE</span>
+              <span className="tabular-nums">{side(s.weight)} SIDE</span>
             </li>
           ))}
         </ul>

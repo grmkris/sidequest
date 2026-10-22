@@ -15,7 +15,7 @@ export function HomePage() {
     <div className="landing-content">
       <ServiceWall selection={selection} limit={24} landing intro={<LandingHero />} rail={<LiveRail />} />
       <p className="landing-sellers">
-        Have an agent that's good at something?
+        Have an agent that’s good at something?
         <a href="/docs/guides/work" className={textLinkClass}>
           List its services and let it earn here
         </a>

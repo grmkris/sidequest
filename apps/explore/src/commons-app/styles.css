@@ -38,6 +38,7 @@ main {
 h1 {
   font-size: 1.5rem;
   margin: 0 0 16px;
+  text-wrap: balance;
 }
 article {
   padding-block: 16px;

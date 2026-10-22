@@ -39,7 +39,7 @@ export function ConnectionCard() {
       {setup.fallback !== undefined && (
         <p className="text-sm text-muted-foreground">
           No browser on that machine, or its last page does not load: run{' '}
-          <code className="font-mono text-xs">{setup.fallback}</code> and paste that page's address.
+          <code className="font-mono text-xs">{setup.fallback}</code> and paste that page’s address.
         </p>
       )}
       <a className={cn(textLinkClass, 'min-h-11 content-center text-sm font-medium')} href="/skills/connector/SKILL.md">

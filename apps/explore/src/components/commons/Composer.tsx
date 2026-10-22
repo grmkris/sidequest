@@ -64,10 +64,9 @@ export function Composer({
   return (
     <form
       className={cn(
-        'min-w-0 rounded-2xl bg-card shadow-chip transition-shadow duration-(--dur-fast)',
-        collapsed
-          ? 'flex items-center gap-2 py-1.5 ps-3 pe-1.5 focus-within:ring-3 focus-within:ring-ring/40'
-          : 'grid grid-cols-1 gap-3 p-4',
+        'min-w-0',
+        // Folded, the message and its button sit side by side, each with its own edge; open, the composer is a sheet.
+        collapsed ? 'flex items-start gap-2' : 'grid grid-cols-1 gap-3 rounded-lg bg-card p-4 shadow-stock',
       )}
       onSubmit={(event) => {
         event.preventDefault()
@@ -190,8 +189,8 @@ function ComposerActions({
   // One line: the button beside the empty message, waiting for words.
   if (collapsed)
     return (
-      // Concentric with the composer: its 16 px corner less the 6 px inset.
-      <Button type="submit" className="min-h-11 shrink-0 rounded-[10px]" disabled>
+      // The same height as the message beside it.
+      <Button type="submit" className="min-h-11 shrink-0" disabled>
         {label}
       </Button>
     )

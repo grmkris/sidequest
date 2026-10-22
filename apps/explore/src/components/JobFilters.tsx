@@ -18,14 +18,14 @@ export function SearchBox({
   label?: string
 }) {
   return (
-    <label className="flex min-h-8 items-center gap-2 rounded-lg border border-input px-2.5 text-muted-foreground transition-colors duration-(--dur-fast) focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 pointer-coarse:min-h-11">
-      <Search aria-hidden className="size-4 shrink-0" />
+    <label className="flex min-h-9 items-stretch gap-2 rounded-md border border-input bg-card px-2.5 text-muted-foreground focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-ring pointer-coarse:min-h-11">
+      <Search aria-hidden className="size-4 shrink-0 self-center" />
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={label}
         aria-label={label}
-        className="min-w-0 flex-1 bg-transparent text-base text-foreground outline-none md:text-sm"
+        className="min-h-9 min-w-0 flex-1 bg-transparent text-base text-foreground outline-none md:text-sm pointer-coarse:min-h-11"
       />
     </label>
   )

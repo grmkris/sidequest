@@ -98,7 +98,7 @@ export function HoldingControls({
               <Badge variant="destructive">Refused</Badge>
             ) : (
               <p className="text-sm text-muted-foreground">
-                A Holding you refuse can never reserve this account's backing.
+                A Holding you refuse can never reserve this account’s backing.
               </p>
             )}
             {state !== 'expired' && (

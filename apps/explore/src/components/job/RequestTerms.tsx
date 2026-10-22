@@ -51,7 +51,7 @@ export function RequestTerms({
     <div className="@container grid rounded-2xl bg-card shadow-stock [&>*+*]:border-t [&>*+*]:border-border/70">
       <DeadlineSteps steps={steps} />
       <div className="grid gap-3 p-4">
-        <span className="text-ui text-muted-foreground">What's at stake</span>
+        <span className="text-ui text-muted-foreground">What’s at stake</span>
         <StakePair creator={parseEther(creatorBond)} worker={parseEther(workerBond)} />
         <span className="text-ui leading-snug text-muted-foreground">
           <BondHorizonNotice bonded={Number(creatorBond) > 0 || Number(workerBond) > 0} tone="rule" />

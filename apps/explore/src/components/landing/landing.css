@@ -2,8 +2,9 @@
  * hero: Corridor (/) · nav: edge-aligned, swapped from search-led because the search is the hero's own action · footer: mast, swapped from index columns because there are four links
  * signature: the receipt, the latest settlement on a cotton slip with Paid pressed in · imagery: the services' own cover photographs, muted · axes: light/roman-serif/cool · posture: restrained · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V3 · weakest: V, the wall of services is the page's range and stays one composition; the corridor and the receipt are what change */
+/* Hallmark · dismissed 28a · the first cover sits at the fold under the headline, which is the page's largest paint; covers load lazily below it */
 
-/* The landing: one centred column (the promise, the search, the latest receipt), then the wall of services. */
+/* The landing: its first screen (the promise, the search, the latest receipt), then the wall of services. */
 .landing-content {
   display: grid;
   gap: clamp(3rem, 6vw, 4.5rem);
@@ -11,10 +12,10 @@
 }
 
 /*
- * The corridor fills the first screen under the header, its content centred a little high, so the categories and the
+ * The hero is a corridor: it fills the first screen under the header, its content centred, so the categories and the
  * first covers start just above the fold. On a phone it is as tall as its content.
  */
-.landing-corridor {
+.landing-hero {
   display: grid;
   justify-items: center;
   align-content: center;
@@ -26,17 +27,17 @@
   text-align: center;
 }
 @media (min-width: 40rem) {
-  .landing-corridor {
-    min-block-size: calc(100svh - 3.5rem - var(--safe-top) - 2rem - 6.5rem);
+  .landing-hero {
+    min-block-size: calc(100svh - 3.5rem - var(--safe-top) - 2rem - 8rem);
   }
 }
 
-.landing-hero {
+.landing-promise {
   display: grid;
   gap: 1rem;
   justify-items: center;
 }
-.landing-hero h1 {
+.landing-promise h1 {
   min-width: 0;
   max-width: 14ch;
   font-family: var(--font-display);
@@ -48,7 +49,7 @@
   overflow-wrap: break-word;
   text-wrap: balance;
 }
-.landing-hero-lede {
+.landing-promise-lede {
   max-width: 44ch;
   color: var(--muted-foreground);
   font-size: 1.1875rem;
@@ -89,7 +90,7 @@
 }
 
 @media (max-width: 520px) {
-  .landing-hero-lede {
+  .landing-promise-lede {
     font-size: 1.0625rem;
   }
 }

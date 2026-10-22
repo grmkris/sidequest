@@ -211,17 +211,17 @@ export function AddressRow({
 export function Address({ value, you = false }: { value: string | null | undefined; you?: boolean }) {
   if (value === null || value === undefined) return <span className="text-muted-foreground">None</span>
   return (
-    <span className="inline-flex min-w-0 max-w-full flex-wrap items-center justify-end gap-0.5 font-mono text-ui">
+    <span className="inline-flex min-w-0 max-w-full flex-wrap items-center justify-end gap-0.5 text-ui">
       <a
         href={explorer('address', value)}
         target="_blank"
         rel="noreferrer"
-        className="inline-flex min-h-8 items-center text-muted-foreground hover:text-foreground pointer-coarse:min-h-11"
+        className="inline-flex min-h-8 items-center font-mono text-muted-foreground hover:text-foreground pointer-coarse:min-h-11"
       >
         {shortAddress(value)}
       </a>
       {you && (
-        <Badge variant="info" className="ml-1 font-sans">
+        <Badge variant="info" className="ml-1">
           You
         </Badge>
       )}
@@ -238,7 +238,7 @@ export function TxLink({ hash, label }: { hash: string | null | undefined; label
       href={explorer('tx', hash)}
       target="_blank"
       rel="noreferrer"
-      className="-my-3.5 inline-flex items-center gap-1 py-3.5 font-mono text-ui text-muted-foreground underline decoration-current/30 underline-offset-4 hover:text-foreground"
+      className="-my-3.5 inline-flex items-center gap-1 py-3.5 font-mono text-ui whitespace-nowrap text-muted-foreground underline decoration-current/30 underline-offset-4 hover:text-foreground"
     >
       {label ?? `${hash.slice(0, 10)}…`}
       <ExternalLink aria-hidden className="size-3" />

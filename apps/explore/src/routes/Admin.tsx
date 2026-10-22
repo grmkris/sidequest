@@ -175,7 +175,7 @@ function Gate({ c, safe, me }: { c: SidequestContracts; safe: Address; me: Addre
         <PageTitle>Admin</PageTitle>
 
         <div role="status" className="grid gap-2 rounded-xl bg-warning/14 p-4 text-sm text-warning-text">
-          <p>The Safe's owners cannot be read from the chain right now.</p>
+          <p>The Safe’s owners cannot be read from the chain right now.</p>
           <Button variant="secondary" onClick={() => void reads.refetch()}>
             Retry
           </Button>

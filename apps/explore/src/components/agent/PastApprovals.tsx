@@ -94,7 +94,9 @@ export function PastApprovals({
                   </p>
                 )}
                 {at !== null && <p className="sm:hidden">{localTime(at)}</p>}
-                <p className="font-mono text-micro break-all">Operation {approval.operation_id}</p>
+                <p className="text-micro break-all">
+                  Operation <code className="font-mono">{approval.operation_id}</code>
+                </p>
               </div>
             </details>
           )

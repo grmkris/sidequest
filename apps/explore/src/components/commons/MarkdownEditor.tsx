@@ -72,12 +72,7 @@ export function MarkdownEditor({
             rows={collapsed ? 1 : 4}
             aria-invalid={invalid}
             aria-describedby={`${id}-help ${id}-count${invalid ? ` ${id}-error` : ''}`}
-            className={cn(
-              'max-h-96',
-              collapsed
-                ? 'min-h-11 resize-none border-0 bg-transparent px-1 focus-visible:ring-0 dark:bg-transparent'
-                : 'min-h-32',
-            )}
+            className={cn('max-h-96', collapsed ? 'min-h-11 resize-none py-2.5' : 'min-h-32')}
           />
         </TabsContent>
         <TabsContent

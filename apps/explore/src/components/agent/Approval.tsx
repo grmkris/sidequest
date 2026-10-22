@@ -212,7 +212,9 @@ function OperationApproval({
         </p>
       )}
       <Details summary="Technical details">
-        <p className="break-all font-mono text-micro text-muted-foreground">Operation {approval.operation_id}</p>
+        <p className="break-all text-micro text-muted-foreground">
+          Operation <code className="font-mono">{approval.operation_id}</code>
+        </p>
       </Details>
       {review !== null && <AgentGrantReview description={review.description} />}
       {progress !== null && <ApprovalProgress key={progress} message={progress} />}

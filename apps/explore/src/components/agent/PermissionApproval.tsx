@@ -81,7 +81,9 @@ function ExactCall({ target, value, callData }: { target: Address; value: bigint
           ))}
         </ul>
       )}
-      <p className="break-all font-mono text-micro text-muted-foreground">Call data {callData}</p>
+      <p className="break-all text-micro text-muted-foreground">
+        Call data <code className="font-mono">{callData}</code>
+      </p>
     </div>
   )
 }
@@ -216,7 +218,9 @@ export function PermissionApproval({
           Agent's reason (its own words): {request.justification}
         </p>
       )}
-      <p className="break-all font-mono text-micro text-muted-foreground">Operation {approval.operation_id}</p>
+      <p className="break-all text-micro text-muted-foreground">
+        Operation <code className="font-mono">{approval.operation_id}</code>
+      </p>
       {approval.status === 'pending' && review === null && request.adjustable && (
         <div className="grid gap-3 sm:grid-cols-2">
           {token !== null && (

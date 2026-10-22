@@ -58,6 +58,8 @@ export function ServiceCover({
         'cover-print relative overflow-clip rounded-2xl bg-muted after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:ring-1 after:ring-foreground/10 after:ring-inset',
         className,
       )}
+      // A picture of what the service makes: the catalogue's goods, not a stock photograph.
+      data-kind="product"
       style={listing.category === undefined ? undefined : { backgroundColor: CATEGORY_TINTS[listing.category] }}
     >
       {shown ? (

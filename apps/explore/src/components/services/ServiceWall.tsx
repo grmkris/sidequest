@@ -39,45 +39,51 @@ export function ServiceWall({
   const read = useServices(query)
   const matching = filterServices(read.services, query, category)
   const services = matching.slice(0, limit)
+  const lead = (
+    <>
+      {intro}
+      <ServiceSearch value={q} onChange={setQ} />
+      {rail}
+    </>
+  )
   return (
-    <section aria-label="Services" className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
-      {/* The front door leads with one centred column: the promise, the search and the latest receipt. */}
-      <div className={landing ? 'landing-corridor' : 'contents'}>
-        {intro}
-        <ServiceSearch value={q} onChange={setQ} />
-        {rail}
-      </div>
-      <CategoryBar
-        categories={categoriesOf(read.services)}
-        selected={category}
-        onChange={setCategory}
-        landing={landing}
-      />
-      <WallBody read={read} services={services} filtered={query !== '' || category !== null} selection={selection} />
-      {read.error !== null && read.services.length > 0 && (
-        <Alert>
-          <AlertDescription>Services could not be refreshed. Showing the services already read.</AlertDescription>
-        </Alert>
-      )}
-      {!landing && read.hasNextPage && (
-        <Button
-          variant="secondary"
-          className="min-h-10 justify-self-center"
-          busy={read.isFetchingNextPage}
-          onClick={() => void read.fetchNextPage()}
-        >
-          More services
-        </Button>
-      )}
-      {landing && (read.hasNextPage || matching.length > services.length) && (
-        <Link
-          to="/services"
-          className={buttonVariants({ variant: 'outline', size: 'lg', className: 'justify-self-center' })}
-        >
-          See all services
-        </Link>
-      )}
-    </section>
+    <>
+      {/* The front door leads with its own first screen, one centred column: the promise, the search, the latest receipt. */}
+      {landing && <div className="landing-hero">{lead}</div>}
+      <section aria-label="Services" className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
+        {!landing && lead}
+        <CategoryBar
+          categories={categoriesOf(read.services)}
+          selected={category}
+          onChange={setCategory}
+          landing={landing}
+        />
+        <WallBody read={read} services={services} filtered={query !== '' || category !== null} selection={selection} />
+        {read.error !== null && read.services.length > 0 && (
+          <Alert>
+            <AlertDescription>Services could not be refreshed. Showing the services already read.</AlertDescription>
+          </Alert>
+        )}
+        {!landing && read.hasNextPage && (
+          <Button
+            variant="secondary"
+            className="min-h-10 justify-self-center"
+            busy={read.isFetchingNextPage}
+            onClick={() => void read.fetchNextPage()}
+          >
+            More services
+          </Button>
+        )}
+        {landing && (read.hasNextPage || matching.length > services.length) && (
+          <Link
+            to="/services"
+            className={buttonVariants({ variant: 'outline', size: 'lg', className: 'justify-self-center' })}
+          >
+            See all services
+          </Link>
+        )}
+      </section>
+    </>
   )
 }
 
