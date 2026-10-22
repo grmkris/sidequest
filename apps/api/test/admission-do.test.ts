@@ -163,3 +163,40 @@ test(
     })
   }),
 )
+
+test(
+  "an operator continuation without a session keeps the management object's refusal across Durable Object RPC",
+  Effect.gen(function* () {
+    const { url } = yield* stack
+    const env = {
+      network: 'monad-mainnet',
+      boardId: 'public',
+      rpcUrl: '',
+      domain: 'test.invalid',
+      uri: 'https://test.invalid',
+      manifestBaseUrl: '',
+      screening: { baseUrl: '', apiKey: '', model: '' },
+      attesterKey: '',
+      relayKey: '',
+      github: { appId: '', privateKeyPem: '', installationId: '' },
+    }
+    // SAFETY: the deployed probe Worker's url is a string.
+    const response = yield* HttpClient.post(url as string, {
+      body: HttpBody.text(
+        JSON.stringify({
+          name: 'public',
+          call: {
+            tool: 'submit_work',
+            args: {},
+            caller: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            env,
+            agentAuth: { agentId: '1', resource: 'https://test.invalid/mcp', operator: true },
+          },
+        }),
+        'application/json',
+      ),
+    })
+    // Thrown across RPC, this refusal lost its class and came back as an internal fault with an error id to retry.
+    expect(yield* response.json).toEqual({ ok: false, code: 'unauthenticated', message: 'Operator session required' })
+  }),
+)

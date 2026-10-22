@@ -1,5 +1,6 @@
 import { traceRpc } from './rpc-observability.ts'
 import { observedQueue } from './observability.ts'
+import { answer } from './board-answer.ts'
 import {
   ADMISSION_OBJECT_NAME,
   SPONSOR_OBJECT_NAME,
@@ -415,25 +416,27 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
           }
         }),
       operatorAgent: (req: { agentId: string; bearer?: string }) =>
-        Effect.promise(async () => {
-          const bindings = runtimeEnv as Record<string, unknown>
-          const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
-          if (namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString())
-            throw new Error('Management identity mismatch')
-          const desk = new SessionDesk({
-            sql: fromD1(bindings.Database as never),
-            now: () => Math.floor(Date.now() / 1000),
-            verify: async () => false,
-          })
-          const session = await desk.resolve({ bearer: req.bearer })
-          if (session === undefined) throw new BoardError('unauthenticated', 'Operator session required')
-          const agent = new AgentStore(
-            fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write)),
-            () => Math.floor(Date.now() / 1000),
-          ).owned(req.agentId, session.address)
-          if (agent.state !== 'active') throw new BoardError('forbidden', 'Agent is not active')
-          return toJson(agent)
-        }),
+        Effect.promise(() =>
+          answer('Operator agent read failed', async () => {
+            const bindings = runtimeEnv as Record<string, unknown>
+            const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
+            if (namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString())
+              throw new Error('Management identity mismatch')
+            const desk = new SessionDesk({
+              sql: fromD1(bindings.Database as never),
+              now: () => Math.floor(Date.now() / 1000),
+              verify: async () => false,
+            })
+            const session = await desk.resolve({ bearer: req.bearer })
+            if (session === undefined) throw new BoardError('unauthenticated', 'Operator session required')
+            const agent = new AgentStore(
+              fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write)),
+              () => Math.floor(Date.now() / 1000),
+            ).owned(req.agentId, session.address)
+            if (agent.state !== 'active') throw new BoardError('forbidden', 'Agent is not active')
+            return toJson(agent)
+          }),
+        ),
       // A refusal comes back as a reply, as `call`'s do: an error thrown across Durable Object RPC loses its class, so the
       // hosted executor would report the board's conflict as an internal fault to retry.
       verifyAgentSigning: (req: BoardCall & { typedData: string }) =>
@@ -459,63 +462,60 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         origin: string
         bearer?: string
       }) =>
-        callQueue(async () => {
-          const bindings = runtimeEnv as Record<string, unknown>
-          const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
-          if (
-            namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString() ||
-            req.env.network !== bindings.NETWORK
-          )
-            throw new Error('management object identity mismatch')
-          const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
-          migrateAgentSchema(sql)
-          const desk = new SessionDesk({
-            sql: fromD1(bindings.Database as never),
-            now: () => Math.floor(Date.now() / 1000),
-            verify: async () => false,
-          })
-          const session = await desk.resolve({ bearer: req.bearer })
-          const reply = await oauthRoute({
-            sql,
-            method: req.method,
-            path: req.path,
-            query: new URLSearchParams(req.query),
-            body: req.body,
-            origin: req.origin,
-            siteOrigin: req.origin,
-            ...(session === undefined ? {} : { owner: session.address }),
-            now: Math.floor(Date.now() / 1000),
-            revokeSubscriptions: async (principal, grantId, at) => {
-              await terminateGrantSubscriptions(fromD1(bindings.Database as never), principal, grantId, at)
-            },
-          })
-          // Consent may bind a waiting setup connection to its agent; revoking ends a connection.
-          syncListeners()
-          return toJson(reply ?? null)
-        }),
+        callQueue(() =>
+          answer('OAuth request failed', async () => {
+            const bindings = runtimeEnv as Record<string, unknown>
+            const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
+            if (
+              namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString() ||
+              req.env.network !== bindings.NETWORK
+            )
+              throw new Error('management object identity mismatch')
+            const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
+            migrateAgentSchema(sql)
+            const desk = new SessionDesk({
+              sql: fromD1(bindings.Database as never),
+              now: () => Math.floor(Date.now() / 1000),
+              verify: async () => false,
+            })
+            const session = await desk.resolve({ bearer: req.bearer })
+            const reply = await oauthRoute({
+              sql,
+              method: req.method,
+              path: req.path,
+              query: new URLSearchParams(req.query),
+              body: req.body,
+              origin: req.origin,
+              siteOrigin: req.origin,
+              ...(session === undefined ? {} : { owner: session.address }),
+              now: Math.floor(Date.now() / 1000),
+              revokeSubscriptions: async (principal, grantId, at) => {
+                await terminateGrantSubscriptions(fromD1(bindings.Database as never), principal, grantId, at)
+              },
+            })
+            // Consent may bind a waiting setup connection to its agent; revoking ends a connection.
+            syncListeners()
+            return toJson(reply ?? null)
+          }),
+        ),
       oauthResolve: (req: { resource: string; bearer?: string; activity?: boolean }) =>
-        Effect.sync(() => {
-          const bindings = runtimeEnv as Record<string, unknown>
-          const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
-          if (namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString())
-            throw new Error('management object identity mismatch')
-          const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
-          migrateAgentSchema(sql)
-          return sql
-        }).pipe(
-          Effect.flatMap((sql) =>
-            Effect.promise(async () => {
-              const now = Math.floor(Date.now() / 1000)
-              const grant = await resolveOAuth(sql, req.bearer, req.resource, now)
-              if (grant === undefined) return toJson(null)
-              // An MCP call: the agent's directory presence and the connection's last use on its agent page.
-              if (req.activity === true && grant.setup !== true)
-                new AgentStore(sql, () => now).touch(grant.agentIds[0]!)
-              if (req.activity === true && grant.grantId !== undefined) touchConnection(sql, grant.grantId, now)
-              // A connection that hears tool changes gets the exact list (ADR-0021).
-              return toJson({ ...grant, listening: grant.grantId !== undefined && listeners.listening(grant.grantId) })
-            }),
-          ),
+        Effect.promise(() =>
+          answer('OAuth resolution failed', async () => {
+            const bindings = runtimeEnv as Record<string, unknown>
+            const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
+            if (namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString())
+              throw new Error('management object identity mismatch')
+            const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
+            migrateAgentSchema(sql)
+            const now = Math.floor(Date.now() / 1000)
+            const grant = await resolveOAuth(sql, req.bearer, req.resource, now)
+            if (grant === undefined) return toJson(null)
+            // An MCP call: the agent's directory presence and the connection's last use on its agent page.
+            if (req.activity === true && grant.setup !== true) new AgentStore(sql, () => now).touch(grant.agentIds[0]!)
+            if (req.activity === true && grant.grantId !== undefined) touchConnection(sql, grant.grantId, now)
+            // A connection that hears tool changes gets the exact list (ADR-0021).
+            return toJson({ ...grant, listening: grant.grantId !== undefined && listeners.listening(grant.grantId) })
+          }),
         ),
       /**
        * A 2026 connection's `subscriptions/listen` stream. The bearer is resolved here again, so the stream belongs to the
@@ -626,86 +626,118 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         }),
       /** Directory presence: when hosted agents last used their connection. No operator, grant or approval data. */
       managedActivity: (req: { agentIds: string[] }) =>
-        Effect.sync(() => {
-          const bindings = runtimeEnv as Record<string, unknown>
-          const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
-          if (namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString())
-            throw new Error('management object identity mismatch')
-          const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
-          migrateAgentSchema(sql)
-          const config = sdk.deployment(bindings.NETWORK as sdk.Network)
-          return toJson(
-            new AgentStore(sql, () => Math.floor(Date.now() / 1000)).lastActivity(
-              config.chainId,
-              config.identity,
-              req.agentIds,
-            ),
-          )
-        }),
+        Effect.promise(() =>
+          answer(
+            'Agent activity read failed',
+            () => {
+              const bindings = runtimeEnv as Record<string, unknown>
+              const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
+              if (namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString())
+                throw new Error('management object identity mismatch')
+              const sql = fromDurableObjectSql(state.storage.sql.raw, (write) =>
+                state.raw.storage.transactionSync(write),
+              )
+              migrateAgentSchema(sql)
+              const config = sdk.deployment(bindings.NETWORK as sdk.Network)
+              return toJson(
+                new AgentStore(sql, () => Math.floor(Date.now() / 1000)).lastActivity(
+                  config.chainId,
+                  config.identity,
+                  req.agentIds,
+                ),
+              )
+            },
+            { retry: 'read' },
+          ),
+        ),
       /**
        * Hosted agents' public profiles, for their registration files (`agentKey`) and `/data/profiles` (every minted
        * agent, or one `agentId`): name, description, tagline and avatar key. No operator, grant or approval data.
        */
       managedProfiles: (req: { agentKey?: string; agentId?: string }) =>
-        Effect.promise(async () => {
-          // SAFETY: the Worker environment is a plain record of this Worker's bindings and variables.
-          const bindings = runtimeEnv as Record<string, unknown>
-          // SAFETY: Board is this Worker's own Durable Object namespace binding, declared in worker.ts.
-          const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
-          if (namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString())
-            throw new Error('management object identity mismatch')
-          const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
-          migrateAgentSchema(sql)
-          const reader = profileReader(
-            sql,
-            () => Math.floor(Date.now() / 1000),
-            // SAFETY: NETWORK is the Worker's configured network name, checked by sdk.deployment.
-            sdk.deployment(bindings.NETWORK as sdk.Network),
-          )
-          return toJson(
-            req.agentKey === undefined ? await reader.profiles(req.agentId) : await reader.registration(req.agentKey),
-          )
-        }),
+        Effect.promise(() =>
+          answer(
+            'Agent profile read failed',
+            async () => {
+              // SAFETY: the Worker environment is a plain record of this Worker's bindings and variables.
+              const bindings = runtimeEnv as Record<string, unknown>
+              // SAFETY: Board is this Worker's own Durable Object namespace binding, declared in worker.ts.
+              const namespace = bindings.Board as { idFromName(name: string): { toString(): string } }
+              if (namespace.idFromName(SPONSOR_OBJECT_NAME).toString() !== state.id.toString())
+                throw new Error('management object identity mismatch')
+              const sql = fromDurableObjectSql(state.storage.sql.raw, (write) =>
+                state.raw.storage.transactionSync(write),
+              )
+              migrateAgentSchema(sql)
+              const reader = profileReader(
+                sql,
+                () => Math.floor(Date.now() / 1000),
+                // SAFETY: NETWORK is the Worker's configured network name, checked by sdk.deployment.
+                sdk.deployment(bindings.NETWORK as sdk.Network),
+              )
+              return toJson(
+                req.agentKey === undefined
+                  ? await reader.profiles(req.agentId)
+                  : await reader.registration(req.agentKey),
+              )
+            },
+            { retry: 'read' },
+          ),
+        ),
       /** Public quote-request facts about hosted posters: agent IDs and one grant's headroom. No operator, grant or approval data. */
       hostedCreators: (req: { env: BoardCall['env']; query: HostedCreatorQuery }) =>
-        Effect.promise(async () => {
-          const sql = sponsorStore(req.env.network)
-          const query = {
-            addresses: req.query.addresses.filter((a) => isAddress(a)).slice(0, 90),
-            allowances: req.query.allowances.filter((a) => isAddress(a.address) && isAddress(a.token)).slice(0, 50),
-          }
-          return toJson(
-            await hostedCreatorFacts(
-              sql,
-              sdk.context(req.env.network, 'main', req.env.rpcUrl, { batch: true, trace: traceRpc }),
-              query,
-              Math.floor(Date.now() / 1000),
-            ),
-          )
-        }),
+        Effect.promise(() =>
+          answer(
+            'Hosted creator read failed',
+            async () => {
+              const sql = sponsorStore(req.env.network)
+              const query = {
+                addresses: req.query.addresses.filter((a) => isAddress(a)).slice(0, 90),
+                allowances: req.query.allowances.filter((a) => isAddress(a.address) && isAddress(a.token)).slice(0, 50),
+              }
+              return toJson(
+                await hostedCreatorFacts(
+                  sql,
+                  sdk.context(req.env.network, 'main', req.env.rpcUrl, { batch: true, trace: traceRpc }),
+                  query,
+                  Math.floor(Date.now() / 1000),
+                ),
+              )
+            },
+            { retry: 'read' },
+          ),
+        ),
       /** Which wallets are active hosted agents, with operators; boards use it to authorize and never return it. */
       hostedOperators: (req: { env: BoardCall['env']; addresses: readonly string[] }) =>
-        Effect.sync(() => {
-          const sql = sponsorStore(req.env.network)
-          const addresses = req.addresses.filter((a) => isAddress(a)).slice(0, 90)
-          return toJson(
-            hostedOperatorFacts(sql, sdk.deployment(req.env.network), addresses, Math.floor(Date.now() / 1000)),
-          )
-        }),
+        Effect.promise(() =>
+          answer(
+            'Hosted operator read failed',
+            () => {
+              const sql = sponsorStore(req.env.network)
+              const addresses = req.addresses.filter((a) => isAddress(a)).slice(0, 90)
+              return toJson(
+                hostedOperatorFacts(sql, sdk.deployment(req.env.network), addresses, Math.floor(Date.now() / 1000)),
+              )
+            },
+            { retry: 'read' },
+          ),
+        ),
       /** Private management storage remains in the existing reserved object. */
       management: (req: { kind: 'migrate' | 'retire' }) =>
-        Effect.sync(() => {
-          const namespace = (runtimeEnv as Record<string, unknown>).Board as
-            | { idFromName(name: string): { toString(): string } }
-            | undefined
-          const objectName = req.kind === 'retire' ? '__sidequest_fleet_v1__' : SPONSOR_OBJECT_NAME
-          if (namespace?.idFromName(objectName).toString() !== state.id.toString())
-            throw new Error('management object identity mismatch')
-          const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
-          if (req.kind === 'retire') retireFleetSchema(sql)
-          else migrateAgentSchema(sql)
-          return 'null'
-        }),
+        Effect.promise(() =>
+          answer('Management storage migration failed', () => {
+            const namespace = (runtimeEnv as Record<string, unknown>).Board as
+              | { idFromName(name: string): { toString(): string } }
+              | undefined
+            const objectName = req.kind === 'retire' ? '__sidequest_fleet_v1__' : SPONSOR_OBJECT_NAME
+            if (namespace?.idFromName(objectName).toString() !== state.id.toString())
+              throw new Error('management object identity mismatch')
+            const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
+            if (req.kind === 'retire') retireFleetSchema(sql)
+            else migrateAgentSchema(sql)
+            return 'null'
+          }),
+        ),
       /** Internal relay RPC shares the reserved object's queue and durable nonce ledger with sponsorship. */
       relay: (req: { env: BoardCall['env']; request: RelayRequest }) =>
         relayQueue(async (): Promise<string> => {

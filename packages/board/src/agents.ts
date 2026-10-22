@@ -4,6 +4,7 @@ import { migrateAgentSchema } from './agent-schema.ts'
 import type { Sql } from './store.ts'
 import { SPONSOR_OBJECT_NAME } from './sponsor.ts'
 import { AgentFailure } from './agent-failure.ts'
+import { BoardError } from './board-error.ts'
 
 export const AGENTS_OBJECT_NAME = SPONSOR_OBJECT_NAME
 /** What an operator lets its agent do (ADR-0021); a connection's OAuth scope only bounds it. */
@@ -114,13 +115,14 @@ export class AgentStore {
 
   get(id: string): AgentRow {
     const row = this.sql.all<AgentRow>('SELECT * FROM agents WHERE id=?', id)[0]
-    if (!row) throw new Error('Agent not found')
+    if (!row) throw new BoardError('not-found', 'Agent not found')
     return row
   }
 
   owned(id: string, operator: string): AgentRow {
     const row = this.get(id)
-    if (row.operator.toLowerCase() !== operator.toLowerCase()) throw new Error('Agent belongs to another operator')
+    if (row.operator.toLowerCase() !== operator.toLowerCase())
+      throw new BoardError('forbidden', 'Agent belongs to another operator')
     return row
   }
 
