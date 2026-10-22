@@ -5,6 +5,7 @@ import {
   admissionFailure,
   parseHostedAdmission,
   readOnlyHostedTools,
+  unwrapReply,
   SessionDesk,
 } from '@sidequest/board'
 import { fromD1 } from '@sidequest/indexer'
@@ -52,21 +53,23 @@ export async function admissionIdentity(bindings: Record<string, unknown>, input
       const management = namespace.get(namespace.idFromName(SPONSOR_OBJECT_NAME)) as unknown as {
         operatorAgent(req: { agentId: string; bearer?: string }): Promise<string>
       }
-      const agent = JSON.parse(
+      // SAFETY: operatorAgent answers the stored agent row; only its address is read.
+      const agent = unwrapReply(
         await management.operatorAgent({
           agentId: input.agentAuth.agentId,
           ...(input.bearer === undefined ? {} : { bearer: input.bearer }),
         }),
-      ) as { address: typeof address }
+      ).result as { address: typeof address }
       if (!OPERATOR_CONTINUATIONS.has(input.tool)) throw new Error('Operator continuation scope mismatch')
       address = agent.address
     } else {
-      const grant = JSON.parse(
+      // SAFETY: oauthResolve answers the resolved grant, or null when the bearer resolves to none.
+      const grant = unwrapReply(
         await namespace.get(namespace.idFromName(SPONSOR_OBJECT_NAME)).oauthResolve({
           resource: input.agentAuth.resource,
           ...(input.bearer === undefined ? {} : { bearer: input.bearer }),
         }),
-      ) as OAuthGrant | null
+      ).result as OAuthGrant | null
       if (
         grant === null ||
         !grant.agentIds.includes(input.agentAuth.agentId) ||

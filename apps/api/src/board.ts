@@ -17,6 +17,7 @@ import {
   agentFailureReply,
   errorDiagnostics,
   failureFromReply,
+  unwrapReply,
   type AgentRetry,
   hostedCreatorFacts,
   hostedOperatorFacts,
@@ -220,7 +221,8 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
                 Math.floor(Date.now() / 1000),
               )
             }
-            return JSON.parse(await namespace.get(id).hostedCreators({ env, query })) as HostedCreatorFacts
+            // SAFETY: the sponsor object's own hostedCreators RPC serialised these facts.
+            return unwrapReply(await namespace.get(id).hostedCreators({ env, query })).result as HostedCreatorFacts
           },
           // Authorization facts only (operator of a hosted creator, same-operator applications); never returned.
           hostedOperators: async (addresses) => {
@@ -240,7 +242,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               return hostedOperatorFacts(sql, sdk.deployment(env.network), addresses, Math.floor(Date.now() / 1000))
             }
             // SAFETY: the sponsor object's own hostedOperators RPC serialised this array just above.
-            return JSON.parse(await namespace.get(id).hostedOperators({ env, addresses })) as HostedOperator[]
+            return unwrapReply(await namespace.get(id).hostedOperators({ env, addresses })).result as HostedOperator[]
           },
           // ADR-0023: the board signs the attestation and the worker attaches it in its own submit; no relay sends it.
           ...(key32(env.attesterKey)
@@ -268,12 +270,13 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         const management = namespace.get(namespace.idFromName(SPONSOR_OBJECT_NAME)) as unknown as {
           operatorAgent(req: { agentId: string; bearer?: string }): Promise<string>
         }
-        const agent = JSON.parse(
+        // SAFETY: operatorAgent answers the stored agent row, whose address and chain_id are read below.
+        const agent = unwrapReply(
           await management.operatorAgent({
             agentId: req.agentAuth.agentId,
             ...(req.bearer === undefined ? {} : { bearer: req.bearer }),
           }),
-        ) as { address: string; chain_id: number }
+        ).result as { address: string; chain_id: number }
         if (
           agent.address.toLowerCase() !== req.caller?.toLowerCase() ||
           agent.chain_id !== sdk.deployment(req.env.network).chainId ||
@@ -282,12 +285,13 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
           throw new BoardError('forbidden', 'Operator continuation is outside this agent action')
         return { address: agent.address }
       }
-      const grant = JSON.parse(
+      // SAFETY: oauthResolve answers the resolved grant, or null when the bearer resolves to none.
+      const grant = unwrapReply(
         await namespace.get(namespace.idFromName(SPONSOR_OBJECT_NAME)).oauthResolve({
           resource: req.agentAuth.resource,
           ...(req.bearer === undefined ? {} : { bearer: req.bearer }),
         }),
-      ) as OAuthGrant | null
+      ).result as OAuthGrant | null
       const origin = new URL(req.agentAuth.resource).origin
       if (
         grant === null ||

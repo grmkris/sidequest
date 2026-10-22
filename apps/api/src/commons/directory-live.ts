@@ -1,5 +1,5 @@
 import { Address, Directory } from '@sidequest/commons'
-import { SPONSOR_OBJECT_NAME } from '@sidequest/board'
+import { SPONSOR_OBJECT_NAME, unwrapReply } from '@sidequest/board'
 import type { AsyncSql } from '@sidequest/indexer'
 import * as sdk from '@sidequest/sdk'
 import { Effect, Layer, Option, Schema } from 'effect'
@@ -16,8 +16,8 @@ const AgentId = Schema.String.check(Schema.isPattern(/^[1-9][0-9]{0,77}$/u))
 const agentIdOf = (token: string): string | null => Option.getOrNull(Schema.decodeUnknownOption(AgentId)(token))
 
 async function names(sql: AsyncSql, namespace: DirectoryNamespace, ctx: sdk.Ctx, audience: string) {
-  const hosted = Schema.decodeUnknownSync(Schema.fromJsonString(Profiles))(
-    await namespace.getByName(SPONSOR_OBJECT_NAME).managedProfiles({}),
+  const hosted = Schema.decodeUnknownSync(Profiles)(
+    unwrapReply(await namespace.getByName(SPONSOR_OBJECT_NAME).managedProfiles({})).result,
   )
   const rows = await sql.all<{ json: string }>(
     'SELECT json FROM directory_agents WHERE chain_id=? AND registry=? AND audience=? AND enrolled=1',

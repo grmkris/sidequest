@@ -9,6 +9,7 @@ import {
   failureFromReply,
   failureKind,
   StoredDataError,
+  unwrapReply,
 } from './agent-failure.ts'
 import { BoardError } from './board-error.ts'
 
@@ -209,6 +210,31 @@ describe('the tenant boundary (VV2-017)', () => {
       code: 'conflict',
       message: 'signing requires an open unassigned hire',
     })
+  })
+})
+
+describe('unwrapReply', () => {
+  it('answers the result of a reply and rethrows its refusal with the code, retry and error id kept', () => {
+    expect(unwrapReply(JSON.stringify({ ok: true, result: { address: '0xabc' } })).result).toEqual({ address: '0xabc' })
+    expect(unwrapReply(JSON.stringify({ ok: true, result: null })).result).toBeNull()
+    const refusal = agentFailureReply(new BoardError('unauthenticated', 'Operator session required'), 'x', vi.fn())
+    const thrown = (() => {
+      try {
+        unwrapReply(JSON.stringify(refusal))
+      } catch (error) {
+        return error
+      }
+    })()
+    expect(thrown).toBeInstanceOf(BoardError)
+    expect(agentFailureReply(thrown, 'Operator agent read failed', vi.fn())).toEqual(refusal)
+    const fault = agentFailureReply(new Error('boom'), 'Operator agent read failed', vi.fn())
+    expect(() => unwrapReply(JSON.stringify(fault))).toThrow(fault.message)
+  })
+
+  it("passes an object's bare value through, as one still on the previous version answers", () => {
+    for (const bare of [null, [], [{ agentId: '1' }], { address: '0xabc', chain_id: 143 }, { ok: 'yes' }, 'text'])
+      expect(unwrapReply(JSON.stringify(bare)).result).toEqual(bare)
+    expect(() => unwrapReply('not json')).toThrow(SyntaxError)
   })
 })
 

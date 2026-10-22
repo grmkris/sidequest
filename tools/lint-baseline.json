@@ -6,7 +6,7 @@
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(no-runtime-typeof)": 1,
     "anti-slop(no-unknown-returns)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 9,
+    "anti-slop(require-safety-comment-for-type-assertion)": 7,
     "complexity(complexity)": 1,
     "typescript(no-base-to-string)": 1
   },
@@ -39,7 +39,7 @@
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(no-runtime-typeof)": 3,
     "anti-slop(no-unknown-returns)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 51,
+    "anti-slop(require-safety-comment-for-type-assertion)": 48,
     "complexity(complexity)": 3,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 4,
@@ -169,7 +169,7 @@
     "eslint(max-lines)": 1
   },
   "apps/api/src/worker.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 19,
+    "anti-slop(require-safety-comment-for-type-assertion)": 17,
     "complexity(complexity)": 3,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,

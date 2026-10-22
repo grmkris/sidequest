@@ -171,6 +171,23 @@ export function failureFromReply(reply: {
   })
 }
 
+/**
+ * A Board Durable Object's answer, read by its caller: the result of an `{ok: true, result}` reply, or the refusal of
+ * an `{ok: false, code, message}` reply rebuilt and thrown (failureFromReply), so the caller's own boundary keeps its
+ * code. An error thrown across Durable Object RPC loses its class, which turned refusals into "internal, retry" faults;
+ * the objects answer replies instead. For a few minutes after a deploy an object can still run the previous version and
+ * answer its bare value (a row, a grant, `null`, an array): that is the result as it is. No bare value has a boolean
+ * `ok`. The caller names the result's type, as it does for BoardReply.
+ */
+export function unwrapReply(text: string): { readonly result: unknown } {
+  const value: unknown = JSON.parse(text)
+  if (!(value instanceof Object) || Array.isArray(value)) return { result: value }
+  const reply: Record<string, unknown> = Object.fromEntries(Object.entries(value))
+  const { ok, code, message } = reply
+  if (ok === false && isText(code) && isText(message)) throw failureFromReply({ ...reply, code, message })
+  return { result: ok === true && Object.hasOwn(reply, 'result') ? reply.result : value }
+}
+
 /** The custom errors our contracts declare: the only revert names a reply may carry. */
 const KNOWN_REVERTS: ReadonlySet<string> = new Set(
   [

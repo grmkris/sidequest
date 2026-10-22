@@ -3,6 +3,7 @@
  * (`/profiles/<agent key>.json`, what a hosted agent's agentURI names) and `/data/profiles[/<agentId>]`. Profiles live
  * in the management object, which `read` reaches; nothing here needs a session.
  */
+import { unwrapReply } from '@sidequest/board'
 import { avatarResponse, type AvatarBucket } from '../avatars.ts'
 import { profilesResponse, registrationResponse, type HostedProfile, type ProfilesReader } from '../profiles.ts'
 
@@ -23,9 +24,11 @@ export async function profileRoute(path: string, origin: string, deps: ProfileRo
   if (path.startsWith('/avatars/')) return avatarResponse(deps.bucket, path)
   if (path.startsWith('/samples/')) return avatarResponse(deps.bucket, path, 'samples')
   const reader: ProfilesReader = {
-    registration: async (agentKey): Promise<HostedProfile | null> => JSON.parse(await deps.read({ agentKey })),
-    profiles: async (agentId): Promise<HostedProfile[]> =>
-      JSON.parse(await deps.read(agentId === undefined ? {} : { agentId })),
+    // SAFETY: managedProfiles answers one registration (or null) by key, and the minted profiles otherwise.
+    registration: async (agentKey) => unwrapReply(await deps.read({ agentKey })).result as HostedProfile | null,
+    // SAFETY: as above, the minted profiles.
+    profiles: async (agentId) =>
+      unwrapReply(await deps.read(agentId === undefined ? {} : { agentId })).result as HostedProfile[],
   }
   return path.startsWith('/profiles/')
     ? registrationResponse(reader, origin, path)

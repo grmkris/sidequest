@@ -27,6 +27,7 @@ import {
   failureFromReply,
   isAllowedOrigin,
   publicTenant,
+  unwrapReply,
 } from '@sidequest/board'
 import { admissionDrainBinding, runtimeSecret } from './prod-config.ts'
 import { type AsyncSql, agentsOfWallet, fromD1, indexStatus, listAgents, networkStats } from '@sidequest/indexer'
@@ -89,6 +90,9 @@ import { avatarRouteRequest } from './agent-profile-management.ts'
 import { objectFor } from './commons/route.ts'
 import { aaRpcRoute } from './aa-proxy.ts'
 import { MAX_API_BODY_BYTES, MAX_TELEGRAM_BODY_BYTES, readRequestBody } from './request-body.ts'
+
+/** What the management object's managedActivity answers: each hosted agent's last activity. */
+type ManagedActivity = Array<{ agent_id: string; address: string; last_activity_at: number }>
 
 const STATUS: Record<string, number> = {
   unauthenticated: 401,
@@ -370,14 +374,15 @@ export default class Api extends Cloudflare.Worker<Api>()(
           await migrateTelegram(sql)
         })()
         yield* Effect.promise(() => migrated as Promise<void>).pipe(Effect.withSpan('api.migrations'))
+        // A failed migration fails the request: unwrapReply rethrows the object's refusal.
         yield* boards
           .getByName('__sidequest_fleet_v1__')
           .management({ kind: 'retire' })
-          .pipe(Effect.withSpan('api.retire-fleet'))
+          .pipe(Effect.map(unwrapReply), Effect.withSpan('api.retire-fleet'))
         yield* boards
           .getByName(SPONSOR_OBJECT_NAME)
           .management({ kind: 'migrate' })
-          .pipe(Effect.withSpan('api.management-migrations'))
+          .pipe(Effect.map(unwrapReply), Effect.withSpan('api.management-migrations'))
 
         const tenant = yield* Effect.promise(async (): Promise<TenantConfig | undefined> => {
           if (boardId === PUBLIC_BOARD_ID)
@@ -453,8 +458,10 @@ export default class Api extends Cloudflare.Worker<Api>()(
           audience: url.origin,
           call: async (id: string, req: import('./directory-object.ts').DirectoryCall) =>
             JSON.parse(await yieldlessDirectoryCall(id, req)),
+          // SAFETY: managedActivity answers the activity of these agents, the shape `activity` declares.
           activity: async (agentIds: string[]) =>
-            JSON.parse(await runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds }))),
+            unwrapReply(await runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds })))
+              .result as ManagedActivity,
         }
         const directoryCall = (tool: string, args: Record<string, unknown>) =>
           runDirectoryTool(directoryDeps, tool, args)
@@ -724,7 +731,8 @@ export default class Api extends Cloudflare.Worker<Api>()(
               { error: 'invalid_request', error_description: 'OAuth requests require the website origin' },
               403,
             )
-          const reply = JSON.parse(
+          // SAFETY: the management object's oauth answers the route's reply, or null for a path it does not serve.
+          const reply = unwrapReply(
             yield* boards.getByName(SPONSOR_OBJECT_NAME).oauth({
               env,
               method: request.method,
@@ -734,7 +742,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
               origin: url.origin,
               ...(bearer === undefined ? {} : { bearer }),
             }),
-          ) as OAuthReply | null
+          ).result as OAuthReply | null
           if (reply !== null)
             return reply.redirect === undefined
               ? json(reply.body, reply.status, reply.headers)
@@ -766,11 +774,12 @@ export default class Api extends Cloudflare.Worker<Api>()(
           const resource = `${url.origin}${url.pathname}`
           const started = Date.now()
           // One resolution per MCP request, which also records the connection's use.
-          const grant = JSON.parse(
+          // SAFETY: oauthResolve answers the resolved grant, or null when the bearer resolves to none.
+          const grant = unwrapReply(
             yield* boards
               .getByName(SPONSOR_OBJECT_NAME)
               .oauthResolve({ resource, activity: true, ...(bearer === undefined ? {} : { bearer }) }),
-          ) as OAuthGrant | null
+          ).result as OAuthGrant | null
           const reply = yield* Effect.promise(() =>
             mcpRoute({
               method: request.method,
@@ -902,8 +911,10 @@ export default class Api extends Cloudflare.Worker<Api>()(
                   sql,
                   network,
                   audience: url.origin,
+                  // SAFETY: managedActivity answers the activity of these agents, the shape `activity` declares.
                   activity: async (agentIds) =>
-                    JSON.parse(await runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds }))),
+                    unwrapReply(await runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedActivity({ agentIds })))
+                      .result as ManagedActivity,
                 },
                 url,
                 now(),
