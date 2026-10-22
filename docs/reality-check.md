@@ -2000,3 +2000,37 @@ Both of this session's promotions passed prod CI. Each live check passed 11/11 o
 
 No mainnet transaction was made. Signed-in prod flows were not exercised. The Safe is still 1-of-1.
 [Report and evidence](evidence/prod-release-2026-10-20/README.md).
+
+## Crew stability, standard MCP OAuth and video through prod MySI (22 Oct 2026, overnight)
+
+Kris asked for an overnight run that leaves the bots stable and making videos through production MySI, with clean,
+standard patterns and no compatibility layers. What is live, and the evidence:
+
+- **Prod crew restarted twice** (`crew.ts up`, CREW_STAGE=prod): first on `4337f533`, then on `0aed83bd`. All four
+  containers (`sq-bot-prod-{patch,grokbot,video,token}`) carry `sidequest.source` 0aed83bd, run `bun --no-install /crew/src/crew/bin/crew.js`, and logged an idle pass after each restart.
+  - Open fixed-price jobs wake fitting members (b613196f); a nudge is consumed only by a run that exits 0 and is parked
+    after three failed runs; a per-member breaker moves a member to its fallback model only on capacity refusals
+    (4337f533, a2861754).
+  - Every member signs in through the MCP SDK's OAuth flow (f5dc7d4c). The four prod token stores were converted to the
+    SDK's shapes; Patch's and Reel's next wake refreshed through the SDK (issuer stamped
+    `https://sidequest.exchange`); a relayed `call grokbot whoami` answered agent 10399.
+  - Reel renders through prod MySI and delivers MyMedia shares (c3732ce0). Not yet live: its MySI sign-in waits for
+    Kris's consent, and it holds with the login command until then.
+- **Prod MySI templates for Kris's owner:** the four starters from myapps prod `405b78ac1` were published through
+  Goblin's prod "MySI" connection (changelog `wft_2umV-hVk59-rnenpLSLr4g`, story `wft_6WUQ9SzTFFoY-29r4AvdMg`, flyer
+  `wft_QTa_NkkSPpwuKDuc5hc-yg`, podcast cover `wft_bnCn_mTOH_0tdQPDvUpzzw`). Prod cutd `0.1.0-405b78ac1964` was
+  published by swarmm's Lane M; both prod machines render templates.
+- **Goblin Reel on prod MySI, a real testnet job end to end:** Desk's request `d6dd473da893cd51` → Reel's quote
+  `92202ffde770a8d3` (3.5 mUSD) → pick (tx `0xaaf51e38…`) → select → activation → MySI run
+  `wf_1792639094720_aoAVUCKfFUdkOIwFtTnpPQ` (302 s, 1080×1920, 40.27 s) → `submit_work` artifact, whose board check
+  reads "sha256 matches (22928994 bytes)" → approved (tx `0x15321e1c7ea1babd9b885eed392a2a11b2460b5002794839bb1f5779f8994ff3`),
+  dev job `c6fa21fae0385d71` completed. Two manual nudges: Goblin routines wake only on events, and none came after
+  activation; and the completion turn ran out of budget searching job threads (Reel's instructions now find its one
+  active job instead).
+- **Dev job #2 settled:** the undisputed rejection of task `59299b20bd6ad110` settled through Desk's
+  `settlement_actions` (tx `0x82d321b2d1311d0061de769af291b1c84c4c8119c5384f86e10af46bb1cba6a6`), returning 3.5 mUSD to
+  Desk.
+- **Signing check refusals:** a conflict from the hosted signing check reached agents as an internal error to retry
+  (498653ff fixes it on dev; see its record for the prod release).
+
+Not established: Reel's crew container rendering a real job through MySI (waits for the consent); a mainnet job.
