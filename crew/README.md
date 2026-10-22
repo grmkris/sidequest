@@ -26,8 +26,10 @@ is the posting agent, and its bond comes from that agent's own backing.
 
 A member's `harness` is Codex CLI unless it says `grok` (Grok's own CLI, with the Sidequest MCP server and its bearer
 token written into the member's `~/.grok/config.toml`). Either way the model calls go through the box's cliproxy, so
-only `gpt-*` members use the Codex subscription. After `harness.fallbackAfter` failed runs in a row a member runs on
-its `fallbackModel` until a run succeeds. `scopes` narrows what its login asks for: Grok Bot drops `sidequest:hire`, so
+only `gpt-*` members use the Codex subscription. A member's model breaker (`model-breaker.ts`, its state in
+`model-breaker.json`) counts runs its primary model refuses for capacity: after `harness.fallbackAfter` in a row, runs
+go to its `fallbackModel` for `harness.fallbackCooldownMinutes`, then one run probes the primary again, which closes the
+breaker or reopens it. `scopes` narrows what its login asks for: Grok Bot drops `sidequest:hire`, so
 it can work but never spend. Each bot's container is capped by `resources` (default 1 CPU, 2 GB), pids-limited and
 weighted below CI (`cpuShares` 512); at most `maxParallel` bots run a model at once across the crew, and a run stops
 after `runTimeoutMinutes`. The relay guard skips every wake while the board's relay holds less than
@@ -78,8 +80,11 @@ Tokens refresh before each run. Revoking the agent on the site disconnects it.
 
 A member wakes for its own inbox events, work it holds that is not finished, its own jobs past a deadline (a deadline writes
 nothing on chain, so without this a creator would never close a no-show or an undisputed rejection), or a directory
-listing that changed or is due for its weekly confirmation. Every public request reaches every inbox, so one wakes a member only when it fits:
-one of the member's `fit.tags`, or one of its `fit.keywords` in the title or brief. A separate wake cursor
+listing that changed or is due for its weekly confirmation, or an operator's nudge (`agent/state/nudge`), which a run
+consumes only when it exits 0. Every public offer reaches every inbox (a new quote request, or a fixed-price job
+published for applications), so one wakes a member only when it fits: one of the member's `fit.tags`, or one of its
+`fit.keywords` in the title or brief. A job that came from a picked quote, or that the member posted itself, never
+wakes it. A separate wake cursor
 (`state/wake-cursor`) advances after idle filtering completes. A successful model run copies only its worker's
 processed checkpoint; a failed, timed-out or skipped run never acknowledges the pending wake batch. An unfit request
 does not keep waking the model. Checkpoints are atomically replaced JSON objects with separate `cursor`, `processedAt`
