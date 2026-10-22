@@ -4,7 +4,7 @@
  */
 import type { Phase } from '@sidequest/react'
 import { Circle, CircleCheck } from 'lucide-react'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { type ReactNode, useLayoutEffect, useRef, useState } from 'react'
 import { type DeliveryWhere, useJobDelivery } from '../../delivery-preview.ts'
 import { previewPlan } from '../../delivery-plan.ts'
 import { type Milestone, milestones } from '../../job-milestones.ts'
@@ -143,16 +143,22 @@ const DOT: Readonly<Record<Milestone['state'], string>> = {
   closed: 'bg-muted-foreground/60',
 }
 
-/** Posted, hired, delivered and paid, with when; or where a job that left that path ended. */
-function Milestones({ events }: { events: readonly TimelineEvent[] }) {
+/**
+ * Posted, hired, delivered and paid, with when, as a receipt's lines on dotted leaders; or where a job that left that
+ * path ended. Below the money when there is a head, parted from it by a dashed tear line.
+ */
+function Milestones({ events, below }: { events: readonly TimelineEvent[]; below: boolean }) {
   return (
-    <ol aria-label="Milestones" className="m-0 grid list-none rounded-xl bg-card p-0 px-4 py-1.5 shadow-stock">
+    <ol
+      aria-label="Milestones"
+      className={cn('m-0 grid list-none p-0 px-4 py-2', below && 'border-t border-dashed border-border')}
+    >
       {milestones(events).map((m) => (
-        <li key={m.label} className="flex min-h-9 items-center gap-3 text-sm">
+        <li key={m.label} className="flex min-h-9 items-center gap-2.5 text-sm">
           <span aria-hidden className={cn('size-2 shrink-0 rounded-full', DOT[m.state])} />
           <span
             className={cn(
-              'min-w-0 flex-1',
+              'min-w-0 shrink-0',
               m.state === 'todo' && 'text-muted-foreground',
               m.state === 'failed' && 'text-destructive-text',
             )}
@@ -160,6 +166,10 @@ function Milestones({ events }: { events: readonly TimelineEvent[] }) {
             {m.label}
             {m.state === 'todo' && <span className="sr-only">, not yet</span>}
           </span>
+          <span
+            aria-hidden
+            className="min-w-4 flex-1 translate-y-[0.3em] border-b border-dotted border-foreground/25"
+          />
           {m.at !== null && (
             <time
               dateTime={new Date(m.at * 1000).toISOString()}
@@ -180,18 +190,31 @@ export function JobStory({
   events,
   job,
   phase,
+  money,
 }: {
   events: readonly TimelineEvent[]
   job: TimelineJob
   phase: Phase | null
+  /** What the job pays, at the head of the same slip. */
+  money?: ReactNode
 }) {
-  if (events.length === 0) return null
+  if (events.length === 0 && money === undefined) return null
   return (
     <>
-      <Milestones events={events} />
-      <Details summary="All chain events">
-        <Timeline events={[...events]} job={job} phase={phase} />
-      </Details>
+      <Receipt>
+        {money}
+        {events.length > 0 && <Milestones events={events} below={money !== undefined} />}
+      </Receipt>
+      {events.length > 0 && (
+        <Details summary="All chain events">
+          <Timeline events={[...events]} job={job} phase={phase} />
+        </Details>
+      )}
     </>
   )
+}
+
+/** One cotton slip on the desk: the job's money and its milestones read as a single receipt. */
+export function Receipt({ children }: { children: ReactNode }) {
+  return <div className="grid min-w-0 rounded-lg bg-card shadow-stock">{children}</div>
 }

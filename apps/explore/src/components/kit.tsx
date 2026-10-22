@@ -144,7 +144,7 @@ export const shortAddress = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
 const STAT_SIZE = {
   sm: 'truncate font-medium',
   md: 'text-base leading-tight font-semibold tracking-tight',
-  lg: 'text-lg leading-tight font-semibold tracking-tight',
+  lg: 'text-2xl leading-tight font-semibold tracking-tight',
 } as const
 
 /** A figure in a `<dl>`: its label, its value in tabular numerals, and an optional line under it. */
@@ -296,7 +296,7 @@ export function Segmented<T extends string>({
             )
           }
           className={cn(
-            'min-h-8 min-w-min flex-1 rounded-md px-2.5 py-1 text-ui font-medium break-words transition-[background-color,color,box-shadow] duration-(--dur-fast) pointer-coarse:min-h-11',
+            'min-h-8 min-w-min flex-1 rounded-md px-2.5 py-1 text-ui font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-(--dur-fast) pointer-coarse:min-h-11',
             value === v ? 'bg-card text-foreground shadow-stock' : 'text-muted-foreground hover:text-foreground',
           )}
         >

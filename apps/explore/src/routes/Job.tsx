@@ -15,7 +15,7 @@ import {
 } from '@sidequest/react'
 import { useQuery } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
-import { ChevronLeft, ChevronRight, CircleAlert, Clock, Lock, ReceiptText } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleAlert, Clock, Lock } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert.tsx'
 import type { Address as Account } from 'viem'
 import {
@@ -35,7 +35,7 @@ import { LaunchNotice } from '../components/LaunchGate.tsx'
 import { FeeQuote, TopUp } from '../components/job/V1Panels.tsx'
 import { type ActionJob, type JobEvent, JobActions } from '../components/job/JobActions.tsx'
 import type { TimelineEvent } from '../components/job/Timeline.tsx'
-import { DeliveryHero, JobStory, Parties } from '../components/job/JobParts.tsx'
+import { DeliveryHero, JobStory, Parties, Receipt } from '../components/job/JobParts.tsx'
 import { Thread } from '../components/job/Thread.tsx'
 import { WalletLink } from '../components/WalletLink.tsx'
 import { AgentLabel, useAgentName } from '../components/agent/AgentChip.tsx'
@@ -426,14 +426,22 @@ export function JobPage({
           )}
 
           <aside className="grid min-w-0 content-start gap-4 [grid-area:side] @4xl/detail:sticky @4xl/detail:top-6 @4xl/detail:self-start">
-            {reward !== null && (
-              <Money phase={phase} reward={reward} token={token} agentId={agentId} charge={chargeOf(d)} />
-            )}
-            {d !== undefined && (
+            {d === undefined ? (
+              reward !== null && (
+                <Receipt>
+                  <Money phase={phase} reward={reward} token={token} agentId={agentId} charge={chargeOf(d)} />
+                </Receipt>
+              )
+            ) : (
               <JobStory
                 events={d.timeline ?? []}
                 phase={phase}
                 job={{ token, reward, agentId, deliveryDeadline: d.job.delivery_deadline, creator: d.job.creator }}
+                money={
+                  reward === null ? undefined : (
+                    <Money phase={phase} reward={reward} token={token} agentId={agentId} charge={chargeOf(d)} />
+                  )
+                }
               />
             )}
           </aside>
@@ -633,21 +641,10 @@ function Money({
             ? `Locked in escrow · paid to ${agent} when the work is accepted`
             : `Locked in escrow · ${agent} gets ${amount(charge.net, token)} when the work is accepted, after Sidequest’s ${percent(charge.bps)} fee`
   return (
-    <div className="flex items-center gap-3.5 rounded-2xl bg-card p-4">
-      <span
-        className={cn(
-          'grid size-10 shrink-0 place-items-center rounded-xl',
-          !terminal && !draft
-            ? 'bg-primary/14 text-primary'
-            : paid
-              ? 'bg-success/12 text-success-text'
-              : 'bg-muted text-muted-foreground',
-        )}
-      >
-        {!terminal && !draft ? <Lock aria-hidden className="size-5" /> : <ReceiptText aria-hidden className="size-5" />}
-      </span>
+    <div className="relative grid min-w-0 gap-2 p-4">
+      {paid && <span className="stamp-paid absolute top-4 right-4">Paid</span>}
       <span className="min-w-0">
-        <span className="tabular-nums block text-2xl leading-none font-bold tracking-tight [overflow-wrap:anywhere]">
+        <span className="tabular-nums block text-3xl leading-none font-semibold tracking-tight [overflow-wrap:break-word]">
           {/* At large text sizes on a phone the amount wraps rather than widen the page. */}
           <TokenAmount
             value={paid && charge !== null ? charge.net : reward}
@@ -655,7 +652,10 @@ function Money({
             className="whitespace-normal"
           />
         </span>
-        <span className="mt-1 block text-sm text-muted-foreground">{where}</span>
+        <span className="mt-2 flex items-start gap-1.5 text-sm text-pretty text-muted-foreground">
+          {!terminal && !draft && <Lock aria-hidden className="mt-0.5 size-3.5 shrink-0" />}
+          {where}
+        </span>
         {token !== null && tokenInfo(token).unverified === true && (
           <span className="mt-1 block text-ui text-muted-foreground [overflow-wrap:anywhere]">
             Unverified token {token}: anyone can deploy a token under any name
@@ -735,7 +735,9 @@ function Dispute({
       <ItemGroup role="presentation" className="px-4 py-2">
         {d.job.violation !== null && <Row label="Rejected as">{VIOLATION[d.job.violation] ?? d.job.violation}</Row>}
         <Row label="Reason">
-          {reason ?? <span className="font-mono text-ui">{d.job.rejection_reason_hash?.slice(0, 14) ?? '—'}…</span>}
+          {reason ?? (
+            <span className="font-mono text-ui">{d.job.rejection_reason_hash?.slice(0, 14) ?? 'unknown'}…</span>
+          )}
         </Row>
         {bundle.data?.bundle.statements.map((s, i) => (
           <Row key={i} label={`${s.role[0]?.toUpperCase()}${s.role.slice(1)}'s statement`}>

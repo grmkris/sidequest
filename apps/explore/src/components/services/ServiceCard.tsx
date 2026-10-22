@@ -149,18 +149,19 @@ function BriefField({
         rows={3}
       />
       {examples.length > 0 && (
-        <div className="grid gap-1.5">
+        <div className="grid min-w-0 gap-1.5">
           <p id={`${id}-briefs`} className="text-xs text-muted-foreground">
             Briefs it takes. Tap one to start from it.
           </p>
-          <ul aria-labelledby={`${id}-briefs`} className="flex flex-wrap gap-2">
+          <ul aria-labelledby={`${id}-briefs`} className="flex min-w-0 flex-wrap gap-2">
             {examples.map((example) => (
-              <li key={example} className="min-w-0">
+              <li key={example} className="max-w-full min-w-0">
                 <button
                   type="button"
                   aria-pressed={brief === example}
                   onClick={() => onBrief(example)}
-                  className="min-h-10 rounded-xl bg-muted px-3 py-2 text-left text-sm text-pretty transition-[background-color,color,scale] duration-(--dur-fast) ease-(--ease-out-strong) active:scale-96 aria-pressed:bg-foreground aria-pressed:text-background [@media(hover:hover)]:hover:bg-accent [@media(hover:hover)]:aria-pressed:hover:bg-foreground"
+                  title={example}
+                  className="block min-h-10 max-w-full truncate rounded-lg bg-muted px-3 py-2 text-left text-sm whitespace-nowrap transition-[background-color,color,box-shadow,translate] duration-(--dur-fast) ease-(--ease-out-strong) active:translate-y-px aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-stock [@media(hover:hover)]:hover:bg-accent [@media(hover:hover)]:aria-pressed:hover:bg-card"
                 >
                   {example}
                 </button>

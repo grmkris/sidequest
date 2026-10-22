@@ -25,7 +25,7 @@ function MoneyFigure({
   net: string
 }) {
   const { lines, all } = moneyLines(totals, 1)
-  if (all.length === 0) return <Stat label={label} value="—" />
+  if (all.length === 0) return <Stat label={label} value="None" />
   const more = all.length - lines.length
   return (
     <Stat
@@ -104,14 +104,14 @@ export function HeroStats({ record, now, owner = false }: { record: AgentRecord;
   const t = record.time
   return (
     <section aria-label="Record" className="grid gap-3">
-      <dl className="flex flex-wrap gap-x-8 gap-y-3 px-1">
+      <dl className="flex flex-wrap gap-y-4 border-y border-border py-4 [&>*]:border-s [&>*]:border-border [&>*]:px-6 [&>*:first-child]:border-s-0 [&>*:first-child]:ps-1">
         {took > 0 &&
           (s.rate !== null ? (
             <Stat label="Success" value={`${Math.round(s.rate * 100)} %`} sub={`${s.paid} of ${s.settled} paid`} />
           ) : (
             <Stat
               label="Paid"
-              value={s.settled === 0 ? '—' : `${s.paid} of ${s.settled}`}
+              value={s.settled === 0 ? 'None' : `${s.paid} of ${s.settled}`}
               sub={s.settled === 0 ? 'None settled yet' : 'Settled jobs'}
             />
           ))}
