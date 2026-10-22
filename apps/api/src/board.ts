@@ -430,13 +430,20 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
           if (agent.state !== 'active') throw new BoardError('forbidden', 'Agent is not active')
           return toJson(agent)
         }),
+      // A refusal comes back as a reply, as `call`'s do: an error thrown across Durable Object RPC loses its class, so the
+      // hosted executor would report the board's conflict as an internal fault to retry.
       verifyAgentSigning: (req: BoardCall & { typedData: string }) =>
         Effect.promise(async () => {
-          await authenticatedAgent(req)
-          return boardFor(req.env).verifyAgentSigning(
-            { address: getAddress(req.caller!) },
-            { tool: req.tool, args: req.args, typedData: req.typedData },
-          )
+          try {
+            await authenticatedAgent(req)
+            const result = await boardFor(req.env).verifyAgentSigning(
+              { address: getAddress(req.caller!) },
+              { tool: req.tool, args: req.args, typedData: req.typedData },
+            )
+            return toJson({ ok: true, result })
+          } catch (error) {
+            return toJson(agentFailureReply(error, 'Signing check failed'))
+          }
         }),
       /** OAuth lives beside the agent and sponsor journals, under this object's single-writer queue. */
       oauth: (req: {

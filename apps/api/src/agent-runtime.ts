@@ -391,8 +391,15 @@ export async function runAgent(runtime: {
       const action = reply.result as import('@sidequest/board').AgentPreparedCall
       return action
     },
-    verifyToolSigning: (input) =>
-      tenant.verifyAgentSigning({ ...prepare(input.tool, input.args), typedData: input.typedData }),
+    verifyToolSigning: async (input) => {
+      // SAFETY: verifyAgentSigning answers a BoardReply envelope (board.ts), as call does.
+      const reply = JSON.parse(
+        await tenant.verifyAgentSigning({ ...prepare(input.tool, input.args), typedData: input.typedData }),
+      ) as BoardReply
+      if (!reply.ok) throw failureFromReply(reply)
+      // SAFETY: a successful signing check answers the string verifyAgentSigning returns.
+      return reply.result as string
+    },
   })
   try {
     const key = typeof operationKey === 'string' ? operationKey : crypto.randomUUID()

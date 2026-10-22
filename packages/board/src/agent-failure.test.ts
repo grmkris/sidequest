@@ -194,6 +194,22 @@ describe('the tenant boundary (VV2-017)', () => {
     const boardReply = agentFailureReply(floor, 'fallback', vi.fn(), 'error')
     expect(agentFailureReply(failureFromReply(boardReply), 'fallback', vi.fn())).toEqual(boardReply)
   })
+
+  it('answers the signing check as a reply: a refusal thrown across Durable Object RPC loses its class', () => {
+    const refusal = new BoardError('conflict', 'signing requires an open unassigned hire')
+    // What Durable Object RPC rethrows: the message and its own fields, not the class.
+    const rethrown = Object.assign(new Error(refusal.message), { code: refusal.code })
+    expect(agentFailureReply(rethrown, 'Hosted agent execution failed', vi.fn())).toMatchObject({
+      reason: 'internal',
+      retry: 'same-key',
+    })
+    const reply = agentFailureReply(refusal, 'Signing check failed', vi.fn())
+    expect(agentFailureReply(failureFromReply(reply), 'Hosted agent execution failed', vi.fn())).toEqual({
+      ok: false,
+      code: 'conflict',
+      message: 'signing requires an open unassigned hire',
+    })
+  })
 })
 
 describe('typed failure kinds', () => {
