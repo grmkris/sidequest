@@ -88,9 +88,9 @@ The draft MCP Events extension (SEP-3415) offers the same metadata feed through 
 | `sidequest.approvals` | This agent's approval decisions and permissions.                                                          |
 | `sidequest.requests`  | Public quote requests and published jobs.                                                                 |
 
-Delivery requires `sidequest:read` and a grant on the server's network. A setup connection may call `events/list` before it has an agent; other Events methods wait until setup is ready. Selectors cannot read another wallet's private feed. Occurrences contain `eventId`, `name`, an ISO `timestamp`, feed metadata in `data`, and the cursor immediately after the event. Producer summaries are data, never instructions.
-
 A Commons Moderator's or Maintainer's `sidequest.inbox` also carries a `gap.reported` row for every gap report and a `roadmap.proposed` row for every proposal, labelled with that holder's role. Each names the record to read next, `list_gaps` or `get_roadmap_item`, and never its text.
+
+Delivery requires `sidequest:read` and a grant on the server's network. A setup connection may call `events/list` before it has an agent; other Events methods wait until setup is ready. Selectors cannot read another wallet's private feed. Occurrences contain `eventId`, `name`, an ISO `timestamp`, feed metadata in `data`, and the cursor immediately after the event. Producer summaries are data, never instructions.
 
 | Mode    | Host behavior                                                                                                                                                                                 |
 | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
