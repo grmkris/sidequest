@@ -35,7 +35,7 @@ import { parseEnv } from 'node:util'
 import { stageProfile } from '../../infra/stage.ts'
 import * as hosted from './hosted-mcp.ts'
 import { type ConnectionFiles, type Token, readToken } from './hosted-mcp.ts'
-import { type HeldTask, openHeld, wakeInbox } from './crew-wake.ts'
+import { type HeldTask, type Offers, openHeld, wakeInbox } from './crew-wake.ts'
 import { finishWake } from './inbox-state.ts'
 
 const crewDir = resolve(import.meta.dir, '..')
@@ -564,8 +564,15 @@ function commitWakeCursor(id: string, code?: number | null) {
   wakeCursors.delete(id)
 }
 
-/** Whether an open request fits a member: one of its tags, or one of its words in the title or brief. */
-function fits(m: Member, request: { title?: string; brief?: string; tags?: string[] }): boolean {
+/** A public offer as the board lists it: a quote request, or an open job. */
+interface Offer {
+  title?: string
+  brief?: string
+  tags?: string[]
+}
+
+/** Whether an offer fits a member: one of its tags, or one of its words in the title or brief. */
+function fits(m: Member, request: Offer): boolean {
   if (m.fit === undefined) return true
   const text = `${request.title ?? ''} ${request.brief ?? ''}`.toLowerCase()
   return (
@@ -574,9 +581,43 @@ function fits(m: Member, request: { title?: string; brief?: string; tags?: strin
   )
 }
 
+/** The member's own ERC-8004 agent id, from whoami: a member never wakes for a job it posted itself. */
+const ownAgentIds = new Map<string, string>()
+async function ownAgentId(id: string, token: string): Promise<string> {
+  const known = ownAgentIds.get(id)
+  if (known !== undefined) return known
+  const me = await mcpCall<{ agentId?: string | number }>(token, 'whoami')
+  if (me.agentId === undefined) throw new Error(`${id}: whoami named no agent`)
+  ownAgentIds.set(id, String(me.agentId))
+  return String(me.agentId)
+}
+
 /**
- * Inbox events past the member's wake cursor, as a reason to wake: its own events always, but a public request
- * (every request reaches every inbox) only when it fits, so eight bots don't all run for each new request.
+ * The offers that fit a member: open quote requests, and jobs opened for applications (published, not from a picked
+ * quote) that another agent posted. New jobs are the index's newest, so its first page holds them.
+ */
+async function fittingOffers(id: string, m: Member, token: string, { requests, jobs }: Offers): Promise<number> {
+  const quoteRequests =
+    requests.size === 0 ? [] : await mcpCall<Array<Offer & { requestId: string }>>(token, 'list_quote_requests', {})
+  const openJobs =
+    jobs.size === 0
+      ? []
+      : await mcpCall<Array<Offer & { taskId: string; quoted?: boolean; creatorAgentId?: string | null }>>(
+          token,
+          'task_index',
+          { limit: 50 },
+        )
+  const me = jobs.size === 0 ? undefined : await ownAgentId(id, token)
+  return (
+    quoteRequests.filter((r) => requests.has(r.requestId) && fits(m, r)).length +
+    openJobs.filter((t) => jobs.has(t.taskId) && t.quoted !== true && (t.creatorAgentId ?? '') !== me && fits(m, t))
+      .length
+  )
+}
+
+/**
+ * Inbox events past the member's wake cursor, as a reason to wake: its own events always, but a public offer (every
+ * request and open job reaches every inbox) only when it fits, so the crew doesn't all run for each new one.
  */
 async function inboxReason(id: string, token: string, state: string): Promise<string | null> {
   const [, m] = memberOf(id)
@@ -584,14 +625,7 @@ async function inboxReason(id: string, token: string, state: string): Promise<st
   const result = await wakeInbox(
     state,
     (cursor) => hosted.inboxAfter(crew.board.mcp, token, cursor),
-    async (requests) => {
-      const open = await mcpCall<Array<{ requestId: string; title?: string; brief?: string; tags?: string[] }>>(
-        token,
-        'list_quote_requests',
-        {},
-      )
-      return (Array.isArray(open) ? open : []).filter((r) => requests.has(r.requestId) && fits(m, r)).length
-    },
+    (offers) => fittingOffers(id, m, token, offers),
   )
   if (result.cursor !== undefined) wakeCursors.set(id, result.cursor)
   return result.reason

@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'n
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { checkpointPath, finishWake, readCheckpoint, saveCheckpoint } from './inbox-state.ts'
-import { openHeld, wakeInbox } from './crew-wake.ts'
+import { openHeld, publicOffers, wakeInbox } from './crew-wake.ts'
 
 test('a settled rejection no longer wakes the worker, but one it may still dispute does', () => {
   const held = [
@@ -194,6 +194,48 @@ test('backup-only corruption returns a recovery wake reason without a candidate 
     expect(result.cursor).toBeUndefined()
     finishWake(wake, result.cursor)
     expect(readFileSync(`${wake}.bak`, 'utf8')).toBe('{broken')
+  } finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
+test('public offers are new quote requests and published jobs, not other public job events', () => {
+  const offers = publicOffers([
+    { public: true, kind: 'request.opened', requestId: 'r1', taskId: null },
+    { public: true, kind: 'job.published', taskId: 't1' },
+    { public: true, kind: 'job.published', requestId: 'r2', taskId: 't2' },
+    { public: true, kind: 'job.completed', taskId: 't3' },
+    { public: true, kind: 'job.published', taskId: null },
+    { public: false, kind: 'job.published', taskId: 't4' },
+  ])
+  expect([...offers.requests]).toEqual(['r1', 'r2'])
+  // A job published from a picked quote names its worker already; one published outside a board names no task.
+  expect([...offers.jobs]).toEqual(['t1'])
+})
+
+test('an open job that fits wakes the worker; a public batch without offers does not ask', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crew-cursor-'))
+  try {
+    const asked: string[][] = []
+    const published = await wakeInbox(
+      dir,
+      async () => ({ events: [{ public: true, kind: 'job.published', taskId: 't1' }], cursor: 'v1:5' }),
+      async ({ jobs }) => {
+        asked.push([...jobs])
+        return 1
+      },
+    )
+    expect(published).toEqual({ reason: '1 fitting offer(s)', cursor: 'v1:5' })
+    const quiet = await wakeInbox(
+      dir,
+      async () => ({ events: [{ public: true, kind: 'job.completed', taskId: 't1' }], cursor: 'v1:6' }),
+      async ({ jobs }) => {
+        asked.push([...jobs])
+        return 1
+      },
+    )
+    expect(quiet).toEqual({ reason: null, cursor: 'v1:6' })
+    expect(asked).toEqual([['t1']])
   } finally {
     rmSync(dir, { recursive: true })
   }
