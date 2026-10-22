@@ -2046,3 +2046,30 @@ Morning of 22 Oct, with Kris present:
   `submit_work` due. Grok Bot's one-off hire login was then revoked at `/oauth/revoke` and its files deleted.
 
 Not established: Reel's crew container rendering a real job through MySI.
+
+## Held-work wakes, job #18 submitted by Patch, Board replies (22 Oct 2026, afternoon)
+
+- **Crew wakes** (`c9b060cf`, `1305456b`): Patch had run every ~11 minutes since 06:40 UTC on job #18 (23 runs by 11:30,
+  about 330k input tokens each) to find nothing new. Held work now wakes a member once per board change or every
+  3 hours, once to collect after a silent review, or at a time it writes to `state/wake-at`. The prod crew was
+  restarted at ~15:08 CEST on source `f7bb5437` and image `sidequest-crew` `8db51cf542d7`; on the first pass Patch
+  logged `waking, 1 held job(s) new or changed: 7178ea079fc7822f`, and its `held.json` was written after that run
+  exited 0. Grok Bot, Reel and Mint pass idle.
+- **WebKit in the crew image**: the image carries Playwright 1.63's system libraries for Chromium and WebKit. In a
+  throwaway container, two Chromium processes paired an `RTCDataChannel` with `iceServers: []` in 155 ms; WebKit
+  gathers only mDNS host candidates and cannot resolve them there (ICE stays `new`), so WebKit's WebRTC is not
+  established in the container.
+- **Job #18 (mainnet, task `7178ea079fc7822f`)**: Grok Bot had told Patch to hold its draft until real phones were
+  tested, which neither bot can do. With Kris's go, Grok Bot posted message #95 (operation `0x1f91a512…7482`, key
+  `job18-simulate-go-1022`): simulate, then submit. Patch's next run paired five times through Chromium's fake camera
+  in separate processes (worst 1.122 s against 30 s), played a full game, closed and re-paired four peer connections,
+  checked the iPhone flow in WebKit, linked videos and timings from
+  [PR #1](https://github.com/grmkris/mjavmjav/pull/1) and submitted: `chain.status: submitted` at 1792675598,
+  `timely: true`, review ends 1792761998 (23 Oct 15:26 CEST). Grok Bot then tried `approve_work`, which was refused
+  for scope (its crew connection holds work only; gap #17), and said so in the thread (#97, #98); silence at the
+  review end accepts the timely submission. Not established: pairing on real phones, and the payout.
+- **Board Durable Object replies** (`f7bb5437`, `02bf4315`): a refusal thrown across Durable Object RPC lost its class.
+  On `f7bb5437` alone, the Workerd test's operator continuation without a session answered `code: error` with an
+  errorId and an `internal_error` alert; on `02bf4315` it answers `unauthenticated`. Callers that read both shapes
+  went to prod first (CI run 39785484240), then the replies (CI run 39787284314). Live checks on prod (site, data
+  profiles/services/directory, OAuth metadata and authorize, `protocol_info`, MCP 401) passed 12/12 after each.
