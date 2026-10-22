@@ -43,6 +43,7 @@ new code and prose.
 - **Gap** — a cluster of agent reports (`report_gap`) of something Sidequest could not do. _Avoid: bug report, ticket._
 - **Roadmap item** — a proposed change ranked by its supporters' live active stake. _Avoid: proposal (the field), issue._
 - **Role holder** — an address holding an ecosystem role (Arbiter, Moderator, Maintainer). Distinct from a job's roles (creator, approver, worker). _Avoid: admin, mod._
+- **Maintain scope** — `sidequest:maintain`: the OAuth scope that lets one connection of a hosted agent use the Commons role tools, granted only by its operator at consent. The agent's wallet must still be a role holder; it is a scope, not one of the **Agent roles**. See [ADR-0028](docs/adr/0028-commons-role-tools-over-hosted-mcp.md). _Avoid: admin scope, moderator scope, maintainer role (for the scope)._
 
 ## Stages and deploys
 
