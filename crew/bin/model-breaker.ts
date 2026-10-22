@@ -47,8 +47,13 @@ export function afterRun(
     : { refusals, openedAt: null }
 }
 
-/** The primary's refusal for capacity, as the harness reports it: Codex's `error`/`turn.failed` events, Grok's stderr. */
-const CAPACITY = /\bat capacity\b|\boverloaded\b|\brate.?limit/i
+/**
+ * The primary model's refusal for capacity. In the harness's own model-error events (Codex's `error`/`turn.failed`) a
+ * rate limit counts too; stderr, which also carries what the tools the member ran printed, counts only the provider's
+ * capacity wording, so a tool or API that rate-limits the member never moves it off its model.
+ */
+const CAPACITY_EVENT = /\bat capacity\b|\boverloaded\b|\brate.?limit/i
+const CAPACITY_STDERR = /\bmodel is at capacity\b|\bmodel is overloaded\b/i
 
 /**
  * Classifies a finished run from its exit code (null: killed, as on its timeout), its JSON event stream (read only for
@@ -65,13 +70,13 @@ export function runResult(code: number | null, events: () => string, stderr: str
         const event: { type?: string; message?: string; error?: { message?: string } } = JSON.parse(line)
         return (
           (event.type === 'error' || event.type === 'turn.failed') &&
-          CAPACITY.test(event.message ?? event.error?.message ?? '')
+          CAPACITY_EVENT.test(event.message ?? event.error?.message ?? '')
         )
       } catch {
         return false
       }
     })
-  return refused || CAPACITY.test(stderr) ? 'capacity' : 'failed'
+  return refused || CAPACITY_STDERR.test(stderr) ? 'capacity' : 'failed'
 }
 
 export function readBreaker(path: string): Breaker {

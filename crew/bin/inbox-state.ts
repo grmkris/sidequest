@@ -2,8 +2,18 @@
  * A member's local wake state: inbox checkpoints and the operator's nudge. Cursor data, timestamps and model notes never
  * share a text field.
  */
-import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import { Schema } from 'effect'
 
 const Checkpoint = Schema.Struct({
@@ -51,11 +61,17 @@ function atomic(path: string, text: string) {
 /** A small state file written whole or not at all. */
 export const saveJson = (path: string, value: unknown): void => atomic(path, `${JSON.stringify(value)}\n`)
 
+/** Runs a nudge gets before it is parked for the operator: a nudge that fails every time must not run every pass. */
+export const NUDGE_TRIES = 3
+/** How long the record of a taken nudge (`nudge.<ms>`) is kept. */
+const NUDGE_RECORD_MS = 14 * 86_400_000
+
 /**
  * The operator's nudge (`state/nudge`, crew/bin/publish.ts) is set aside as a run starts, so a second pass does not
- * start a second run for it; it is kept (renamed `nudge.<ms>`) as a record. Undefined: there is no nudge.
+ * start a second run for it; it is kept (renamed `nudge.<ms>`) as a record for two weeks. Undefined: there is no nudge.
  */
 export function takeNudge(path: string): string | undefined {
+  pruneNudgeRecords(path)
   if (!existsSync(path)) return undefined
   const note = readFileSync(path, 'utf8').trim()
   renameSync(path, `${path}.${Date.now()}`)
@@ -64,11 +80,42 @@ export function takeNudge(path: string): string | undefined {
 
 /**
  * A nudge is consumed only by a run that finished its work (exit 0). A run that failed, timed out or never started puts
- * it back, after any nudge written meanwhile, so the next pass wakes the member for it again.
+ * it back, after any nudge written meanwhile, so the next pass wakes the member for it again; after NUDGE_TRIES runs
+ * that failed it is parked as `nudge.failed.<ms>` and the member's `needs-operator` says why.
  */
-export function settleNudge(path: string, note: string | undefined, code: number | null): void {
-  if (note === undefined || code === 0) return
+export function settleNudge(path: string, note: string | undefined, run: 'done' | 'failed' | 'not-started'): void {
+  const tries = `${path}.tries`
+  if (note === undefined) return
+  if (run === 'done') {
+    rmSync(tries, { force: true })
+    return
+  }
+  if (run === 'not-started') {
+    appendFileSync(path, `${note}\n`, { mode: 0o600 })
+    return
+  }
+  const failed = (existsSync(tries) ? Number(readFileSync(tries, 'utf8')) || 0 : 0) + 1
+  if (failed >= NUDGE_TRIES) {
+    rmSync(tries, { force: true })
+    writeFileSync(`${path}.failed.${Date.now()}`, `${note}\n`, { mode: 0o600 })
+    writeFileSync(
+      join(dirname(path), 'needs-operator'),
+      `a nudge failed ${failed} runs and is parked in ${basename(path)}.failed.*: ${note.slice(0, 200)}\n`,
+      { mode: 0o600 },
+    )
+    return
+  }
+  writeFileSync(tries, String(failed), { mode: 0o600 })
   appendFileSync(path, `${note}\n`, { mode: 0o600 })
+}
+
+function pruneNudgeRecords(path: string) {
+  const dir = dirname(path)
+  if (!existsSync(dir)) return
+  const record = new RegExp(`^${basename(path)}\\.\\d{13}$`, 'u')
+  for (const name of readdirSync(dir))
+    if (record.test(name) && Date.now() - statSync(join(dir, name)).mtimeMs > NUDGE_RECORD_MS)
+      rmSync(join(dir, name), { force: true })
 }
 
 /** Call only after processing the batch; a restart sees either the old checkpoint or the complete new one. */

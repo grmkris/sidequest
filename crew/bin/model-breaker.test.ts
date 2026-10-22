@@ -52,7 +52,10 @@ test('a run is classified from its exit code, its Codex events and its stderr', 
   expect(runResult(null, unread, '')).toBe('failed')
   expect(runResult(1, log(`{"type":"thread.started"}\n${capacity}\n`), '')).toBe('capacity')
   expect(runResult(1, log('{"type":"error","message":"Selected model is at capacity."}'), '')).toBe('capacity')
-  expect(runResult(1, log(''), 'error: 429 rate limit reached for model')).toBe('capacity')
+  expect(runResult(1, log(''), 'Error: Selected model is at capacity.')).toBe('capacity')
+  // A tool that rate-limits the member says nothing about its model.
+  expect(runResult(1, log(''), 'gh: API rate limit exceeded for user')).toBe('failed')
+  expect(runResult(1, log('{"type":"error","message":"429: rate limit reached for model"}'), '')).toBe('capacity')
   expect(runResult(1, log('{"type":"turn.failed","error":{"message":"stream disconnected"}}'), '')).toBe('failed')
   // A model that only writes about capacity in its work is not refused.
   expect(runResult(1, log('{"type":"item.completed","item":{"text":"the model is at capacity"}}'), '')).toBe('failed')

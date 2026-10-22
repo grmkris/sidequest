@@ -816,8 +816,9 @@ async function wake(id: string, reason: string, model: string | undefined): Prom
   const nudge = takeNudge(nudgePath)
   console.log(`${crew.members[id]?.name ?? id}: waking, ${reason}${model === undefined ? '' : ` (on ${model})`}`)
   const outcome = await run(id, nudge ?? '', model)
-  settleNudge(nudgePath, nudge, outcome?.code ?? null)
-  own(nudgePath)
+  settleNudge(nudgePath, nudge, outcome === null ? 'not-started' : outcome.code === 0 ? 'done' : 'failed')
+  // The member clears its own needs-operator, and the supervisor writes these as root in its container.
+  own(nudgePath, `${nudgePath}.tries`, join(dirname(nudgePath), 'needs-operator'))
   return outcome
 }
 

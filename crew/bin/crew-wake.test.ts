@@ -3,7 +3,15 @@ import { expect, test } from 'bun:test'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { checkpointPath, finishWake, readCheckpoint, saveCheckpoint, settleNudge, takeNudge } from './inbox-state.ts'
+import {
+  NUDGE_TRIES,
+  checkpointPath,
+  finishWake,
+  readCheckpoint,
+  saveCheckpoint,
+  settleNudge,
+  takeNudge,
+} from './inbox-state.ts'
 import { openHeld, publicOffers, wakeInbox } from './crew-wake.ts'
 
 test('a settled rejection no longer wakes the worker, but one it may still dispute does', () => {
@@ -209,18 +217,37 @@ test('a nudge is consumed only by a run that finished its work', () => {
     expect(note).toBe('apply to job 18')
     // Set aside while the run goes, so a second pass does not start another run for it.
     expect(existsSync(nudge)).toBe(false)
-    settleNudge(nudge, note, 1) // refused for capacity
+    settleNudge(nudge, note, 'failed') // refused for capacity
     expect(readFileSync(nudge, 'utf8')).toBe('apply to job 18\n')
-    settleNudge(nudge, takeNudge(nudge), null) // did not start
+    settleNudge(nudge, takeNudge(nudge), 'not-started')
     expect(readFileSync(nudge, 'utf8')).toBe('apply to job 18\n')
-    settleNudge(nudge, takeNudge(nudge), 0)
+    settleNudge(nudge, takeNudge(nudge), 'done')
     expect(existsSync(nudge)).toBe(false)
     // An empty nudge still wakes the member once, then is gone.
     writeFileSync(nudge, '')
     const empty = takeNudge(nudge)
     expect(empty).toBe('')
-    settleNudge(nudge, empty, 0)
+    settleNudge(nudge, empty, 'done')
     expect(existsSync(nudge)).toBe(false)
+  } finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
+test('a nudge that fails every run is parked for the operator after three tries', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crew-nudge-'))
+  try {
+    const nudge = join(dir, 'nudge')
+    writeFileSync(nudge, 'deploy the site\n')
+    for (let run = 1; run < NUDGE_TRIES; run++) {
+      settleNudge(nudge, takeNudge(nudge), 'failed')
+      settleNudge(nudge, takeNudge(nudge), 'not-started') // a skipped pass is not a try
+      expect(readFileSync(nudge, 'utf8')).toBe('deploy the site\n')
+    }
+    settleNudge(nudge, takeNudge(nudge), 'failed')
+    expect(existsSync(nudge)).toBe(false)
+    expect(readdirSync(dir).some((name) => /^nudge\.failed\.\d+$/u.test(name))).toBe(true)
+    expect(readFileSync(join(dir, 'needs-operator'), 'utf8')).toContain('a nudge failed 3 runs')
   } finally {
     rmSync(dir, { recursive: true })
   }
@@ -233,7 +260,7 @@ test('a nudge written during a failed run is kept beside the one put back', () =
     writeFileSync(nudge, 'first\n')
     const note = takeNudge(nudge)
     writeFileSync(nudge, 'second\n')
-    settleNudge(nudge, note, 1)
+    settleNudge(nudge, note, 'failed')
     expect(readFileSync(nudge, 'utf8')).toBe('second\nfirst\n')
   } finally {
     rmSync(dir, { recursive: true })
