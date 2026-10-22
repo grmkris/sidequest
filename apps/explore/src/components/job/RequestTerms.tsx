@@ -142,7 +142,7 @@ function Stake({ who, value }: { who: string; value: bigint | null }) {
   return (
     <div className="grid gap-0.5 rounded-xl bg-muted/40 px-3 py-2.5">
       <span className="text-base font-semibold tabular-nums">
-        {value === null ? '—' : <TokenAmount value={value} token={deployment.factory} />}
+        {value === null ? 'None' : <TokenAmount value={value} token={deployment.factory} />}
       </span>
       <span className="text-ui text-muted-foreground">{who}</span>
     </div>

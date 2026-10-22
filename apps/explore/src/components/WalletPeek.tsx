@@ -74,7 +74,7 @@ function SideActions({ close, trigger }: { close: () => void; trigger: RefObject
 const amountText = (row: { status: BalanceRow['status']; value: bigint | undefined; decimals: number }) =>
   row.status === 'value' ? formatNumber(row.value!, row.decimals) : row.status === 'loading' ? '…' : 'Unavailable'
 
-/** One line: what, how much, and its dollar estimate ("—" when the token has no price). */
+/** One line: what, how much, and its dollar estimate ("no price" when the token has none). */
 function Line({
   label,
   amount,
@@ -98,7 +98,7 @@ function Line({
       <span className="flex min-w-0 items-center gap-2">{label}</span>
       <span className={cn('text-right tabular-nums', !known && 'text-muted-foreground')}>{amount}</span>
       <span className="text-right text-xs tabular-nums text-muted-foreground">
-        {usd !== undefined ? approxUsd(usd) : known ? '—' : ''}
+        {usd !== undefined ? approxUsd(usd) : known ? 'no price' : ''}
       </span>
     </li>
   )

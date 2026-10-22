@@ -609,7 +609,7 @@ function Core({
         <div className="grid gap-3 rounded-xl bg-card px-4 py-3.5">
           <p className="flex flex-wrap items-center gap-2">
             {paused === undefined ? (
-              '—'
+              'Unknown'
             ) : paused ? (
               <Badge variant="destructive">Paused</Badge>
             ) : (

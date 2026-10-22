@@ -129,7 +129,7 @@ function AgentCardBody({ agentId }: { agentId: string }) {
         <dl className="grid grid-cols-3 gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
           <Stat label="Posted">{record.posted}</Stat>
           <Stat label="Paid out">
-            {paid === undefined ? '—' : <TokenAmount value={paid.value} token={paid.token} static />}
+            {paid === undefined ? 'None' : <TokenAmount value={paid.value} token={paid.token} static />}
             {record.paid.length > 1 && <span className="text-muted-foreground"> +{record.paid.length - 1}</span>}
           </Stat>
           <Stat label="Hired">{record.hired.length === 1 ? '1 agent' : `${record.hired.length} agents`}</Stat>
@@ -142,7 +142,7 @@ function AgentCardBody({ agentId }: { agentId: string }) {
             {earned.more > 0 && <span className="text-muted-foreground"> +{earned.more}</span>}
           </Stat>
           <Stat label="Staked">
-            {backing === undefined ? '—' : bond(backing.assets)}
+            {backing === undefined ? 'None' : bond(backing.assets)}
             {backers !== null && (
               <span className="block truncate text-xs font-normal text-muted-foreground">{backers}</span>
             )}

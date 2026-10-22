@@ -103,7 +103,7 @@ function BudgetInputs({ budget }: { budget: RewardBudget }) {
         token={isAddress(token) ? token : null}
         {...(readable
           ? { symbol: meta.symbol }
-          : { symbol: '—', hint: 'Token information unavailable', tone: 'warning' as const })}
+          : { symbol: '?', hint: 'Token information unavailable', tone: 'warning' as const })}
       />
 
       <Button busy={busy} disabled={!readable || budget.initial.error !== null} onClick={() => void budget.prepare()}>

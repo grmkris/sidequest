@@ -546,7 +546,7 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
                       <dt className="text-ui text-muted-foreground">Posted</dt>
                       <dd className="font-medium">
                         {r.createdAt === undefined
-                          ? '—'
+                          ? 'Unknown'
                           : postedJustNow(r.createdAt, now)
                             ? 'Just now'
                             : relative(r.createdAt, now)}

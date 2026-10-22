@@ -46,12 +46,12 @@ function WalletCard({ address }: { address: string }) {
         <dl className="grid grid-cols-3 gap-2 rounded-lg bg-muted/50 px-3 py-2.5 text-ui">
           <Figure label="Posted">{record.posted}</Figure>
           <Figure label="Paid out">
-            {paid === undefined ? '—' : <TokenAmount value={paid.value} token={paid.token} static />}
+            {paid === undefined ? 'None' : <TokenAmount value={paid.value} token={paid.token} static />}
             {record.paid.length > 1 && <span className="text-muted-foreground"> +{record.paid.length - 1}</span>}
           </Figure>
           <Figure label="Agents hired">
             {record.hired.length === 0 ? (
-              '—'
+              'None'
             ) : (
               <span className="flex items-center -space-x-1.5">
                 {record.hired.slice(0, 4).map((h) => (

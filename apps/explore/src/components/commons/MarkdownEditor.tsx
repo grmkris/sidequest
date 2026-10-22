@@ -41,7 +41,7 @@ export function MarkdownEditor({
     if (replyId !== undefined || (focusRevision ?? 0) > 0) input.current?.focus()
   }, [replyId, focusRevision])
   return (
-    <Field data-invalid={invalid} className="min-w-0">
+    <Field data-invalid={invalid} className="relative min-w-0">
       <FieldLabel htmlFor={id} className={cn(collapsed && 'sr-only')}>
         {label}
       </FieldLabel>

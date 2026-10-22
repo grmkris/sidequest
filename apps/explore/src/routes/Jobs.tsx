@@ -261,7 +261,7 @@ export function JobsPage() {
               [
                 v,
                 <span key={v} className="whitespace-nowrap">
-                  {l} <span className="tabular-nums text-muted-foreground">{chainReady ? counts[v] : '—'}</span>
+                  {l} <span className="tabular-nums text-muted-foreground">{chainReady ? counts[v] : '…'}</span>
                 </span>,
               ] as const,
           )}
