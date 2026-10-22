@@ -358,7 +358,13 @@ test(
       expect(yield* metadata.json).toMatchObject({
         resource: `${apiUrl}${resourcePath}`,
         authorization_servers: [apiUrl],
-        scopes_supported: ['sidequest:read', 'sidequest:hire', 'sidequest:work', 'sidequest:setup'],
+        scopes_supported: [
+          'sidequest:read',
+          'sidequest:hire',
+          'sidequest:work',
+          'sidequest:maintain',
+          'sidequest:setup',
+        ],
       })
     }
     const discovery = yield* HttpClient.get(`${apiUrl}/.well-known/oauth-authorization-server`)

@@ -1,9 +1,11 @@
 import { expect, it } from 'vitest'
+import { commonsRoleTools } from '@sidequest/commons'
 import {
   OPERATOR_CONTINUATIONS,
   effectiveRoles,
   listedTool,
   permittedTool,
+  requiredToolScope,
   toolDecision,
   toolRefusal,
   toolAnnotations,
@@ -119,4 +121,47 @@ it('never lists or offers release_pick to a client, and lets only the executor r
   }
   expect(permittedTool({ scopes: ['sidequest:read', 'sidequest:hire'] }, 'release_pick', true)).toBe(true)
   expect(OPERATOR_CONTINUATIONS.has('release_pick')).toBe(true)
+})
+
+// ADR-0028: the Commons role tools are a plain scope the operator grants at consent, never an agent role.
+it('lists and allows the Commons role tools only on a connection granted sidequest:maintain', () => {
+  const maintainer = { scopes: [...both, 'sidequest:maintain'], roles: ['work'] as const }
+  const plain = { scopes: both, roles: ['work', 'hire'] as const }
+  const setup = { scopes: ['sidequest:setup'], setup: true, roles: [] }
+  for (const name of commonsRoleTools) {
+    expect(requiredToolScope(name), name).toBe('sidequest:maintain')
+    for (const listening of [false, true]) {
+      expect(toolDecision({ ...maintainer, listening }, name), name).toBe('allow')
+      expect(listedTool({ ...maintainer, listening }, name), name).toBe(true)
+      expect(toolRefusal({ ...maintainer, listening }, name), name).toBeUndefined()
+      // Without the scope a role tool is not listed, and a call is a tool error, never a step-up.
+      expect(listedTool({ ...plain, listening }, name), name).toBe(false)
+      expect(toolRefusal({ ...plain, listening }, name), name).toEqual({
+        result: {
+          content: [{ type: 'text', text: expect.stringContaining('scope-required') }],
+          structuredContent: { ok: false, code: 'scope-required', scope: 'sidequest:maintain' },
+          isError: true,
+        },
+      })
+      // A setup connection neither lists the role tools nor waits for them: an approval never brings them.
+      expect(listedTool({ ...setup, listening }, name), name).toBe(false)
+      expect(toolDecision({ ...setup, listening }, name), name).toBe('scope')
+    }
+    expect(toolDecision(maintainer, name, true), name).toBe('allow')
+    expect(toolDecision(plain, name, true), name).toBe('scope')
+  }
+  const text = JSON.stringify(toolRefusal(plain, 'merge_gaps'))
+  expect(text).toContain('Only your operator can grant it')
+  expect(text).toContain('tick Commons role tools')
+})
+
+it('keeps sidequest:maintain to the role tools: it permits no Commons write and adds no agent role', () => {
+  const readAndMaintain = { scopes: ['sidequest:read', 'sidequest:maintain'], roles: ['work', 'hire'] as const }
+  expect(toolDecision(readAndMaintain, 'set_gap_status')).toBe('allow')
+  for (const name of ['post_message', 'report_gap', 'apply', 'create_task'])
+    expect(toolDecision(readAndMaintain, name), name).toBe('scope')
+  expect(toolDecision(readAndMaintain, 'list_gaps')).toBe('allow')
+  expect(effectiveRoles(readAndMaintain)).toEqual([])
+  expect(effectiveRoles({ scopes: [...both, 'sidequest:maintain'], roles: ['hire'] })).toEqual(['hire'])
+  expect(effectiveRoles({ scopes: [...both, 'sidequest:maintain'] })).toEqual(['work', 'hire'])
 })

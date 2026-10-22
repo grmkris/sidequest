@@ -1,5 +1,6 @@
 import { afterEach, expect, it } from 'vitest'
 import { resolveOAuth, OAUTH_SCOPES } from '../src/oauth.ts'
+import { boundScopes } from '../src/oauth-setup.ts'
 import { setupFixture, operator, resource, origin } from './setup-oauth-fixture.ts'
 
 const fixtures: ReturnType<typeof setupFixture>[] = []
@@ -73,6 +74,42 @@ it("connecting an existing agent on consent turns the operator's waiting setup c
     agentIds: ['quill'],
     scopes: ['sidequest:read', 'sidequest:work'],
   })
+})
+
+// ADR-0028: only a consent for an existing agent grants sidequest:maintain, and only to that consent's connection.
+it('never grants sidequest:maintain through setup: a setup consent naming it is refused', async () => {
+  const f = fixture(),
+    r = await f.request('sidequest:setup sidequest:read sidequest:maintain')
+  for (const body of [
+    { setup: true, maintain: true },
+    { setup: true, maintain: false },
+    { setup: true, scopes: ['sidequest:setup', 'sidequest:maintain'] },
+  ]) {
+    const refused = await f.route(`/oauth/requests/${r.requestId}/approve`, body)
+    expect(refused, JSON.stringify(body)).toMatchObject({ status: 400, body: { error: 'invalid_request' } })
+  }
+  expect(boundScopes(['sidequest:setup', 'sidequest:read', 'sidequest:maintain', 'sidequest:work'])).toEqual([
+    'sidequest:read',
+    'sidequest:work',
+  ])
+})
+
+it('binds waiting setup connections without sidequest:maintain, even when the consent that binds them ticks it', async () => {
+  const f = fixture(),
+    waiting = await f.connection('sidequest:setup sidequest:read sidequest:maintain')
+  expect(waiting.tokens.scope).toBe('sidequest:setup')
+  f.active('quill')
+  const r = await f.request('sidequest:setup sidequest:read sidequest:maintain')
+  const approved = await f.route(`/oauth/requests/${r.requestId}/approve`, { agentIds: ['quill'], maintain: true })
+  expect(approved?.status).toBe(200)
+  expect(await resolveOAuth(f.sql, waiting.tokens.access_token, resource, 1000)).toMatchObject({
+    agentIds: ['quill'],
+    scopes: ['sidequest:read'],
+  })
+  // The consenting connection itself holds the tick.
+  expect(f.sql.all('SELECT scopes_json FROM agent_oauth_requests WHERE id=?', r.requestId)).toEqual([
+    { scopes_json: JSON.stringify(['sidequest:maintain', 'sidequest:read']) },
+  ])
 })
 
 it('binds setup codes to PKCE, client, redirect and resource and consumes them once', async () => {

@@ -1,6 +1,7 @@
 /** Real SQLite storage and WebCrypto PKCE. No provider/network substitutions. */
 import { DatabaseSync } from 'node:sqlite'
 import { expect, test } from 'vitest'
+import { Schema } from 'effect'
 import { AgentStore, fromNodeSqlite } from '@sidequest/board'
 import type { Address } from 'viem'
 import { oauthRoute, resolveOAuth, type OAuthReply } from '../src/oauth.ts'
@@ -18,6 +19,7 @@ const verifier = 'a'.repeat(43)
 const redirectUri = 'http://127.0.0.1:3210/callback'
 
 type Tokens = { access_token: string; refresh_token: string }
+const decode = <A>(schema: Schema.Codec<A, unknown>, reply: OAuthReply) => Schema.decodeUnknownSync(schema)(reply.body)
 
 async function echoWebhookChallenge(_url: unknown, init?: RequestInit) {
   const envelope = JSON.parse(new TextDecoder().decode(init?.body as Uint8Array)) as { challenge: string }
@@ -59,6 +61,7 @@ async function connection(
   f: ReturnType<typeof fixture>,
   scopes?: string[],
   requested = 'sidequest:read sidequest:work sidequest:hire',
+  consentBody: Record<string, unknown> = {},
 ) {
   const registered = await f.route('/oauth/register', { redirect_uris: [redirectUri], client_name: 'SQLite client' })
   const clientId = (registered.body as { client_id: string }).client_id
@@ -77,6 +80,7 @@ async function connection(
   const approve = await f.route(`/oauth/requests/${requestId}/approve`, {
     agentIds: ['one'],
     ...(scopes === undefined ? {} : { scopes }),
+    ...consentBody,
   })
   const code = new URL((approve.body as { result: { redirectUrl: string } }).result.redirectUrl).searchParams.get(
     'code',
@@ -232,6 +236,102 @@ test('consent grants what the client requested plus read, whatever scopes the pa
       'sidequest:hire',
       'sidequest:read',
     ])
+  } finally {
+    f.db.close()
+  }
+})
+
+// ADR-0028: the Commons role tools come only from the operator's tick, for a client that asked for them.
+test('grants sidequest:maintain only when the client asked for it and the operator ticked it, and refresh keeps it', async () => {
+  const f = fixture()
+  try {
+    for (const path of [
+      '/.well-known/oauth-authorization-server',
+      '/.well-known/oauth-protected-resource/b/team-board/mcp',
+    ]) {
+      // SAFETY: both discovery documents carry scopes_supported.
+      const discovery = (await f.route(path, {}, new URLSearchParams(), 'GET')).body as { scopes_supported: string[] }
+      expect(discovery.scopes_supported).toContain('sidequest:maintain')
+    }
+    const requested = 'sidequest:read sidequest:work sidequest:maintain'
+    const scopesOf = async (tokens: Tokens) => (await resolveOAuth(f.sql, tokens.access_token, resource, 1000))?.scopes
+    // Asked for but not ticked: the connection holds the rest, and its token says the narrower scope.
+    const unticked = await connection(f, undefined, requested)
+    // SAFETY: a token reply for an approved consent carries the issued token pair and its scope.
+    const plain = (await f.route('/oauth/token', unticked.tokenBody)).body as Tokens & { scope: string }
+    expect(plain.scope).toBe('sidequest:read sidequest:work')
+    expect(await scopesOf(plain)).toEqual(['sidequest:read', 'sidequest:work'])
+    const ticked = await connection(f, undefined, requested, { maintain: true })
+    // SAFETY: as above.
+    const granted = (await f.route('/oauth/token', ticked.tokenBody)).body as Tokens & { scope: string }
+    expect(granted.scope).toBe('sidequest:maintain sidequest:read sidequest:work')
+    const refresh = { grant_type: 'refresh_token', client_id: ticked.clientId, resource }
+    // SAFETY: a refresh reply carries the rotated token pair and its scope.
+    const refreshed = (await f.route('/oauth/token', { ...refresh, refresh_token: granted.refresh_token }))
+      .body as Tokens & {
+      scope: string
+    }
+    expect(refreshed.scope).toBe(granted.scope)
+    expect(await scopesOf(refreshed)).toEqual(['sidequest:maintain', 'sidequest:read', 'sidequest:work'])
+  } finally {
+    f.db.close()
+  }
+})
+
+test('refuses a maintain tick the client did not ask for, and a maintain value that is not a boolean', async () => {
+  const f = fixture()
+  try {
+    const registered = await f.route('/oauth/register', { redirect_uris: [redirectUri], client_name: 'SQLite client' })
+    const clientId = decode(Schema.Struct({ client_id: Schema.String }), registered).client_id
+    const consent = async (scope?: string) => {
+      const query = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        resource,
+        code_challenge_method: 'S256',
+        code_challenge: await pkceChallenge(verifier),
+        state: `state-${scope ?? 'default'}`,
+        ...(scope === undefined ? {} : { scope }),
+      })
+      const authorize = await f.route('/oauth/authorize', {}, query, 'GET')
+      return new URL(authorize.redirect!).searchParams.get('oauth_request')!
+    }
+    const narrow = await consent('sidequest:read sidequest:hire')
+    const Refusal = Schema.Struct({ error: Schema.String, error_description: Schema.String })
+    for (const maintain of [true, 'yes']) {
+      const refused = await f.route(`/oauth/requests/${narrow}/approve`, { agentIds: ['one'], maintain })
+      expect(refused.status).toBe(400)
+      expect(decode(Refusal, refused)).toEqual({
+        error: 'invalid_request',
+        error_description: expect.stringContaining('sidequest:maintain'),
+      })
+    }
+    // The refusals left the consent pending: approving without the tick still connects, without the scope.
+    expect((await f.route(`/oauth/requests/${narrow}/approve`, { agentIds: ['one'], maintain: false })).status).toBe(
+      200,
+    )
+    // A client that names no scope asks for every supported one: the page may offer the tick, and none is granted unticked.
+    const open = await consent()
+    const page = await f.route(`/oauth/requests/${open}`, {}, new URLSearchParams(), 'GET')
+    const Page = Schema.Struct({
+      result: Schema.Struct({ request: Schema.Struct({ scopes: Schema.Array(Schema.String) }) }),
+    })
+    expect(decode(Page, page).result.request.scopes).toContain('sidequest:maintain')
+    const approved = await f.route(`/oauth/requests/${open}/approve`, { agentIds: ['one'] })
+    const Redirect = Schema.Struct({ result: Schema.Struct({ redirectUrl: Schema.String }) })
+    const code = new URL(decode(Redirect, approved).result.redirectUrl).searchParams.get('code')!
+    const token = await f.route('/oauth/token', {
+      grant_type: 'authorization_code',
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      resource,
+      code,
+      code_verifier: verifier,
+    })
+    expect(decode(Schema.Struct({ scope: Schema.String }), token).scope).toBe(
+      'sidequest:hire sidequest:read sidequest:work',
+    )
   } finally {
     f.db.close()
   }

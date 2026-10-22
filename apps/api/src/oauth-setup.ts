@@ -3,6 +3,7 @@ import { AgentStore, agentRoles, type Sql } from '@sidequest/board'
 import { Schema } from 'effect'
 import type { OAuthGrant, OAuthReply, oauthRoute } from './oauth.ts'
 import {
+  MAINTAIN_SCOPE,
   OAUTH_SCOPES as AGENT_SCOPES,
   pkceChallenge,
   randomToken,
@@ -110,11 +111,22 @@ export function bindWaitingSetupConnections(
 
 /**
  * What a connection holds once it acts as an agent: read, plus whichever of work and hire its client asked for. The
- * client's request is only an upper bound; the agent's roles decide within it (ADR-0021).
+ * client's request is only an upper bound; the agent's roles decide within it (ADR-0021). Never sidequest:maintain:
+ * only the operator's tick at a consent for an existing agent grants that (ADR-0028).
  */
 export function boundScopes(requested: readonly string[]): string[] {
   const roles = ['sidequest:hire', 'sidequest:work'].filter((scope) => requested.includes(scope))
   return ['sidequest:read', ...roles].toSorted()
+}
+
+/**
+ * What a consent for an existing agent grants: boundScopes, plus sidequest:maintain when its client asked for it and
+ * the operator ticked the opt-in (ADR-0028). Undefined for a tick that is not a boolean or the client did not ask for.
+ */
+export function consentScopes(requested: readonly string[], maintain: unknown): string[] | undefined {
+  if (maintain !== undefined && !Schema.is(Schema.Boolean)(maintain)) return undefined
+  if (maintain === true && !requested.includes(MAINTAIN_SCOPE)) return undefined
+  return [...boundScopes(requested), ...(maintain === true ? [MAINTAIN_SCOPE] : [])].toSorted()
 }
 
 export async function setupOAuthRoute(input: Input): Promise<OAuthReply | undefined> {
@@ -142,6 +154,19 @@ async function approve(input: Input, requestId: string): Promise<OAuthReply> {
   // Any client may connect for setup. Its requested roles are kept only to pre-tick the approval page; the operator
   // chooses the roles there, so a role choice sent with this consent is ignored.
   const requested = scopes(request.scopes_json)
+  // ADR-0028: the Commons role tools are granted only at a consent for an existing agent, never through setup.
+  if (
+    body.maintain !== undefined ||
+    (Schema.is(Schema.Array(Schema.String))(body.scopes) && body.scopes.includes(MAINTAIN_SCOPE))
+  )
+    return {
+      status: 400,
+      body: {
+        error: 'invalid_request',
+        error_description: `Setup consent cannot grant ${MAINTAIN_SCOPE}; connect an existing agent to grant it`,
+      },
+      headers,
+    }
   if (
     body.agentIds !== undefined &&
     (!Schema.is(Schema.Array(Schema.String))(body.agentIds) || body.agentIds.length !== 0)

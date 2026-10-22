@@ -1,5 +1,10 @@
 /** OAuth 2.1 public clients: exact redirect/resource binding and PKCE S256 only. */
-export const OAUTH_SCOPES = ['sidequest:read', 'sidequest:hire', 'sidequest:work'] as const
+/**
+ * The Commons role tools (ADR-0028). A plain scope, not an agent role: only the operator grants it, at consent, and the
+ * Commons role holder list still decides every call.
+ */
+export const MAINTAIN_SCOPE = 'sidequest:maintain'
+export const OAUTH_SCOPES = ['sidequest:read', 'sidequest:hire', 'sidequest:work', MAINTAIN_SCOPE] as const
 
 export function parseScopes(value: unknown): string[] | undefined {
   if (typeof value !== 'string') return undefined

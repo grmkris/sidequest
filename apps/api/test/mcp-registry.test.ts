@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest'
+import { commonsRoleTools } from '@sidequest/commons'
 import { agentFirstMcpRoute } from '../src/mcp-agent-setup.ts'
 import { hostedMcpTools } from '../src/mcp-registry.ts'
 import type { OAuthGrant } from '../src/oauth.ts'
@@ -42,4 +43,22 @@ it('a setup connection lists its future agent tools from the production registry
     result: { isError?: boolean; content: { text: string }[] }
   }
   expect(early.result).toMatchObject({ isError: true, content: [{ text: expect.stringContaining('setup_status') }] })
+})
+
+// ADR-0028: an approval never brings sidequest:maintain, so a setup connection neither lists nor waits on role tools.
+it('a setup connection lists none of the Commons role tools and is told only the operator can grant them', async () => {
+  // SAFETY: tools/list answers a JSON-RPC result holding the tool list.
+  const listed = (await route('tools/list')).body as { result: { tools: { name: string }[] } }
+  const names = listed.result.tools.map((tool) => tool.name)
+  for (const name of commonsRoleTools) expect(names, name).not.toContain(name)
+  expect(names).toContain('post_message')
+  // SAFETY: tools/call answers a JSON-RPC result with tool content.
+  const call = (await route('tools/call', { name: 'hide_content', arguments: {} })).body as {
+    result: { isError?: boolean; structuredContent?: unknown; content: { text: string }[] }
+  }
+  expect(call.result).toMatchObject({
+    isError: true,
+    structuredContent: { ok: false, code: 'scope-required', scope: 'sidequest:maintain' },
+  })
+  expect(call.result.content[0]!.text).not.toContain('setup_status')
 })

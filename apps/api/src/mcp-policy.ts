@@ -1,7 +1,8 @@
 /** OAuth scopes are checked by both discovery and the Durable Object executing the action. */
 import type { OAuthGrant } from './oauth.ts'
 import { AGENT_ROLES, type AgentRole } from '@sidequest/board'
-import { commonsReadTools, commonsWriteTools, toolSpecs } from '@sidequest/commons'
+import { commonsReadTools, commonsRoleTools, commonsWriteTools, toolSpecs } from '@sidequest/commons'
+import { MAINTAIN_SCOPE } from './oauth-validation.ts'
 
 const READ_TOOLS = new Set([
   ...commonsReadTools,
@@ -100,6 +101,7 @@ export const SETUP_TOOLS = new Set([
  * permission request/use/stop false  true         true/true/false authority / execution / local stop
  * unstake/cancel/withdraw     false  true         true        vault transaction
  * sweep/x402                  false  true         true        transfer / signed payment
+ * Commons role tools          false  merge_* only true        public action, public reason, audit log (sidequest:maintain)
  * All effects are bounded to Sidequest, hence openWorldHint=false.
  */
 const REVIEW: Readonly<Record<string, readonly [boolean, boolean, boolean]>> = {
@@ -239,9 +241,18 @@ export const OPERATOR_CONTINUATIONS = new Set([
 
 export function requiredToolScope(
   name: string,
-): 'sidequest:read' | 'sidequest:hire' | 'sidequest:work' | 'sidequest:setup' | 'write' | undefined {
+):
+  | 'sidequest:read'
+  | 'sidequest:hire'
+  | 'sidequest:work'
+  | 'sidequest:setup'
+  | typeof MAINTAIN_SCOPE
+  | 'write'
+  | undefined {
   if (name === 'create_agent' || name === 'setup_status') return 'sidequest:setup'
   if (READ_TOOLS.has(name)) return 'sidequest:read'
+  // ADR-0028: the Commons role tools need the operator's consent-time grant; the role holder list is the second key.
+  if (commonsRoleTools.has(name)) return MAINTAIN_SCOPE
   if (HIRE_TOOLS.has(name)) return 'sidequest:hire'
   if (WORK_TOOLS.has(name)) return 'sidequest:work'
   if (SHARED_TOOLS.has(name)) return 'write'
@@ -340,6 +351,7 @@ export function toolRefusal(
       },
     }
   const scope = requiredToolScope(name)
+  if (scope === MAINTAIN_SCOPE) return { result: maintainRefusal() }
   if (scope === undefined || scope === 'sidequest:setup')
     return {
       result: {
@@ -369,10 +381,36 @@ function roleRefusal(role: AgentRole) {
   }
 }
 
-/** A setup connection's call to a tool it gets only once its operator approves the agent. */
+/**
+ * A Commons role tool on a connection its operator did not grant sidequest:maintain (ADR-0028). No step-up: a client
+ * signing in again cannot add it, only the operator can, by reconnecting and ticking the opt-in at consent.
+ */
+function maintainRefusal() {
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `scope-required: this connection was not granted ${MAINTAIN_SCOPE}, which the Commons role tools need. Only your operator can grant it: they reconnect Sidequest in this app, pick this agent and tick Commons role tools. The agent's wallet must also hold the Commons role.`,
+      },
+    ],
+    structuredContent: { ok: false, code: 'scope-required', scope: MAINTAIN_SCOPE },
+    isError: true,
+  }
+}
+
+/**
+ * A setup connection's call to a tool it gets only once its operator approves the agent. The Commons role tools never
+ * come with an approval, so a setup connection does not wait for them.
+ */
 function awaitsApproval(grant: Pick<OAuthGrant, 'scopes' | 'setup' | 'setupFamilyId'>, name: string): boolean {
   const scope = requiredToolScope(name)
-  return grant.setup === true && !permittedTool(grant, name) && scope !== undefined && scope !== 'sidequest:setup'
+  return (
+    grant.setup === true &&
+    !permittedTool(grant, name) &&
+    scope !== undefined &&
+    scope !== 'sidequest:setup' &&
+    scope !== MAINTAIN_SCOPE
+  )
 }
 
 export function permittedTool(

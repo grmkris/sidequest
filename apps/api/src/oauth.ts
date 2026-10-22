@@ -1,6 +1,7 @@
 import { AgentStore, agentRoles, migrateAgentSchema, type AgentRole, type Sql } from '@sidequest/board'
 import type { Statement } from '@sidequest/indexer'
 import {
+  MAINTAIN_SCOPE,
   parseScopes as parseAgentScopes,
   pkceChallenge,
   randomToken,
@@ -12,7 +13,7 @@ import {
 
 import { Schema } from 'effect'
 import type { OAuthGrant as AgentOAuthGrant } from '@sidequest/indexer/oauth-types'
-import { bindWaitingSetupConnections, boundScopes, resolveSetupOAuth, setupOAuthRoute } from './oauth-setup.ts'
+import { bindWaitingSetupConnections, consentScopes, resolveSetupOAuth, setupOAuthRoute } from './oauth-setup.ts'
 export type OAuthGrant = AgentOAuthGrant & {
   readonly setup?: boolean
   readonly setupFamilyId?: string
@@ -309,9 +310,12 @@ export async function oauthRoute(input: {
     )
       return failure('invalid_request', 'Select one active agent owned by this operator')
     // The connection holds what its client asked for; the agent's own roles decide within that (ADR-0021).
-    const selectedScopes = boundScopes(
+    const selectedScopes = consentScopes(
       Schema.decodeUnknownSync(Schema.Array(Schema.String))(JSON.parse(request.scopes_json)),
+      approve ? body.maintain : undefined,
     )
+    if (selectedScopes === undefined)
+      return failure('invalid_request', `Tick ${MAINTAIN_SCOPE} (true or false) only for a client that asked for it`)
     const code = randomToken()
     const codeHash = await tokenHash(code)
     let consumed = false

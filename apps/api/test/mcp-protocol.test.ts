@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite'
+import { commonsRoleTools } from '@sidequest/commons'
 import { fromNodeSqlite } from '@sidequest/indexer'
 import { describe, expect, it, vi } from 'vitest'
 import { mcpRoute, MODERN_LANE } from '../src/mcp.ts'
@@ -509,6 +510,55 @@ describe('hosted tool metadata', () => {
     expect(failed).not.toHaveProperty('_meta')
     const unknown = result(await route('tools/call', { name: 'submit_selection' }, { tools: registry, call }))
     expect(unknown).toMatchObject({ isError: true, content: [{ text: expect.stringContaining('not-found') }] })
+  })
+  // ADR-0028: the Commons role tools reach only a connection its operator granted sidequest:maintain at consent.
+  const maintainGrant = { ...fullGrant, scopes: [...fullGrant.scopes, 'sidequest:maintain'] }
+  it.each([{}, { _meta: meta }])(
+    'lists the Commons role tools only with sidequest:maintain, each needing an operationKey',
+    async (params) => {
+      const list = async (granted: OAuthGrant) =>
+        // SAFETY: tools/list returns its advertised tool objects under result.tools.
+        result(await route('tools/list', params, { grant: granted, tools: registry })).tools as {
+          name: string
+          inputSchema: { required?: string[]; properties: Record<string, unknown> }
+          securitySchemes: unknown
+        }[]
+      const granted = await list(maintainGrant)
+      expect(granted.map((tool) => tool.name)).toEqual(expect.arrayContaining([...commonsRoleTools]))
+      const hide = granted.find((tool) => tool.name === 'hide_content')!
+      expect(hide.inputSchema.required).toContain('operationKey')
+      expect(hide.inputSchema.properties).toHaveProperty('operationKey')
+      expect(hide.securitySchemes).toEqual([{ type: 'oauth2', scopes: ['sidequest:maintain'] }])
+      const plain = (await list(fullGrant)).map((tool) => tool.name)
+      for (const name of commonsRoleTools) expect(plain).not.toContain(name)
+    },
+  )
+  it('answers a role tool call without sidequest:maintain with scope-required, never a step-up or a call', async () => {
+    const args = { gapId: 3, status: 'fixed', reason: 'Shipped in the docs', operationKey: 'gap-3-fixed' }
+    const call = vi.fn()
+    for (const params of [{}, { _meta: meta }]) {
+      const reply = await route(
+        'tools/call',
+        { ...params, name: 'set_gap_status', arguments: args },
+        { grant: fullGrant, tools: registry, call },
+      )
+      expect(reply.status).toBe(200)
+      expect(reply.headers?.['www-authenticate']).toBeUndefined()
+      expect(result(reply)).toMatchObject({
+        isError: true,
+        content: [{ text: expect.stringContaining('Only your operator can grant it') }],
+        structuredContent: { ok: false, code: 'scope-required', scope: 'sidequest:maintain' },
+      })
+    }
+    expect(call).not.toHaveBeenCalled()
+    // With the scope the call reaches the agent's executor; the Commons role holder list decides it there.
+    const allowed = vi.fn(async () => ({ ok: true, result: { status: 'confirmed' } }))
+    await route(
+      'tools/call',
+      { name: 'set_gap_status', arguments: args },
+      { grant: maintainGrant, tools: registry, call: allowed },
+    )
+    expect(allowed).toHaveBeenCalledWith('set_gap_status', args, 'a1')
   })
 })
 
