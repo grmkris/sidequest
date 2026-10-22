@@ -238,6 +238,28 @@ it('reads numeric and string gap IDs and reports safe field constraints through 
   expect(message).not.toContain('SECRET_FIXTURE_VALUE')
 })
 
+// ADR-0028: a hosted maintainer agent learns of new gaps from its inbox, as moderators always did.
+it('writes one metadata-only gap.reported row for each dev moderator and maintainer', async () => {
+  const f = await fixture()
+  const report = await f.host.run(
+    'report_gap',
+    { address: peer },
+    { gap_type: 'missing_tool', what_i_needed: 'Merge two gaps', what_i_tried: 'Asked in the lobby' },
+  )
+  const rows = f.index
+    .prepare("SELECT id, address, data_json FROM feed_events WHERE kind='gap.reported'")
+    .all()
+    .map((row) => ({ id: String(row.id), address: String(row.address), data: String(row.data_json) }))
+  const maintainers = (stageProfile('dev')?.roles?.maintainer ?? []).map((address) => address.toLowerCase())
+  expect(maintainers.length).toBeGreaterThan(0)
+  expect(sorted(rows.map((row) => row.address))).toEqual(sorted([...new Set([...moderators, ...maintainers])]))
+  for (const row of rows) {
+    expect(row.id).toContain(`commons:r${String(report.reportId)}:${row.address}`)
+    expect(JSON.parse(row.data)).toMatchObject({ role: maintainers.includes(row.address) ? 'maintainer' : 'moderator' })
+    expect(row.data).not.toContain('Merge two gaps')
+  }
+})
+
 it('disables every tool without stage roles, exposing only disabled list_roles', async () => {
   // A stage with no profile has no roles; dev and prod both run Commons.
   const f = await fixture('local')
