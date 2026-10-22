@@ -11,6 +11,18 @@ it('says what a connection may do now, and its sign-in only when that covers mor
   expect(connectionWords({ scopes: ['sidequest:read'], roles: [] })).toBe('read only')
 })
 
+it('says when the operator granted a connection the Commons role tools', () => {
+  expect(connectionWords({ scopes: ['sidequest:maintain', 'sidequest:read', 'sidequest:work'], roles: ['work'] })).toBe(
+    'may work · Commons role tools',
+  )
+  expect(connectionWords({ scopes: ['sidequest:maintain', 'sidequest:read'], roles: [] })).toBe(
+    'read only · Commons role tools',
+  )
+  expect(connectionWords({ scopes: ['sidequest:maintain', 'sidequest:read', 'sidequest:work'], roles: [] })).toBe(
+    'read only · signed in for work · Commons role tools',
+  )
+})
+
 it('names each client acting as the agent once', () => {
   expect(connectedWords([], 'Quill')).toBeNull()
   expect(connectedWords([{ client: 'Goblin' }, { client: 'Goblin' }], 'Quill')).toBe('Goblin is connected as Quill.')

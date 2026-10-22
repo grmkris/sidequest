@@ -18,6 +18,8 @@ import { hires } from './onboarding/useOnboardingFacts.ts'
 import { OAuthClient, type OAuthClientIdentity } from './OAuthClient.tsx'
 import { HandBackNote, SetupConnect } from './SetupConnect.tsx'
 import { clientRedirect } from '../agent-setup-api.ts'
+import { useRoles } from '../commons-query.ts'
+import { commonsRoleOffer, consentBody, type CommonsRoleOffer } from '../oauth-consent.ts'
 
 function rolesText(roles: readonly ('work' | 'hire')[]): string {
   const words = [
@@ -46,7 +48,13 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
     queryFn: () => agentEndpoint<{ agents: ManagedAgent[] }>('/api/agents'),
     enabled: auth.signedIn,
   })
-  const [chosen, setSelected] = useState('')
+  const [chosen, setChosen] = useState('')
+  // ADR-0028: never ticked by default, and cleared whenever the operator picks another agent.
+  const [maintain, setMaintain] = useState(false)
+  const setSelected = (id: string) => {
+    setChosen(id)
+    setMaintain(false)
+  }
   const [creating, setCreating] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,15 +62,18 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
   // One agent is the obvious answer: pick it, so connecting it is one button.
   const selected = chosen !== '' ? chosen : active.length === 1 ? active[0]!.id : ''
   const agent = agents.data?.agents.find((row) => row.id === selected)
+  const commonsRoles = useRoles()
+  const offer = commonsRoleOffer(request.data?.request.scopes, commonsRoles.data, agent?.address)
   async function decide(approved: boolean) {
     setBusy(true)
     setError(null)
     try {
       // The connection gets what its client asked for; the agent's own roles decide within that (ADR-0021).
-      const response = await agentEndpoint<{ redirectUrl: string }>(`/oauth/requests/${requestId}/approve`, 'POST', {
-        decision: approved ? 'approve' : 'reject',
-        agentIds: [selected],
-      })
+      const response = await agentEndpoint<{ redirectUrl: string }>(
+        `/oauth/requests/${requestId}/approve`,
+        'POST',
+        consentBody({ approved, agentId: selected, offer, maintain }),
+      )
       window.location.assign(clientRedirect(response.redirectUrl))
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'OAuth consent is unavailable')
@@ -133,6 +144,7 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
             The weekly budget limits transfers of payment tokens. It does not limit deposits at risk: an agent can
             activate a job that requires a deposit, and a slash is immediate.
           </p>
+          {offer !== undefined && <CommonsRoleTick role={offer} checked={maintain} onChange={setMaintain} />}
           <Button
             busy={busy}
             disabled={agent.state !== 'active' || request.data === undefined}
@@ -153,6 +165,30 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+    </div>
+  )
+}
+
+const ROLE_NAME: Readonly<Record<CommonsRoleOffer, string>> = { maintainer: 'Maintainer', moderator: 'Moderator' }
+
+/**
+ * The opt-in for the Commons role tools (ADR-0028), offered only when the client asked for them and the agent's wallet
+ * holds a Commons role. Unticked, the connection gets none of them; the role list still decides every call.
+ */
+function CommonsRoleTick(props: { role: CommonsRoleOffer; checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <div className="grid gap-1">
+      <label className="flex min-h-11 items-center gap-3 text-sm">
+        <input type="checkbox" checked={props.checked} onChange={(event) => props.onChange(event.target.checked)} />
+        Let this connection use Commons role tools as {ROLE_NAME[props.role]}
+      </label>
+      <p className="text-sm text-muted-foreground">
+        {props.role === 'maintainer'
+          ? 'It could hide and unhide posts, set roadmap and gap status, link gaps and merge items and gaps.'
+          : 'It could hide and unhide posts.'}{' '}
+        Every action is public and logged with its reason, and a merge cannot be undone. A model acting on text others
+        wrote can be misled: tick this only for an agent you set up to moderate.
+      </p>
     </div>
   )
 }

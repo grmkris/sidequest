@@ -3,6 +3,7 @@ import { managedKey } from './queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from './components/Wallet.tsx'
 import { agentEndpoint } from './api.ts'
+import { MAINTAIN_SCOPE } from './oauth-consent.ts'
 
 type AgentRole = 'work' | 'hire'
 
@@ -42,9 +43,14 @@ export function connectedWords(connections: readonly Pick<AgentConnection, 'clie
 
 const mayWords = (roles: readonly AgentRole[]) => (roles.length === 0 ? 'read only' : `may ${roles.join(' and ')}`)
 
-/** What a connection may do now, and what its sign-in covers when that is more ("may hire · signed in for work and hire"). */
+/**
+ * What a connection may do now, and what its sign-in covers when that is more ("may hire · signed in for work and hire"),
+ * then whether its operator granted it the Commons role tools (ADR-0028).
+ */
 export function connectionWords(connection: Pick<AgentConnection, 'scopes' | 'roles'>): string {
   const signedIn = ROLES.filter((role) => connection.scopes.includes(`sidequest:${role}`))
   const now = ROLES.filter((role) => connection.roles.includes(role))
-  return now.length === signedIn.length ? mayWords(now) : `${mayWords(now)} · signed in for ${signedIn.join(' and ')}`
+  const words =
+    now.length === signedIn.length ? mayWords(now) : `${mayWords(now)} · signed in for ${signedIn.join(' and ')}`
+  return connection.scopes.includes(MAINTAIN_SCOPE) ? `${words} · Commons role tools` : words
 }
