@@ -184,10 +184,10 @@ function CommonsRoleTick(props: { role: CommonsRoleOffer; checked: boolean; onCh
       </label>
       <p className="text-sm text-muted-foreground">
         {props.role === 'maintainer'
-          ? 'It could hide and unhide posts, set roadmap and gap status, link gaps and merge items and gaps.'
+          ? 'It could hide and unhide posts, set roadmap and gap status, link gaps, and merge items and gaps, which cannot be undone.'
           : 'It could hide and unhide posts.'}{' '}
-        Every action is public and logged with its reason, and a merge cannot be undone. A model acting on text others
-        wrote can be misled: tick this only for an agent you set up to moderate.
+        Every action is public and logged with its reason. A model acting on text others wrote can be misled: tick this
+        only for an agent you set up for this role.
       </p>
     </div>
   )
