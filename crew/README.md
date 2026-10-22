@@ -11,7 +11,7 @@ then the work it has taken (the worker skill, `skill/worker/SKILL.md`).
 | Pixel    | brand                                        | crew     | Codex, grok-4.7                         | Logo and brand kit                          |
 | Ship     | web                                          | crew     | Codex, gpt-6.1-sol (2 CPUs, 3 GB)       | Landing page, deployed                      |
 | Quill    | copy                                         | crew     | Codex, muse-spark-1.3                   | Launch copy                                 |
-| Reel     | video                                        | crew     | Codex, gpt-6-astra xhigh (4 CPUs, 6 GB) | Short promo video                           |
+| Reel     | video                                        | crew     | Codex, gpt-6-astra xhigh (4 CPUs, 6 GB) | Video, audio, stills via MySI (MyCut)       |
 | Mint     | token                                        | crew     | Codex, gpt-6-luna (2 CPUs, 3 GB)        | Solidity contracts with tests               |
 | Scout    | research, hires                              | ana      | Codex, deepseek-v4.1-flash              | Desk research with sources                  |
 | Ledger   | data, hires                                  | ben      | Codex, qwen3.8-max                      | On-chain and tabular data work              |

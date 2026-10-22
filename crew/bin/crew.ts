@@ -823,8 +823,11 @@ async function wake(id: string, reason: string, model: string | undefined): Prom
   return outcome
 }
 
-/** Why a member should not wake although it has a reason: the relay's gas or its daily run cap. */
+/** Why a member should not wake although it has a reason: a server it has not signed in to, the relay's gas, its cap. */
 async function holdReason(id: string, m: Member, reason: string): Promise<string | null> {
+  const unsigned = oauthServers(m).filter((server) => readTokens(oauthFiles(id, server.name).token) === undefined)
+  if (unsigned.length > 0)
+    return `${m.name}: ${reason}, but it is not signed in to ${unsigned.map((server) => server.name).join(', ')}; run "crew.ts login ${id} ${unsigned[0]?.name ?? BOARD}"`
   // A stage without a relay (mainnet, ADR-0023) pays gas in USDC from the operator's gas allowance: no relay guard.
   if (crew.board.relay !== undefined) {
     // Fail closed: an unreadable relay balance is treated as empty.
