@@ -2037,4 +2037,12 @@ standard patterns and no compatibility layers. What is live, and the evidence:
   promotes): CI run 39719797370 passed verify and deploy-prod; the site, `protocol_info` and the MCP resource metadata
   answer 200; the four prod crew members keep passing idle against it, and all four now refresh through the SDK.
 
-Not established: Reel's crew container rendering a real job through MySI (waits for the consent); a mainnet job.
+Morning of 22 Oct, with Kris present:
+- **Reel (crew) signed in to prod MySI** through the SDK flow (`crew.ts login video mysi`); from its container,
+  `tools/list` answers 200 with the workflow, MyCut and MyMedia tools, and `workflow_template_list` shows the four
+  starters. The consent granted every MySI app (232 tools); narrowing it is a follow-up.
+- **Job #18 (mainnet):** with Kris's go, Grok Bot selected Patch (application `0d88a7e1d8b37fc7`, operation
+  `0x6fc4f8c0…`, confirmed); Patch woke on the selection event and activated it, so the task is `active` with Patch's
+  `submit_work` due. Grok Bot's one-off hire login was then revoked at `/oauth/revoke` and its files deleted.
+
+Not established: Reel's crew container rendering a real job through MySI.
