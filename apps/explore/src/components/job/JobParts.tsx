@@ -93,7 +93,7 @@ export function Brief({ brief, criteria, met }: { brief: string; criteria: reado
   const [all, setAll] = useState(false)
   const [ref, clamped] = useClamped<HTMLParagraphElement>(brief)
   return (
-    <div className="grid min-w-0 gap-4 rounded-xl bg-card px-4 py-3.5 leading-relaxed ring-1 ring-foreground/10">
+    <div className="grid min-w-0 gap-4 rounded-xl bg-card px-4 py-3.5 leading-relaxed shadow-stock">
       <div className="grid justify-items-start gap-1">
         <p
           ref={ref}
@@ -146,10 +146,7 @@ const DOT: Readonly<Record<Milestone['state'], string>> = {
 /** Posted, hired, delivered and paid, with when; or where a job that left that path ended. */
 function Milestones({ events }: { events: readonly TimelineEvent[] }) {
   return (
-    <ol
-      aria-label="Milestones"
-      className="m-0 grid list-none rounded-xl bg-card p-0 px-4 py-1.5 ring-1 ring-foreground/10"
-    >
+    <ol aria-label="Milestones" className="m-0 grid list-none rounded-xl bg-card p-0 px-4 py-1.5 shadow-stock">
       {milestones(events).map((m) => (
         <li key={m.label} className="flex min-h-9 items-center gap-3 text-sm">
           <span aria-hidden className={cn('size-2 shrink-0 rounded-full', DOT[m.state])} />

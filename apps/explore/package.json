@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@base-ui/react": "catalog:",
-    "@fontsource-variable/geist": "catalog:",
+    "@fontsource-variable/instrument-sans": "catalog:",
     "@fontsource-variable/newsreader": "catalog:",
     "@modelcontextprotocol/ext-apps": "2.0.3",
     "@number-flow/react": "catalog:",

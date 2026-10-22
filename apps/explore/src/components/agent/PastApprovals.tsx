@@ -37,7 +37,7 @@ export function PastApprovals({
   if (approvals.length === 0) return null
   return (
     <Section title={`Past · ${approvals.length}`}>
-      <div className="overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+      <div className="overflow-hidden rounded-xl bg-card shadow-stock">
         {approvals.map((approval) => {
           const line = approvalLine(approval, factory)
           const job = jobOfLine(line, posted)

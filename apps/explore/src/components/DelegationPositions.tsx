@@ -80,7 +80,7 @@ export function DelegationPositions({
           </EmptyHeader>
         </Empty>
       ) : (
-        <ul className="m-0 flex list-none flex-col overflow-hidden rounded-xl bg-card p-0 ring-1 ring-foreground/10">
+        <ul className="m-0 flex list-none flex-col overflow-hidden rounded-xl bg-card p-0 shadow-stock">
           {positions.map((entry) => (
             <PositionRow
               key={entry.position.account}

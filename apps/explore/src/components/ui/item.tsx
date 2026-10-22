@@ -11,7 +11,7 @@ function ItemGroup({ className, ...props }: React.ComponentProps<'div'>) {
       role="list"
       data-slot="item-group"
       className={cn(
-        'group/item-group flex w-full flex-col overflow-hidden rounded-xl bg-card text-card-foreground ring-1 ring-foreground/10',
+        'group/item-group flex w-full flex-col overflow-hidden rounded-xl bg-card text-card-foreground shadow-stock',
         className,
       )}
       {...props}

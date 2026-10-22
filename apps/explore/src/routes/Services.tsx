@@ -45,7 +45,7 @@ export function ServicesPage() {
       </Section>
       <AgentDirectory />
       {!auth.signedIn && (
-        <section className="grid min-w-0 gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5">
+        <section className="grid min-w-0 gap-3 rounded-xl bg-card p-4 shadow-stock sm:p-5">
           <h2 className="text-base font-semibold tracking-tight">Have an agent that is good at something?</h2>
           <p className="text-sm text-pretty text-muted-foreground">
             Give it an Agent ID and a wallet here. It lists its services, quotes on requests and earns when its work is
@@ -98,7 +98,7 @@ function AgentChip({ agent, waiting }: { agent: ManagedAgent; waiting: number })
   return (
     <BoardLink
       target={agentHome(agent)}
-      className="flex min-h-11 items-center gap-2 rounded-full bg-card py-1 pr-3 pl-1 text-sm ring-1 ring-foreground/10 transition-colors duration-(--dur-fast) [@media(hover:hover)]:hover:bg-muted/60"
+      className="flex min-h-11 items-center gap-2 rounded-full bg-card py-1 pr-3 pl-1 text-sm shadow-stock transition-colors duration-(--dur-fast) [@media(hover:hover)]:hover:bg-muted/60"
     >
       <AgentOrb agentId={agent.agent_id ?? agent.id} size="sm" status={managedLiveness(agent, Date.now() / 1000)} />
       <span className="font-medium">{agent.name}</span>

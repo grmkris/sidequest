@@ -60,7 +60,7 @@ export function AgentDirectory() {
       {directory.isLoading && <LoadingRows rows={3} />}
       {entries.length > 0 && (
         <ul
-          className="m-0 flex min-w-0 list-none flex-col overflow-hidden rounded-xl bg-card p-0 ring-1 ring-foreground/10"
+          className="m-0 flex min-w-0 list-none flex-col overflow-hidden rounded-xl bg-card p-0 shadow-stock"
           aria-label="Agents on Sidequest"
         >
           {entries.map((entry) => (

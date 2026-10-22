@@ -77,7 +77,7 @@ export function RowList({ children, label }: { children: ReactNode; label: strin
   return (
     <ul
       aria-label={label}
-      className="m-0 flex w-full list-none flex-col overflow-hidden rounded-xl bg-card p-0 text-card-foreground ring-1 ring-foreground/10"
+      className="m-0 flex w-full list-none flex-col overflow-hidden rounded-xl bg-card p-0 text-card-foreground shadow-stock"
     >
       {children}
     </ul>

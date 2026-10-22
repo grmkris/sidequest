@@ -10,7 +10,7 @@ import { Item, ItemGroup, ItemContent } from './ui/item.tsx'
 import { Skeleton } from './ui/skeleton.tsx'
 
 const FIELD =
-  'w-full min-w-0 min-h-8 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors duration-(--dur-fast) outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm pointer-coarse:min-h-11'
+  'w-full min-w-0 min-h-9 rounded-md border border-input bg-card px-2.5 py-1 text-base transition-colors duration-(--dur-fast) placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-ring disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-55 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm pointer-coarse:min-h-11'
 
 /** A titled block: a quiet header above a surface, and an optional footnote below it. */
 export function Section({
@@ -209,7 +209,7 @@ export function AddressRow({
 
 /** An address: shortened, linked to the explorer, copyable. */
 export function Address({ value, you = false }: { value: string | null | undefined; you?: boolean }) {
-  if (value === null || value === undefined) return <span className="text-muted-foreground">—</span>
+  if (value === null || value === undefined) return <span className="text-muted-foreground">None</span>
   return (
     <span className="inline-flex min-w-0 max-w-full flex-wrap items-center justify-end gap-0.5 font-mono text-ui">
       <a
@@ -330,7 +330,9 @@ export function LoadingRows({ rows = 3 }: { rows?: number }) {
 export function PageTitle({ children, sub }: { children: ReactNode; sub?: ReactNode }) {
   return (
     <header className="grid gap-1">
-      <h1 className="text-2xl leading-tight font-semibold tracking-tight">{children}</h1>
+      <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] sm:text-4xl">
+        {children}
+      </h1>
       {sub !== undefined && (
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">{sub}</div>
       )}
@@ -354,7 +356,7 @@ export function Details({
   open?: boolean
 }) {
   return (
-    <details open={open} className={cn('group/details rounded-xl bg-card ring-1 ring-foreground/10', className)}>
+    <details open={open} className={cn('group/details rounded-xl bg-card shadow-stock', className)}>
       <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 px-4 text-sm font-medium select-none pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden">
         <ChevronRight
           aria-hidden

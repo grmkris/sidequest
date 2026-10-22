@@ -44,7 +44,7 @@ export function BackingStrip({ wallet, viewer }: { wallet: Address; viewer: Addr
           This agent&apos;s backing can&apos;t be read right now; it retries.
         </p>
       ) : (
-        <div className="grid min-h-40 gap-3 rounded-xl bg-card px-4 py-3 ring-1 ring-foreground/10">
+        <div className="grid min-h-40 gap-3 rounded-xl bg-card px-4 py-3 shadow-stock">
           {read.isError && (
             <p className="text-xs text-muted-foreground">Showing last known backing; the refresh is unavailable.</p>
           )}
@@ -155,7 +155,7 @@ export function BackingPlaceholder() {
 
 function BackingSkeleton() {
   return (
-    <div className="grid min-h-40 gap-3 rounded-xl bg-card px-4 py-3 ring-1 ring-foreground/10">
+    <div className="grid min-h-40 gap-3 rounded-xl bg-card px-4 py-3 shadow-stock">
       <output className="sr-only">Loading agent backing</output>
       <div className="flex gap-8" aria-hidden>
         {[0, 1, 2].map((i) => (

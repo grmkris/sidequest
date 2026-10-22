@@ -64,7 +64,7 @@ export function AmountField({
   return (
     <div
       className={cn(
-        'grid gap-1 rounded-lg bg-background px-3 pt-2 pb-2.5 ring-1 ring-foreground/10 transition-shadow duration-(--dur-fast)',
+        'grid gap-1 rounded-md bg-card px-3 pt-2 pb-2.5 ring-1 ring-input transition-shadow duration-(--dur-fast)',
         'has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-ring/60',
         tone === 'warning' && 'ring-warning/60',
         tone === 'destructive' && 'ring-destructive/60',

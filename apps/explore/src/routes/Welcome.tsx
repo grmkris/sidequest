@@ -66,7 +66,7 @@ export function WelcomePage() {
     return (
       <>
         <PageTitle>Set up Sidequest</PageTitle>
-        <section className="grid gap-3 rounded-xl bg-card p-5 ring-1 ring-foreground/10">
+        <section className="grid gap-3 rounded-xl bg-card p-5 shadow-stock">
           {auth.address === undefined ? (
             <>
               <p className="text-sm text-muted-foreground">
@@ -234,7 +234,7 @@ function StepCard({
   return (
     <li
       aria-current={state === 'current' ? 'step' : undefined}
-      className={cn('grid gap-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10', state === 'todo' && 'opacity-60')}
+      className={cn('grid gap-4 rounded-xl bg-card p-4 shadow-stock', state === 'todo' && 'opacity-60')}
     >
       <div className="flex items-start gap-3">
         <StepMark n={n} state={state} fresh={fresh} />
@@ -279,7 +279,7 @@ function Fund({ address }: { address: Address }) {
  */
 function AllSet({ agent, connected }: { agent: ManagedAgent; connected: string | null }) {
   return (
-    <section className="grid justify-items-center gap-4 rounded-xl bg-card p-6 text-center ring-1 ring-foreground/10">
+    <section className="grid justify-items-center gap-4 rounded-xl bg-card p-6 text-center shadow-stock">
       <AgentOrb agentId={agent.agent_id ?? agent.id} size="lg" status={managedLiveness(agent, Date.now() / 1000)} />
       <div className="grid gap-1">
         <h2 className="text-lg font-semibold tracking-tight">You’re set</h2>

@@ -97,7 +97,7 @@ function RecordRows({ jobs }: { jobs: readonly RecordJob[] }) {
   const { address } = useAuth()
   const minute = Math.floor(useNow() / 60) * 60
   return (
-    <ItemGroup className="gap-0 overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10">
+    <ItemGroup className="gap-0 overflow-hidden rounded-xl bg-card shadow-stock">
       {jobs.map((j) => {
         const board = j.board_id ?? 'public'
         const task = tasks.get(j.job_id)

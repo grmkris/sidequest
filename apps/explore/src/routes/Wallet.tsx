@@ -34,7 +34,7 @@ import { sidequest } from '../sidequest.ts'
 import { type TokenSum, type WalletRecord, hasHistory, walletRecord } from '../wallet-record.ts'
 import { chain, deployed, deployment, explorer } from '../wallet.ts'
 
-const TILE = 'grid min-w-0 content-start gap-1 rounded-xl bg-card px-4 py-3.5 ring-1 ring-foreground/10'
+const TILE = 'grid min-w-0 content-start gap-1 rounded-xl bg-card px-4 py-3.5 shadow-stock'
 
 /** The agent whose wallet this is, if any: from what this page already knows, else the index's answer. */
 function useWalletAgent(address: Address): { agentId: string | null; checked: boolean } {
@@ -97,7 +97,7 @@ function Tile({ label, value, sub }: { label: string; value: ReactNode; sub?: Re
 /** The largest amount, and how many other tokens there are. */
 function Money({ sums }: { sums: TokenSum[] }) {
   const [first] = sums
-  if (first === undefined) return <>—</>
+  if (first === undefined) return <>None</>
   return (
     <>
       <TokenAmount value={first.value} token={first.token} static />
@@ -120,7 +120,7 @@ function Record({ record }: { record: WalletRecord }) {
 /** Agents as a list of rows: each orb and name opening its card, with what the wallet has with it. */
 function AgentRows({ rows }: { rows: { agentId: string; note: ReactNode }[] }) {
   return (
-    <ul className="m-0 grid list-none gap-0 overflow-hidden rounded-xl bg-card p-0 ring-1 ring-foreground/10">
+    <ul className="m-0 grid list-none gap-0 overflow-hidden rounded-xl bg-card p-0 shadow-stock">
       {rows.map(({ agentId, note }) => (
         <li
           key={agentId}

@@ -61,7 +61,7 @@ export function ListingCard({ agent }: { agent: ManagedAgent }) {
   return (
     <div className="flex flex-col gap-2">
       <h2 className="px-1 text-ui font-medium text-muted-foreground">Directory listing</h2>
-      <div className="flex flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+      <div className="flex flex-col gap-3 rounded-xl bg-card p-4 shadow-stock">
         <p className="text-sm">
           <ListingStatus loading={listing.isLoading} failed={listing.isError} listed={listed} now={now} />
         </p>

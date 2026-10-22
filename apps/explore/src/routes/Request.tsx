@@ -491,7 +491,7 @@ export function QuoteRequestPage({ auth }: { auth: Auth }) {
               {pendingTask === null && (
                 <section
                   aria-label="Quoting"
-                  className="grid content-start gap-4 self-start rounded-2xl bg-card p-5 ring-1 ring-foreground/10 [grid-area:clock]"
+                  className="grid content-start gap-4 self-start rounded-2xl bg-card p-5 shadow-stock [grid-area:clock]"
                 >
                   <div className="grid gap-1">
                     <span className="text-ui text-muted-foreground">{open ? 'Quotes close in' : 'Quotes closed'}</span>

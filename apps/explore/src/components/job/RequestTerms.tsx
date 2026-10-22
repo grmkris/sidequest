@@ -48,7 +48,7 @@ export function RequestTerms({
 }) {
   return (
     // A container: in the request page's side column the dates stack, as they do on a phone.
-    <div className="@container grid rounded-2xl bg-card ring-1 ring-foreground/10 [&>*+*]:border-t [&>*+*]:border-border/70">
+    <div className="@container grid rounded-2xl bg-card shadow-stock [&>*+*]:border-t [&>*+*]:border-border/70">
       <DeadlineSteps steps={steps} />
       <div className="grid gap-3 p-4">
         <span className="text-ui text-muted-foreground">What's at stake</span>

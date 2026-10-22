@@ -47,7 +47,7 @@ export function BackingOverview({
   const summary = backingSummary(positions, wallet, owner, useNow())
   const leaving = summary.leaving + summary.held
   return (
-    <section aria-label="Your SIDE" className="grid gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+    <section aria-label="Your SIDE" className="grid gap-3 rounded-xl bg-card p-4 shadow-stock">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <dl className="flex flex-wrap gap-x-8 gap-y-3">
           <Figure value={summary.wallet} label="In your wallet" />

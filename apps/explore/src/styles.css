@@ -1,10 +1,14 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Coral (deal 3/3, seed marketplace-where-people-hire-d7f0·c8ce1008·2026-10-22·r0) · redesign: full
+ * nav: kept sidebar shell, the sidebar on desk paper · signature: the receipt, every paid job a cotton slip with Paid pressed in evergreen · states: loading, empty, error, full
+ * axes: light/roman-serif/cool · posture: restrained · brand: two-path mark, evergreen, Newsreader display · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a stock shadcn kit could belong to any app; the money now reads as receipts and the settled state is pressed in evergreen */
 /* Explicit sources: automatic detection follows .gitignore only inside a git checkout (apps/docs does the same). */
 @import 'tailwindcss' source(none);
 @import 'tw-animate-css';
 @import './shadcn.css';
 @import '@sidequest/react/commons-ui.css';
 @import './components/landing/landing.css';
-@import '@fontsource-variable/geist';
+@import '@fontsource-variable/instrument-sans';
 @import '@fontsource-variable/newsreader/opsz.css';
 @import '@fontsource-variable/newsreader/opsz-italic.css';
 @source '.';
@@ -26,7 +30,7 @@
   .post-opening {
     max-block-size: 16rem;
     overflow: clip;
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 4.5rem), transparent);
+    mask-image: linear-gradient(to bottom, var(--foreground) calc(100% - 4.5rem), transparent);
   }
   .commons-markdown {
     min-inline-size: 0;
@@ -161,87 +165,127 @@
     border-color: var(--border);
     margin-block: 1.5em;
   }
+  /*
+   * The settled state, pressed into the stock: the word in the body face at 600, sentence case, in the paid ink, inside
+   * a ruled frame and set a few degrees off true, as a rubber stamp lands. Ink sinks into the paper in light (multiply),
+   * and sits on it in dark.
+   */
+  .stamp-paid {
+    display: inline-block;
+    rotate: -4deg;
+    border: 1.5px solid currentColor;
+    border-radius: 4px;
+    padding: 0 0.4em;
+    color: var(--paid);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.5;
+    text-shadow: 0.5px 0.75px 0 color-mix(in oklch, var(--paid) 35%, transparent);
+    mix-blend-mode: multiply;
+    white-space: nowrap;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .stamp-paid {
+      mix-blend-mode: normal;
+    }
+  }
+  :root[data-theme='dark'] .stamp-paid {
+    mix-blend-mode: normal;
+  }
 }
 
 /*
- * Sidequest's design tokens: shadcn's base-nova vocabulary (background, card, primary, muted, border, ring…) in oklch,
- * with warm paper, evergreen ink and a pale mint primary in dark mode.
- * The two-path mark suggests work branching out and coming back. Status colours retain their own meanings.
+ * Sidequest's design tokens: shadcn's base-nova vocabulary (background, card, primary, muted, border, ring…) in oklch.
+ * The material is stationery on a desk (Hallmark Coral): warm grey paper for the page, cotton stock for records, a
+ * felt desk for the sidebar, one light from the left. The brand stays: the two-path mark and its evergreen, which also
+ * inks the one settled state (paid). Status colours retain their own meanings.
  *
  * Light and dark follow the system setting. `[data-theme]` on <html> forces one (the widget's `?theme=`); the dark
  * tokens are therefore written twice, under the media query and under `[data-theme='dark']`, and
  * design-tokens.test.ts holds the two copies equal. There is no class-based init script: the CSP allows no inline JS.
  */
 :root {
-  --background: oklch(0.985 0.002 90);
-  --foreground: oklch(0.17 0.01 255);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.17 0.01 255);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.17 0.01 255);
+  --background: oklch(0.97 0.006 55);
+  --foreground: oklch(0.21 0.012 38);
+  --card: oklch(0.988 0.0045 80);
+  --card-foreground: oklch(0.23 0.012 38);
+  --popover: oklch(0.988 0.0045 80);
+  --popover-foreground: oklch(0.21 0.012 38);
   --primary: oklch(0.34 0.06 165);
-  --primary-foreground: oklch(0.985 0.002 90);
-  --secondary: oklch(0.955 0.003 90);
-  --secondary-foreground: oklch(0.22 0.012 255);
-  --muted: oklch(0.955 0.003 90);
-  --muted-foreground: oklch(0.5 0.01 255);
-  --accent: oklch(0.955 0.003 90);
-  --accent-foreground: oklch(0.22 0.012 255);
-  --border: oklch(0.89 0.004 90);
-  --input: oklch(0.89 0.004 90);
-  --ring: oklch(0.62 0.02 255);
-  /* The sidebar is a shade heavier than the page, as a source list sits beside its content. */
-  --sidebar: oklch(0.967 0.003 90);
-  --sidebar-foreground: oklch(0.17 0.01 255);
+  --primary-foreground: oklch(0.988 0.0045 80);
+  --secondary: oklch(0.945 0.007 55);
+  --secondary-foreground: oklch(0.29 0.013 40);
+  --muted: oklch(0.945 0.007 55);
+  --muted-foreground: oklch(0.47 0.013 45);
+  --accent: oklch(0.915 0.009 55);
+  --accent-foreground: oklch(0.21 0.012 38);
+  --border: oklch(0.87 0.009 55);
+  /* A field's edge reaches 3:1 against the paper it sits on. */
+  --input: oklch(0.62 0.012 50);
+  --ring: oklch(0.5 0.1 165);
+  /* The sidebar is the desk the records lie on: a shade warmer and heavier than the page. */
+  --sidebar: oklch(0.943 0.008 64);
+  --sidebar-foreground: oklch(0.21 0.012 38);
   --sidebar-primary: oklch(0.34 0.06 165);
-  --sidebar-primary-foreground: oklch(0.985 0.002 90);
-  --sidebar-accent: oklch(0.92 0.004 90);
-  --sidebar-accent-foreground: oklch(0.17 0.01 255);
-  --sidebar-border: oklch(0.91 0.003 90);
-  --sidebar-ring: oklch(0.62 0.02 255);
+  --sidebar-primary-foreground: oklch(0.988 0.0045 80);
+  --sidebar-accent: oklch(0.905 0.01 60);
+  --sidebar-accent-foreground: oklch(0.21 0.012 38);
+  --sidebar-border: oklch(0.88 0.009 60);
+  --sidebar-ring: oklch(0.5 0.1 165);
+  /* The settled state (paid), pressed into the stock. */
+  --paid: oklch(0.42 0.09 160);
+  /* Ink on a coloured fill (a switch knob, a monogram): the same near-white in both themes. */
+  --ink-on-color: oklch(0.99 0.004 80);
   /* Status: a base colour for dots, fills and 12% tints, and a `-text` shade that reaches 4.5:1 as text. */
   --success: oklch(0.6 0.15 150);
   --success-text: oklch(0.42 0.11 150);
   --warning: oklch(0.75 0.15 70);
-  --warning-text: oklch(0.47 0.11 60);
+  --warning-text: oklch(0.46 0.11 60);
   --info: oklch(0.58 0.16 255);
   --info-text: oklch(0.45 0.14 255);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-text: oklch(0.48 0.19 27);
-  --overlay: oklch(0.17 0.01 255 / 0.25);
-  --elevation-popover: 0 0 0 1px oklch(0 0 0 / 0.06), 0 2px 4px oklch(0 0 0 / 0.04), 0 8px 24px oklch(0 0 0 / 0.08);
-  --elevation-chip: 0 0 0 1px oklch(0 0 0 / 0.08), 0 1px 2px oklch(0 0 0 / 0.06);
+  --overlay: oklch(0.21 0.012 38 / 0.28);
+  /* The light on paper objects (see the elevation recipes below): a lit edge, a shade edge, a hairline and a cast. */
+  --stock-lit: oklch(1 0.005 80 / 0.9);
+  --stock-edge: oklch(0.32 0.03 50 / 0.1);
+  --stock-line: oklch(0.32 0.03 50 / 0.22);
+  --stock-cast: oklch(0.32 0.03 50 / 0.3);
+  --groove-shade: oklch(0.32 0.03 50 / 0.16);
   --radius: 0.5rem;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --background: oklch(0.2 0.006 255);
-    --foreground: oklch(0.94 0.004 90);
-    --card: oklch(0.245 0.007 255);
-    --card-foreground: oklch(0.94 0.004 90);
-    --popover: oklch(0.245 0.007 255);
-    --popover-foreground: oklch(0.94 0.004 90);
+    --background: oklch(0.2 0.008 50);
+    --foreground: oklch(0.94 0.006 70);
+    --card: oklch(0.24 0.009 50);
+    --card-foreground: oklch(0.94 0.006 70);
+    --popover: oklch(0.25 0.009 50);
+    --popover-foreground: oklch(0.94 0.006 70);
     --primary: oklch(0.86 0.065 165);
     --primary-foreground: oklch(0.2 0.02 165);
-    --secondary: oklch(0.3 0.007 255);
-    --secondary-foreground: oklch(0.94 0.004 90);
-    --muted: oklch(0.29 0.007 255);
-    --muted-foreground: oklch(0.74 0.008 90);
-    --accent: oklch(0.31 0.008 255);
-    --accent-foreground: oklch(0.96 0.004 90);
-    --border: oklch(0.34 0.008 255);
-    --input: oklch(0.34 0.008 255);
-    --ring: oklch(0.6 0.02 255);
-    --sidebar: oklch(0.175 0.006 255);
-    --sidebar-foreground: oklch(0.94 0.004 90);
+    --secondary: oklch(0.29 0.009 50);
+    --secondary-foreground: oklch(0.94 0.006 70);
+    --muted: oklch(0.27 0.009 50);
+    --muted-foreground: oklch(0.75 0.01 65);
+    --accent: oklch(0.3 0.01 50);
+    --accent-foreground: oklch(0.96 0.006 70);
+    --border: oklch(0.33 0.01 50);
+    --input: oklch(0.56 0.012 55);
+    --ring: oklch(0.74 0.08 165);
+    --sidebar: oklch(0.175 0.008 50);
+    --sidebar-foreground: oklch(0.94 0.006 70);
     --sidebar-primary: oklch(0.86 0.065 165);
     --sidebar-primary-foreground: oklch(0.2 0.02 165);
-    --sidebar-accent: oklch(0.255 0.007 255);
-    --sidebar-accent-foreground: oklch(0.94 0.004 90);
-    --sidebar-border: oklch(0.27 0.007 255);
-    --sidebar-ring: oklch(0.6 0.02 255);
+    --sidebar-accent: oklch(0.25 0.009 50);
+    --sidebar-accent-foreground: oklch(0.94 0.006 70);
+    --sidebar-border: oklch(0.26 0.009 50);
+    --sidebar-ring: oklch(0.74 0.08 165);
+    --paid: oklch(0.8 0.1 160);
+    /* Ink on a coloured fill (a switch knob, a monogram): the same near-white in both themes. */
+    --ink-on-color: oklch(0.99 0.004 80);
     --success: oklch(0.75 0.14 150);
     --success-text: oklch(0.82 0.12 150);
     --warning: oklch(0.82 0.15 78);
@@ -250,39 +294,45 @@
     --info-text: oklch(0.8 0.1 250);
     --destructive: oklch(0.72 0.19 22);
     --destructive-text: oklch(0.8 0.13 25);
-    --overlay: oklch(0 0 0 / 0.5);
-    --elevation-popover: 0 0 0 1px oklch(1 0 0 / 0.08), 0 2px 4px oklch(0 0 0 / 0.3), 0 8px 24px oklch(0 0 0 / 0.4);
-    --elevation-chip: 0 0 0 1px oklch(1 0 0 / 0.09), 0 1px 2px oklch(0 0 0 / 0.3);
+    --overlay: oklch(0.07 0.01 40 / 0.55);
+    --stock-lit: oklch(1 0.005 80 / 0.06);
+    --stock-edge: oklch(0.07 0.01 40 / 0.3);
+    --stock-line: oklch(1 0.005 80 / 0.1);
+    --stock-cast: oklch(0.07 0.01 40 / 0.6);
+    --groove-shade: oklch(0.07 0.01 40 / 0.5);
     color-scheme: dark;
   }
 }
 
 :root[data-theme='dark'] {
-  --background: oklch(0.2 0.006 255);
-  --foreground: oklch(0.94 0.004 90);
-  --card: oklch(0.245 0.007 255);
-  --card-foreground: oklch(0.94 0.004 90);
-  --popover: oklch(0.245 0.007 255);
-  --popover-foreground: oklch(0.94 0.004 90);
+  --background: oklch(0.2 0.008 50);
+  --foreground: oklch(0.94 0.006 70);
+  --card: oklch(0.24 0.009 50);
+  --card-foreground: oklch(0.94 0.006 70);
+  --popover: oklch(0.25 0.009 50);
+  --popover-foreground: oklch(0.94 0.006 70);
   --primary: oklch(0.86 0.065 165);
   --primary-foreground: oklch(0.2 0.02 165);
-  --secondary: oklch(0.3 0.007 255);
-  --secondary-foreground: oklch(0.94 0.004 90);
-  --muted: oklch(0.29 0.007 255);
-  --muted-foreground: oklch(0.74 0.008 90);
-  --accent: oklch(0.31 0.008 255);
-  --accent-foreground: oklch(0.96 0.004 90);
-  --border: oklch(0.34 0.008 255);
-  --input: oklch(0.34 0.008 255);
-  --ring: oklch(0.6 0.02 255);
-  --sidebar: oklch(0.175 0.006 255);
-  --sidebar-foreground: oklch(0.94 0.004 90);
+  --secondary: oklch(0.29 0.009 50);
+  --secondary-foreground: oklch(0.94 0.006 70);
+  --muted: oklch(0.27 0.009 50);
+  --muted-foreground: oklch(0.75 0.01 65);
+  --accent: oklch(0.3 0.01 50);
+  --accent-foreground: oklch(0.96 0.006 70);
+  --border: oklch(0.33 0.01 50);
+  --input: oklch(0.56 0.012 55);
+  --ring: oklch(0.74 0.08 165);
+  --sidebar: oklch(0.175 0.008 50);
+  --sidebar-foreground: oklch(0.94 0.006 70);
   --sidebar-primary: oklch(0.86 0.065 165);
   --sidebar-primary-foreground: oklch(0.2 0.02 165);
-  --sidebar-accent: oklch(0.255 0.007 255);
-  --sidebar-accent-foreground: oklch(0.94 0.004 90);
-  --sidebar-border: oklch(0.27 0.007 255);
-  --sidebar-ring: oklch(0.6 0.02 255);
+  --sidebar-accent: oklch(0.25 0.009 50);
+  --sidebar-accent-foreground: oklch(0.94 0.006 70);
+  --sidebar-border: oklch(0.26 0.009 50);
+  --sidebar-ring: oklch(0.74 0.08 165);
+  --paid: oklch(0.8 0.1 160);
+  /* Ink on a coloured fill (a switch knob, a monogram): the same near-white in both themes. */
+  --ink-on-color: oklch(0.99 0.004 80);
   --success: oklch(0.75 0.14 150);
   --success-text: oklch(0.82 0.12 150);
   --warning: oklch(0.82 0.15 78);
@@ -291,10 +341,32 @@
   --info-text: oklch(0.8 0.1 250);
   --destructive: oklch(0.72 0.19 22);
   --destructive-text: oklch(0.8 0.13 25);
-  --overlay: oklch(0 0 0 / 0.5);
-  --elevation-popover: 0 0 0 1px oklch(1 0 0 / 0.08), 0 2px 4px oklch(0 0 0 / 0.3), 0 8px 24px oklch(0 0 0 / 0.4);
-  --elevation-chip: 0 0 0 1px oklch(1 0 0 / 0.09), 0 1px 2px oklch(0 0 0 / 0.3);
+  --overlay: oklch(0.07 0.01 40 / 0.55);
+  --stock-lit: oklch(1 0.005 80 / 0.06);
+  --stock-edge: oklch(0.07 0.01 40 / 0.3);
+  --stock-line: oklch(1 0.005 80 / 0.1);
+  --stock-cast: oklch(0.07 0.01 40 / 0.6);
+  --groove-shade: oklch(0.07 0.01 40 / 0.5);
   color-scheme: dark;
+}
+
+/*
+ * Paper objects in one light from the left, from the per-theme colours above: stock (a lit edge above, a shade edge
+ * below, a hairline around and a cast falling right), stock lifted on hover (a longer cast), a groove (the same light
+ * pressed in), what floats over the page, and a persistent chip.
+ */
+:root {
+  --elevation-stock:
+    inset 0 1px 0 var(--stock-lit), inset 0 -1px 0 var(--stock-edge), 0 0 0 0.5px var(--stock-line),
+    0 1px 0 var(--stock-edge), 6px 5px 10px -6px var(--stock-cast);
+  --elevation-stock-lift:
+    inset 0 1px 0 var(--stock-lit), inset 0 -1px 0 var(--stock-edge), 0 0 0 0.5px var(--stock-line),
+    0 1px 0 var(--stock-edge), 12px 10px 18px -8px var(--stock-cast);
+  --elevation-groove:
+    inset 1px 1.5px 2px var(--groove-shade), inset -1px -1px 0 var(--stock-lit), 0 0 0 0.5px var(--stock-line);
+  --elevation-popover:
+    0 0 0 0.5px var(--stock-line), 0 2px 4px var(--stock-edge), 12px 12px 28px -10px var(--stock-cast);
+  --elevation-chip: 0 0 0 0.5px var(--stock-line), 2px 2px 4px -2px var(--stock-cast);
 }
 
 /* Motion: strong curves (the built-in ones are too weak to read as intentional), short asymmetric durations. */
@@ -320,8 +392,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Newsreader Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
   --font-display: 'Newsreader Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
   --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
   /* Chrome type: one size for row titles, pills and secondary lines; micro for counts and initials. */
@@ -363,14 +435,20 @@
   --color-destructive: var(--destructive);
   --color-destructive-text: var(--destructive-text);
   --color-overlay: var(--overlay);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --color-paid: var(--paid);
+  --color-ink-on-color: var(--ink-on-color);
+  /* Stationery corners: 8px on a sheet or a control, 6px on a field, 10 to 12px only on a picture's frame. */
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-  /* One elevation recipe for everything that floats over the page, one for persistent chips. */
+  --radius-xl: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.25);
+  --radius-3xl: calc(var(--radius) * 1.5);
+  --radius-4xl: calc(var(--radius) * 1.75);
+  /* Stock for records and controls (lifted on hover), a groove for a choice, one recipe for what floats, one for chips. */
+  --shadow-stock: var(--elevation-stock);
+  --shadow-stock-lift: var(--elevation-stock-lift);
+  --shadow-groove: var(--elevation-groove);
   --shadow-popover: var(--elevation-popover);
   --shadow-chip: var(--elevation-chip);
 }
@@ -393,11 +471,13 @@
   }
   html,
   body {
+    overflow-x: clip;
     background: var(--background);
     color: var(--foreground);
   }
   body {
-    @apply text-sm;
+    @apply text-base;
+    font-synthesis: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-size-adjust: 100%;
@@ -507,7 +587,7 @@
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-property:
-      opacity, color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, box-shadow !important;
+      opacity, color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow !important;
   }
   .animate-spin {
     animation-duration: 1.5s !important;

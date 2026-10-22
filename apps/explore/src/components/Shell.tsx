@@ -65,25 +65,22 @@ function places(mine: ReadonlySet<string>): Place[] {
   ]
 }
 
-/** Site links kept in the sidebar, now that the docs are no longer a place in the nav. */
+/** Site links kept in the sidebar, now that the docs are no longer a place in the nav: a short row, parted by space. */
 function SiteLinks({ className }: { className?: string }) {
+  const link =
+    'underline decoration-current/30 underline-offset-4 transition-colors duration-(--dur-fast) [@media(hover:hover)]:hover:text-foreground [@media(hover:hover)]:hover:decoration-current'
   return (
-    <p className={cn('text-xs text-muted-foreground', className)}>
-      <a className="underline" href="https://github.com/grmkris/sidequest" target="_blank" rel="noreferrer">
-        Source
-      </a>{' '}
-      ·{' '}
-      <a className="underline" href="/docs">
+    <p className={cn('flex flex-wrap gap-x-4 gap-y-1 text-ui text-muted-foreground', className)}>
+      <a className={link} href="/docs">
         Docs
       </a>
+      <a className={link} href="https://github.com/grmkris/sidequest" target="_blank" rel="noreferrer">
+        Source
+      </a>
       {xLink !== null && (
-        <>
-          {' '}
-          ·{' '}
-          <a className="underline" href={xLink} target="_blank" rel="noreferrer">
-            X
-          </a>
-        </>
+        <a className={link} href={xLink} target="_blank" rel="noreferrer">
+          X
+        </a>
       )}
     </p>
   )
@@ -113,12 +110,14 @@ function Brand({ stacked = false }: { stacked?: boolean }) {
     <div className="flex min-w-0 items-center">
       <Link
         to="/"
-        className="flex min-h-11 max-w-full min-w-0 items-center gap-2 text-base font-semibold tracking-tight"
+        className="flex min-h-11 max-w-full min-w-0 items-center gap-2.5 font-display text-xl font-medium tracking-tight"
       >
         <Mark />
         <span className="truncate">
           Sidequest
-          {!stacked && boardId !== 'public' && <span className="font-normal text-muted-foreground"> · {boardId}</span>}
+          {!stacked && boardId !== 'public' && (
+            <span className="font-sans text-sm font-normal text-muted-foreground"> {boardId}</span>
+          )}
         </span>
       </Link>
     </div>
@@ -157,11 +156,11 @@ export function Shell({ children }: { children: ReactNode }) {
   const { auth, account, paused, narrow, collect } = state
   return (
     <JobPostingProvider>
-      <div className="min-h-dvh lg:grid lg:grid-cols-[15rem_1fr]">
+      <div className="min-h-dvh lg:ps-60">
         <SkipLink />
         {auth.signedIn && auth.address !== undefined && <WelcomeOpener address={auth.address} />}
         <aside
-          className="sticky top-0 hidden h-dvh flex-col gap-1 overflow-y-auto border-r bg-sidebar px-3 pt-4 pb-4 text-sidebar-foreground lg:flex"
+          className="fixed inset-y-0 start-0 z-30 hidden w-60 flex-col gap-1 overflow-y-auto border-e border-sidebar-border bg-sidebar px-3 pt-4 pb-4 text-sidebar-foreground lg:flex"
           aria-label="Sections"
         >
           <div className="px-2 pb-4">
@@ -184,7 +183,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </aside>
 
         <div className="min-w-0">
-          <header className="material-chrome material-edge-bottom sticky top-0 z-30 pt-[var(--safe-top)] lg:hidden">
+          <header className="material-chrome material-edge-bottom top-0 z-30 pt-[var(--safe-top)] max-lg:sticky lg:hidden">
             <div className="flex min-h-12 items-center justify-between gap-3 pr-[max(1rem,var(--safe-right))] pl-[max(1rem,var(--safe-left))]">
               <Brand />
               <span className="flex items-center gap-1">
