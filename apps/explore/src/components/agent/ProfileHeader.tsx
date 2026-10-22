@@ -187,11 +187,19 @@ export function ProfileHeader({
   const title = name ?? `Agent ID ${id}`
   const now = useNow()
   const status = directory === undefined ? 'idle' : directoryLiveness(directory, now)
+  // A picture that fails to load falls back to the agent's orb, never a broken image.
+  const [failedImage, setFailedImage] = useState<string | null>(null)
+  const image = profile?.image ?? null
   return (
     <header className="grid min-h-52 content-start gap-4 sm:min-h-44">
       <div className="flex items-center gap-5">
-        {profile?.image !== null && profile?.image !== undefined ? (
-          <img src={profile.image} alt="" className="size-18 shrink-0 rounded-full bg-muted object-cover" />
+        {image !== null && failedImage !== image ? (
+          <img
+            src={image}
+            alt=""
+            onError={() => setFailedImage(image)}
+            className="size-18 shrink-0 rounded-full bg-muted object-cover"
+          />
         ) : (
           <AgentOrb agentId={id} size="lg" status={status} />
         )}

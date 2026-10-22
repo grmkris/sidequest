@@ -144,7 +144,7 @@ export const shortAddress = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
 const STAT_SIZE = {
   sm: 'truncate font-medium',
   md: 'text-base leading-tight font-semibold tracking-tight',
-  lg: 'text-2xl leading-tight font-semibold tracking-tight',
+  lg: 'text-xl leading-tight font-semibold tracking-tight sm:text-2xl',
 } as const
 
 /** A figure in a `<dl>`: its label, its value in tabular numerals, and an optional line under it. */

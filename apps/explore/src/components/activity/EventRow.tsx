@@ -207,18 +207,32 @@ function EventSentence({
   )
 }
 
-/** A payment's amount, in the ledger column at the row's end, above how long ago it was paid. */
+/**
+ * A payment's amount, in the ledger column at the row's end, above how long ago it was paid. On a phone the column
+ * keeps only the time, and the amount stands on its own line under the sentence (LedgerLine), so the sentence keeps
+ * the row's width.
+ */
 function LedgerAside({ event }: { event: FeedEvent }) {
   return (
     <span className="grid justify-items-end gap-0.5 text-right sm:min-w-28">
-      <TokenAmount
-        value={event.amount}
-        token={event.token}
-        static
-        className="text-sm font-medium whitespace-nowrap text-foreground tabular-nums"
-      />
+      <LedgerAmount event={event} className="hidden sm:inline-flex" />
       <Ago at={event.at} />
     </span>
+  )
+}
+
+function LedgerLine({ event }: { event: FeedEvent }) {
+  return <LedgerAmount event={event} className="sm:hidden" />
+}
+
+function LedgerAmount({ event, className }: { event: FeedEvent; className: string }) {
+  return (
+    <TokenAmount
+      value={event.amount}
+      token={event.token}
+      static
+      className={cn('text-sm font-medium whitespace-nowrap text-foreground tabular-nums', className)}
+    />
   )
 }
 
@@ -274,9 +288,10 @@ export function EventRow({
       <p ref={shown.ref} className="text-sm leading-snug text-pretty">
         <EventSentence event={event} sentence={sentence} ledger={ledger} />
       </p>
+      {ledger && <LedgerLine event={event} />}
       {big && shown.thumb !== null && <WorkPreview thumb={shown.thumb} status={status} wide={false} />}
       {event.job !== undefined && <RequestFacts job={event.job} />}
-      <StepTrack stops={track} />
+      <StepTrack stops={track} stamp />
     </StretchedRow>
   )
 }

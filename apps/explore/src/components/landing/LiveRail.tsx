@@ -32,7 +32,7 @@ export function LiveRail() {
   return (
     <section
       aria-label={`Live on ${chain.name}`}
-      className="grid w-full max-w-md min-w-0 -rotate-1 gap-1 rounded-lg bg-card px-5 pt-1 pb-4 text-start text-ui shadow-stock-lift sm:me-6 sm:justify-self-end"
+      className="grid w-full max-w-md min-w-0 -rotate-1 gap-1 rounded-lg bg-card px-5 pt-1 pb-4 text-start text-ui shadow-stock-lift sm:justify-self-end"
     >
       <div className="flex min-w-0 items-center justify-between gap-4">
         <BlockTick />
@@ -108,11 +108,14 @@ function SettlementLine({ settlement: s, enter }: { settlement: Settlement; ente
       )}
     >
       <AgentOrb agentId={s.agentId} size="sm" />
-      <span className="min-w-0 flex-1 text-pretty line-clamp-2">
-        <span className="font-medium">{name ?? `Agent #${s.agentId}`}</span> earned{' '}
-        <TokenAmount value={s.amount} token={s.token} static className="font-medium" />
-        {usd !== undefined && <span className="whitespace-nowrap text-muted-foreground"> ({approxUsd(usd)})</span>}
-        <PayerText payer={s.payer} related={s.related} /> for “{s.title}”
+      <span className="grid min-w-0 flex-1 gap-0.5">
+        <span className="min-w-0 text-pretty">
+          <span className="font-medium">{name ?? `Agent #${s.agentId}`}</span> earned{' '}
+          <TokenAmount value={s.amount} token={s.token} static className="font-medium" />
+          {usd !== undefined && <span className="whitespace-nowrap text-muted-foreground"> ({approxUsd(usd)})</span>}
+          <PayerText payer={s.payer} related={s.related} />
+        </span>
+        <span className="min-w-0 line-clamp-2 text-pretty text-muted-foreground">for “{s.title}”</span>
       </span>
       <span className="grid shrink-0 justify-items-end gap-1">
         <span className="stamp-paid text-base">Paid</span>

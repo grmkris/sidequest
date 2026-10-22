@@ -2,6 +2,7 @@
  * nav: kept sidebar shell, the sidebar on desk paper · signature: the receipt, every paid job a cotton slip with Paid pressed in evergreen · states: loading, empty, error, full
  * axes: light/roman-serif/cool · posture: restrained · brand: two-path mark, evergreen, Newsreader display · contrast: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a stock shadcn kit could belong to any app; the money now reads as receipts and the settled state is pressed in evergreen */
+/* Hallmark · finish-review: subagent · 7 findings · 7 resolved · gap: the stamp now sits on every paid ledger row, not only in the card */
 /* Hallmark · waive 72 · the boxes named are a closed details element and the category groove, whose chips scroll sideways past its edge by design · nothing crowds an edge once shown */
 /* Hallmark · waive 39b · the 20px and 28px buttons are inline figure triggers on an agent record and a job, opening the money breakdown · they are figures in a row, not form controls */
 /* Hallmark · dismissed F18 · data-slot here is the base-nova component name (button, popover-trigger), not an image slot */
@@ -172,23 +173,26 @@
     margin-block: 1.5em;
   }
   /*
-   * The settled state, pressed into the stock: the word in the body face at 600, sentence case, in the paid ink, inside
-   * a ruled frame and set a few degrees off true, as a rubber stamp lands. Ink sinks into the paper in light (multiply),
-   * and sits on it in dark.
+   * The settled state, pressed into the stock as a rubber stamp lands: the word in the display face at 600, sentence
+   * case, in the paid ink, inside a double-ruled frame, set a few degrees off true, its ink uneven (a noise mask) where
+   * the pad ran thin. Unlike a status badge, it is the one serif, framed object of its kind on a screen. Ink sinks into
+   * the paper in light (multiply) and sits on it in dark.
    */
   .stamp-paid {
     display: inline-block;
     rotate: -4deg;
-    border: 1.5px solid currentColor;
-    border-radius: 4px;
-    padding: 0 0.4em;
+    border: 3px double currentColor;
+    border-radius: 3px;
+    padding: 0 0.35em 0.05em;
     color: var(--paid);
-    font-size: 0.875rem;
+    font-family: var(--font-display);
+    font-size: 1rem;
     font-weight: 600;
-    line-height: 1.5;
-    text-shadow: 0.5px 0.75px 0 color-mix(in oklch, var(--paid) 35%, transparent);
+    line-height: 1.35;
     mix-blend-mode: multiply;
     white-space: nowrap;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -1.4 1.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mask-size: 120px 60px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme='light']) .stamp-paid {

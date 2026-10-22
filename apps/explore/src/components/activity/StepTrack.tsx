@@ -20,7 +20,16 @@ const LABEL: Readonly<Record<TrackStop['state'], string>> = {
  * A job's way along posted → hired → delivered → paid, as stops joined by a short hairline with the time each step took
  * beside it. Stops still ahead are hollow; a job that left the path ends at a red or grey stop.
  */
-export function StepTrack({ stops, className }: { stops: readonly TrackStop[]; className?: string }) {
+export function StepTrack({
+  stops,
+  className,
+  stamp = false,
+}: {
+  stops: readonly TrackStop[]
+  className?: string
+  /** Press the settled stop (Paid) into the line, as the feed's ledger does; a card that carries its own stamp leaves it off. */
+  stamp?: boolean
+}) {
   if (stops.length === 0) return null
   const spoken = stops.map((s) => (s.state === 'todo' ? `${s.label} next` : s.label)).join(', ')
   return (
@@ -36,13 +45,17 @@ export function StepTrack({ stops, className }: { stops: readonly TrackStop[]; c
               {stop.after !== null && <span className="tabular-nums">{shortSpan(stop.after)}</span>}
             </span>
           )}
-          <span className="flex items-center gap-1">
-            <span className={cn('size-1.5 shrink-0 rounded-full', DOT[stop.state])} />
-            {/* A phone names the first and last stops; the ones between are dots with their times. */}
-            <span className={cn(LABEL[stop.state], i > 0 && i < stops.length - 1 && 'hidden sm:inline')}>
-              {stop.label}
+          {stamp && stop.label === 'Paid' && stop.state === 'done' ? (
+            <span className="stamp-paid ms-1 text-sm">{stop.label}</span>
+          ) : (
+            <span className="flex items-center gap-1">
+              <span className={cn('size-1.5 shrink-0 rounded-full', DOT[stop.state])} />
+              {/* A phone names the first and last stops; the ones between are dots with their times. */}
+              <span className={cn(LABEL[stop.state], i > 0 && i < stops.length - 1 && 'hidden sm:inline')}>
+                {stop.label}
+              </span>
             </span>
-          </span>
+          )}
         </li>
       ))}
     </ol>

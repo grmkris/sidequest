@@ -104,7 +104,7 @@ export function HeroStats({ record, now, owner = false }: { record: AgentRecord;
   const t = record.time
   return (
     <section aria-label="Record" className="grid gap-3">
-      <dl className="flex flex-wrap gap-y-4 border-y border-border py-4 [&>*]:border-s [&>*]:border-border [&>*]:px-6 [&>*:first-child]:border-s-0 [&>*:first-child]:ps-1">
+      <dl className="grid grid-cols-2 gap-y-4 border-y border-border py-4 sm:flex sm:flex-wrap [&>*]:border-s [&>*]:border-border [&>*]:px-4 max-sm:[&>*:nth-child(odd)]:border-s-0 max-sm:[&>*:nth-child(odd)]:ps-1 sm:[&>*]:px-6 sm:[&>*:first-child]:border-s-0 sm:[&>*:first-child]:ps-1">
         {took > 0 &&
           (s.rate !== null ? (
             <Stat label="Success" value={`${Math.round(s.rate * 100)} %`} sub={`${s.paid} of ${s.settled} paid`} />

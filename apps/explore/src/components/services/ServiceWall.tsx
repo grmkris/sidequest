@@ -150,7 +150,7 @@ function CategoryBar({
     <PillDock landing={landing}>
       <fieldset className="w-fit max-w-full min-w-0 rounded-xl bg-muted p-1 shadow-groove">
         <legend className="sr-only">Service categories</legend>
-        <div className="flex snap-x gap-1 overflow-x-auto rounded-lg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex snap-x gap-1 overflow-x-auto rounded-lg [scrollbar-width:none] max-lg:[mask-image:linear-gradient(to_right,var(--foreground)_calc(100%-2.5rem),transparent)] lg:flex-wrap lg:overflow-visible [&::-webkit-scrollbar]:hidden">
           <CategoryPill pressed={selected === null} onClick={() => onChange(null)} label="All" count={total} />
           {categories.map(({ value, label, count }) => (
             <CategoryPill
