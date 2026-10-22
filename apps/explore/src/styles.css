@@ -192,6 +192,10 @@
   :root[data-theme='dark'] .stamp-paid {
     mix-blend-mode: normal;
   }
+  /* Covers are prints on the desk: Coral's photograph treatment (muted, a touch of sepia), field and picture together. */
+  .cover-print {
+    filter: saturate(0.82) contrast(0.98) sepia(0.06);
+  }
 }
 
 /*

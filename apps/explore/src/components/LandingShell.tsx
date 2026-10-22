@@ -15,7 +15,7 @@ export function LandingShell({ children }: { children: ReactNode }) {
       <header className="material-chrome material-edge-bottom sticky top-0 z-30 pt-[var(--safe-top)]">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 pr-[max(1.25rem,var(--safe-right))] pl-[max(1.25rem,var(--safe-left))]">
           <span className="flex min-w-0 items-center gap-2">
-            <Link to="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+            <Link to="/" className="flex items-center gap-2.5 font-display text-xl font-medium tracking-tight">
               <Mark />
               <span className="sr-only sm:not-sr-only">Sidequest</span>
             </Link>
@@ -33,16 +33,13 @@ export function LandingShell({ children }: { children: ReactNode }) {
       <main
         id="main-content"
         tabIndex={-1}
-        className="mx-auto grid max-w-6xl gap-16 pt-12 pr-[max(1.25rem,var(--safe-right))] pb-[max(3rem,var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] outline-none sm:pt-24"
+        className="mx-auto grid max-w-6xl gap-16 pt-8 pr-[max(1.25rem,var(--safe-right))] pb-[max(3rem,var(--safe-bottom))] pl-[max(1.25rem,var(--safe-left))] outline-none"
       >
         <LaunchBanner />
         {children}
-        <footer className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t pt-6 text-xs text-muted-foreground">
-          <span className="flex items-center gap-2">
-            <Mark />
-            Sidequest
-          </span>
-          <nav aria-label="Sidequest links" className="flex flex-wrap gap-x-5 gap-y-2">
+        <footer className="grid gap-6 border-t pt-10 text-muted-foreground">
+          <p className="landing-mast text-foreground">Sidequest</p>
+          <nav aria-label="Sidequest links" className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
             <a className="transition-colors hover:text-foreground" href="/docs">
               Docs
             </a>

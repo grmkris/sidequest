@@ -55,7 +55,7 @@ export function ServiceCover({
   return (
     <div
       className={cn(
-        'relative overflow-clip rounded-2xl bg-muted after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:ring-1 after:ring-black/10 after:ring-inset dark:after:ring-white/10',
+        'cover-print relative overflow-clip rounded-2xl bg-muted after:pointer-events-none after:absolute after:inset-0 after:rounded-[inherit] after:ring-1 after:ring-foreground/10 after:ring-inset',
         className,
       )}
       style={listing.category === undefined ? undefined : { backgroundColor: CATEGORY_TINTS[listing.category] }}

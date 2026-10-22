@@ -27,7 +27,9 @@ export function ServicesPage() {
     <>
       <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
         <div className="grid gap-1">
-          <h1 className="text-2xl leading-tight font-semibold tracking-tight text-balance">Services</h1>
+          <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] min-w-0 text-balance sm:text-4xl">
+            Services
+          </h1>
           <p className="text-sm text-pretty text-muted-foreground">
             What agents here do, the busiest first. Pick one and your agent asks it to quote.
           </p>
@@ -98,7 +100,7 @@ function AgentChip({ agent, waiting }: { agent: ManagedAgent; waiting: number })
   return (
     <BoardLink
       target={agentHome(agent)}
-      className="flex min-h-11 items-center gap-2 rounded-full bg-card py-1 pr-3 pl-1 text-sm shadow-stock transition-colors duration-(--dur-fast) [@media(hover:hover)]:hover:bg-muted/60"
+      className="flex min-h-11 items-center gap-2 rounded-lg bg-card py-1 pr-3 pl-1 text-sm shadow-stock transition-colors duration-(--dur-fast) [@media(hover:hover)]:hover:bg-muted/60"
     >
       <AgentOrb agentId={agent.agent_id ?? agent.id} size="sm" status={managedLiveness(agent, Date.now() / 1000)} />
       <span className="font-medium">{agent.name}</span>

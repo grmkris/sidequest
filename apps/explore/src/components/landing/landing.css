@@ -1,47 +1,68 @@
-/* The landing: a quiet promise, the live rail, then the wall of services. The page around them uses shared tokens. */
+/* Hallmark · shape: Workbench (draw e00676) · genre: modern-minimal · theme: Coral (deal 3/3, seed marketplace-where-people-hire-d7f0·c8ce1008·2026-10-22·r0) · redesign: full · job: buy
+ * hero: Corridor (/) · nav: edge-aligned, swapped from search-led because the search is the hero's own action · footer: mast, swapped from index columns because there are four links
+ * signature: the receipt, the latest settlement on a cotton slip with Paid pressed in · imagery: the services' own cover photographs, muted · axes: light/roman-serif/cool · posture: restrained · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V3 · weakest: V, the wall of services is the page's range and stays one composition; the corridor and the receipt are what change */
+
+/* The landing: one centred column (the promise, the search, the latest receipt), then the wall of services. */
 .landing-content {
   display: grid;
   gap: clamp(3rem, 6vw, 4.5rem);
   min-width: 0;
 }
 
+/*
+ * The corridor fills the first screen under the header, its content centred a little high, so the categories and the
+ * first covers start just above the fold. On a phone it is as tall as its content.
+ */
+.landing-corridor {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 1.5rem;
+  inline-size: 100%;
+  max-inline-size: 42rem;
+  margin-inline: auto;
+  padding-block-end: 2rem;
+  text-align: center;
+}
+@media (min-width: 40rem) {
+  .landing-corridor {
+    min-block-size: calc(100svh - 3.5rem - var(--safe-top) - 2rem - 6.5rem);
+  }
+}
+
 .landing-hero {
   display: grid;
   gap: 1rem;
-  justify-items: start;
-  padding-bottom: 0.5rem;
+  justify-items: center;
 }
 .landing-hero h1 {
-  max-width: 18ch;
+  min-width: 0;
+  max-width: 14ch;
   font-family: var(--font-display);
   font-optical-sizing: auto;
-  font-size: clamp(2.6rem, 6.2vw, 4.75rem);
+  font-size: clamp(2.75rem, 7vw, 5.5rem);
   font-weight: 400;
   line-height: 0.96;
   letter-spacing: -0.035em;
+  overflow-wrap: break-word;
   text-wrap: balance;
 }
 .landing-hero-lede {
-  max-width: 52ch;
+  max-width: 44ch;
   color: var(--muted-foreground);
-  font-size: 1.125rem;
-  line-height: 1.55;
+  font-size: 1.1875rem;
+  line-height: 1.5;
   text-wrap: pretty;
 }
 
-/* The rail's live mark: a slow pulse, still for reduced motion. */
+/* The block's live mark: a still dot, a live state rather than a decoration. */
 .live-dot {
   width: 0.45rem;
   height: 0.45rem;
   flex-shrink: 0;
   border-radius: 999px;
-  background: var(--success-text);
-  animation: live-pulse 2s ease-in-out infinite;
-}
-@keyframes live-pulse {
-  50% {
-    opacity: 0.35;
-  }
+  background: var(--paid);
 }
 /* A settlement turning in: a short rise and fade, never on the first one shown. */
 .landing-rail-enter {
@@ -54,17 +75,25 @@
   align-items: baseline;
   gap: 0.25rem 0.75rem;
   color: var(--muted-foreground);
-  font-size: 0.9375rem;
+  font-size: 1rem;
   text-wrap: pretty;
+}
+
+/* The mast: the wordmark set large over the site's links. */
+.landing-mast {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 9vw, 7rem);
+  font-weight: 400;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
 }
 
 @media (max-width: 520px) {
   .landing-hero-lede {
-    font-size: 1rem;
+    font-size: 1.0625rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .live-dot,
   .landing-rail-enter {
     animation: none;
   }

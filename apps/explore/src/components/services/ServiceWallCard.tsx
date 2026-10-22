@@ -11,8 +11,8 @@ import { PriceText, ServiceCard } from './ServiceCard.tsx'
 import { ServiceCover } from './ServiceCover.tsx'
 
 /**
- * A service on the wall: its picture first, then its name, how long it takes, and who offers it, with no box around
- * it. The whole tile opens the service's card; the circle on the picture adds it to a request. A service with a
+ * A service on the wall, as an offer in a catalogue: its picture first, a print on the desk with the light's edge and
+ * cast, then its name in the display face, how long it takes, who offers it and, when fixed, its price. No box around it. The whole tile opens the service's card; the circle on the picture adds it to a request. A service with a
  * delivery proven on this chain can take a wide tile, and its picture links that job.
  */
 export function ServiceWallCard({
@@ -33,11 +33,11 @@ export function ServiceWallCard({
   const delivery = provenDelivery(listing)
   const priced = priceOf(listing.price).kind === 'amount'
   return (
-    <article className="group/tile relative flex h-full min-w-0 flex-col gap-3 transition-transform duration-(--dur-fast) ease-(--ease-out-strong) has-[.service-tile-open:active]:scale-98">
+    <article className="group/tile relative flex h-full min-w-0 flex-col gap-3 transition-transform duration-(--dur-fast) ease-(--ease-out-strong) has-[.service-tile-open:active]:translate-y-px">
       <div
         className={cn(
-          'relative grid rounded-2xl transition-shadow duration-(--dur-slow) ease-(--ease-out-strong)',
-          '[@media(hover:hover)]:group-hover/tile:shadow-popover',
+          'relative grid rounded-2xl shadow-stock transition-[box-shadow,translate] duration-(--dur-base) ease-(--ease-out-strong)',
+          '[@media(hover:hover)]:group-hover/tile:-translate-y-px [@media(hover:hover)]:group-hover/tile:shadow-stock-lift',
           'group-has-[.service-tile-open:focus-visible]/tile:outline-3 group-has-[.service-tile-open:focus-visible]/tile:outline-offset-2 group-has-[.service-tile-open:focus-visible]/tile:outline-ring',
           // No transform here: it would lift the picture's own links under the tile's.
           selected && 'outline-3 outline-offset-2 outline-foreground',
@@ -48,17 +48,14 @@ export function ServiceWallCard({
           listing={listing}
           className="col-start-1 row-start-1"
           // A wide tile shows its whole delivery frame: the picture's ground is the tile's colour, so it runs on seamlessly.
-          imageClassName={cn(
-            'transition-[scale] duration-(--dur-slow) ease-(--ease-out-strong) [@media(hover:hover)_and_(pointer:fine)]:group-hover/tile:scale-103',
-            wide && 'sm:object-contain',
-          )}
+          imageClassName={cn(wide && 'sm:object-contain')}
         />
         {delivery?.jobId !== undefined && <DeliveredBadge jobId={delivery.jobId} />}
         <SelectCircle name={listing.name} selected={selected} onToggle={onToggle} />
       </div>
       <div className="grid gap-1 px-0.5">
         <div className="flex min-w-0 items-baseline justify-between gap-3">
-          <h3 className="min-w-0 truncate text-[0.9375rem] leading-snug font-semibold">
+          <h3 className="min-w-0 truncate font-display text-xl leading-snug font-normal tracking-tight">
             <CardLink
               mode="sheet"
               target={serviceTarget(listing.agentId, listing.serviceId)}
@@ -97,9 +94,9 @@ function DeliveredBadge({ jobId }: { jobId: string }) {
   return (
     <BoardLink
       target={boardRoutes().job(jobId)}
-      className="relative z-1 col-start-1 row-start-1 m-2.5 inline-flex min-h-8 items-center gap-1 self-end justify-self-start rounded-full px-2.5 text-ui font-medium tabular-nums shadow-chip material-chrome pointer-coarse:min-h-10 [@media(hover:hover)]:hover:underline"
+      className="relative z-1 col-start-1 row-start-1 m-2.5 inline-flex min-h-8 items-center gap-1 self-end justify-self-start rounded-md bg-card px-2.5 text-ui font-medium tabular-nums shadow-stock pointer-coarse:min-h-10 [@media(hover:hover)]:hover:underline"
     >
-      <Check aria-hidden className="size-3.5 text-success-text" strokeWidth={2.5} />
+      <Check aria-hidden className="size-3.5 text-paid" strokeWidth={2.5} />
       Delivered #{jobId}
     </BoardLink>
   )
@@ -125,8 +122,8 @@ function SelectCircle({ name, selected, onToggle }: { name: string; selected: bo
     >
       <span
         className={cn(
-          'grid size-8 place-items-center rounded-full shadow-chip transition-[scale,background-color,color] duration-(--dur-fast) ease-(--ease-out-strong) group-active/pick:scale-96 group-focus-visible/pick:ring-3 group-focus-visible/pick:ring-ring',
-          selected ? 'bg-foreground text-background' : 'text-foreground material-chrome',
+          'grid size-8 place-items-center rounded-full shadow-stock transition-[translate,background-color,color] duration-(--dur-fast) ease-(--ease-out-strong) group-active/pick:translate-y-px group-focus-visible/pick:outline-2 group-focus-visible/pick:outline-offset-2 group-focus-visible/pick:outline-ring',
+          selected ? 'bg-foreground text-background' : 'bg-card text-foreground',
         )}
       >
         {selected ? (

@@ -22,9 +22,9 @@ import { paidFormat } from './live-format.ts'
 import { type Payer, RAIL_HOLD_MS, type Settlement, paidTotal, railTurns, settlementsOf } from './live-rail.ts'
 
 /**
- * The board, live, above the services: the chain's newest block, the latest settlements one at a time (who earned
- * what, from whom, for which job), and what agents have been paid in all. Chain facts only; before anything has
- * settled it shows the block alone.
+ * The board, live, above the services, as a receipt slip: the chain's newest block and a way to all activity at its
+ * head, the latest settlements one at a time (who earned what, from whom, for which job, Paid pressed in), and what
+ * agents have been paid in all at its foot. Chain facts only; before anything has settled it shows the block alone.
  */
 export function LiveRail() {
   const { events } = useActivityFeed()
@@ -32,18 +32,20 @@ export function LiveRail() {
   return (
     <section
       aria-label={`Live on ${chain.name}`}
-      className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 rounded-2xl bg-card px-4 py-1.5 text-ui shadow-chip sm:flex sm:py-1"
+      className="grid w-full min-w-0 gap-1 rounded-lg bg-card px-4 pt-1 pb-3 text-start text-ui shadow-stock"
     >
-      <BlockTick />
+      <div className="flex min-w-0 items-center justify-between gap-4">
+        <BlockTick />
+        <Link
+          to="/jobs"
+          className="inline-flex min-h-10 shrink-0 items-center gap-1 font-medium text-muted-foreground transition-colors duration-(--dur-fast) [@media(hover:hover)]:hover:text-foreground"
+        >
+          All activity
+          <ArrowUpRight aria-hidden="true" className="size-3.5" />
+        </Link>
+      </div>
       {settlements.length > 0 && <SettlementTicker settlements={settlements} />}
       <PaidTotal />
-      <Link
-        to="/jobs"
-        className="inline-flex min-h-10 shrink-0 items-center gap-1 font-medium text-muted-foreground transition-colors duration-(--dur-fast) max-sm:col-start-2 max-sm:row-start-1 sm:ms-auto [@media(hover:hover)]:hover:text-foreground"
-      >
-        All activity
-        <ArrowUpRight aria-hidden="true" className="size-3.5" />
-      </Link>
     </section>
   )
 }
@@ -82,7 +84,7 @@ function SettlementTicker({ settlements }: { settlements: Settlement[] }) {
   const shown = settlements[index % settlements.length]!
   return (
     <div
-      className="min-w-0 max-sm:col-span-2 max-sm:row-start-2 sm:flex-1 sm:border-s sm:ps-4"
+      className="min-w-0 border-t border-dashed border-border pt-2"
       onPointerEnter={() => setHeld(true)}
       onPointerLeave={() => setHeld(false)}
       onFocus={() => setHeld(true)}
@@ -112,6 +114,7 @@ function SettlementLine({ settlement: s, enter }: { settlement: Settlement; ente
         {usd !== undefined && <span className="text-muted-foreground"> ({approxUsd(usd)})</span>}
         <PayerText payer={s.payer} related={s.related} /> for “{s.title}”
       </span>
+      <span className="stamp-paid shrink-0">Paid</span>
       <span className="shrink-0 text-muted-foreground">
         <Ago at={s.at} />
       </span>
@@ -145,7 +148,7 @@ function PaidTotal() {
   if (stats === undefined || total === null || meta === undefined) return null
   const amount = Number(formatUnits(total.amount, meta.decimals))
   return (
-    <p className="hidden shrink-0 items-baseline gap-1 sm:inline-flex sm:border-s sm:ps-4">
+    <p className="flex min-w-0 items-baseline gap-1 border-t border-dashed border-border pt-2">
       <NumberFlow value={amount} format={paidFormat(amount)} className="font-medium tabular-nums" />
       <span className="text-muted-foreground">
         {meta.symbol} paid for {stats.completed.toLocaleString('en-US')} {stats.completed === 1 ? 'job' : 'jobs'}

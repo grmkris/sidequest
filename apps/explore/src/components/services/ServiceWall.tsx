@@ -41,9 +41,12 @@ export function ServiceWall({
   const services = matching.slice(0, limit)
   return (
     <section aria-label="Services" className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
-      {intro}
-      <ServiceSearch value={q} onChange={setQ} />
-      {rail}
+      {/* The front door leads with one centred column: the promise, the search and the latest receipt. */}
+      <div className={landing ? 'landing-corridor' : 'contents'}>
+        {intro}
+        <ServiceSearch value={q} onChange={setQ} />
+        {rail}
+      </div>
       <CategoryBar
         categories={categoriesOf(read.services)}
         selected={category}
@@ -69,7 +72,7 @@ export function ServiceWall({
       {landing && (read.hasNextPage || matching.length > services.length) && (
         <Link
           to="/services"
-          className={buttonVariants({ variant: 'outline', size: 'lg', className: 'justify-self-center rounded-full' })}
+          className={buttonVariants({ variant: 'outline', size: 'lg', className: 'justify-self-center' })}
         >
           See all services
         </Link>
@@ -101,7 +104,7 @@ function ServiceSearch({ value, onChange }: { value: string; onChange: (value: s
   const input = useRef<HTMLInputElement>(null)
   useSlashFocus(input)
   return (
-    <label className="flex h-14 min-w-0 cursor-text items-center gap-3 rounded-2xl bg-card ps-4 pe-3 shadow-chip transition-shadow duration-(--dur-fast) focus-within:ring-3 focus-within:ring-ring/40">
+    <label className="flex h-12 w-full min-w-0 cursor-text items-center gap-3 rounded-lg bg-card ps-4 pe-3 ring-1 ring-input focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-ring">
       <Search aria-hidden className="size-5 shrink-0 text-muted-foreground" />
       <span className="sr-only">Search services</span>
       <input
@@ -139,9 +142,9 @@ function CategoryBar({
   const total = categories.reduce((sum, item) => sum + item.count, 0)
   return (
     <PillDock landing={landing}>
-      <fieldset className="w-fit max-w-full min-w-0 rounded-full p-1 shadow-chip material-chrome">
+      <fieldset className="w-fit max-w-full min-w-0 rounded-xl bg-muted p-1 shadow-groove">
         <legend className="sr-only">Service categories</legend>
-        <div className="flex snap-x gap-1 overflow-x-auto rounded-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex snap-x gap-1 overflow-x-auto rounded-lg [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <CategoryPill pressed={selected === null} onClick={() => onChange(null)} label="All" count={total} />
           {categories.map(({ value, label, count }) => (
             <CategoryPill
@@ -174,10 +177,10 @@ function CategoryPill({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className="inline-flex min-h-10 shrink-0 snap-start items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-muted-foreground transition-[background-color,color,scale] duration-(--dur-fast) ease-(--ease-out-strong) active:scale-96 aria-pressed:bg-foreground aria-pressed:text-background [@media(hover:hover)]:hover:text-foreground [@media(hover:hover)]:aria-pressed:hover:text-background"
+      className="inline-flex min-h-9 shrink-0 snap-start items-center gap-1.5 rounded-lg px-3.5 text-sm font-medium text-muted-foreground transition-[background-color,color,box-shadow,translate] duration-(--dur-fast) ease-(--ease-out-strong) active:translate-y-px aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-stock [@media(hover:hover)]:hover:text-foreground pointer-coarse:min-h-11"
     >
       {label}
-      <span className="tabular-nums opacity-60">{count}</span>
+      <span className="text-muted-foreground tabular-nums">{count}</span>
     </button>
   )
 }
