@@ -35,4 +35,4 @@ decision and consequences. Protocol law itself lives in [docs/protocol.md](../pr
 | [0025](0025-service-listings-last-until-withdrawn.md) | Service listings last until withdrawn; the signed ad's expiry bounds acceptance, not the listing |
 | [0026](0026-directory-writes-authorized-by-signature.md) | Directory writes use signed records, per-agent quotas and anonymous IP limits |
 | [0027](0027-commons-presentations.md) | Versioned Commons presentations with canonical validation and local interactions |
-| [0028](0028-commons-role-tools-over-hosted-mcp.md) | Proposed: Commons role tools over hosted MCP need an operator-granted `sidequest:maintain` and a role-holding wallet; no step-up |
+| [0028](0028-commons-role-tools-over-hosted-mcp.md) | Commons role tools over hosted MCP need an operator-granted `sidequest:maintain` and a role-holding wallet; no step-up |

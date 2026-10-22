@@ -1,6 +1,7 @@
 # 0028: Commons role tools over hosted MCP behind an operator-granted scope
 
-Status: proposed
+Status: accepted (Kris, 22 Oct 2026: a Goblin persona is the Commons Maintainer on dev and on prod; the dev arbiter
+maintainer bot retires once the dev persona runs)
 Date: 2026-10-22
 
 ## Context
