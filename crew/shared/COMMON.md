@@ -10,7 +10,7 @@ you as a hosted agent: Sidequest signs as your agent wallet and pays its gas, so
 - **Standing operator notes.** If `/crew/agent/state/operator-notes.md` exists, read it first: your operator wrote it
   and it holds until removed (for example "do not review task X"). Never write to it yourself.
 - **One pass per run.** Read `/crew/agent/state/cursor` with
-  `bun /crew/src/crew/bin/inbox-state.ts read /crew/agent/state/cursor`, then pass its `cursor` to `inbox`
+  `bun --no-install /crew/src/crew/bin/checkpoint.js read /crew/agent/state/cursor`, then pass its `cursor` to `inbox`
   (omit it on the first run). Legacy plain `v1:...` files still read. A corrupt or missing primary resumes a valid
   `cursor.bak`, including events older than seven days. Only when neither copy is usable does `resync: true` request
   a cursorless diagnostic; preserve both files and report recovery required. Never append a
@@ -18,7 +18,7 @@ you as a hosted agent: Sidequest signs as your agent wallet and pays its gas, so
   Act on every event before committing the batch: persist each write's exact arguments and operationKey first,
   and on replay reconcile or retry that same operation; a confirmed write must not get a fresh key.
   Only after the batch succeeds, atomically save the returned cursor with
-  `bun /crew/src/crew/bin/inbox-state.ts commit /crew/agent/state/cursor '<checkpoint JSON>'`, where the JSON is
+  `bun --no-install /crew/src/crew/bin/checkpoint.js commit /crew/agent/state/cursor '<checkpoint JSON>'`, where the JSON is
   `{"cursor":"<exact server cursor>","processedAt":"<ISO time>","modelNote":"<optional note>"}`. Cursor,
   timestamp and model note are separate fields. If a read, model or action fails, leave the checkpoint in place;
   restart from it and replay with the saved keys. Only `invalid: cursor must be a value returned by inbox` permits

@@ -93,8 +93,8 @@ wakes it. A separate wake cursor
 (`state/wake-cursor`) advances after idle filtering completes. A successful model run copies only its worker's
 processed checkpoint; a failed, timed-out or skipped run never acknowledges the pending wake batch. An unfit request
 does not keep waking the model. Checkpoints are atomically replaced JSON objects with separate `cursor`, `processedAt`
-and optional `modelNote` fields; legacy plain cursors still read. `inbox-state.ts read|commit <path>` is the member's
-read/write helper (in containers: `/crew/src/crew/bin/inbox-state.ts`). A corrupt or missing primary resumes a valid
+and optional `modelNote` fields; legacy plain cursors still read. `checkpoint.ts read|commit <path>` is the member's
+read/write helper (in containers the bundle `/crew/src/crew/bin/checkpoint.js`). A corrupt or missing primary resumes a valid
 backup. `resync: true` means neither copy is usable; perform a cursorless diagnostic and report recovery required,
 without replacing checkpoints. Only the exact server cursor error (`invalid: cursor must be a value returned by inbox`)
 permits that diagnostic retry; unrelated invalid errors propagate. A `gap: true` response also fails before checkpointing.
@@ -140,7 +140,9 @@ before. Model calls reach the box's cliproxy at its tailnet address (`harness.co
     docker inspect sq-bot-reel                    # limits, mounts, labels, the source commit it runs
 
 A container runs a `git archive` of the commit `up` was called at (`.crew/source/<sha>/`, `sidequest.source` label),
-so editing the working tree never changes a running bot: commit, then `up` again. The harness CLIs are mounted from
+so editing the working tree never changes a running bot: commit, then `up` again. `up` bundles that snapshot's entry
+points (`crew.js`, `checkpoint.js`) from this checkout's `node_modules`, so run `bun install` first; containers run the
+bundles with `bun --no-install` and never fetch a package. The harness CLIs are mounted from
 their installed paths at `up` time; after updating codex or grok, run `up` again. Each bot's env file
 (`.crew/env/<member>.env`, mode 600) holds only `CLIPROXY_API_KEY` and the variables its member lists.
 

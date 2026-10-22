@@ -16,7 +16,7 @@ import {
 import { basename, dirname, join } from 'node:path'
 import { Schema } from 'effect'
 
-const Checkpoint = Schema.Struct({
+export const Checkpoint = Schema.Struct({
   cursor: Schema.String.check(Schema.isMinLength(1), Schema.isPattern(/^\S+$/u)),
   processedAt: Schema.optionalKey(Schema.String),
   modelNote: Schema.optionalKey(Schema.String),
@@ -135,15 +135,4 @@ export function finishWake(path: string, candidate: string | undefined, code?: n
   } else if (candidate !== undefined) {
     saveCheckpoint(path, { cursor: candidate, processedAt: new Date().toISOString() })
   }
-}
-
-if (import.meta.main) {
-  const [command, path, payload] = Bun.argv.slice(2)
-  if (path === undefined) throw new Error('usage: inbox-state.ts read|commit <path> [checkpoint JSON]')
-  if (command === 'read') {
-    const { checkpoint, resync } = readCheckpoint(path)
-    console.log(JSON.stringify({ ...(resync ? {} : { cursor: checkpoint?.cursor }), resync, lastValid: checkpoint }))
-  } else if (command === 'commit' && payload !== undefined) {
-    saveCheckpoint(path, Schema.decodeUnknownSync(Checkpoint)(JSON.parse(payload)))
-  } else throw new Error('usage: inbox-state.ts read|commit <path> [checkpoint JSON]')
 }

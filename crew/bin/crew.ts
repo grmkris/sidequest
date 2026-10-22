@@ -928,19 +928,39 @@ function containerize(id: string) {
 }
 
 /** The source a container runs: a `git archive` of this commit, so editing the working tree never changes a bot. */
+/** The entry points a container runs, each bundled with the packages the lockfile pins (crew/bin/<name>.js). */
+const BUNDLES = ['crew', 'checkpoint']
+
+/**
+ * The crew at HEAD as its containers run it: the committed source, and its entry points bundled from this checkout's
+ * node_modules (install them from the lockfile first), so a container never resolves a package at run time.
+ */
 function snapshot(): { sha: string; source: string } {
   const sha = spawnSync('git', ['-C', repo, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim()
   const source = join(repo, '.crew', 'source', sha)
-  if (!existsSync(source)) {
-    mkdirSync(source, { recursive: true })
-    const tar = spawnSync(
-      'bash',
-      ['-c', `git -C "$0" archive "$1" crew infra skill | tar -x -C "$2"`, repo, sha, source],
-      {
-        stdio: 'inherit',
-      },
-    )
-    if (tar.status !== 0) throw new Error('could not snapshot the crew source')
+  if (existsSync(join(source, 'crew', 'bin', 'crew.js'))) return { sha, source }
+  rmSync(source, { recursive: true, force: true })
+  mkdirSync(source, { recursive: true })
+  const entries = join(source, 'crew', 'bin')
+  const steps: Array<[string, string[]]> = [
+    ['bash', ['-c', `git -C "$0" archive "$1" crew infra skill | tar -x -C "$2"`, repo, sha, source]],
+    [
+      'bun',
+      [
+        'build',
+        ...BUNDLES.map((name) => join(entries, `${name}.ts`)),
+        '--target=bun',
+        '--root',
+        entries,
+        '--outdir',
+        entries,
+      ],
+    ],
+  ]
+  for (const [command, args] of steps) {
+    if (spawnSync(command, args, { cwd: repo, stdio: 'inherit' }).status === 0) continue
+    rmSync(source, { recursive: true, force: true })
+    throw new Error(`could not snapshot the crew at ${sha} (${command})`)
   }
   return { sha, source }
 }
@@ -973,7 +993,7 @@ function botService(id: string, m: Member, e: Record<string, string>, at: Mounts
     init: true,
     restart: 'unless-stopped',
     working_dir: '/crew/src',
-    command: ['bun', '/crew/src/crew/bin/crew.ts', 'serve', id, String(crew.harness.loopMinutes)],
+    command: ['bun', '--no-install', '/crew/src/crew/bin/crew.js', 'serve', id, String(crew.harness.loopMinutes)],
     env_file: [envFile],
     environment: {
       CREW_IN_CONTAINER: '1',
@@ -1065,9 +1085,11 @@ const [command, a, b] = process.argv.slice(2)
 const relayed = !inContainer && ['login', 'run', 'wake', 'call'].includes(command ?? '') && a !== undefined
 if (relayed && existsSync(join(home(a), 'secrets'))) {
   if (!botRunning(a)) throw new Error(`${a} runs in ${bot(a)}, which is not up; start it with "up ${a}"`)
-  const inside = spawnSync('docker', ['exec', bot(a), 'bun', '/crew/src/crew/bin/crew.ts', ...process.argv.slice(2)], {
-    stdio: 'inherit',
-  })
+  const inside = spawnSync(
+    'docker',
+    ['exec', bot(a), 'bun', '--no-install', '/crew/src/crew/bin/crew.js', ...process.argv.slice(2)],
+    { stdio: 'inherit' },
+  )
   process.exit(inside.status ?? 1)
 }
 if (command === 'login') await login(memberOf(a)[0], b ?? BOARD, process.argv[5])
