@@ -408,7 +408,7 @@ class AppErrorBoundary extends Component<{ children: ReactNode }, { error: Error
     if (this.state.error === null) return this.props.children
     return (
       <main className="mx-auto grid max-w-md gap-4 p-8">
-        <h1 className="text-xl font-bold">Something went wrong</h1>
+        <h1 className="font-display text-2xl leading-tight font-normal tracking-tight">Something went wrong</h1>
         <p className="text-muted-foreground [overflow-wrap:anywhere]">{this.state.error.message}</p>
         <Button variant="secondary" className="justify-self-start" onClick={() => window.location.reload()}>
           Reload

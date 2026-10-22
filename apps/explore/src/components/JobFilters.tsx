@@ -45,8 +45,8 @@ export function TagChips({ tags, onChange }: { tags: readonly JobTag[]; onChange
             aria-pressed={on}
             onClick={() => onChange(on ? tags.filter((t) => t !== tag) : [...tags, tag])}
             className={cn(
-              'min-h-8 rounded-full px-3 text-sm font-medium transition-colors pointer-coarse:min-h-11',
-              on ? 'bg-primary/14 text-primary' : 'bg-muted text-muted-foreground hover:text-foreground',
+              'min-h-8 rounded-lg px-3 text-sm font-medium transition-[background-color,color,box-shadow] duration-(--dur-fast) pointer-coarse:min-h-11',
+              on ? 'bg-card text-foreground shadow-stock' : 'bg-muted text-muted-foreground hover:text-foreground',
             )}
           >
             {JOB_TAG_LABELS[tag]}

@@ -142,7 +142,7 @@ function Money({ job }: { job: FeedJob }) {
   const money = receiptMoney(chain, job.bucket === 'paid')
   if (money.length === 0) return null
   return (
-    <dl className="m-0 grid gap-1 font-mono text-xs">
+    <dl className="m-0 grid gap-1.5 text-sm">
       {money.map((line) => (
         <Leader key={line.label} label={line.label}>
           <TokenAmount value={line.value} token={chain?.token} static />

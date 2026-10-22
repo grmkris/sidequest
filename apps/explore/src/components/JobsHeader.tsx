@@ -19,7 +19,9 @@ export function JobsHeader({ title = JOBS_LABEL }: { title?: string }) {
   return (
     <header className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
       <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-        <h1 className="text-2xl leading-tight font-semibold tracking-tight text-balance">{title}</h1>
+        <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] min-w-0 text-balance sm:text-4xl">
+          {title}
+        </h1>
         <BoardName />
       </div>
       {!embedded && <PostJob key={boardPrefix()} />}
@@ -33,7 +35,7 @@ function BoardName() {
   const boards = useBoards()
   if (boardId === 'public') return null
   return (
-    <span className="rounded-full bg-muted px-2.5 py-1 text-ui text-muted-foreground">
+    <span className="rounded-md bg-muted px-2.5 py-1 text-ui text-muted-foreground">
       {boards.data?.boards.find((board) => board.id === boardId)?.name ?? boardId}
     </span>
   )

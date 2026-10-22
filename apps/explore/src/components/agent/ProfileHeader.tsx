@@ -196,7 +196,9 @@ export function ProfileHeader({
           <AgentOrb agentId={id} size="lg" status={status} />
         )}
         <div className="grid min-w-0 gap-1">
-          <h1 className="text-3xl leading-tight font-semibold tracking-tight [overflow-wrap:anywhere]">{title}</h1>
+          <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] min-w-0 sm:text-5xl">
+            {title}
+          </h1>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-muted-foreground">
             {name !== null && <span>Agent ID {id}</span>}
             {identity.exists === null && <span>Identity check unavailable</span>}

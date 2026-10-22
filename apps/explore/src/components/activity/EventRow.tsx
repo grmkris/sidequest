@@ -163,11 +163,23 @@ function RequestFacts({ job }: { job: FeedJob }) {
   )
 }
 
-/** The row's sentence: payer and actor named (agents with their cards, wallets by address), the job's title set apart. */
-function EventSentence({ event, sentence }: { event: FeedEvent; sentence: ReturnType<typeof liveSentence> }) {
+/**
+ * The row's sentence: payer and actor named (agents with their cards, wallets by address), the job's title set apart.
+ * A payment's amount stands in the ledger column instead (`ledger`), so the sentence reads who paid whom for what.
+ */
+function EventSentence({
+  event,
+  sentence,
+  ledger,
+}: {
+  event: FeedEvent
+  sentence: ReturnType<typeof liveSentence>
+  ledger: boolean
+}) {
   const { actor, text, payer } = sentence
   const [before, after] = aroundTitle(text, event.title)
-  const amount = event.amount === undefined ? null : <TokenAmount value={event.amount} token={event.token} static />
+  const amount =
+    event.amount === undefined || ledger ? null : <TokenAmount value={event.amount} token={event.token} static />
   const actorParty = actor ? actorOf(event) : null
   return (
     <>
@@ -195,6 +207,21 @@ function EventSentence({ event, sentence }: { event: FeedEvent; sentence: Return
   )
 }
 
+/** A payment's amount, in the ledger column at the row's end, above how long ago it was paid. */
+function LedgerAside({ event }: { event: FeedEvent }) {
+  return (
+    <span className="grid justify-items-end gap-0.5 text-right sm:min-w-28">
+      <TokenAmount
+        value={event.amount}
+        token={event.token}
+        static
+        className="text-sm font-medium whitespace-nowrap text-foreground tabular-nums"
+      />
+      <Ago at={event.at} />
+    </span>
+  )
+}
+
 /**
  * One thing that happened, as a sentence: who did it, what, to which job, for how much and how long ago. As a job's
  * row (the feed's usual reading) it also carries the job's track and, once work was delivered, the work itself, large;
@@ -219,6 +246,8 @@ export function EventRow({
   const status = UNACCEPTED[event.kind]
   const big = layout === 'job' && shown.thumb !== null
   const track = layout !== 'step' && event.job !== undefined ? trackOf(event.job) : []
+  // A payment in a job's row reads as a ledger line: who paid whom for what, the amount in its own column.
+  const ledger = layout !== 'step' && sentence.payer !== undefined && event.amount !== undefined
   return (
     <StretchedRow
       fresh={fresh}
@@ -233,7 +262,7 @@ export function EventRow({
           : { kind: 'card', target, title: event.title, card: <JobCard job={event.job} /> }
       }
       media={<EventMedia event={event} payer={sentence.payer} />}
-      aside={<Ago at={event.at} />}
+      aside={ledger ? <LedgerAside event={event} /> : <Ago at={event.at} />}
       thumb={
         shown.thumb === null ? undefined : big ? (
           <WorkPreview thumb={shown.thumb} status={status} wide />
@@ -243,7 +272,7 @@ export function EventRow({
       }
     >
       <p ref={shown.ref} className="text-sm leading-snug text-pretty">
-        <EventSentence event={event} sentence={sentence} />
+        <EventSentence event={event} sentence={sentence} ledger={ledger} />
       </p>
       {big && shown.thumb !== null && <WorkPreview thumb={shown.thumb} status={status} wide={false} />}
       {event.job !== undefined && <RequestFacts job={event.job} />}

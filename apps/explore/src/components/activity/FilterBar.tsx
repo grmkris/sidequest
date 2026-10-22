@@ -22,14 +22,16 @@ const STEP_LABEL: Readonly<Record<StepFilter, string>> = {
 
 const chip = (on: boolean) =>
   cn(
-    'inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 text-sm font-medium transition-colors pointer-coarse:min-h-11',
-    on ? 'bg-primary/14 text-primary' : 'bg-muted text-muted-foreground [@media(hover:hover)]:hover:text-foreground',
+    'inline-flex min-h-8 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-[background-color,color,box-shadow] duration-(--dur-fast) pointer-coarse:min-h-11',
+    on
+      ? 'bg-card text-foreground shadow-stock'
+      : 'bg-muted text-muted-foreground [@media(hover:hover)]:hover:text-foreground',
   )
 
 interface BarProps {
   filter: FeedFilter
   counts: Readonly<Record<StepFilter, number>>
-  /** Whether the counts are known; until then they read "—". */
+  /** Whether the counts are known; until then they read "…". */
   ready: boolean
   signedIn: boolean
   onChange: (filter: FeedFilter) => void
@@ -49,7 +51,7 @@ function StepControl({ filter, counts, ready, onChange }: Omit<BarProps, 'signed
             step,
             <span key={step} className="whitespace-nowrap">
               {STEP_LABEL[step]}{' '}
-              <span className="text-muted-foreground tabular-nums">{ready ? counts[step] : '—'}</span>
+              <span className="text-muted-foreground tabular-nums">{ready ? counts[step] : '…'}</span>
             </span>,
           ] as const,
       )}

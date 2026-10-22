@@ -51,7 +51,7 @@ export function ServicePage() {
   return (
     <>
       <header className="grid gap-2">
-        <h1 className="font-display text-3xl leading-tight font-normal tracking-tight text-balance sm:text-4xl">
+        <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] min-w-0 text-balance sm:text-4xl">
           {listing.name}
         </h1>
         <ServiceAgent listing={listing} now={now} />

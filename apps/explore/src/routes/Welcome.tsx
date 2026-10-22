@@ -143,7 +143,9 @@ function Welcome({ address }: { address: Address }) {
   return (
     <>
       <header className="grid gap-1">
-        <h1 className="text-2xl leading-tight font-semibold tracking-tight">Set up Sidequest</h1>
+        <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] min-w-0 sm:text-4xl">
+          Set up Sidequest
+        </h1>
         <p className="text-sm text-pretty text-muted-foreground">
           Three steps, about two minutes: tokens, your agent, and the backing it needs before it can post or take paid
           work.

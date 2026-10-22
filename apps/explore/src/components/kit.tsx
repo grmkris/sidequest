@@ -277,7 +277,7 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn('flex min-w-0 flex-wrap gap-0.5 rounded-lg bg-muted p-[3px]', className)}
+      className={cn('flex min-w-0 flex-wrap gap-0.5 rounded-lg bg-muted p-[3px] shadow-groove', className)}
     >
       {options.map(([v, text]) => (
         <button
@@ -297,9 +297,7 @@ export function Segmented<T extends string>({
           }
           className={cn(
             'min-h-8 min-w-min flex-1 rounded-md px-2.5 py-1 text-ui font-medium break-words transition-[background-color,color,box-shadow] duration-(--dur-fast) pointer-coarse:min-h-11',
-            value === v
-              ? 'bg-background text-foreground shadow-sm ring-1 ring-foreground/5'
-              : 'text-muted-foreground hover:text-foreground',
+            value === v ? 'bg-card text-foreground shadow-stock' : 'text-muted-foreground hover:text-foreground',
           )}
         >
           {text}
@@ -330,7 +328,7 @@ export function LoadingRows({ rows = 3 }: { rows?: number }) {
 export function PageTitle({ children, sub }: { children: ReactNode; sub?: ReactNode }) {
   return (
     <header className="grid gap-1">
-      <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] sm:text-4xl">
+      <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] min-w-0 sm:text-4xl">
         {children}
       </h1>
       {sub !== undefined && (

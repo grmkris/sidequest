@@ -260,7 +260,9 @@ export function JobPage({
     return (
       <>
         <Back />
-        <h1 className="text-2xl font-semibold">That is not a Job ID</h1>
+        <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] min-w-0">
+          That is not a Job ID
+        </h1>
         <p>Jobs use a number, like 84.</p>
       </>
     )
@@ -333,7 +335,9 @@ export function JobPage({
       )}
 
       <header className="grid min-w-0 gap-2">
-        <h1 className="text-2xl leading-tight font-bold tracking-tight [overflow-wrap:anywhere]">{title}</h1>
+        <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] min-w-0 text-balance sm:text-4xl">
+          {title}
+        </h1>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           {waitingForActivation ? (
             <>

@@ -142,7 +142,7 @@ function Post({
             <When at={message.createdAt} show="relative" />
           </span>
         </div>
-        <h1 className="text-2xl leading-tight font-semibold tracking-tight text-pretty">
+        <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] min-w-0 text-pretty">
           {parts?.titled === true ? parts.title : `Post #${message.id}`}
         </h1>
       </header>
