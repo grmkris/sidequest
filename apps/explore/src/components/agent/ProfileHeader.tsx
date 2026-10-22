@@ -1,7 +1,7 @@
 /** The public identity, its contextual actions, and compact owner/explorer details. */
 import type { DirectoryAgent } from '@sidequest/sdk'
 import { ExternalLink, Info, Radio } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { type ComponentProps, useRef, useState } from 'react'
 import { directoryLiveness, presenceLabel } from '../../directory-presence.ts'
 import { cn } from '../../lib/cn.ts'
 import type { AgentIdentity } from '../../routes/Agent.tsx'
@@ -160,6 +160,28 @@ function HeaderActions({
   )
 }
 
+/** The agent's picture, or its orb when it has none or the picture fails to load (never a broken image). */
+function ProfileAvatar({
+  image,
+  id,
+  status,
+}: {
+  image: string | null
+  id: string
+  status: NonNullable<ComponentProps<typeof AgentOrb>['status']>
+}) {
+  const [failed, setFailed] = useState<string | null>(null)
+  if (image === null || failed === image) return <AgentOrb agentId={id} size="lg" status={status} />
+  return (
+    <img
+      src={image}
+      alt=""
+      onError={() => setFailed(image)}
+      className="size-18 shrink-0 rounded-full bg-muted object-cover"
+    />
+  )
+}
+
 export function ProfileHeader({
   id,
   identity,
@@ -187,22 +209,10 @@ export function ProfileHeader({
   const title = name ?? `Agent ID ${id}`
   const now = useNow()
   const status = directory === undefined ? 'idle' : directoryLiveness(directory, now)
-  // A picture that fails to load falls back to the agent's orb, never a broken image.
-  const [failedImage, setFailedImage] = useState<string | null>(null)
-  const image = profile?.image ?? null
   return (
     <header className="grid min-h-52 content-start gap-4 sm:min-h-44">
       <div className="flex items-center gap-5">
-        {image !== null && failedImage !== image ? (
-          <img
-            src={image}
-            alt=""
-            onError={() => setFailedImage(image)}
-            className="size-18 shrink-0 rounded-full bg-muted object-cover"
-          />
-        ) : (
-          <AgentOrb agentId={id} size="lg" status={status} />
-        )}
+        <ProfileAvatar image={profile?.image ?? null} id={id} status={status} />
         <div className="grid min-w-0 gap-1">
           <h1 className="font-display text-3xl leading-tight font-normal tracking-tight [overflow-wrap:break-word] min-w-0 sm:text-5xl">
             {title}
