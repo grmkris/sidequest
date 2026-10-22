@@ -2,7 +2,7 @@ import { expect, it } from '@effect/vitest'
 import { Effect, Schema } from 'effect'
 import { makeHarness, alice, bob, moderator, maintainer } from './layers.ts'
 import { invoke } from './calls.ts'
-import { postEvents } from '../src/feed.ts'
+import { postEvents, roleHolderEvents } from '../src/feed.ts'
 import type { Message } from '../src/schema/messages.ts'
 import { PostMessageOutput } from '../src/schema/messages.ts'
 import { ReportGapOutput } from '../src/schema/gaps.ts'
@@ -77,4 +77,78 @@ it.effect.prop(
         expect(h.events.every((event) => event.next !== undefined)).toBe(true)
       }).pipe(Effect.provide(h.layer))
     }),
+)
+
+it('tells each role holder once about a gap report or a proposal, a holder of both roles as maintainer', () => {
+  const upper = `0x${'D'.repeat(40)}`
+  const gap = roleHolderEvents(
+    { kind: 'gap.reported', prefix: 'commons:r7', id: 3, now: 50 },
+    { moderator: [moderator, moderator.toUpperCase().replace('0X', '0x'), upper], maintainer: [maintainer] },
+  )
+  expect(gap).toEqual([
+    {
+      id: `commons:r7:${moderator}`,
+      address: moderator,
+      kind: 'gap.reported',
+      role: 'moderator',
+      summary: 'A Commons gap was reported.',
+      next: { tool: 'list_gaps', args: { gapId: '3' } },
+      occurredAt: 50,
+    },
+    {
+      id: `commons:r7:${maintainer}`,
+      address: maintainer,
+      kind: 'gap.reported',
+      role: 'maintainer',
+      summary: 'A Commons gap was reported.',
+      next: { tool: 'list_gaps', args: { gapId: '3' } },
+      occurredAt: 50,
+    },
+  ])
+  const proposed = roleHolderEvents(
+    { kind: 'roadmap.proposed', prefix: 'commons:i4', id: 4, now: 60 },
+    { moderator: [], maintainer: [maintainer] },
+  )
+  expect(proposed).toEqual([
+    {
+      id: `commons:i4:${maintainer}`,
+      address: maintainer,
+      kind: 'roadmap.proposed',
+      role: 'maintainer',
+      summary: 'A roadmap item was proposed.',
+      next: { tool: 'get_roadmap_item', args: { itemId: '4' } },
+      occurredAt: 60,
+    },
+  ])
+  expect(
+    roleHolderEvents({ kind: 'gap.reported', prefix: 'commons:r1', id: 1, now: 1 }, { moderator: [], maintainer: [] }),
+  ).toEqual([])
+})
+it.effect('a real gap report and proposal reach the moderator and the maintainer', () =>
+  Effect.gen(function* () {
+    const h = yield* makeHarness()
+    h.state.stakes.set(alice, PROPOSE_MINIMUM)
+    const rows = (kind: string) =>
+      h.events.filter((event) => event.kind === kind).map((event) => [event.id, event.address, event.role])
+    yield* Effect.gen(function* () {
+      const gap = yield* invoke('report_gap', ReportGapOutput, alice, {
+        gap_type: 'missing_tool',
+        what_i_needed: 'A tool',
+        what_i_tried: 'Another tool',
+      })
+      const item = yield* invoke('propose_item', ProposeItemOutput, alice, {
+        title: 'Add the tool',
+        problem: 'It is missing',
+        proposal: 'Add it',
+      })
+      expect(rows('gap.reported')).toEqual([
+        [`commons:r${gap.reportId}:${moderator}`, moderator, 'moderator'],
+        [`commons:r${gap.reportId}:${maintainer}`, maintainer, 'maintainer'],
+      ])
+      expect(rows('roadmap.proposed')).toEqual([
+        [`commons:i${item.item.id}:${moderator}`, moderator, 'moderator'],
+        [`commons:i${item.item.id}:${maintainer}`, maintainer, 'maintainer'],
+      ])
+    }).pipe(Effect.provide(h.layer))
+  }),
 )

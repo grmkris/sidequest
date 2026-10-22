@@ -55,22 +55,32 @@ export function postEvents(
   ]
 }
 
-interface ModeratorEvent {
+interface RoleHolderEvent {
   readonly kind: 'gap.reported' | 'roadmap.proposed'
   readonly prefix: string
   readonly id: number
   readonly now: number
 }
-export function moderatorEvents(event: ModeratorEvent, moderators: readonly Address[]): FeedEvent[] {
+/**
+ * A gap report or a roadmap proposal reaches every Commons role holder who triages it, once per address: a holder of
+ * both roles is told as maintainer. The row names the record to read, never its text.
+ */
+export function roleHolderEvents(
+  event: RoleHolderEvent,
+  holders: { readonly moderator: readonly Address[]; readonly maintainer: readonly Address[] },
+): FeedEvent[] {
   const gap = event.kind === 'gap.reported'
   const next = gap
     ? { tool: 'list_gaps', args: { gapId: String(event.id) } }
     : { tool: 'get_roadmap_item', args: { itemId: String(event.id) } }
-  return [...new Set(moderators.map((a) => a.toLowerCase()))].map((address) => ({
+  const roles = new Map<string, 'moderator' | 'maintainer'>()
+  for (const address of holders.moderator) roles.set(address.toLowerCase(), 'moderator')
+  for (const address of holders.maintainer) roles.set(address.toLowerCase(), 'maintainer')
+  return [...roles].map(([address, role]) => ({
     id: `${event.prefix}:${address}`,
     address,
     kind: event.kind,
-    role: 'moderator',
+    role,
     summary: gap ? 'A Commons gap was reported.' : 'A roadmap item was proposed.',
     next,
     occurredAt: event.now,

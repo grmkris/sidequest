@@ -10,7 +10,7 @@ import { takeRate } from '../rate.ts'
 import { sqlEffect } from '../sql/effects.ts'
 import { rootGap } from '../gaps/cluster.ts'
 import { itemOf, requireItem } from './common.ts'
-import { moderatorEvents } from '../feed.ts'
+import { roleHolderEvents } from '../feed.ts'
 
 export const proposeItem = Effect.fnUntraced(function* (
   caller: Address | undefined,
@@ -51,7 +51,7 @@ export const proposeItem = Effect.fnUntraced(function* (
     }),
   )
   yield* (yield* FeedSink).write(
-    moderatorEvents({ kind: 'roadmap.proposed', prefix: `commons:i${item.id}`, id: item.id, now }, config.moderator),
+    roleHolderEvents({ kind: 'roadmap.proposed', prefix: `commons:i${item.id}`, id: item.id, now }, config),
   )
   return { item, threadSubject: item.threadSubject }
 })

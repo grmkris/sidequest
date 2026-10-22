@@ -7,7 +7,7 @@ import { takeRate } from '../rate.ts'
 import { authenticated, enabled } from '../roles/holders.ts'
 import { sqlEffect } from '../sql/effects.ts'
 import { resolveCluster } from './cluster.ts'
-import { moderatorEvents } from '../feed.ts'
+import { roleHolderEvents } from '../feed.ts'
 
 export const reportGap = Effect.fnUntraced(function* (caller: Address | undefined, input: typeof ReportGapInput.Type) {
   const config = yield* enabled()
@@ -45,10 +45,7 @@ export const reportGap = Effect.fnUntraced(function* (caller: Address | undefine
     }),
   )
   yield* (yield* FeedSink).write(
-    moderatorEvents(
-      { kind: 'gap.reported', prefix: `commons:r${result.reportId}`, id: result.gapId, now },
-      config.moderator,
-    ),
+    roleHolderEvents({ kind: 'gap.reported', prefix: `commons:r${result.reportId}`, id: result.gapId, now }, config),
   )
   return result
 })

@@ -26,7 +26,8 @@ it.effect('report limit is 20/day and blocked reports write neither content nor 
       expect(error._tag).toBe('RateLimited')
       expect(error.message).toBe('retry in 86400s')
       expect(h.sql.all('SELECT * FROM commons_gap_reports')).toHaveLength(20)
-      expect(h.events).toHaveLength(20)
+      // One row per report for each role holder: the harness has one moderator and one maintainer.
+      expect(h.events).toHaveLength(40)
       yield* TestClock.adjust(86_400_000)
       yield* invoke('report_gap', ReportGapOutput, alice, {
         gap_type: 'error',
