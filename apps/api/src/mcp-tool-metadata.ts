@@ -36,6 +36,7 @@ const PUBLISHER_OUTPUT_SCHEMAS: Readonly<Record<string, Record<string, unknown>>
         agentId: { type: ['string', 'null'] },
         chainId: { type: 'number' },
         roles: { type: 'array', items: { type: 'string', enum: ['work', 'hire'] } },
+        maintain: { type: 'boolean' },
       }),
     }),
     required: ['id', 'name'],

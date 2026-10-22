@@ -560,6 +560,24 @@ describe('hosted tool metadata', () => {
     )
     expect(allowed).toHaveBeenCalledWith('set_gap_status', args, 'a1')
   })
+  it('says in whoami whether the operator granted the Commons role tools, beside the unchanged roles', async () => {
+    const whoami = async (granted: OAuthGrant) =>
+      result(await route('tools/call', { name: 'whoami' }, { grant: granted, tools: registry })).structuredContent
+    expect(await whoami(maintainGrant)).toMatchObject({ result: { maintain: true, roles: ['work', 'hire'] } })
+    expect(await whoami(fullGrant)).toMatchObject({ result: { maintain: false, roles: ['work', 'hire'] } })
+    expect(await whoami({ ...maintainGrant, roles: ['work'] })).toMatchObject({
+      result: { maintain: true, roles: ['work'] },
+    })
+    // SAFETY: tools/list returns its advertised tool objects under result.tools.
+    const listed = result(await route('tools/list', {}, { grant: maintainGrant, tools: registry })).tools as {
+      name: string
+      outputSchema: unknown
+    }[]
+    expect(listed.find((tool) => tool.name === 'whoami')?.outputSchema).toHaveProperty(
+      'properties.result.properties.maintain',
+      { type: 'boolean' },
+    )
+  })
 })
 
 it('serves authenticated static skills with pagination and matching resource bytes', async () => {

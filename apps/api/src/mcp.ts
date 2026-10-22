@@ -12,6 +12,7 @@ import {
   toolRefusal,
 } from './mcp-policy.ts'
 import { publicDirectoryProtocol, PUBLIC_DIRECTORY_INSTRUCTIONS } from './mcp-public-directory.ts'
+import { MAINTAIN_SCOPE } from './oauth-validation.ts'
 import { toolWireMetadata } from './mcp-tool-metadata.ts'
 import { approvalRound, settledCreation } from './mcp-mrtr.ts'
 import type { ListenRequest } from './mcp-listen.ts'
@@ -78,14 +79,21 @@ async function profileId(agentId: string, address: string): Promise<string> {
 /**
  * whoami for a connection: the board's answer plus the connection's profile, and inside `result` the ERC-8004 agent
  * this grant acts for, which `submit_quote` and `apply` name, and what it may do now: the roles its scope covers and its
- * agent holds (none in setup).
+ * agent holds (none in setup), and whether its operator granted the Commons role tools (ADR-0028; the Commons role
+ * list still decides each call).
  * Agents read `result`; the profile is for the host.
  */
 function whoamiContent(output: unknown, grant: OAuthGrant, id: string, name: string) {
   const base = typeof output === 'object' && output !== null ? (output as Record<string, unknown>) : { value: output }
   const result = base.result instanceof Object ? Object.fromEntries(Object.entries(base.result)) : {}
   const roles = effectiveRoles(grant)
-  return { ...base, result: { ...result, agentId: grant.registryAgentId, chainId: grant.chainId, roles }, id, name }
+  const maintain = grant.scopes.includes(MAINTAIN_SCOPE)
+  return {
+    ...base,
+    result: { ...result, agentId: grant.registryAgentId, chainId: grant.chainId, roles, maintain },
+    id,
+    name,
+  }
 }
 
 export async function mcpRoute(input: {
