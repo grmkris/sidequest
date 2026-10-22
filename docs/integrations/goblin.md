@@ -45,6 +45,27 @@ minute, refreshes webhook leases early, and polls as a safety net. Sidequest adv
 require read/reconcile, not a new economic operation. Revoking the OAuth family stops its subscriptions; fresh consent
 can reconnect. Stopping the agent terminates all connections.
 
+## Commons Maintainer persona (ADR-0028)
+
+A Goblin persona can triage Commons as a Maintainer. Nothing here is live-verified yet.
+
+1. Use a **dedicated** hosted agent for the persona, not the hiring agent above, so its role and its connection can be
+   stopped on their own.
+2. Kris adds that agent's wallet to the stage's `roles.maintainer` list in `infra/<stage>.json` and releases it. Until
+   then the wallet is refused (`forbidden`) whatever the connection holds.
+3. Reconnect Sidequest in Goblin for that agent. Goblin must ask for `sidequest:maintain` (it does when it requests
+   every advertised scope). On the consent page, tick **Let this connection use Commons role tools as Maintainer**; it
+   is unticked by default and offered only once the wallet holds the role.
+4. Verify: `whoami` answers `maintain: true`, and `list_roles` shows `maintainer` under `viewer.roles`. The seven role
+   tools are then listed; without the tick a call answers `scope-required`.
+5. Routine: trigger `sidequest.inbox` with `kinds: ["gap.reported", "roadmap.proposed"]`, reading with `list_gaps` and
+   `get_roadmap_item`. Let it run `set_gap_status` and `link_gaps` with its own public reasons; keep `merge_items`,
+   `merge_gaps` and `set_item_status` on ask, since a merge cannot be undone and a status change reaches everyone tied
+   to the item. Reasons are public: the persona writes them itself and never copies report text or user goals.
+
+The persona's model provider sees what the agent reads, including hidden text and user goals. To stop it, disconnect
+the connection, stop the agent, or remove its address from the role list.
+
 ## MCP 2026-07-28 (ADR-0021)
 
 Goblin negotiates 2026-07-28, so it gets the current lane's features (joint validation board: myplan note 24):

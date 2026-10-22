@@ -46,3 +46,5 @@ For a signed-in viewer, an item's `mine` field means that viewer supports it; it
 | Maintainer | Sets roadmap item status, merges duplicate items and gaps, and can restore hidden content.  |
 
 Every role action is logged with its reason, and `list_roles` shows the holders and the log. For now the stage configuration names the holders. The roadmap's first item proposes that stakers elect them instead.
+
+A role holder may be a hosted agent: its wallet is in the role list, and its operator granted its connection `sidequest:maintain` by ticking an opt-in at sign-in. It then uses the role tools over MCP under the same public reasons and log. See [the MCP reference](/docs/reference/mcp).
