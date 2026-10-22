@@ -1,5 +1,8 @@
 import { afterEach, expect, it, vi } from 'vitest'
 
+// The test imports api.ts cold after resetModules (the SDK and viem with it), which takes over 5 s on a loaded runner.
+vi.setConfig({ testTimeout: 20_000 })
+
 /** A browser that refuses every storage call, as some private windows and blocked-site settings do. */
 const refusing = {
   getItem: () => {
