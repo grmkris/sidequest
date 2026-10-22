@@ -82,7 +82,7 @@
   "scripts": {
     "check": "bun run format:check && bun run agents:check && bun run graph && bun run migrations:check && bun run dupes && bun run typecheck && bun run lint:gate && bun run test && bun run test:scripts",
     "check:fast": "bun run typecheck && bun run lint",
-    "typecheck": "tsc -p scripts/ci/tsconfig.json && turbo run typecheck",
+    "typecheck": "tsc -p scripts/ci/tsconfig.json && tsc -p crew/tsconfig.json && turbo run typecheck",
     "test": "turbo run test --concurrency=2",
     "lint": "oxlint -c oxlint.config.ts .",
     "lint:fix": "oxlint -c oxlint.config.ts --fix .",

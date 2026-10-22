@@ -32,6 +32,7 @@ import {
 } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { parseEnv } from 'node:util'
+import { Schema } from 'effect'
 import { stageProfile } from '../../infra/stage.ts'
 import * as hosted from './hosted-mcp.ts'
 import { type ConnectionFiles, REDIRECT, beginLogin, finishLogin, freshToken, readTokens } from './mcp-oauth.ts'
@@ -97,7 +98,7 @@ interface CrewFile extends Omit<Crew, 'board'> {
   board: { stage: string; scopes: string; rpc: string }
 }
 interface Crew {
-  board: CrewFile['board'] & { origin: string; mcp: string; relay?: string; chainId: number; chain: string }
+  board: CrewFile['board'] & { origin: string; mcp: string; relay: string | undefined; chainId: number; chain: string }
   harness: {
     baseUrl: string
     /** cliproxy as a bot's container on the crew bridge reaches it: the box's tailnet address, not loopback. */
@@ -1018,11 +1019,16 @@ function botService(id: string, m: Member, e: Record<string, string>, at: Mounts
   }
 }
 
-/** The crew's ERC-8004 Agent IDs by name, from the board's directory (a token names only the hosted agent's key). */
+const Directory = Schema.Struct({
+  agents: Schema.optionalKey(
+    Schema.Array(Schema.Struct({ agentId: Schema.String, profile: Schema.Struct({ name: Schema.String }) })),
+  ),
+})
+
+/** The crew's ERC-8004 Agent IDs by name, from the board's directory. */
 async function agentIds(): Promise<Map<string, string>> {
   const res = await fetch(`${crew.board.origin}/data/directory`).catch(() => undefined)
-  const body: { agents?: Array<{ agentId: string; profile: { name: string } }> } =
-    res?.ok === true ? await res.json() : {}
+  const body = res?.ok === true ? Schema.decodeUnknownSync(Directory)(await res.json()) : {}
   return new Map((body.agents ?? []).map((agent) => [agent.profile.name, agent.agentId]))
 }
 

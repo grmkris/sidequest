@@ -20,41 +20,46 @@ const json = (body: unknown, status = 200) =>
 function authorizationServer() {
   const forms: Array<Record<string, string>> = []
   let issued = 0
-  const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-    const url = new URL(input instanceof Request ? input.url : String(input))
-    if (url.pathname.startsWith('/.well-known/oauth-protected-resource'))
-      return json({
-        resource: SERVER,
-        authorization_servers: [ISSUER],
-        scopes_supported: ['connector', 'offline_access'],
-      })
-    if (url.pathname.startsWith('/.well-known/oauth-authorization-server'))
-      return json({
-        issuer: ISSUER,
-        authorization_endpoint: `${ISSUER}/authorize`,
-        token_endpoint: `${ISSUER}/token`,
-        registration_endpoint: `${ISSUER}/register`,
-        response_types_supported: ['code'],
-        code_challenge_methods_supported: ['S256'],
-        token_endpoint_auth_methods_supported: ['none'],
-      })
-    if (url.pathname === '/register') {
-      const metadata = JSON.parse(await bodyText(init))
-      return json({ ...metadata, client_id: 'client-1' }, 201)
-    }
-    if (url.pathname === '/token') {
-      const form = Object.fromEntries(new URLSearchParams(await bodyText(init)))
-      forms.push(form)
-      issued += 1
-      return json({
-        access_token: `access-${issued}`,
-        token_type: 'Bearer',
-        expires_in: 3600,
-        refresh_token: `refresh-${issued}`,
-      })
-    }
-    return new Response('not found', { status: 404 })
-  })
+  const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
+    Object.assign(
+      async (input: string | URL | Request, init?: RequestInit) => {
+        const url = new URL(input instanceof Request ? input.url : String(input))
+        if (url.pathname.startsWith('/.well-known/oauth-protected-resource'))
+          return json({
+            resource: SERVER,
+            authorization_servers: [ISSUER],
+            scopes_supported: ['connector', 'offline_access'],
+          })
+        if (url.pathname.startsWith('/.well-known/oauth-authorization-server'))
+          return json({
+            issuer: ISSUER,
+            authorization_endpoint: `${ISSUER}/authorize`,
+            token_endpoint: `${ISSUER}/token`,
+            registration_endpoint: `${ISSUER}/register`,
+            response_types_supported: ['code'],
+            code_challenge_methods_supported: ['S256'],
+            token_endpoint_auth_methods_supported: ['none'],
+          })
+        if (url.pathname === '/register') {
+          const metadata = JSON.parse(await bodyText(init))
+          return json({ ...metadata, client_id: 'client-1' }, 201)
+        }
+        if (url.pathname === '/token') {
+          const form = Object.fromEntries(new URLSearchParams(await bodyText(init)))
+          forms.push(form)
+          issued += 1
+          return json({
+            access_token: `access-${issued}`,
+            token_type: 'Bearer',
+            expires_in: 3600,
+            refresh_token: `refresh-${issued}`,
+          })
+        }
+        return new Response('not found', { status: 404 })
+      },
+      { preconnect: () => undefined },
+    ),
+  )
   return { forms, fetchSpy }
 }
 
@@ -100,8 +105,8 @@ test('a login discovers the server, registers once, and exchanges the code with 
     const challenge = createHash('sha256')
       .update(exchange?.code_verifier ?? '')
       .digest('base64url')
-    expect(challenge).toBe(address.searchParams.get('code_challenge'))
-    expect(readTokens(files().token)).toMatchObject({ access_token: 'access-1', refresh_token: 'refresh-1' })
+    expect(challenge).toBe(address.searchParams.get('code_challenge') ?? '')
+    expect(readTokens(files().token) ?? {}).toMatchObject({ access_token: 'access-1', refresh_token: 'refresh-1' })
     expect(existsSync(files().login)).toBe(false)
     expect(JSON.parse(readFileSync(files().client, 'utf8'))).toMatchObject({ client_id: 'client-1' })
   } finally {

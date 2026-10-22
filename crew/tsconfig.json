@@ -1,0 +1,6 @@
+{
+  "extends": "../tsconfig.base.json",
+  // The crew's supervisor, its helpers and their tests: Bun scripts run on the host and in each bot's container.
+  "compilerOptions": { "types": ["bun", "node"] },
+  "include": ["bin/**/*.ts"]
+}

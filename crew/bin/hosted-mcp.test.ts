@@ -14,7 +14,9 @@ afterEach(() => {
 /** A board that answers one tools/call with `text`, flagged as an error or not. */
 function board(text: string, isError = false, status = 200) {
   fetchSpy.mockImplementation(
-    async () => new Response(JSON.stringify({ result: { content: [{ text }], isError } }), { status }),
+    Object.assign(async () => new Response(JSON.stringify({ result: { content: [{ text }], isError } }), { status }), {
+      preconnect: () => undefined,
+    }),
   )
 }
 
@@ -25,7 +27,10 @@ function requestBody(init?: RequestInit) {
 describe('hosted MCP client', () => {
   it('unwraps a tool result', async () => {
     board(JSON.stringify({ ok: true, result: { address: '0xabc', agentId: '7' } }))
-    expect(await mcpCall('https://board.test/mcp', 'token', 'whoami')).toEqual({ address: '0xabc', agentId: '7' })
+    expect(await mcpCall<{ address: string; agentId: string }>('https://board.test/mcp', 'token', 'whoami')).toEqual({
+      address: '0xabc',
+      agentId: '7',
+    })
   })
 
   it('turns a refusal into an error that carries the board code and retry advice', async () => {

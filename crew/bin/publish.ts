@@ -183,7 +183,7 @@ function nudge(example: Example, requestId: string) {
 }
 
 const [command, arg, roundArg] = process.argv.slice(2)
-switch (command) {
+switch (command ?? '') {
   case 'notes':
     notes()
     break

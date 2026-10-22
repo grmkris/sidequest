@@ -866,8 +866,7 @@
   "crew/bin/crew.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 3,
     "eslint(max-lines)": 1,
-    "typescript(no-misused-promises)": 1,
-    "typescript(no-unnecessary-type-assertion)": 1
+    "typescript(no-misused-promises)": 1
   },
   "infra/stage.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1

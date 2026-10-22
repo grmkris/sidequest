@@ -58,7 +58,7 @@ export async function wakeInbox(
   state: string,
   readInbox: (cursor?: string) => Promise<{ events?: InboxEvent[]; cursor?: string }>,
   countFitting: (offers: Offers) => Promise<number>,
-): Promise<{ reason: string | null; cursor?: string }> {
+): Promise<{ reason: string | null; cursor?: string | undefined }> {
   const saved = checkpointPath([join(state, 'wake-cursor'), join(state, 'cursor')])
   const loaded = saved === undefined ? undefined : readCheckpoint(saved)
   const inbox = await readInbox(loaded?.checkpoint?.cursor)

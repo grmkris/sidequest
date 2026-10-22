@@ -20,8 +20,10 @@ const { personas } = await import('./hirer-mind.ts')
 
 afterAll(() => rmSync(root, { recursive: true, force: true }))
 
-const [persona] = personas
-if (persona === undefined) throw new Error('no personas')
+const persona = personas[0] ?? fail()
+function fail(): never {
+  throw new Error('no personas')
+}
 // A token that outlives the test, so no refresh is attempted.
 secretFile(join(root, 'hosted', persona.id, 'client.json'), { client_id: 'c' })
 secretFile(join(root, 'hosted', persona.id, 'token.json'), {
@@ -38,15 +40,20 @@ const keys: string[] = []
 
 /** The board answers each tools/call with the next reply (a write's state, or a refusal). */
 function board(...replies: Array<{ text: string; isError?: boolean }>) {
-  fetchSpy.mockImplementation(async (_url, init) => {
-    // SAFETY: the client under test always sends a JSON-RPC tools/call with an arguments object.
-    const body = JSON.parse(init?.body as string) as { params: { arguments: { operationKey?: string } } }
-    keys.push(body.params.arguments.operationKey ?? '')
-    const reply = replies.shift() ?? { text: '{"status":"pending"}' }
-    // A write's state comes back as the tool result, inside the board's `{ ok, result }`; a refusal as it is.
-    const text = reply.isError === true ? reply.text : JSON.stringify({ ok: true, result: JSON.parse(reply.text) })
-    return new Response(JSON.stringify({ result: { content: [{ text }], isError: reply.isError } }))
-  })
+  fetchSpy.mockImplementation(
+    Object.assign(
+      async (_url: string | URL | Request, init?: RequestInit) => {
+        // SAFETY: the client under test always sends a JSON-RPC tools/call with an arguments object.
+        const body = JSON.parse(init?.body as string) as { params: { arguments: { operationKey?: string } } }
+        keys.push(body.params.arguments.operationKey ?? '')
+        const reply = replies.shift() ?? { text: '{"status":"pending"}' }
+        // A write's state comes back as the tool result, inside the board's `{ ok, result }`; a refusal as it is.
+        const text = reply.isError === true ? reply.text : JSON.stringify({ ok: true, result: JSON.parse(reply.text) })
+        return new Response(JSON.stringify({ result: { content: [{ text }], isError: reply.isError } }))
+      },
+      { preconnect: () => undefined },
+    ),
+  )
 }
 
 function freshJob(h: InstanceType<typeof HostedHirer>, n: number) {
