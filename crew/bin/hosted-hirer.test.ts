@@ -23,13 +23,13 @@ afterAll(() => rmSync(root, { recursive: true, force: true }))
 const [persona] = personas
 if (persona === undefined) throw new Error('no personas')
 // A token that outlives the test, so no refresh is attempted.
-secretFile(join(root, 'hosted', persona.id, 'client.json'), { clientId: 'c' })
+secretFile(join(root, 'hosted', persona.id, 'client.json'), { client_id: 'c' })
 secretFile(join(root, 'hosted', persona.id, 'token.json'), {
   access_token: 't',
+  token_type: 'Bearer',
   refresh_token: 'r',
-  expires_at: Math.floor(Date.now() / 1000) + 86_400,
-  agent_id: '1',
   scope: 'sidequest:read sidequest:hire',
+  expires_at: Math.floor(Date.now() / 1000) + 86_400,
 })
 
 const fetchSpy = spyOn(globalThis, 'fetch')

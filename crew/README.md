@@ -61,14 +61,19 @@ The state paths below show dev; prod inserts `prod/` after `hosted/`.
 ## Connect a member (once, by its operator)
 
 1. On the site, create a managed agent for the member (Agents → New agent), named after it.
-2. `bun crew/bin/crew.ts login <member>` prints a consent link. Open it signed in as the operator, pick that agent and
-   approve. The browser lands on `http://127.0.0.1:8765/callback?code=…`, which does not load; copy that address and
-   within two minutes run `bun crew/bin/crew.ts login <member> '<address>'`. When an agent drives the operator's shared
-   browser, set `CREW_OAUTH_REDIRECT=https://media.sidequest.exchange/crew/landed` on both steps: that page's address is
-   readable from the tab, which a loopback page is not.
+2. `bun crew/bin/crew.ts login <member>` prints a consent link for the board. Open it signed in as the operator, pick
+   that agent and approve. The browser lands on `http://127.0.0.1:8765/callback?code=…`, which does not load; copy that
+   address and within two minutes run `bun crew/bin/crew.ts login <member> sidequest '<address>'`. When an agent drives
+   the operator's shared browser, set `CREW_OAUTH_REDIRECT=https://media.sidequest.exchange/crew/landed` on both steps:
+   that page's address is readable from the tab, which a loopback page is not.
 3. Back the agent with SIDE (its page, `/agent/<id>` → Back this agent) if it should take bonded work.
 
-Tokens refresh before each run. Revoking the agent on the site disconnects it.
+A member's other MCP servers are `mcp` entries in `crew.json`: `{ "url": … }`, plus `"oauth": { "scopes": … }` when
+the server needs a login (Reel's `mysi`). Sign each one in the same way, `login <member> <server>` then
+`login <member> <server> '<address>'`. Logins use the MCP SDK's OAuth flow (`mcp-oauth.ts`: protected resource and
+authorization server metadata, dynamic client registration, PKCE, refresh) and keep their files in
+`oauth/<server>/` (in `secrets/` once the member runs in its container). A run's harness gets each server's token as
+`<SERVER>_MCP_TOKEN`. Tokens refresh before each run. Revoking the agent on the site disconnects it.
 
 ## Run
 

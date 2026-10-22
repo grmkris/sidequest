@@ -25,12 +25,12 @@ import { now, pick, sleep } from './activity.ts'
 import { personas } from './hirer-mind.ts'
 import {
   type Whoami,
-  HostedHirer,
   MAX_OPEN,
-  SCOPES,
   SPEND_CAP,
+  HostedHirer,
   board,
   call,
+  clientOf,
   filesOf,
   identify,
   personaOf,
@@ -38,6 +38,7 @@ import {
   tick,
 } from './hosted-hirer.ts'
 import * as hosted from './hosted-mcp.ts'
+import { REDIRECT, beginLogin, finishLogin, readTokens } from './mcp-oauth.ts'
 
 const MAX_JOBS = Number(process.env.ACTIVITY_MAX_JOBS ?? 12)
 const POST_MINUTES = Number(process.env.ACTIVITY_POST_MINUTES ?? 20)
@@ -53,20 +54,17 @@ async function readStdin(): Promise<string> {
 async function login(id: string, landed?: string) {
   const p = personaOf(id)
   if (landed === undefined || landed === '--stdin') {
-    const url = await hosted.beginLogin(board, filesOf(id), {
-      clientName: `Sidequest hirer: ${p.name}`,
-      scopes: SCOPES,
-    })
-    console.log(url)
+    console.log(await beginLogin(board.mcp, filesOf(id), clientOf(id)))
     if (landed === undefined) {
       console.error(`Open it signed in as ${p.name}'s operator, pick its agent and approve; then, within 2 minutes:`)
-      console.error(`  bun crew/bin/hosted-hirers.ts login ${id} '<the ${hosted.REDIRECT}?code=… address>'`)
+      console.error(`  bun crew/bin/hosted-hirers.ts login ${id} '<the ${REDIRECT}?code=… address>'`)
       return
     }
     landed = await readStdin()
   }
-  const t = await hosted.finishLogin(board, filesOf(id), landed)
-  console.log(`${p.name} connected as agent ${t.agent_id} with ${t.scope}`)
+  await finishLogin(board.mcp, filesOf(id), clientOf(id), landed)
+  const me = await call<Whoami>(id, 'whoami')
+  console.log(`${p.name} connected as agent ${me.agentId ?? '?'} (${me.address ?? '?'})`)
 }
 
 /** The next poster: the maker first, so the 3D ask is on the board from the start; then any connected persona with room. */
@@ -120,7 +118,7 @@ async function status() {
     const invited = jobs.filter((job) => job.invite !== undefined).length
     console.log(`${p.id} ${p.name}: ${jobs.length} posted, ${invited} with an invite`)
     for (const job of jobs.slice(-5)) console.log(`  ${job.key} ${job.step} ${job.outcome ?? ''} ${job.title}`)
-    if (hosted.readToken(filesOf(p.id).token) === undefined) {
+    if (readTokens(filesOf(p.id).token) === undefined) {
       console.log(`  not connected`)
       continue
     }

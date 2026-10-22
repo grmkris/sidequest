@@ -29,6 +29,7 @@ import {
 } from './hirer-mind.ts'
 import { answerThreads } from './hirer-threads.ts'
 import * as hosted from './hosted-mcp.ts'
+import { type ConnectionFiles, freshToken, readTokens } from './mcp-oauth.ts'
 
 /** What the steps read of a write's result. */
 const Keyed = Schema.Struct({ operationKey: Schema.String })
@@ -50,7 +51,7 @@ export const SCOPES = 'sidequest:read sidequest:hire'
 const hostedRoot = process.env.HOSTED_ROOT ?? resolve(import.meta.dirname, '../../.crew/activity/hosted')
 
 /** A persona's OAuth files: its own directory under HOSTED_ROOT, owner-only. */
-export const filesOf = (id: string): hosted.ConnectionFiles => ({
+export const filesOf = (id: string): ConnectionFiles => ({
   client: join(hostedRoot, id, 'client.json'),
   login: join(hostedRoot, id, 'login.json'),
   token: join(hostedRoot, id, 'token.json'),
@@ -63,10 +64,13 @@ export function personaOf(id: string | undefined): Persona {
   return p
 }
 
+/** The OAuth client a persona registers as on the board. */
+export const clientOf = (id: string) => ({ name: `Sidequest hirer: ${personaOf(id).name}`, scope: SCOPES })
+
 /** One tool call as the persona's hosted agent, with a token good for at least five minutes. */
 export async function call<T>(id: string, tool: string, args: Record<string, unknown> = {}): Promise<T> {
-  const token = await hosted.freshToken(board, filesOf(id), 300, id)
-  return hosted.mcpCall<T>(board.mcp, token.access_token, tool, args)
+  const token = await freshToken(board.mcp, filesOf(id), clientOf(id), 300, id)
+  return hosted.mcpCall<T>(board.mcp, token, tool, args)
 }
 
 export interface Whoami {
@@ -461,7 +465,7 @@ async function advance(h: HostedHirer, job: Job) {
 
 /** Who the persona is on the board; a revoked grant stops the persona until its operator connects it again. */
 export async function identify(h: HostedHirer): Promise<boolean> {
-  if (hosted.readToken(filesOf(h.id).token) === undefined) return false
+  if (readTokens(filesOf(h.id).token) === undefined) return false
   try {
     const me = await call<Whoami>(h.id, 'whoami')
     if (me.address === undefined || me.agentId === undefined) return false

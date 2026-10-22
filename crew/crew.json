@@ -89,7 +89,7 @@
       "enabled": true,
       "env": ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID=bceaeae4788dce3493514fde194b4a7e"],
       "mcp": {
-        "cloudflare-docs": "https://docs.mcp.cloudflare.com/mcp"
+        "cloudflare-docs": { "url": "https://docs.mcp.cloudflare.com/mcp" }
       },
       "operator": "crew",
       "fallbackModel": "grok-4.7",
@@ -187,7 +187,9 @@
         "GEMINI_API_KEY_PAID",
         "ELEVENLABS_API_KEY"
       ],
-      "mcp": {},
+      "mcp": {
+        "mysi": { "url": "https://mysi.lol/mcp?codemode=off", "oauth": { "scopes": "connector offline_access" } }
+      },
       "operator": "crew",
       "scopes": "sidequest:read sidequest:work",
       "fallbackModel": "deepseek-v4.1-flash",

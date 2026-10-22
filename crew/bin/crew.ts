@@ -6,11 +6,13 @@
  * container is capped (CPUs, memory, pids) and weighted below interactive work and CI. State (OAuth tokens, harness
  * home, scratch work, cursors, transcripts) lives in `.crew/hosted/`, which git ignores.
  *
- *   bun crew/bin/crew.ts login <member>            print the consent link (sign in, pick the member's agent, approve)
- *   bun crew/bin/crew.ts login <member> '<url>'    finish with the page address the browser landed on
- *   bun crew/bin/crew.ts run <member> [note]       one routine pass (inbox, listing, work), then stop
- *   bun crew/bin/crew.ts loop [minutes]            check every enabled, connected member each interval; start a run
- *                                                  (in parallel) only when it has inbox events, held work or a listing due
+ *   bun crew/bin/crew.ts login <member> [server]          print the consent link for the board (default) or one of the
+ *                                                         member's OAuth servers (sign in, approve)
+ *   bun crew/bin/crew.ts login <member> <server> '<url>'  finish with the page address the browser landed on
+ *   bun crew/bin/crew.ts run <member> [note]              one routine pass (inbox, listing, work), then stop
+ *   bun crew/bin/crew.ts loop [minutes]                   check every enabled, connected member each interval; start a
+ *                                                         run (in parallel) only when it has inbox events, held work or
+ *                                                         a listing due
  *   bun crew/bin/crew.ts status
  */
 import { spawn, spawnSync } from 'node:child_process'
@@ -32,7 +34,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { parseEnv } from 'node:util'
 import { stageProfile } from '../../infra/stage.ts'
 import * as hosted from './hosted-mcp.ts'
-import { type ConnectionFiles, type Token, readToken } from './hosted-mcp.ts'
+import { type ConnectionFiles, REDIRECT, beginLogin, finishLogin, freshToken, readTokens } from './mcp-oauth.ts'
 import { type HeldTask, type Offers, openHeld, wakeInbox } from './crew-wake.ts'
 import { finishWake, settleNudge, takeNudge } from './inbox-state.ts'
 import { type RunResult, afterRun, onFallback, readBreaker, runResult, saveBreaker } from './model-breaker.ts'
@@ -60,6 +62,11 @@ interface Resources {
   cpus: number
   memory: string
 }
+/** An MCP server a member uses beside the board: its address, and the scopes its OAuth login asks for when it has one. */
+interface McpServer {
+  url: string
+  oauth?: { scopes: string }
+}
 interface Member {
   name: string
   email: string
@@ -77,7 +84,7 @@ interface Member {
   runTimeoutMinutes?: number
   enabled: boolean
   env: string[]
-  mcp: Record<string, string>
+  mcp: Record<string, McpServer>
   /** Its directory listings (advertise_service, at most 10); `service` is the older single-listing form. */
   services?: Listing[]
   /** What public requests wake it: their tags, or words in their title or brief (none set: every request). */
@@ -183,33 +190,54 @@ function env(): Record<string, string> {
   return { ...merged, ...(process.env as Record<string, string>) }
 }
 
-/** A member's OAuth files: in `secrets/` once it runs in its container (see secretPath). */
-const oauthFiles = (id: string): ConnectionFiles => ({
-  client: secretPath(id, 'client.json'),
-  login: secretPath(id, 'login.json'),
-  token: secretPath(id, 'token.json'),
-  lock: secretPath(id, 'token.lock'),
+/** The board, as the OAuth server every member signs in to. */
+const BOARD = 'sidequest'
+
+/** The servers a member signs in to over OAuth: the board, then its own servers that need a login. */
+function oauthServers(m: Member): Array<{ name: string; url: string; scope: string }> {
+  return [
+    { name: BOARD, url: crew.board.mcp, scope: m.scopes ?? crew.board.scopes },
+    ...Object.entries(m.mcp).flatMap(([name, server]) =>
+      server.oauth === undefined ? [] : [{ name, url: server.url, scope: server.oauth.scopes }],
+    ),
+  ]
+}
+
+function oauthServer(id: string, name: string) {
+  const [, m] = memberOf(id)
+  const server = oauthServers(m).find((candidate) => candidate.name === name)
+  if (server === undefined)
+    throw new Error(
+      `${id} signs in to ${oauthServers(m)
+        .map((candidate) => candidate.name)
+        .join(', ')}, not ${name}`,
+    )
+  return { ...server, client: { name: `Sidequest crew: ${m.name}`, scope: server.scope } }
+}
+
+/** A member's OAuth files for one server: in `secrets/` once it runs in its container (see secretPath). */
+const oauthFiles = (id: string, server: string): ConnectionFiles => ({
+  client: secretPath(id, `oauth/${server}/client.json`),
+  login: secretPath(id, `oauth/${server}/login.json`),
+  token: secretPath(id, `oauth/${server}/token.json`),
+  lock: secretPath(id, `oauth/${server}/token.lock`),
 })
 
-async function login(id: string, landed?: string) {
+async function login(id: string, name: string, landed?: string) {
   const [, m] = memberOf(id)
+  const server = oauthServer(id, name)
   if (landed === undefined) {
-    const url = await hosted.beginLogin(crew.board, oauthFiles(id), {
-      clientName: `Sidequest crew: ${m.name}`,
-      scopes: m.scopes ?? crew.board.scopes,
-    })
+    const url = await beginLogin(server.url, oauthFiles(id, name), server.client)
     console.log(
-      `Open this while signed in to ${crew.board.origin}, pick ${m.name}'s agent and approve. The browser then`,
+      `Open this signed in as ${m.name}'s operator on ${new URL(server.url).origin} and approve. The browser then`,
     )
-    console.log(
-      `lands on ${hosted.REDIRECT}?code=… (a page that does not load); pass that whole address within 2 minutes:\n`,
-    )
+    console.log(`lands on ${REDIRECT}?code=… (a page that does not load); pass that whole address within 2 minutes:\n`)
     console.log(`${url}\n`)
-    console.log(`  bun crew/bin/crew.ts login ${id} '<that address>'`)
+    console.log(`  bun crew/bin/crew.ts login ${id} ${name} '<that address>'`)
     return
   }
-  const t = await hosted.finishLogin(crew.board, oauthFiles(id), landed)
-  console.log(`${m.name} connected as agent ${t.agent_id} with ${t.scope}`)
+  await finishLogin(server.url, oauthFiles(id, name), server.client, landed)
+  console.log(`${m.name} connected to ${server.url}`)
 }
 
 /** Minutes a member's run may take: its own override or the harness default, never past a fresh token's hour. */
@@ -217,9 +245,25 @@ function runTimeout(id: string): number {
   return Math.min(crew.members[id]?.runTimeoutMinutes ?? crew.harness.runTimeoutMinutes, 55)
 }
 
-/** A token that outlives the member's run (it may last its timeout; access tokens last an hour). */
-const freshToken = (id: string): Promise<Token> =>
-  hosted.freshToken(crew.board, oauthFiles(id), (runTimeout(id) + 5) * 60, id)
+/** An access token for one server that outlives the member's run (it may last its timeout; tokens last an hour). */
+function serverToken(id: string, name: string): Promise<string> {
+  const server = oauthServer(id, name)
+  return freshToken(server.url, oauthFiles(id, name), server.client, (runTimeout(id) + 5) * 60, `${id} on ${name}`)
+}
+
+/** The board's access token for a member. */
+const boardToken = (id: string): Promise<string> => serverToken(id, BOARD)
+
+/** A run's access tokens, one per OAuth server, by server name. */
+async function runTokens(id: string, m: Member): Promise<Record<string, string>> {
+  const tokens = await Promise.all(
+    oauthServers(m).map(async (server): Promise<[string, string]> => [server.name, await serverToken(id, server.name)]),
+  )
+  return Object.fromEntries(tokens)
+}
+
+/** The variable a harness reads a server's bearer token from: `SIDEQUEST_MCP_TOKEN`, `MYSI_MCP_TOKEN`, … */
+const tokenVar = (name: string) => `${name.toUpperCase().replaceAll('-', '_')}_MCP_TOKEN`
 
 const bin = (name: string) =>
   realpathSync(spawnSync('bash', ['-lc', `command -v ${name}`], { encoding: 'utf8' }).stdout.trim())
@@ -252,7 +296,7 @@ function prepareAgentDir(id: string): string {
 }
 
 /** The harness's own config in its home: cliproxy as the model provider, the board (and extra servers) as MCP. */
-function writeHarnessConfig(m: Member, token: Token, harnessHome: string) {
+function writeHarnessConfig(m: Member, tokens: Record<string, string>, harnessHome: string) {
   mkdirSync(join(harnessHome, '.codex'), { recursive: true, mode: 0o700 })
   writeFileSync(
     join(harnessHome, '.gitconfig'),
@@ -263,25 +307,31 @@ function writeHarnessConfig(m: Member, token: Token, harnessHome: string) {
         : ''
     }`,
   )
-  const extraMcp = Object.entries(m.mcp)
-    .map(([n, url]) => `[mcp_servers.${n}]\nurl = "${url}"\n`)
-    .join('')
-  // Grok's CLI reads the board's bearer token from its config, not the environment; the home is the member's own (0700).
+  const servers = [[BOARD, crew.board.mcp] as const, ...Object.entries(m.mcp).map(([n, s]) => [n, s.url] as const)]
+  // Grok's CLI reads a bearer token from its config, not the environment; the home is the member's own (0700).
   if (m.harness === 'grok') {
     mkdirSync(join(harnessHome, '.grok'), { recursive: true, mode: 0o700 })
     writeFileSync(
       join(harnessHome, '.grok', 'config.toml'),
-      `[models]\ndefault = "${m.model}"\ndefault_reasoning_effort = "${m.effort}"\n[model."${m.model}"]\nbase_url = "${cliproxyUrl}"\nenv_key = "CLIPROXY_API_KEY"\n[mcp_servers.sidequest]\nurl = "${crew.board.mcp}"\nenabled = true\n[mcp_servers.sidequest.headers]\nAuthorization = "Bearer ${token.access_token}"\n${Object.entries(
-        m.mcp,
-      )
-        .map(([n, url]) => `[mcp_servers.${n}]\nurl = "${url}"\nenabled = true\n`)
+      `[models]\ndefault = "${m.model}"\ndefault_reasoning_effort = "${m.effort}"\n[model."${m.model}"]\nbase_url = "${cliproxyUrl}"\nenv_key = "CLIPROXY_API_KEY"\n${servers
+        .map(
+          ([n, url]) =>
+            `[mcp_servers.${n}]\nurl = "${url}"\nenabled = true\n${
+              tokens[n] === undefined ? '' : `[mcp_servers.${n}.headers]\nAuthorization = "Bearer ${tokens[n]}"\n`
+            }`,
+        )
         .join('')}`,
       { mode: 0o600 },
     )
   }
   writeFileSync(
     join(harnessHome, '.codex', 'config.toml'),
-    `model = "${m.model}"\nmodel_provider = "cliproxy"\nmodel_reasoning_effort = "${m.effort}"\n[model_providers.cliproxy]\nname = "cliproxy"\nbase_url = "${cliproxyUrl}"\nwire_api = "responses"\nenv_key = "CLIPROXY_API_KEY"\nrequires_openai_auth = false\n[mcp_servers.sidequest]\nurl = "${crew.board.mcp}"\nbearer_token_env_var = "SIDEQUEST_MCP_TOKEN"\n${extraMcp}[projects."/crew/agent"]\ntrust_level = "trusted"\n`,
+    `model = "${m.model}"\nmodel_provider = "cliproxy"\nmodel_reasoning_effort = "${m.effort}"\n[model_providers.cliproxy]\nname = "cliproxy"\nbase_url = "${cliproxyUrl}"\nwire_api = "responses"\nenv_key = "CLIPROXY_API_KEY"\nrequires_openai_auth = false\n${servers
+      .map(
+        ([n, url]) =>
+          `[mcp_servers.${n}]\nurl = "${url}"\n${tokens[n] === undefined ? '' : `bearer_token_env_var = "${tokenVar(n)}"\n`}`,
+      )
+      .join('')}[projects."/crew/agent"]\ntrust_level = "trusted"\n`,
   )
   const grok = join(harnessHome, '.grok')
   own(
@@ -295,18 +345,18 @@ function writeHarnessConfig(m: Member, token: Token, harnessHome: string) {
 }
 
 /** The run's whole environment: nothing else from the supervisor reaches the harness. */
-function harnessVars(m: Member, token: Token, e: Record<string, string>): Record<string, string> {
+function harnessVars(m: Member, tokens: Record<string, string>, e: Record<string, string>): Record<string, string> {
   const vars: Record<string, string> = {
     HOME: '/home/agent',
     TERM: 'dumb',
     LANG: 'C.UTF-8',
     PATH: '/opt/bin:/opt/codex/bin:/opt/foundry:/usr/local/bin:/usr/bin:/bin',
-    SIDEQUEST_MCP_TOKEN: token.access_token,
     CLIPROXY_API_KEY: cliproxyKey(e),
     GIT_AUTHOR_NAME: m.name,
     GIT_AUTHOR_EMAIL: m.email,
     GIT_COMMITTER_NAME: m.name,
     GIT_COMMITTER_EMAIL: m.email,
+    ...Object.fromEntries(Object.entries(tokens).map(([name, token]) => [tokenVar(name), token])),
   }
   return { ...vars, ...memberEnv(m, e) }
 }
@@ -416,11 +466,10 @@ function busy(id: string): boolean {
 }
 
 /** What a run is told: who it is, what to read, its listings, the operator's note for this run. */
-async function promptFor(id: string, m: Member, token: Token, note: string): Promise<string> {
+async function promptFor(id: string, m: Member, note: string): Promise<string> {
   const { services, hash } = await listingsOf(m)
   return [
-    // token.agent_id is the hosted agent's key; a member signs work with its ERC-8004 Agent ID, which whoami returns.
-    `You are ${m.name}, the '${id}' member of the Sidequest crew and an autonomous hosted worker (hosted-agent key ${token.agent_id}; your public Agent ID is the agentId whoami returns).`,
+    `You are ${m.name}, the '${id}' member of the Sidequest crew and an autonomous hosted worker (your public Agent ID is the agentId whoami returns).`,
     'You run in a sandbox container; your working directory is /crew/agent (scratch work in /crew/agent/work, your state in /crew/agent/state).',
     'Read, in this order: /crew/agent/AGENTS.md (your role), /crew/shared/COMMON.md (crew rules) and /crew/skill/worker/SKILL.md (your procedure).',
     'Do one routine pass as COMMON.md describes, then stop.',
@@ -447,11 +496,11 @@ async function run(id: string, note = '', model?: string): Promise<Run | null> {
     console.log(`${m.name}: still running, skipped`)
     return null
   }
-  const token = await freshToken(id)
+  const tokens = await runTokens(id, m)
   const agent = prepareAgentDir(id)
-  writeHarnessConfig(m, token, join(home(id), 'home'))
-  const prompt = await promptFor(id, m, token, note)
-  const vars = harnessVars(m, token, env())
+  writeHarnessConfig(m, tokens, join(home(id), 'home'))
+  const prompt = await promptFor(id, m, note)
+  const vars = harnessVars(m, tokens, env())
   const runs = join(home(id), 'runs')
   mkdirSync(runs, { recursive: true, mode: 0o700 })
   own(runs)
@@ -540,7 +589,7 @@ async function wakeReason(id: string): Promise<string | null> {
   // A nudge (crew/bin/publish.ts) is an operator's word that this member should look at something now.
   if (existsSync(join(state, 'nudge'))) return 'nudged'
   if (listingDue(state, (await listingsOf(memberOf(id)[1])).hash)) return 'listing due'
-  const token = (await freshToken(id)).access_token
+  const token = await boardToken(id)
   const inboxWake = await inboxReason(id, token, state)
   if (inboxWake !== null) return inboxWake
   // Held work: jobs this member activated and holds on chain (role holder), whose chain status is not final.
@@ -668,10 +717,10 @@ function runsToday(id: string): number {
 function connection(id: string, now: number): string {
   if (!inContainer && existsSync(join(home(id), 'secrets')))
     return `connected in ${bot(id)} (${botRunning(id) ? 'up' : 'down'})`
-  const t = readToken(secretPath(id, 'token.json'))
+  const t = readTokens(oauthFiles(id, BOARD).token)
   if (t === undefined) return 'not connected'
   const left = t.expires_at - now
-  return `agent ${t.agent_id}, token ${left > 0 ? `valid ${Math.round(left / 60)} min` : 'expired (refreshes on run)'}`
+  return `token ${left > 0 ? `valid ${Math.round(left / 60)} min` : 'expired (refreshes on run)'}`
 }
 
 function status() {
@@ -861,9 +910,8 @@ function containerize(id: string) {
   const script = [
     'set -e',
     'cd /m',
-    'if [ -f token.json ]; then jq -r .agent_id token.json > agent-key; fi',
     'mkdir -p secrets',
-    'for f in token.json client.json login.json; do if [ -f "$f" ]; then mv "$f" secrets/; fi; done',
+    'if [ -d oauth ]; then rm -rf secrets/oauth && mv oauth secrets/; fi',
     'chown -R 0:0 secrets',
     'chmod 700 secrets',
     'find secrets -type f -exec chmod 600 {} +',
@@ -914,8 +962,6 @@ function botService(id: string, m: Member, e: Record<string, string>, at: Mounts
   ]
   writeFileSync(envFile, `${vars.join('\n')}\n`, { mode: 0o600 })
   chmodSync(envFile, 0o600)
-  const keyFile = join(home(id), 'agent-key')
-  const agentKey = existsSync(keyFile) ? readFileSync(keyFile, 'utf8').trim() : ''
   const { cpus, memory } = m.resources ?? crew.harness.resources
   const state = home(id)
   return {
@@ -946,7 +992,6 @@ function botService(id: string, m: Member, e: Record<string, string>, at: Mounts
     stop_grace_period: '30s',
     labels: {
       'sidequest.agent.id': agentId,
-      'sidequest.agent.key': agentKey,
       'sidequest.agent.name': m.name,
       'sidequest.agent.member': id,
       'sidequest.agent.harness': m.harness ?? 'codex',
@@ -1018,18 +1063,14 @@ if (relayed && existsSync(join(home(a), 'secrets'))) {
   })
   process.exit(inside.status ?? 1)
 }
-if (command === 'login') await login(a!, b)
+if (command === 'login') await login(memberOf(a)[0], b ?? BOARD, process.argv[5])
 else if (command === 'run') await run(memberOf(a)[0], b)
 else if (command === 'status') status()
 else if (command === 'wake') console.log((await wakeReason(memberOf(a)[0])) ?? 'idle')
 // One tool call as a member, for an operator's probe: reads, or writes with the operationKey in the JSON.
 else if (command === 'call')
   console.log(
-    JSON.stringify(
-      await mcpCall((await freshToken(memberOf(a)[0])).access_token, b!, JSON.parse(process.argv[5] ?? '{}')),
-      null,
-      2,
-    ),
+    JSON.stringify(await mcpCall(await boardToken(memberOf(a)[0]), b!, JSON.parse(process.argv[5] ?? '{}')), null, 2),
   )
 else if (command === 'serve') await serve(memberOf(a)[0], Number(b ?? crew.harness.loopMinutes))
 else if (command === 'containerize') containerize(memberOf(a)[0])
@@ -1041,9 +1082,7 @@ else if (command === 'loop') {
   // Each enabled, connected member loops on its own (start staggered), at most maxParallel runs at once.
   const minutes = Number(a ?? 15)
   const slot = processSlot()
-  const members = Object.entries(crew.members).filter(
-    ([id, m]) => m.enabled && existsSync(secretPath(id, 'token.json')),
-  )
+  const members = Object.entries(crew.members).filter(([id, m]) => m.enabled && existsSync(oauthFiles(id, BOARD).token))
   console.log(
     `crew loop: ${members.map(([, m]) => m.name).join(', ')} every ${minutes} min, at most ${crew.harness.maxParallel} at once`,
   )
@@ -1055,7 +1094,7 @@ else if (command === 'loop') {
   )
 } else {
   console.error(
-    'usage: crew.ts login <member> [url] | run <member> [note] | loop [minutes] | status | wake <member> | call <member> <tool> [json]\n' +
+    'usage: crew.ts login <member> [server] [url] | run <member> [note] | loop [minutes] | status | wake <member> | call <member> <tool> [json]\n' +
       '       crew.ts containerize <member> | up [member…] | down | logs <member> | serve <member> [minutes] (in its container)',
   )
   process.exit(2)

@@ -1,48 +1,12 @@
 /**
- * A hosted agent's MCP connection, shared by the crew (crew.ts) and the hosted hirers (hosted-hirers.ts): an OAuth
- * login with PKCE that its operator approves on the site, tokens refreshed one at a time (a refresh token works once,
- * and replaying it revokes the grant), and tool calls over the board's /mcp. Callers say where each connection keeps
- * its files; nothing here knows about members or personas.
+ * A hosted agent's tool calls over a board's /mcp, shared by the crew (crew.ts) and the hosted hirers
+ * (hosted-hirers.ts), and the owner-only files their connections keep. Signing in is mcp-oauth.ts; nothing here knows
+ * about members or personas.
  */
 import { Option, Schema } from 'effect'
-import { createHash, randomBytes } from 'node:crypto'
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 
-/**
- * Where the operator's browser lands after consent: nothing listens there, so its address is pasted back. An operator
- * browser shared with this machine's agent can land on an HTTPS page instead (`CREW_OAUTH_REDIRECT`), whose address the
- * agent reads from the tab; the code in it is useless without this machine's PKCE verifier.
- */
-export const REDIRECT = process.env.CREW_OAUTH_REDIRECT || 'http://127.0.0.1:8765/callback'
-/** The redirect a client registered before the choice was stored. */
-const LOOPBACK = 'http://127.0.0.1:8765/callback'
-
-const TokenFile = Schema.Struct({
-  access_token: Schema.String,
-  refresh_token: Schema.String,
-  expires_at: Schema.Number,
-  agent_id: Schema.String,
-  scope: Schema.String,
-})
-export type Token = typeof TokenFile.Type
-const ClientFile = Schema.Struct({ clientId: Schema.String, redirect: Schema.optionalKey(Schema.String) })
-const LoginFile = Schema.Struct({ verifier: Schema.String, state: Schema.String })
-/** What /oauth/token answers: a token (its agent as a number or a string), or an error. */
-const TokenReply = Schema.Struct({
-  access_token: Schema.optionalKey(Schema.String),
-  refresh_token: Schema.optionalKey(Schema.String),
-  expires_in: Schema.optionalKey(Schema.Number),
-  agent_id: Schema.optionalKey(Schema.Union([Schema.String, Schema.Number])),
-  scope: Schema.optionalKey(Schema.String),
-  error: Schema.optionalKey(Schema.String),
-  error_description: Schema.optionalKey(Schema.String),
-})
-type TokenReply = typeof TokenReply.Type
-const Registration = Schema.Struct({
-  client_id: Schema.optionalKey(Schema.String),
-  error_description: Schema.optionalKey(Schema.String),
-})
 const Refusal = Schema.Struct({
   message: Schema.optionalKey(Schema.String),
   code: Schema.optionalKey(Schema.String),
@@ -64,14 +28,6 @@ export interface Board {
   mcp: string
 }
 
-/** One connection's OAuth files: its registered client, a pending login, its token and the refresh lock. */
-export interface ConnectionFiles {
-  client: string
-  login: string
-  token: string
-  lock: string
-}
-
 const json = (value: unknown) => JSON.stringify(value, null, 2) + '\n'
 
 /** Written whole or not at all (a temporary file renamed over it), readable by its owner only. */
@@ -81,142 +37,6 @@ export function secretFile(path: string, value: unknown) {
   writeFileSync(temporary, json(value), { mode: 0o600 })
   chmodSync(temporary, 0o600)
   renameSync(temporary, path)
-}
-
-/** A JSON file read as `schema`, or undefined when there is none. */
-function readFile<S extends Schema.ConstraintDecoder<unknown>>(schema: S, path: string): S['Type'] | undefined {
-  return existsSync(path) ? Schema.decodeUnknownSync(schema)(JSON.parse(readFileSync(path, 'utf8'))) : undefined
-}
-
-export const readToken = (path: string): Token | undefined => readFile(TokenFile, path)
-const readClient = (path: string) => readFile(ClientFile, path)
-
-async function oauthForm(board: Board, path: string, body: Record<string, string>): Promise<TokenReply> {
-  const res = await fetch(`${board.origin}${path}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams(body),
-  })
-  const reply = Schema.decodeUnknownSync(TokenReply)(await res.json())
-  if (!res.ok) throw new Error(`${path}: ${res.status} ${reply.error_description ?? reply.error ?? ''}`)
-  return reply
-}
-
-/**
- * Starts a login: registers the client once, saves a fresh PKCE verifier and state, and returns the address the
- * operator opens on the site to pick the agent and approve.
- */
-export async function beginLogin(
-  board: Board,
-  files: ConnectionFiles,
-  { clientName, scopes }: { clientName: string; scopes: string },
-): Promise<string> {
-  let client = readClient(files.client)
-  // A client registered for another redirect cannot use this one, so it is registered again.
-  if (client === undefined || (client.redirect ?? LOOPBACK) !== REDIRECT) {
-    const res = await fetch(`${board.origin}/oauth/register`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ client_name: clientName, redirect_uris: [REDIRECT] }),
-    })
-    const reg = Schema.decodeUnknownSync(Registration)(await res.json())
-    if (reg.client_id === undefined) throw new Error(`register: ${reg.error_description ?? res.status}`)
-    client = { clientId: reg.client_id, redirect: REDIRECT }
-    secretFile(files.client, client)
-  }
-  const verifier = randomBytes(32).toString('base64url')
-  const state = randomBytes(12).toString('hex')
-  secretFile(files.login, { verifier, state })
-  const q = new URLSearchParams({
-    response_type: 'code',
-    client_id: client.clientId,
-    redirect_uri: REDIRECT,
-    scope: scopes,
-    resource: board.mcp,
-    state,
-    code_challenge: createHash('sha256').update(verifier).digest('base64url'),
-    code_challenge_method: 'S256',
-  })
-  return `${board.origin}/oauth/authorize?${q}`
-}
-
-/** Finishes a login from the address the browser landed on, and saves the token. */
-export async function finishLogin(board: Board, files: ConnectionFiles, landed: string): Promise<Token> {
-  const client = readClient(files.client)
-  const pending = readFile(LoginFile, files.login)
-  if (client === undefined || pending === undefined) throw new Error('start the login first')
-  const url = new URL(landed)
-  if (url.searchParams.get('error') !== null) throw new Error(`consent refused: ${url.searchParams.get('error')}`)
-  if (url.searchParams.get('state') !== pending.state)
-    throw new Error('that address is from a different login; start again')
-  const t = await oauthForm(board, '/oauth/token', {
-    grant_type: 'authorization_code',
-    code: url.searchParams.get('code') ?? '',
-    redirect_uri: client.redirect ?? LOOPBACK,
-    client_id: client.clientId,
-    code_verifier: pending.verifier,
-    resource: board.mcp,
-  })
-  return saveToken(files.token, t)
-}
-
-function saveToken(path: string, t: TokenReply): Token {
-  if (t.access_token === undefined || t.refresh_token === undefined)
-    throw new Error(`token: ${t.error_description ?? t.error ?? 'no token in the reply'}`)
-  const token: Token = {
-    access_token: t.access_token,
-    refresh_token: t.refresh_token,
-    expires_at: Math.floor(Date.now() / 1000) + (t.expires_in ?? 3600),
-    agent_id: String(t.agent_id),
-    scope: t.scope ?? '',
-  }
-  secretFile(path, token)
-  return token
-}
-
-/** One refresh at a time per connection: a refresh token works once, and replaying it revokes the grant. */
-export async function withTokenLock<T>(lock: string, label: string, work: () => Promise<T>): Promise<T> {
-  for (let waited = 0; ; waited += 250) {
-    try {
-      mkdirSync(lock)
-      break
-    } catch {
-      // A lock older than a minute outlived its holder (a refresh takes seconds); a younger one is still in use.
-      const age = Date.now() - (statSync(lock, { throwIfNoEntry: false })?.mtimeMs ?? 0)
-      if (age > 60_000) rmSync(lock, { recursive: true, force: true })
-      else if (waited > 30_000) throw new Error(`${label}: its token lock has been held for 30 s`)
-      else await Bun.sleep(250)
-    }
-  }
-  try {
-    return await work()
-  } finally {
-    rmSync(lock, { recursive: true, force: true })
-  }
-}
-
-/** A token that stays valid for at least `minSeconds`, refreshed under the lock when it would not. */
-export async function freshToken(
-  board: Board,
-  files: ConnectionFiles,
-  minSeconds: number,
-  label: string,
-): Promise<Token> {
-  return withTokenLock(files.lock, label, async () => {
-    const t = readToken(files.token)
-    const client = readClient(files.client)
-    if (t === undefined || client === undefined) throw new Error(`${label} is not connected; run "login ${label}"`)
-    if (t.expires_at - Math.floor(Date.now() / 1000) > minSeconds) return t
-    return saveToken(
-      files.token,
-      await oauthForm(board, '/oauth/token', {
-        grant_type: 'refresh_token',
-        refresh_token: t.refresh_token,
-        client_id: client.clientId,
-        resource: board.mcp,
-      }),
-    )
-  })
 }
 
 /**

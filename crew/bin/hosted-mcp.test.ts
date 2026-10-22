@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Schema } from 'effect'
-import { McpToolError, inboxAfter, mcpCall, readTaskList, readToken, secretFile } from './hosted-mcp.ts'
+import { McpToolError, inboxAfter, mcpCall, readTaskList, secretFile } from './hosted-mcp.ts'
 
 const fetchSpy = spyOn(globalThis, 'fetch')
 afterEach(() => {
@@ -46,17 +46,15 @@ describe('hosted MCP client', () => {
     expect(failure).toMatchObject({ code: undefined, message: 'get_task: upstream went away' })
   })
 
-  it('writes secret files whole and owner-only, and reads a token back', () => {
+  it('writes secret files whole and owner-only', () => {
     const dir = mkdtempSync(join(tmpdir(), 'hosted-mcp-'))
     try {
       const path = join(dir, 'nested', 'token.json')
-      const token = { access_token: 'a', refresh_token: 'r', expires_at: 1, agent_id: '7', scope: 'sidequest:read' }
+      const token = { access_token: 'a', token_type: 'Bearer', refresh_token: 'r', expires_at: 1 }
       secretFile(path, token)
       expect(statSync(path).mode & 0o777).toBe(0o600)
       expect(statSync(join(dir, 'nested')).mode & 0o777).toBe(0o700)
       expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual(token)
-      expect(readToken(path)).toEqual(token)
-      expect(readToken(join(dir, 'missing.json'))).toBeUndefined()
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
