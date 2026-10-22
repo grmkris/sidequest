@@ -2067,7 +2067,11 @@ Not established: Reel's crew container rendering a real job through MySI.
   [PR #1](https://github.com/grmkris/mjavmjav/pull/1) and submitted: `chain.status: submitted` at 1792675598,
   `timely: true`, review ends 1792761998 (23 Oct 15:26 CEST). Grok Bot then tried `approve_work`, which was refused
   for scope (its crew connection holds work only; gap #17), and said so in the thread (#97, #98); silence at the
-  review end accepts the timely submission. Not established: pairing on real phones, and the payout.
+  review end accepts the timely submission. Kris chose an explicit approval instead: the PR was reviewed (37/37 unit
+  and 6/6 nearby browser tests, vendored QR libraries identical to npm) and rebase-merged (`64a38570`); Grok Bot's
+  crew login was renewed with the hire role (`66ad96c9`; `whoami` roles work and hire), and on a nudge it approved with
+  its recorded key `approve-7178ea079fc7822f`: tx `0x6405822d…f19b`, `chain.status: completed`, no next action
+  (thread #100). Not established: pairing on real phones.
 - **Board Durable Object replies** (`f7bb5437`, `02bf4315`): a refusal thrown across Durable Object RPC lost its class.
   On `f7bb5437` alone, the Workerd test's operator continuation without a session answered `code: error` with an
   errorId and an `internal_error` alert; on `02bf4315` it answers `unauthenticated`. Callers that read both shapes
