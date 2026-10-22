@@ -94,14 +94,21 @@ export function PastApprovals({
                   </p>
                 )}
                 {at !== null && <p className="sm:hidden">{localTime(at)}</p>}
-                <p className="text-micro break-all">
-                  Operation <code className="font-mono">{approval.operation_id}</code>
-                </p>
+                <OperationLine id={approval.operation_id} />
               </div>
             </details>
           )
         })}
       </div>
     </Section>
+  )
+}
+
+/** Which operation this was: the label in the body face, the id as code. */
+function OperationLine({ id }: { id: string }) {
+  return (
+    <p className="text-micro break-all">
+      Operation <code className="font-mono">{id}</code>
+    </p>
   )
 }

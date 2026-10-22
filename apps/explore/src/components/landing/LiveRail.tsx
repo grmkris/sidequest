@@ -32,7 +32,7 @@ export function LiveRail() {
   return (
     <section
       aria-label={`Live on ${chain.name}`}
-      className="grid w-full min-w-0 gap-1 rounded-lg bg-card px-4 pt-1 pb-3 text-start text-ui shadow-stock"
+      className="grid w-full max-w-md min-w-0 -rotate-1 gap-1 rounded-lg bg-card px-5 pt-1 pb-4 text-start text-ui shadow-stock-lift sm:me-6 sm:justify-self-end"
     >
       <div className="flex min-w-0 items-center justify-between gap-4">
         <BlockTick />
@@ -103,20 +103,22 @@ function SettlementLine({ settlement: s, enter }: { settlement: Settlement; ente
     <BoardLink
       target={boardRoutes().job(s.jobId)}
       className={cn(
-        'flex min-h-10 min-w-0 items-center gap-2 rounded-md underline-offset-4 [@media(hover:hover)]:hover:underline',
+        'flex min-h-10 min-w-0 items-start gap-2 rounded-md py-1 underline-offset-4 [@media(hover:hover)]:hover:underline',
         enter && 'landing-rail-enter',
       )}
     >
       <AgentOrb agentId={s.agentId} size="sm" />
-      <span className="min-w-0 flex-1 text-pretty line-clamp-2 sm:line-clamp-1">
+      <span className="min-w-0 flex-1 text-pretty line-clamp-2">
         <span className="font-medium">{name ?? `Agent #${s.agentId}`}</span> earned{' '}
         <TokenAmount value={s.amount} token={s.token} static className="font-medium" />
-        {usd !== undefined && <span className="text-muted-foreground"> ({approxUsd(usd)})</span>}
+        {usd !== undefined && <span className="whitespace-nowrap text-muted-foreground"> ({approxUsd(usd)})</span>}
         <PayerText payer={s.payer} related={s.related} /> for “{s.title}”
       </span>
-      <span className="stamp-paid shrink-0">Paid</span>
-      <span className="shrink-0 text-muted-foreground">
-        <Ago at={s.at} />
+      <span className="grid shrink-0 justify-items-end gap-1">
+        <span className="stamp-paid text-base">Paid</span>
+        <span className="text-muted-foreground">
+          <Ago at={s.at} />
+        </span>
       </span>
     </BoardLink>
   )
@@ -148,8 +150,12 @@ function PaidTotal() {
   if (stats === undefined || total === null || meta === undefined) return null
   const amount = Number(formatUnits(total.amount, meta.decimals))
   return (
-    <p className="flex min-w-0 items-baseline gap-1 border-t border-dashed border-border pt-2">
-      <NumberFlow value={amount} format={paidFormat(amount)} className="font-medium tabular-nums" />
+    <p className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 border-t border-dashed border-border pt-3">
+      <NumberFlow
+        value={amount}
+        format={paidFormat(amount)}
+        className="text-2xl font-semibold tracking-tight tabular-nums"
+      />
       <span className="text-muted-foreground">
         {meta.symbol} paid for {stats.completed.toLocaleString('en-US')} {stats.completed === 1 ? 'job' : 'jobs'}
       </span>
