@@ -2007,7 +2007,8 @@ Kris asked for an overnight run that leaves the bots stable and making videos th
 standard patterns and no compatibility layers. What is live, and the evidence:
 
 - **Prod crew restarted twice** (`crew.ts up`, CREW_STAGE=prod): first on `4337f533`, then on `0aed83bd`. All four
-  containers (`sq-bot-prod-{patch,grokbot,video,token}`) carry `sidequest.source` 0aed83bd, run `bun --no-install /crew/src/crew/bin/crew.js`, and logged an idle pass after each restart.
+  containers (`sq-bot-prod-{patch,grokbot,video,token}`) carry `sidequest.source` 0aed83bd, run
+  `bun --no-install /crew/src/crew/bin/crew.js`, and logged an idle pass after each restart.
   - Open fixed-price jobs wake fitting members (b613196f); a nudge is consumed only by a run that exits 0 and is parked
     after three failed runs; a per-member breaker moves a member to its fallback model only on capacity refusals
     (4337f533, a2861754).
