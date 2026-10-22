@@ -58,7 +58,7 @@ export const utc = (unix: number) => `${new Date(unix * 1000).toISOString().slic
 /** "Thu 1 Oct, 14:29 · in 2 h" (or only one half), with the UTC instant on hover. */
 export function When({ at, show = 'both' }: { at: number | null | undefined; show?: 'both' | 'time' | 'relative' }) {
   const t = useNow()
-  if (at === null || at === undefined || at === 0) return <span className="text-muted-foreground">—</span>
+  if (at === null || at === undefined || at === 0) return <span className="text-muted-foreground">None</span>
   return (
     <time dateTime={new Date(at * 1000).toISOString()} title={utc(at)} className="tabular-nums">
       {show !== 'relative' && localTime(at)}

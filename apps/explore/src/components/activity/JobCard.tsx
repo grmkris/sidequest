@@ -209,9 +209,7 @@ function Foot({ job }: { job: FeedJob }) {
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-dashed border-border pt-3">
       {paid ? (
         <span className="flex items-center gap-2">
-          <span className="inline-block -rotate-6 rounded-sm border-2 border-success-text px-1.5 py-px font-mono text-[11px] font-bold tracking-widest text-success-text opacity-90">
-            PAID
-          </span>
+          <span className="stamp-paid">Paid</span>
           <TxLink hash={tx} />
         </span>
       ) : (

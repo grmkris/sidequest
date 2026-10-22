@@ -84,9 +84,7 @@ function HireScreening({ boardId, taskId }: { boardId: string; taskId: string })
         {warning.reasons.length > 0 && (
           <ul className="grid list-disc gap-0.5 pl-5 text-ui leading-snug text-muted-foreground">
             {warning.reasons.map((reason) => (
-              <li key={reason} className="first-letter:uppercase">
-                {reason}
-              </li>
+              <li key={reason}>{sentence(reason)}</li>
             ))}
           </ul>
         )}
@@ -97,3 +95,6 @@ function HireScreening({ boardId, taskId }: { boardId: string; taskId: string })
     </div>
   )
 }
+
+/** A reason as a sentence: its first letter capital, in the text itself rather than by a style. */
+const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1)

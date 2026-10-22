@@ -47,7 +47,7 @@ export function KindGlyph({
     >
       <Icon aria-hidden className="size-9 stroke-[1.25]" />
       <span className="grid gap-0.5">
-        <span className="text-xs font-medium tracking-wide text-foreground uppercase">{label}</span>
+        <span className="text-sm font-medium text-foreground">{label}</span>
         <span className="max-w-full truncate font-mono text-xs">{detail}</span>
       </span>
     </span>

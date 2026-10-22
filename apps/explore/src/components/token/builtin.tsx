@@ -7,11 +7,11 @@ import { type SVGProps, useId } from 'react'
 
 type IconProps = Omit<SVGProps<SVGSVGElement>, 'children'>
 
-const svg = (props: IconProps) => ({ viewBox: '0 0 32 32', 'aria-hidden': true, focusable: false, ...props }) as const
+const svg = (props: IconProps) => ({ viewBox: '0 0 32 32', focusable: false, ...props }) as const
 
 export function FactoryIcon(props: IconProps) {
   return (
-    <svg {...svg(props)}>
+    <svg aria-hidden {...svg(props)}>
       {/* The Sidequest mark in the page's ink: near-black on light, inverted on dark, like the favicon. */}
       <circle cx="16" cy="16" r="16" className="fill-foreground" />
       <path
@@ -31,7 +31,7 @@ function TestToken({ fill, glyph, ...props }: IconProps & { fill: string; glyph:
   // Unique per instance: several chips on one page each carry their own pattern.
   const id = `hatch${useId().replaceAll(':', '')}`
   return (
-    <svg {...svg(props)}>
+    <svg aria-hidden {...svg(props)}>
       <defs>
         <pattern id={id} width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <rect width="2" height="4" fill="#fff" fillOpacity="0.14" />

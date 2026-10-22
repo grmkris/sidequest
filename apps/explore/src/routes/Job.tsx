@@ -841,8 +841,11 @@ function Details({
         <PeopleRows d={d} listed={listed} viewer={viewer} />
         {windows !== undefined && (
           <Row label="Windows">
-            review {span(windows.reviewSeconds)} · dispute {span(windows.disputeSeconds)} · arbitration{' '}
-            {span(windows.arbitrationSeconds)}
+            <span className="grid justify-items-end">
+              <span>review {span(windows.reviewSeconds)}</span>
+              <span>dispute {span(windows.disputeSeconds)}</span>
+              <span>arbitration {span(windows.arbitrationSeconds)}</span>
+            </span>
           </Row>
         )}
         <Deposits d={d} listed={listed} />

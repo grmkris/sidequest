@@ -54,8 +54,8 @@ export function ScreeningCard({
               {(screening?.reasons.length ?? 0) > 0 && (
                 <span className="mt-0.5 grid gap-0.5 text-ui leading-snug text-muted-foreground">
                   {screening?.reasons.map((r) => (
-                    <span key={r} className="block first-letter:uppercase">
-                      {r}
+                    <span key={r} className="block">
+                      {r.charAt(0).toUpperCase() + r.slice(1)}
                     </span>
                   ))}
                 </span>

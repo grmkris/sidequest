@@ -23,7 +23,7 @@ export function RoleReason({
         aria-describedby={`${id}-help`}
       />
       <FieldDescription id={`${id}-help`}>
-        3–500 characters. This reason appears in the public role log.
+        3 to 500 characters. This reason appears in the public role log.
       </FieldDescription>
     </Field>
   )

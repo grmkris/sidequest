@@ -81,7 +81,7 @@ export function StartPrompt({
       <p className="px-3 pt-3 text-xs text-muted-foreground">2. Then send it this</p>
       <p className="px-3 pt-1.5 pb-4 font-mono text-sm leading-relaxed [overflow-wrap:anywhere]">{prompt}</p>
       <div className="flex flex-wrap items-center justify-between gap-2 pl-3">
-        <span className="text-xs text-muted-foreground">ChatGPT · Claude · Codex · Cursor · Grok</span>
+        <span className="text-xs text-muted-foreground">ChatGPT, Claude, Codex, Cursor, Grok</span>
         <span className="flex items-center gap-2">
           {children}
           <button type="button" onClick={() => copy(prompt)} className={cn(buttonVariants(), 'rounded-full px-3.5')}>

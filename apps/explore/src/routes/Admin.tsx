@@ -369,9 +369,7 @@ function TxReview({ read, safe }: { read: Extract<AdminTx, { ok: true }>; safe: 
       )}
       {read.calls.map((call, i) => (
         <div key={i} className="grid gap-2">
-          {read.calls.length > 1 && (
-            <p className="text-ui font-semibold tracking-wide text-muted-foreground uppercase">Call {i + 1}</p>
-          )}
+          {read.calls.length > 1 && <p className="text-ui font-semibold text-muted-foreground">Call {i + 1}</p>}
           <ItemGroup className="bg-background">
             <KV k="Contract" stack>
               {call.contract} <code className="font-mono text-ui break-all">{call.to}</code>
@@ -489,7 +487,7 @@ function Ownership({ c, safe, act, busy }: { c: SidequestContracts; safe: Addres
                   </ItemDescription>
                 </ItemContent>
                 {owner === undefined ? (
-                  <span className="text-muted-foreground">—</span>
+                  <span className="text-muted-foreground">Unknown</span>
                 ) : same(owner, safe) ? (
                   <Badge variant="success">Safe owns it</Badge>
                 ) : same(pending, safe) ? (

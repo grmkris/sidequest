@@ -75,7 +75,7 @@ export function TokenIcon({ token, className }: { token: string; className?: str
       )}
       style={{
         background: `linear-gradient(140deg, hsl(${h} 55% 52%), hsl(${(h + 40) % 360} 50% 40%))`,
-        color: '#fff',
+        color: 'var(--ink-on-color)',
       }}
     >
       {tokenSource(a) === 'unlisted' && (

@@ -146,7 +146,7 @@ export function BoardNewPage({ auth }: { auth: ReturnType<typeof useSignedIn> })
                 autoComplete="off"
               />
             </FieldLabel>
-            <FieldDescription>3–32 characters of a-z, 0-9 and -. The id in every route.</FieldDescription>
+            <FieldDescription>3 to 32 characters of a-z, 0-9 and -. The id in every route.</FieldDescription>
           </Field>
           <Field>
             <FieldLabel className="flex-col items-stretch">
