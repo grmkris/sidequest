@@ -1,3 +1,5 @@
+/* Hallmark · checked: 2026-10-22 · genre: modern-minimal (inferred) · the Commons MCP app shown inside hosts, outside the Explore redesign
+ * floor: 0 FAIL · fixed: 3 (39a, 26b, F3) · built: the project · redesign: polish · v2.0.0 */
 :root {
   color-scheme: light;
   --background: #fafaf9;
@@ -77,6 +79,9 @@ button {
   border: 1px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
+}
+button:active:not(:disabled) {
+  background: var(--border);
 }
 button:disabled {
   opacity: 0.55;
