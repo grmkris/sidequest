@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fontsource-variable/geist": "catalog:",
+    "@fontsource-variable/instrument-sans": "catalog:",
     "@sidequest/sdk": "workspace:*",
     "@tanstack/react-router": "1.170.41",
     "@tanstack/react-start": "catalog:",
