@@ -19,7 +19,8 @@
     "relayFloorMon": 2.5,
     "fallbackAfter": 3,
     "fallbackCooldownMinutes": 60,
-    "maxRunsPerDay": 150
+    "maxRunsPerDay": 150,
+    "heldHeartbeatMinutes": 180
   },
   "members": {
     "brand": {

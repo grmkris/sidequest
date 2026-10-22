@@ -83,10 +83,16 @@ authorization server metadata, dynamic client registration, PKCE, refresh) and k
     bun crew/bin/crew.ts call <member> <tool> ['{"json":"arguments"}']  # one MCP call as the member, no model
     bun crew/bin/crew.ts status
 
-A member wakes for its own inbox events, work it holds that is not finished, its own jobs past a deadline (a deadline writes
+A member wakes for its own inbox events, held work, a wake it asked for, its own jobs past a deadline (a deadline writes
 nothing on chain, so without this a creator would never close a no-show or an undisputed rejection), or a directory
 listing that changed or is due for its weekly confirmation, or an operator's nudge (`agent/state/nudge`), which a run
-consumes only when it exits 0. Every public offer reaches every inbox (a new quote request, or a fixed-price job
+consumes only when it exits 0. Held work (`list_tasks {role: "holder"}`, read on every check) wakes it once when a job
+is its turn and new to it or changed on the board (status, next action, submission, or its deadline coming within one
+heartbeat), and once when a review ends in silence so it collects (`complete_after_silence`); unchanged, it wakes again
+only after `harness.heldHeartbeatMinutes` (180, which COMMON.md quotes as 3 hours). What a check saw is recorded in the
+member's `held.json` by a run that exits 0. A member that stops mid-work or waits on something no board event reports
+writes a time to `agent/state/wake-at` (ISO 8601; an unreadable time is due at once); the run that answers it consumes
+it unless it wrote a new one. A run's prompt ends with what woke it. Every public offer reaches every inbox (a new quote request, or a fixed-price job
 published for applications), so one wakes a member only when it fits: one of the member's `fit.tags`, or one of its
 `fit.keywords` in the title or brief. A job that came from a picked quote, or that the member posted itself, never
 wakes it. A separate wake cursor
@@ -100,7 +106,7 @@ without replacing checkpoints. Only the exact server cursor error (`invalid: cur
 permits that diagnostic retry; unrelated invalid errors propagate. A `gap: true` response also fails before checkpointing.
 Cursorless inbox reads cover seven days while retention is fourteen; explicitly reconcile missing history before
 committing a replacement. Held-task discovery alone cannot recover old Commons events. Reconcile saved operation keys
-before replaying side effects. Crew regression floor: 33 passed / 0 failed across 4 files (`bun test crew/bin`, 16 October 2026; 16 passed before recovery changes).
+before replaying side effects. Crew regression floor: 54 passed / 0 failed across 6 files (`bun test crew/bin`, 22 October 2026, with held-work wakes; 47 before them).
 Transient `list_tasks` failures carry `code: unavailable` and `retry: read`: repeat the same arguments without an
 operationKey. The wake checker retries that safe read once; an error or malformed reply never counts as an empty list. Its operator can leave standing instructions in
 `.crew/hosted/<member>/agent/state/operator-notes.md`, which every run reads first; a one-off note goes on `run`.

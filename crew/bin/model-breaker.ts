@@ -5,9 +5,8 @@
  * another cooldown. Other failures say nothing about capacity and leave it as it is. The state is a file in the
  * member's home, so a restarted container keeps it.
  */
-import { existsSync, readFileSync } from 'node:fs'
 import { Schema } from 'effect'
-import { saveJson } from './inbox-state.ts'
+import { readJson, saveJson } from './inbox-state.ts'
 
 const Breaker = Schema.Struct({
   /** Capacity refusals in a row on the primary. */
@@ -79,15 +78,8 @@ export function runResult(code: number | null, events: () => string, stderr: str
   return refused || CAPACITY_STDERR.test(stderr) ? 'capacity' : 'failed'
 }
 
-export function readBreaker(path: string): Breaker {
-  if (!existsSync(path)) return CLOSED
-  try {
-    return Schema.decodeUnknownSync(Breaker)(JSON.parse(readFileSync(path, 'utf8')))
-  } catch {
-    // An unreadable breaker starts closed: the primary gets the next run, and a refusal counts from there.
-    return CLOSED
-  }
-}
+/** An unreadable breaker starts closed: the primary gets the next run, and a refusal counts from there. */
+export const readBreaker = (path: string): Breaker => readJson(path, Breaker, CLOSED)
 
 export const saveBreaker = (path: string, breaker: Breaker): void =>
   saveJson(path, Schema.decodeUnknownSync(Breaker)(breaker))

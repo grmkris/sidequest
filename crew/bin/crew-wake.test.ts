@@ -6,13 +6,25 @@ import { join } from 'node:path'
 import {
   NUDGE_TRIES,
   checkpointPath,
+  dueWakeAt,
   finishWake,
   readCheckpoint,
   saveCheckpoint,
   settleNudge,
+  settleWakeAt,
   takeNudge,
 } from './inbox-state.ts'
-import { openHeld, publicOffers, wakeInbox } from './crew-wake.ts'
+import {
+  type HeldSeen,
+  type HeldTask,
+  NOTHING_SEEN,
+  finishHeld,
+  heldWake,
+  openHeld,
+  publicOffers,
+  readHeld,
+  wakeInbox,
+} from './crew-wake.ts'
 
 test('a settled rejection no longer wakes the worker, but one it may still dispute does', () => {
   const held = [
@@ -304,6 +316,139 @@ test('an open job that fits wakes the worker; a public batch without offers does
     )
     expect(quiet).toEqual({ reason: null, cursor: 'v1:6' })
     expect(asked).toEqual([['t1']])
+  } finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
+const MINUTE = 60_000
+const policy = { heartbeatMs: 180 * MINUTE }
+/** 22 Oct 2026, 08:00 UTC; job #18's delivery deadline is six days later. */
+const T0 = Date.UTC(2026, 9, 22, 8)
+const job18: HeldTask = {
+  taskId: '7178ea079fc7822f',
+  chain: { status: 'active', submittedAt: null },
+  nextAction: { actor: 'worker', action: 'submit_work', deadline: T0 / 1000 + 6 * 86_400 },
+}
+
+/** Each pass of the member loop: the check, and a successful run recording what it saw whenever the check woke it. */
+function passes(held: readonly HeldTask[], minutes: readonly number[], seen: HeldSeen = NOTHING_SEEN) {
+  return minutes.map((at) => {
+    const check = heldWake(held, seen, T0 + at * MINUTE, policy)
+    if (check.reason !== null) seen = check.candidate
+    return check.reason
+  })
+}
+
+test('an active job waiting on a check wakes its worker once, then only after a three-hour heartbeat', () => {
+  // Job #18 on 22 Oct: Patch held it as a draft and ran every ten minutes to find nothing new.
+  const reasons = passes([job18], [0, 10, 20, 170, 180, 190])
+  expect(reasons[0]).toBe('1 held job(s) new or changed: 7178ea079fc7822f')
+  expect(reasons.slice(1, 4)).toEqual([null, null, null])
+  expect(reasons[4]).toBe('1 held job(s) unchanged for 3 h')
+  expect(reasons[5]).toBeNull()
+})
+
+/** A submitted job whose next step is `action` by `actor`. */
+const submitted = (actor: string, action: string): HeldTask => ({
+  taskId: 't',
+  chain: { status: 'submitted', submittedAt: 100 },
+  nextAction: { actor, action, deadline: null },
+})
+
+test('a review that ends in silence wakes the worker once to collect; other settlements do not wake it', () => {
+  const seen = heldWake([job18], NOTHING_SEEN, T0, policy).candidate
+  // Submitted: the approver's turn, so nothing wakes the worker during review.
+  expect(heldWake([submitted('approver', 'approve_or_reject')], seen, T0 + MINUTE, policy).reason).toBeNull()
+  const silent = heldWake([submitted('anyone', 'complete_after_silence')], seen, T0 + 2 * MINUTE, policy)
+  expect(silent.reason).toBe('1 held job(s) new or changed: t')
+  expect(
+    heldWake([submitted('anyone', 'complete_after_silence')], silent.candidate, T0 + 3 * MINUTE, policy).reason,
+  ).toBeNull()
+  for (const action of ['settle_missed_delivery', 'settle_rejection', 'settle_arbitration_timeout'])
+    expect(heldWake([submitted('anyone', action)], NOTHING_SEEN, T0, policy).reason).toBeNull()
+})
+
+test('a rejection the worker may dispute wakes it once, and again as its window nears its end', () => {
+  const rejected: HeldTask = {
+    taskId: 'r',
+    chain: { status: 'rejected-pending', submittedAt: 100 },
+    nextAction: { actor: 'worker', action: 'dispute_or_wait', deadline: T0 / 1000 + 86_400 },
+  }
+  const reasons = passes([rejected], [0, 10, 170, 180, 21 * 60 + 10, 21 * 60 + 20])
+  expect(reasons.map((reason) => reason?.split(':')[0] ?? null)).toEqual([
+    '1 held job(s) new or changed',
+    null,
+    null,
+    '1 held job(s) unchanged for 3 h',
+    // Inside the last heartbeat before the dispute window closes: one more look, not one every pass.
+    '1 held job(s) new or changed',
+    null,
+  ])
+})
+
+test('jobs that leave the held set never wake, and the next look forgets them', () => {
+  const other: HeldTask = { ...job18, taskId: 'other' }
+  const seen = heldWake([job18, other], NOTHING_SEEN, T0, policy).candidate
+  const after = heldWake([job18], seen, T0 + 10 * MINUTE, policy)
+  expect(after.reason).toBeNull()
+  expect(Object.keys(after.candidate.tasks)).toEqual(['7178ea079fc7822f'])
+  expect(heldWake([], seen, T0 + 300 * MINUTE, policy).reason).toBeNull()
+})
+
+test('what a run saw survives a restart, is recorded only after a run that finished, and a broken file starts over', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crew-held-'))
+  try {
+    const path = join(dir, 'held.json')
+    expect(readHeld(path)).toEqual(NOTHING_SEEN)
+    const { candidate } = heldWake([job18], readHeld(path), T0, policy)
+    for (const code of [1, 124, null]) finishHeld(path, candidate, code)
+    expect(existsSync(path)).toBe(false)
+    finishHeld(path, candidate, 0)
+    expect(readHeld(path)).toEqual(candidate)
+    expect(heldWake([job18], readHeld(path), T0 + 10 * MINUTE, policy).reason).toBeNull()
+    writeFileSync(path, '{"at":"soon"}')
+    expect(readHeld(path)).toEqual(NOTHING_SEEN)
+  } finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
+test('a wake a member asks for is due at its time, and only the run that finished its work consumes it', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crew-wake-at-'))
+  try {
+    const path = join(dir, 'wake-at')
+    expect(dueWakeAt(path, T0)).toBeUndefined()
+    writeFileSync(path, '2026-10-22T08:45:00Z\n')
+    expect(dueWakeAt(path, T0)).toBeUndefined()
+    const seen = dueWakeAt(path, T0 + 45 * MINUTE)
+    expect(seen).toBe('2026-10-22T08:45:00Z')
+    settleWakeAt(path, seen, 1) // a failed run asks again next pass
+    expect(existsSync(path)).toBe(true)
+    settleWakeAt(path, seen, 0)
+    expect(existsSync(path)).toBe(false)
+    // Unix seconds work too.
+    writeFileSync(path, String(T0 / 1000 + 60))
+    expect(dueWakeAt(path, T0 + MINUTE)).toBe(String(T0 / 1000 + 60))
+  } finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
+test('a time written during the run is kept for the next wake, and an unreadable one is due at once', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'crew-wake-at-'))
+  try {
+    const path = join(dir, 'wake-at')
+    writeFileSync(path, '2026-10-22T08:00:00Z')
+    const seen = dueWakeAt(path, T0)
+    writeFileSync(path, '2026-10-22T09:00:00Z\n') // the run asks to come back in an hour
+    settleWakeAt(path, seen, 0)
+    expect(dueWakeAt(path, T0)).toBeUndefined()
+    expect(dueWakeAt(path, T0 + 60 * MINUTE)).toBe('2026-10-22T09:00:00Z')
+    writeFileSync(path, 'in an hour')
+    expect(dueWakeAt(path, T0)).toBe('in an hour')
+    settleWakeAt(path, 'in an hour', 0)
+    expect(existsSync(path)).toBe(false)
   } finally {
     rmSync(dir, { recursive: true })
   }

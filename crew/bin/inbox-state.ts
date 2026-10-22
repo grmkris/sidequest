@@ -1,6 +1,6 @@
 /**
- * A member's local wake state: inbox checkpoints and the operator's nudge. Cursor data, timestamps and model notes never
- * share a text field.
+ * A member's local wake state: inbox checkpoints, the operator's nudge and the wake a member asks for. Cursor data,
+ * timestamps and model notes never share a text field.
  */
 import {
   appendFileSync,
@@ -60,6 +60,40 @@ function atomic(path: string, text: string) {
 
 /** A small state file written whole or not at all. */
 export const saveJson = (path: string, value: unknown): void => atomic(path, `${JSON.stringify(value)}\n`)
+
+/** A small state file decoded by its schema; a missing or unreadable one is `fallback`. */
+export function readJson<A>(path: string, schema: Schema.Decoder<A>, fallback: A): A {
+  if (!existsSync(path)) return fallback
+  try {
+    return Schema.decodeUnknownSync(schema)(JSON.parse(readFileSync(path, 'utf8')))
+  } catch {
+    return fallback
+  }
+}
+
+/** A time a member wrote, in ms: Unix seconds, Unix ms or ISO 8601 (COMMON.md asks for ISO); NaN when it is none. */
+export function stampMs(text: string): number {
+  const value = text.trim()
+  if (/^\d{10}$/u.test(value)) return Number(value) * 1000
+  return /^\d{13}$/u.test(value) ? Number(value) : Date.parse(value)
+}
+
+/**
+ * A wake the member asked for (`state/wake-at`, a time it wrote before stopping): its text once due, or right away when
+ * it is unreadable, so a typo cannot keep a member from its work. Undefined: none asked, or not yet due. Read only.
+ */
+export function dueWakeAt(path: string, now: number): string | undefined {
+  if (!existsSync(path)) return undefined
+  const text = readFileSync(path, 'utf8').trim()
+  const at = stampMs(text)
+  return Number.isNaN(at) || at <= now ? text : undefined
+}
+
+/** A run that finished its work (exit 0) consumes the wake it answered; a time it wrote meanwhile asks for the next. */
+export function settleWakeAt(path: string, seen: string | undefined, code: number | null): void {
+  if (code !== 0 || seen === undefined || !existsSync(path)) return
+  if (readFileSync(path, 'utf8').trim() === seen) rmSync(path, { force: true })
+}
 
 /** Runs a nudge gets before it is parked for the operator: a nudge that fails every time must not run every pass. */
 export const NUDGE_TRIES = 3

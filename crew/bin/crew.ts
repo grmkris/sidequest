@@ -36,8 +36,8 @@ import { Schema } from 'effect'
 import { stageProfile } from '../../infra/stage.ts'
 import * as hosted from './hosted-mcp.ts'
 import { type ConnectionFiles, REDIRECT, beginLogin, finishLogin, freshToken, readTokens } from './mcp-oauth.ts'
-import { type HeldTask, type Offers, openHeld, wakeInbox } from './crew-wake.ts'
-import { finishWake, settleNudge, takeNudge } from './inbox-state.ts'
+import { type HeldSeen, type HeldTask, type Offers, finishHeld, heldWake, readHeld, wakeInbox } from './crew-wake.ts'
+import { dueWakeAt, finishWake, settleNudge, settleWakeAt, stampMs, takeNudge } from './inbox-state.ts'
 import { type RunResult, afterRun, onFallback, readBreaker, runResult, saveBreaker } from './model-breaker.ts'
 
 const crewDir = resolve(import.meta.dir, '..')
@@ -116,6 +116,8 @@ interface Crew {
     fallbackCooldownMinutes: number
     /** The cost guard: model runs per member per UTC day (idle checks are free and do not count). */
     maxRunsPerDay: number
+    /** How long held work that has not changed on the board waits before its member looks again (COMMON.md says 3 h). */
+    heldHeartbeatMinutes: number
   }
   members: Record<string, Member>
 }
@@ -466,8 +468,8 @@ function busy(id: string): boolean {
   return existsSync(marker) && alive(Number(readFileSync(marker, 'utf8')))
 }
 
-/** What a run is told: who it is, what to read, its listings, the operator's note for this run. */
-async function promptFor(id: string, m: Member, note: string): Promise<string> {
+/** What a run is told: who it is, what to read, its listings, the operator's note for this run, and why it woke. */
+async function promptFor(id: string, m: Member, note: string, reason?: string): Promise<string> {
   const { services, hash } = await listingsOf(m)
   return [
     `You are ${m.name}, the '${id}' member of the Sidequest crew and an autonomous hosted worker (your public Agent ID is the agentId whoami returns).`,
@@ -477,6 +479,7 @@ async function promptFor(id: string, m: Member, note: string): Promise<string> {
     `Your directory listings (one advertise_service call each; listings hash ${hash}): ${JSON.stringify(services)}`,
     note === '' ? '' : `Operator note for this run: ${note}`,
     `Your git identity is ${m.name} <${m.email}>. Chain: ${crew.board.chain} (${crew.board.chainId}). Board: ${crew.board.origin}. Be concise.`,
+    reason === undefined ? '' : `Woken for: ${reason.slice(0, 300)}.`,
   ]
     .filter(Boolean)
     .join('\n')
@@ -489,7 +492,7 @@ interface Run {
 }
 
 /** One run of a member; null when it did not start because one is already going. */
-async function run(id: string, note = '', model?: string): Promise<Run | null> {
+async function run(id: string, note = '', model?: string, reason?: string): Promise<Run | null> {
   const [, base] = memberOf(id)
   const m = model === undefined ? base : { ...base, model, effort: 'high' }
   // One run per member at a time.
@@ -500,7 +503,7 @@ async function run(id: string, note = '', model?: string): Promise<Run | null> {
   const tokens = await runTokens(id, m)
   const agent = prepareAgentDir(id)
   writeHarnessConfig(m, tokens, join(home(id), 'home'))
-  const prompt = await promptFor(id, m, note)
+  const prompt = await promptFor(id, m, note, reason)
   const vars = harnessVars(m, tokens, env())
   const runs = join(home(id), 'runs')
   mkdirSync(runs, { recursive: true, mode: 0o700 })
@@ -545,9 +548,7 @@ const mcpCall = <T = unknown>(token: string, name: string, args: Record<string, 
 
 /** When a member last advertised, in ms. Members write ISO 8601 (COMMON.md), but some write Unix seconds or ms. */
 function advertisedAt(state: string): number {
-  const stamp = existsSync(join(state, 'advertised')) ? readFileSync(join(state, 'advertised'), 'utf8').trim() : ''
-  if (/^\d{10}$/.test(stamp)) return Number(stamp) * 1000
-  return /^\d{13}$/.test(stamp) ? Number(stamp) : Date.parse(stamp)
+  return stampMs(existsSync(join(state, 'advertised')) ? readFileSync(join(state, 'advertised'), 'utf8') : '')
 }
 
 /** How often a member confirms its listings that have not changed: they last until withdrawn (ADR-0025). */
@@ -580,36 +581,83 @@ function listingDue(state: string, hash: string): boolean {
   return saved !== hash || !(Date.now() - advertisedAt(state) < LISTING_CONFIRM_MS)
 }
 
-/**
- * Whether a member has anything to do, read without starting a model: new inbox events past its saved cursor, held
- * work that is not finished, its own jobs past a deadline, or listings that changed or are due for their weekly
- * confirmation. Idle members cost no model tokens.
- */
-async function wakeReason(id: string): Promise<string | null> {
-  const state = join(home(id), 'agent', 'state')
+/** Why a member should run now (null: idle), and what its check saw, for the supervisor to record after the run. */
+interface WakeCheck {
+  reason: string | null
+  /** The held work this check saw (crew-wake.ts heldWake); recorded only by a run that finishes its work. */
+  held?: HeldSeen
+  /** The text of a due `state/wake-at`; the run that answers it consumes it. */
+  wakeAt?: string
+}
+
+/** How long unchanged held work waits before its member looks again. */
+const heldPolicy = { heartbeatMs: crew.harness.heldHeartbeatMinutes * 60_000 }
+
+/** The reasons to wake that need no board: the operator's nudge, else listings that are due. */
+async function localReason(id: string, state: string): Promise<string | null> {
   // A nudge (crew/bin/publish.ts) is an operator's word that this member should look at something now.
   if (existsSync(join(state, 'nudge'))) return 'nudged'
-  if (listingDue(state, (await listingsOf(memberOf(id)[1])).hash)) return 'listing due'
+  return listingDue(state, (await listingsOf(memberOf(id)[1])).hash) ? 'listing due' : null
+}
+
+/** A due wake the member asked for (`state/wake-at`), as a reason. */
+function askedReason(wakeAt: string | undefined): string | null {
+  if (wakeAt === undefined) return null
+  const at = stampMs(wakeAt)
+  return `a wake it asked for (${Number.isNaN(at) ? 'unreadable time' : new Date(at).toISOString()})`
+}
+
+/** What the board says, read with one token: inbox events past the wake cursor, and the held work. */
+async function boardCheck(id: string, state: string, now: number) {
   const token = await boardToken(id)
-  const inboxWake = await inboxReason(id, token, state)
-  if (inboxWake !== null) return inboxWake
-  // Held work: jobs this member activated and holds on chain (role holder), whose chain status is not final.
-  const held = await hosted.readTaskList<HeldTask>(crew.board.mcp, token, { role: 'holder', limit: 20 })
-  const open = openHeld(held)
-  if (open.length > 0) return `${open.length} held task(s)`
-  // A deadline passing writes nothing on chain, so no event wakes a creator to close a no-show or an undisputed
-  // rejection: look for its own jobs whose window has run out.
-  const now = Date.now() / 1000
+  const inbox = await inboxReason(id, token, state)
+  // Held work: jobs this member activated and holds on chain (role holder).
+  const tasks = await hosted.readTaskList<HeldTask>(crew.board.mcp, token, { role: 'holder', limit: 20 })
+  return { token, inbox, held: heldWake(tasks, readHeld(join(home(id), 'held.json')), now, heldPolicy) }
+}
+
+/**
+ * A deadline passing writes nothing on chain, so no event wakes a creator to close a no-show or an undisputed
+ * rejection: its own jobs whose window has run out.
+ */
+async function pastDeadline(token: string, now: number): Promise<string | null> {
   const created = await hosted.readTaskList<{
     chain?: { status?: string; deliveryDeadline?: number; disputeEndsAt?: number | null }
   }>(crew.board.mcp, token, { role: 'creator', limit: 20 })
   const due = created.filter(
     ({ chain: c }) =>
-      (c?.status === 'active' && (c.deliveryDeadline ?? Infinity) < now) ||
-      (c?.status === 'rejected-pending' && (c.disputeEndsAt ?? Infinity) < now),
+      (c?.status === 'active' && (c.deliveryDeadline ?? Infinity) * 1000 < now) ||
+      (c?.status === 'rejected-pending' && (c.disputeEndsAt ?? Infinity) * 1000 < now),
   )
-  if (due.length > 0) return `${due.length} own job(s) past a deadline`
-  return null
+  return due.length > 0 ? `${due.length} own job(s) past a deadline` : null
+}
+
+/**
+ * Whether a member has anything to do, read without starting a model and without writing anything: the operator's
+ * nudge, listings that changed or are due for their weekly confirmation, a wake it asked for, new inbox events past
+ * its saved cursor, held work that is new or changed on the board (or unchanged for a heartbeat), or its own jobs past
+ * a deadline. The inbox and held work are read on every check, so a run for any reason records what it saw. Idle
+ * members cost no model tokens.
+ */
+async function wakeCheck(id: string): Promise<WakeCheck> {
+  const state = join(home(id), 'agent', 'state')
+  const now = Date.now()
+  const wakeAt = dueWakeAt(join(state, 'wake-at'), now)
+  const asked = wakeAt === undefined ? {} : { wakeAt }
+  const local = [await localReason(id, state), askedReason(wakeAt)].filter((reason) => reason !== null)
+  let board: Awaited<ReturnType<typeof boardCheck>>
+  try {
+    board = await boardCheck(id, state, now)
+  } catch (error) {
+    // Without the board, an operator's nudge, due listings or a wake it asked for still run; nothing else is known.
+    if (local.length === 0) throw error
+    console.log(`${memberOf(id)[1].name}: board check failed (${String(error).slice(0, 80)}); waking anyway`)
+    return { reason: local.join('; '), ...asked }
+  }
+  const seen = { held: board.held.candidate, ...asked }
+  const reasons = [...local, board.inbox, board.held.reason].filter((reason) => reason !== null)
+  if (reasons.length > 0) return { reason: reasons.join('; '), ...seen }
+  return { reason: await pastDeadline(board.token, now), ...seen }
 }
 
 /** The wake cursor each member's last check read up to, written once the events behind it are dealt with. */
@@ -816,7 +864,7 @@ async function wake(id: string, reason: string, model: string | undefined): Prom
   const nudgePath = join(home(id), 'agent', 'state', 'nudge')
   const nudge = takeNudge(nudgePath)
   console.log(`${crew.members[id]?.name ?? id}: waking, ${reason}${model === undefined ? '' : ` (on ${model})`}`)
-  const outcome = await run(id, nudge ?? '', model)
+  const outcome = await run(id, nudge ?? '', model, reason)
   settleNudge(nudgePath, nudge, outcome === null ? 'not-started' : outcome.code === 0 ? 'done' : 'failed')
   // The member clears its own needs-operator, and the supervisor writes these as root in its container.
   own(nudgePath, `${nudgePath}.tries`, join(dirname(nudgePath), 'needs-operator'))
@@ -847,17 +895,21 @@ const breakerPolicy = {
   cooldownMs: crew.harness.fallbackCooldownMinutes * 60_000,
 }
 
-/** Why a member should run now, or null: its wake reason, unless the relay's gas or its daily run cap holds it. */
-async function checkMember(id: string, m: Member): Promise<string | null> {
-  let reason: string | null
+/** A check that found a reason to run. */
+type Wake = WakeCheck & { reason: string }
+
+/** Why a member should run now, or null: its wake check, unless the relay's gas or its daily run cap holds it. */
+async function checkMember(id: string, m: Member): Promise<Wake | null> {
+  let check: WakeCheck
   try {
     wakeCursors.delete(id)
-    reason = await wakeReason(id)
+    check = await wakeCheck(id)
   } catch (error) {
     // A failed check is not a reason to spend a model run; the next pass checks again.
     console.log(`${m.name}: wake check failed (${String(error).slice(0, 80)}); not waking`)
     return null
   }
+  const { reason } = check
   if (reason === null) {
     console.log(`${m.name}: idle`)
     commitWakeCursor(id)
@@ -865,22 +917,29 @@ async function checkMember(id: string, m: Member): Promise<string | null> {
   }
   const blocked = await holdReason(id, m, reason)
   if (blocked !== null) console.log(blocked)
-  return blocked === null ? reason : null
+  return blocked === null ? { ...check, reason } : null
 }
 
-/** One run for `reason` within the crew's run cap, on the model the member's breaker picks. */
-async function runMember(id: string, m: Member, reason: string, slot: Slot) {
+/**
+ * One run for its check's reason within the crew's run cap, on the model the member's breaker picks. Only a run that
+ * finished its work records what the check saw: the inbox cursor, the held work and the wake it asked for.
+ */
+async function runMember(id: string, m: Member, check: Wake, slot: Slot) {
   const breakerPath = join(home(id), 'model-breaker.json')
   await slot.take()
   try {
     const breaker = readBreaker(breakerPath)
     const fallback = m.fallbackModel !== undefined && onFallback(breaker, breakerPolicy, Date.now())
-    const outcome = await wake(id, reason, fallback ? m.fallbackModel : undefined)
+    const outcome = await wake(id, check.reason, fallback ? m.fallbackModel : undefined)
     if (outcome === null) return
     const next = afterRun(breaker, { result: outcome.result, onPrimary: !fallback }, breakerPolicy, Date.now())
     saveBreaker(breakerPath, next)
     own(breakerPath)
     commitWakeCursor(id, outcome.code)
+    const heldPath = join(home(id), 'held.json')
+    finishHeld(heldPath, check.held, outcome.code)
+    own(heldPath)
+    settleWakeAt(join(home(id), 'agent', 'state', 'wake-at'), check.wakeAt, outcome.code)
   } catch (error) {
     console.error(`${id}: ${String(error)}`)
   } finally {
@@ -891,8 +950,8 @@ async function runMember(id: string, m: Member, reason: string, slot: Slot) {
 /** A member's routine, forever: check for work, run when there is a reason and nothing holds it back, sleep. */
 async function memberLoop(id: string, m: Member, minutes: number, slot: Slot) {
   for (;;) {
-    const reason = await checkMember(id, m)
-    if (reason !== null) await runMember(id, m, reason, slot)
+    const check = await checkMember(id, m)
+    if (check !== null) await runMember(id, m, check, slot)
     await Bun.sleep(minutes * 60_000)
   }
 }
@@ -1098,7 +1157,7 @@ if (relayed && existsSync(join(home(a), 'secrets'))) {
 if (command === 'login') await login(memberOf(a)[0], b ?? BOARD, process.argv[5])
 else if (command === 'run') await run(memberOf(a)[0], b)
 else if (command === 'status') status()
-else if (command === 'wake') console.log((await wakeReason(memberOf(a)[0])) ?? 'idle')
+else if (command === 'wake') console.log((await wakeCheck(memberOf(a)[0])).reason ?? 'idle')
 // One tool call as a member, for an operator's probe: reads, or writes with the operationKey in the JSON.
 else if (command === 'call')
   console.log(
