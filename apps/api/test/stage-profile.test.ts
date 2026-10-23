@@ -24,6 +24,27 @@ test('Commons is enabled by validated roles: dev and prod each with a moderator 
     expect(() => validateStageProfile({ ...stageProfile('dev'), roles }, 'dev')).toThrow()
 })
 
+test('the media team (ADR-0029): Kris operates media on both stages; profiles refuse malformed teams', () => {
+  const kris = { wallet: '0xB9970A6371358F6C74DFb15A7cB2653E3AE3E471', role: 'operator' }
+  expect(stageProfile('prod')?.media?.team).toEqual([kris])
+  expect(stageProfile('dev')?.media?.team).toContainEqual(kris)
+  for (const stage of ['dev', 'prod'] as const) {
+    expect(stageProfile(stage)?.media?.timezone).toBe('Europe/Ljubljana')
+    expect(stageProfile(stage)?.resources.Media).toBe(`sidequest-${stage}-media`)
+  }
+  const dev = stageProfile('dev')!
+  const media = dev.media!
+  for (const bad of [
+    { ...media, team: [{ wallet: 'invalid', role: 'operator' }] },
+    { ...media, team: [{ ...kris, role: 'owner' }] },
+    { ...media, team: [kris, { ...kris, wallet: kris.wallet.toLowerCase() }] },
+    { ...media, timezone: 'Mars/Olympus' },
+    { ...media, pullHosts: ['https://media.sidequest.exchange'] },
+  ])
+    expect(() => validateStageProfile({ ...dev, media: bad }, 'dev')).toThrow()
+  expect(() => validateStageProfile({ ...dev, resources: { ...dev.resources, Media: '' } }, 'dev')).toThrow()
+})
+
 test('dev (testnet) and prod (mainnet since 13 Oct) profiles own distinct resources and domains', () => {
   for (const stage of ['dev', 'prod'] as const) {
     const p = stageProfile(stage)!

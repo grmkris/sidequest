@@ -17,7 +17,8 @@
     "Indexer": "sidequest-indexer-prod",
     "Explore": "sidequest-explore-prod",
     "Database": "sidequest-prod-db",
-    "Manifests": "sidequest-prod-manifests"
+    "Manifests": "sidequest-prod-manifests",
+    "Media": "sidequest-prod-media"
   },
   "roles": {
     "moderator": ["0xaC7F8233dc0CC8F613F73c220dFf2c1D7809f504"],
@@ -27,5 +28,15 @@
     "factory": "0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67",
     "singleton": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
     "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99"
+  },
+  "media": {
+    "team": [
+      {
+        "wallet": "0xB9970A6371358F6C74DFb15A7cB2653E3AE3E471",
+        "role": "operator"
+      }
+    ],
+    "timezone": "Europe/Ljubljana",
+    "pullHosts": ["media.sidequest.exchange"]
   }
 }

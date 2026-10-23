@@ -104,7 +104,7 @@ const stageFile = (stage: Stage): StageFile => {
     fail(`invalid network in infra/${stage}.json`)
   if (new URL(value.origin).origin !== value.origin || !value.origin.startsWith('https://'))
     fail(`invalid origin in infra/${stage}.json`)
-  for (const id of ['Api', 'Indexer', 'Explore', 'Database', 'Manifests'])
+  for (const id of ['Api', 'Indexer', 'Explore', 'Database', 'Manifests', 'Media'])
     if (!value.resources[id]) fail(`infra/${stage}.json missing resource ${id}`)
   return value as StageFile
 }
@@ -164,6 +164,8 @@ export const assembleEnv = (
     'GITHUB_APP_INSTALLATION_ID',
     'ARBITER_MODEL_BASE_URL',
     'SCREENING_MODEL',
+    // Optional (ADR-0029): unset leaves media uploads and internal previews unavailable.
+    'MEDIA_SIGNING_KEY',
   ])
   for (const [key, value] of Object.entries(base))
     if (value !== undefined && !launchInput(key) && inherited(key, localRun, settings)) env[key] = value
@@ -391,7 +393,7 @@ export const validateFirstDeployCensus = (infra: StageFile, census: Census): voi
   if (
     census.workers.some((worker) => names.includes(worker.id ?? '')) ||
     census.databases.some((row) => row.name === infra.resources.Database) ||
-    census.buckets.some((row) => row.name === infra.resources.Manifests) ||
+    census.buckets.some((row) => row.name === infra.resources.Manifests || row.name === infra.resources.Media) ||
     census.domains.some((domain) => domain.hostname === new URL(infra.origin).hostname)
   )
     fail('first deploy refused: fixed Cloudflare resources already exist (local-state migration required)')
@@ -457,15 +459,41 @@ const runAlchemy = (
   return JSON.parse(lines[0]!.slice('SIDEQUEST_CI_RESULT='.length)) as Snapshot
 }
 
+/**
+ * Resources a release may create after the stack's first deploy, each reviewed in its ADR: the media bucket (ADR-0029).
+ * A create is admitted only while the stage file's bucket of that name does not exist in the account, so a lost state
+ * can never re-create a bucket over a live one; every other create is still refused.
+ */
+export const EXPECTED_BUCKET_CREATES: readonly string[] = ['Media']
+export const expectedCreates = (snapshot: Snapshot, infra: StageFile, buckets: Census['buckets']): number =>
+  snapshot.resources.filter((row) => {
+    const name = infra.resources[row.fqn]
+    return (
+      row.action === 'create' &&
+      EXPECTED_BUCKET_CREATES.includes(row.fqn) &&
+      name !== undefined &&
+      !buckets.some((bucket) => bucket.name === name)
+    )
+  }).length
+
 /** Creates whose ownership probe Alchemy defers to Apply (props wait on upstream outputs); Apply adopts them when they exist. */
 export const deferredCreates = (snapshot: Snapshot): number =>
   snapshot.resources.filter((row) => row.action === 'create' && (snapshot.deferredAdoption ?? []).includes(row.fqn))
     .length
-export const assertSnapshotSafe = (snapshot: Snapshot, firstDeploy: boolean, adoptMove: boolean): void => {
+export const assertSnapshotSafe = (
+  snapshot: Snapshot,
+  firstDeploy: boolean,
+  adoptMove: boolean,
+  expected = 0,
+): void => {
   // During the one-time dev state move, a deferred-adoption create is an adoption of the existing named resource.
   const deferred = adoptMove ? deferredCreates(snapshot) : 0
   assertPlanSafe(
-    { ...snapshot.summary, create: snapshot.summary.create - deferred, adopted: snapshot.summary.adopted + deferred },
+    {
+      ...snapshot.summary,
+      create: snapshot.summary.create - deferred - expected,
+      adopted: snapshot.summary.adopted + deferred,
+    },
     firstDeploy,
     adoptMove,
   )
@@ -543,7 +571,11 @@ async function main(): Promise<void> {
   }
   const snapshot = runAlchemy('plan', stage, env, adoptMove)
   const counts = snapshot.summary
-  assertSnapshotSafe(snapshot, !remoteState && !adoptMove, adoptMove)
+  const wantsBucket = remoteState && snapshot.resources.some((row) => row.action === 'create')
+  const expected = wantsBucket
+    ? expectedCreates(snapshot, infra, (await censusOf(infra, env.CLOUDFLARE_API_TOKEN!)).buckets)
+    : 0
+  assertSnapshotSafe(snapshot, !remoteState && !adoptMove, adoptMove, expected)
   for (const resource of snapshot.resources)
     console.log(
       `${resource.fqn}: ${resource.action}${(snapshot.deferredAdoption ?? []).includes(resource.fqn) ? ' (ownership probe at apply)' : ''}`,

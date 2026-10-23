@@ -9,6 +9,7 @@ import {
   assertSnapshotSafe,
   censusOf,
   checkStateStore,
+  expectedCreates,
   expectedStateStoreVersion,
   REQUIRED_SECRETS,
   validateEnv,
@@ -26,7 +27,14 @@ const infra: StageFile = {
   chainId: 10143,
   origin: 'https://dev.sidequest.exchange',
   relay: '0x0000000000000000000000000000000000000001',
-  resources: { Api: 'api', Indexer: 'indexer', Explore: 'explore', Database: 'db', Manifests: 'manifests' },
+  resources: {
+    Api: 'api',
+    Indexer: 'indexer',
+    Explore: 'explore',
+    Database: 'db',
+    Manifests: 'manifests',
+    Media: 'media',
+  },
   cloudflare: { accountId: 'account', zoneId: 'zone', zoneName: 'sidequest.exchange' },
 }
 const clean: PlanCounts = { create: 0, update: 0, adopted: 0, replace: 0, delete: 0, orphaned: 0, noop: 5 }
@@ -319,4 +327,33 @@ test('a deferred-adoption create counts as an adoption only during the dev state
   expect(() => assertSnapshotSafe(snapshot, false, true)).not.toThrow()
   expect(() => assertSnapshotSafe(snapshot, false, false)).toThrow('--adopt-move')
   expect(() => assertSnapshotSafe({ ...snapshot, deferredAdoption: ['Api'] }, false, true)).toThrow('create=1')
+})
+
+test('the media bucket is the one create a release admits, and only while no bucket of its name exists', () => {
+  const summary: PlanCounts = { create: 1, update: 1, adopted: 0, replace: 0, delete: 0, orphaned: 0, noop: 3 }
+  const media = { fqn: 'Media', action: 'create', bindings: [] }
+  const snapshot = { summary, resources: [media, { fqn: 'Api', action: 'update', bindings: [] }], actions: [] }
+  expect(expectedCreates(snapshot, infra, [{ name: 'manifests' }])).toBe(1)
+  expect(() => assertSnapshotSafe(snapshot, false, false, expectedCreates(snapshot, infra, []))).not.toThrow()
+  // A lost state must never re-create a live bucket.
+  expect(expectedCreates(snapshot, infra, [{ name: 'media' }])).toBe(0)
+  expect(() => assertSnapshotSafe(snapshot, false, false, 0)).toThrow('create=1')
+  // Any other create is still refused, beside the media bucket or alone.
+  const other = { fqn: 'Manifests', action: 'create', bindings: [] }
+  const both = { summary: { ...summary, create: 2 }, resources: [media, other], actions: [] }
+  expect(expectedCreates(both, infra, [])).toBe(1)
+  expect(() => assertSnapshotSafe(both, false, false, expectedCreates(both, infra, []))).toThrow('create=1')
+  const { Media: _media, ...withoutMedia } = infra.resources
+  expect(expectedCreates(snapshot, { ...infra, resources: withoutMedia }, [])).toBe(0)
+})
+
+test('a first deploy also refuses an existing media bucket of the stage name', () => {
+  const census = {
+    zone: { id: 'zone', account: { id: 'account' }, name: 'sidequest.exchange', status: 'active' },
+    workers: [],
+    databases: [],
+    buckets: [{ name: 'media' }],
+    domains: [],
+  }
+  expect(() => validateFirstDeployCensus(infra, census)).toThrow('already exist')
 })
