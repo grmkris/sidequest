@@ -77,3 +77,19 @@ it('preserves content-addressed asset policies only for anonymous successful rea
   expect(read('/offers/0x123.json', { authorization: 'Bearer private' }, 'GET', immutable)).toBe('no-store')
   expect(read('/api/agents', {}, 'GET', immutable)).toBe('no-store')
 })
+
+const file = (status: number, cacheControl: string) =>
+  HttpServerResponse.raw(new Response(null, { status }), { status, headers: { 'cache-control': cacheControl } })
+
+it('lets media files keep their own caching on 200, 206 and 304, whatever cookie the zone adds', () => {
+  const immutable = 'public, max-age=31536000, immutable'
+  expect(read('/media/f/launch-75s/a.mp4?v=503f35d6', {}, 'GET', file(200, immutable))).toBe(immutable)
+  expect(read('/media/f/launch-75s/a.mp4', { cookie: '__cf_bm=zone' }, 'GET', file(206, immutable))).toBe(immutable)
+  expect(read('/media/f/launch-75s/a.mp4', {}, 'HEAD', file(304, 'private, max-age=600'))).toBe('private, max-age=600')
+  expect(read('/media/f/launch-75s/a.mp4', { authorization: 'Bearer private' }, 'GET', file(200, immutable))).toBe(
+    'no-store',
+  )
+  expect(read('/media/f/internal/a.mp4', {}, 'GET', file(404, 'no-store'))).toBe('no-store')
+  expect(read('/media/f/x/a.mp4', {}, 'GET', HttpServerResponse.raw(new Response(null)))).toBe('no-store')
+  expect(read('/media/upload/abc', {}, 'PUT', file(201, immutable))).toBe('no-store')
+})

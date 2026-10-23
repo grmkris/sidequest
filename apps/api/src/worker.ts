@@ -40,6 +40,11 @@ import { Database } from './database.ts'
 import { dripOnce } from './drip.ts'
 import { claimFaucet, faucetChain } from './faucet.ts'
 import { Manifests } from './manifests.ts'
+import { Media } from './media-bucket.ts'
+import { agentActor, stageMedia, walletActor } from './media/access.ts'
+import { type MediaBucket, receiveMediaUpload, serveMediaFile } from './media/serve.ts'
+import { isMediaTool, MEDIA_READ_TOOLS, mediaTools, runMediaTool, type MediaDeps } from './media/tools.ts'
+import { migrateMedia } from '@sidequest/indexer/media-schema'
 import { rpcUrlForNetwork } from './network.ts'
 import {
   dripState,
@@ -115,6 +120,7 @@ function workerLocalSchema(tool: string): object | undefined {
     ...telegramTools,
     ...tenantTools,
     ...feedTools,
+    ...mediaTools,
   }
   if (Object.hasOwn(local, tool)) return local[tool]!.inputSchema
   return WORKER_BOARD_TOOLS.has(tool) ? boardTools[tool]?.inputSchema : undefined
@@ -135,6 +141,12 @@ const selectedHostedSend = sdk.hostedSendMode(selectedNetwork, process.env.HOSTE
 const tokenCache = new Map<string, TenantToken>()
 const boardCache = new Map<string, { at: number; config: TenantConfig | undefined }>()
 let migrated: Promise<void> | undefined
+let mediaMigrated: Promise<void> | undefined
+const migrateMediaOnce = (sql: AsyncSql) =>
+  (mediaMigrated ??= migrateMedia(sql).catch((error: unknown) => {
+    mediaMigrated = undefined
+    throw error
+  }))
 
 export async function activityRoute(
   sql: AsyncSql,
@@ -215,6 +227,8 @@ export default class Api extends Cloudflare.Worker<Api>()(
       ),
       TELEGRAM_BOT_TOKEN: Redacted.make(runtimeSecret('TELEGRAM_BOT_TOKEN') || 'unset'),
       TELEGRAM_WEBHOOK_SECRET: Redacted.make(runtimeSecret('TELEGRAM_WEBHOOK_SECRET') || 'unset'),
+      // ADR-0029: signs media upload and preview links; optional, unset leaves those unavailable.
+      MEDIA_SIGNING_KEY: Redacted.make(process.env.MEDIA_SIGNING_KEY || 'unset'),
       // Retain existing binding names for guarded staging updates; these obsolete lists are ignored.
       PROD_APPROVED_WALLETS: '',
       PROD_APPROVED_BOARDS: '',
@@ -231,6 +245,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
     const runtimeEnv = yield* Cloudflare.WorkerEnvironment
     const directory = yield* DirectoryObject
     const manifests = yield* Cloudflare.R2.ReadWriteBucket(Manifests)
+    yield* Cloudflare.R2.ReadWriteBucket(Media)
     // Workers AI and Images, bound as env.AI and env.IMAGES: agents' generated avatars, drawn and resized to 256 px
     // (workers-ai-images.ts) in the management object.
     yield* Cloudflare.Workers.AI()
@@ -282,6 +297,26 @@ export default class Api extends Cloudflare.Worker<Api>()(
         const chainId = deployment.chainId
         const raw = yield* facts.raw
         const sql: AsyncSql = fromD1(raw as never)
+        // SAFETY: Media is this Worker's R2 binding (media-bucket.ts); its raw form streams bodies with their length.
+        const mediaBucket = (runtimeEnv as Record<string, unknown>).Media as MediaBucket | undefined
+        const mediaKey = yield* secret('MEDIA_SIGNING_KEY')
+
+        // ADR-0029: media files and uploads stream straight from and to R2, before any board or management work.
+        if (url.pathname.startsWith('/media/f/') || url.pathname.startsWith('/media/upload/')) {
+          const webRequest = request.source
+          if (!(webRequest instanceof Request)) return HttpServerResponse.text('unavailable', { status: 503 })
+          const response = yield* Effect.promise(async () => {
+            await migrateMediaOnce(sql)
+            const deps = { sql, bucket: mediaBucket, signingKey: mediaKey, now: now() }
+            return url.pathname.startsWith('/media/f/')
+              ? serveMediaFile(deps, webRequest, url)
+              : receiveMediaUpload(deps, webRequest, url)
+          })
+          return HttpServerResponse.raw(response, {
+            status: response.status,
+            headers: { 'cache-control': response.headers.get('cache-control') ?? 'no-store' },
+          })
+        }
 
         if (url.pathname === '/telegram/webhook' && request.method === 'POST') {
           const supplied = request.headers['x-telegram-bot-api-secret-token'] ?? null
@@ -372,6 +407,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
           await migrateDirectory(sql)
           await desk.migrate()
           await migrateTelegram(sql)
+          await migrateMediaOnce(sql)
         })()
         yield* Effect.promise(() => migrated as Promise<void>).pipe(Effect.withSpan('api.migrations'))
         // A failed migration fails the request: unwrapReply rethrows the object's refusal.
@@ -451,6 +487,17 @@ export default class Api extends Cloudflare.Worker<Api>()(
         }
         const bearer = request.headers.authorization?.replace(/^Bearer\s+/i, '') || undefined
         const ip = request.headers['cf-connecting-ip']
+        const media = stageMedia(stage)
+        const mediaDeps: MediaDeps = {
+          sql,
+          bucket: mediaBucket,
+          ...(media === undefined ? { media: undefined } : { media }),
+          signingKey: mediaKey,
+          origin: yield* Config.String('PUBLIC_ORIGIN'),
+          now,
+          fetch: (input, init) => fetch(input, init),
+        }
+        const mediaRefused = { ok: false as const, code: 'not-found', message: 'media lives on the public board' }
         const directoryDeps = {
           sql,
           network,
@@ -589,6 +636,24 @@ export default class Api extends Cloudflare.Worker<Api>()(
                       },
                     }
                   if (directoryMutationTool(tool)) return { reply: await directoryEdgeCall(tool, args) }
+                  // ADR-0029: media runs here for a signed-in wallet with its own team role, ahead of hosted admission.
+                  if (isMediaTool(tool) && oauthCaller === undefined) {
+                    if (tenant.id !== PUBLIC_BOARD_ID) return { reply: mediaRefused }
+                    if (!MEDIA_READ_TOOLS.has(tool)) {
+                      // SAFETY: runtimeEnv holds this Worker's bindings, the rate limiter's among them.
+                      const rate = await enforceHostedRate(runtimeEnv as Record<string, unknown>, {
+                        network,
+                        tool,
+                        boardId: tenant.id,
+                        bearer,
+                        mcpSession,
+                        caller: session?.address,
+                        ip,
+                      })
+                      if (!rate.ok) return { reply: rate }
+                    }
+                    return { reply: await runMediaTool(mediaDeps, walletActor(media, session?.address), tool, args) }
+                  }
                   const denied = hostedCallFailure(admission, network, tenant.id, tool, args, session?.address, stage)
                   if (denied !== undefined) return { reply: { ok: false, code: 'forbidden', message: denied } }
                   if (Object.hasOwn(directoryTools, tool))
@@ -792,6 +857,11 @@ export default class Api extends Cloudflare.Worker<Api>()(
               ...(grant === null ? {} : { grant }),
               tools: hostedMcpTools(network),
               call: async (tool, args, agentId) => {
+                // ADR-0029: an agent acts on media with its operator's team role, on a connection granted sidequest:media.
+                if (isMediaTool(tool))
+                  return tenant.id === PUBLIC_BOARD_ID
+                    ? runMediaTool(mediaDeps, agentActor(media, grant!, agentId), tool, args)
+                    : mediaRefused
                 if (
                   [
                     'list_boards',

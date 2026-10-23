@@ -94,6 +94,8 @@ jobs:
           TESTNET_PAYMASTER_SIGNER_KEY: ${{ secrets.TESTNET_PAYMASTER_SIGNER_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          # ADR-0029: signs media upload and preview links; unset leaves them unavailable.
+          MEDIA_SIGNING_KEY: ${{ secrets.MEDIA_SIGNING_KEY }}
           AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
           HYPERSYNC_API_TOKEN: ${{ secrets.HYPERSYNC_API_TOKEN }}
           MONAD_RPC_URL: ${{ secrets.MONAD_RPC_URL }}

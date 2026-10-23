@@ -1,5 +1,6 @@
 import { directoryTools } from './directory.ts'
 import { feedTools } from './feed.ts'
+import { mediaTools } from './media/tools.ts'
 import { networkTool } from './mcp-policy.ts'
 import { agentTools } from './tools-agents.ts'
 import { tenantTools } from './tools-tenant.ts'
@@ -12,8 +13,8 @@ import { tools } from './tools.ts'
  */
 export function hostedMcpTools(network: string) {
   return Object.fromEntries(
-    Object.entries({ ...tools, ...tenantTools, ...directoryTools, ...agentTools, ...feedTools }).filter(([name]) =>
-      networkTool(network, name),
+    Object.entries({ ...tools, ...tenantTools, ...directoryTools, ...agentTools, ...feedTools, ...mediaTools }).filter(
+      ([name]) => networkTool(network, name),
     ),
   )
 }

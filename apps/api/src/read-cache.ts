@@ -23,9 +23,19 @@ const PUBLIC_TTL: Readonly<Record<string, number>> = {
 
 const CREDENTIAL_HEADERS = ['authorization', 'cookie', 'mcp-session-id', 'x-privy-token']
 
+/**
+ * ADR-0029: media files decide their own caching (immutable public, short private) for 200, 206 and 304, and read no
+ * cookie, so a zone cookie does not make a video uncacheable. A bearer header still means a private reply.
+ */
+function mediaCacheControl(request: CacheRequest, response: HttpServerResponse.HttpServerResponse): string {
+  if (request.headers.authorization !== undefined || ![200, 206, 304].includes(response.status)) return 'no-store'
+  return response.headers['cache-control'] ?? 'no-store'
+}
+
 /** Credentials, cookies, errors, private routes and live economic snapshots always bypass shared caching. */
 export function responseCacheControl(request: CacheRequest, response: HttpServerResponse.HttpServerResponse): string {
   if (request.method !== 'GET' && request.method !== 'HEAD') return 'no-store'
+  if (new URL(request.url).pathname.startsWith('/media/f/')) return mediaCacheControl(request, response)
   if (CREDENTIAL_HEADERS.some((name) => request.headers[name] !== undefined)) return 'no-store'
   if (response.headers['set-cookie'] !== undefined || !Cookies.isEmpty(response.cookies)) return 'no-store'
   if (response.status !== 200 && response.status !== 304) return 'no-store'

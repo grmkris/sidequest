@@ -6,6 +6,7 @@ import { defaultProviderMode } from 'alchemy/ProviderMode'
 import * as Effect from 'effect/Effect'
 import { Database } from './apps/api/src/database.ts'
 import { Manifests } from './apps/api/src/manifests.ts'
+import { Media } from './apps/api/src/media-bucket.ts'
 import Api from './apps/api/src/worker.ts'
 import Indexer from './apps/indexer/src/worker.ts'
 import { assertDeployConfig } from './apps/api/src/deploy-preflight.ts'
@@ -37,6 +38,7 @@ export default Alchemy.Stack(
     yield* Effect.promise(() => assertDeployConfig(profile?.stage ?? 'local', profile))
     const database = yield* Database
     const manifests = yield* Manifests
+    const media = yield* Media
     const api = yield* Api
     const indexer = yield* Indexer
     // Explore (spec §6): the SPA's assets, with the board API proxied same-origin through a service binding.
@@ -47,6 +49,7 @@ export default Alchemy.Stack(
         indexerUrl: indexer.url,
         databaseName: database.databaseName,
         manifestsBucket: manifests.bucketName,
+        mediaBucket: media.bucketName,
       }
     }
     // Each stage owns only its canonical hostname. The development stack never claims the apex.
@@ -84,6 +87,7 @@ export default Alchemy.Stack(
       indexerUrl: indexer.url,
       databaseName: database.databaseName,
       manifestsBucket: manifests.bucketName,
+      mediaBucket: media.bucketName,
     }
   }),
 )
