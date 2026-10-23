@@ -2,7 +2,14 @@ import { Link } from '@tanstack/react-router'
 import { Search } from 'lucide-react'
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from 'react'
 import { cn } from '../../lib/cn.ts'
-import { categoriesOf, filterServices, splitFeatured } from '../../service-wall.ts'
+import {
+  BENTO_EVERY,
+  bentoOrder,
+  categoriesOf,
+  filterServices,
+  interleaveBy,
+  splitFeatured,
+} from '../../service-wall.ts'
 import { selectionKey } from '../../service-ask.ts'
 import { useServices, type ServiceCategory, type ServiceListing } from '../../services.ts'
 import type { useServiceSelection } from '../../useServiceSelection.ts'
@@ -44,7 +51,7 @@ export function ServiceWall({
     </>
   )
   const wall = (
-    <section aria-label="Services" className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
+    <section aria-label="Services" className="@container/wall grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
       {!landing && lead}
       <CategoryBar
         categories={categoriesOf(read.services)}
@@ -223,28 +230,39 @@ function WallBody({
         </EmptyHeader>
       </Empty>
     )
+  // Every fifth tile leads the bento, two columns and two rows, on alternating sides, and the dense flow packs the
+  // rest around it. The lead tiles go to services that prove a delivery on chain; the others take turns by category.
   const { featured, rest } = splitFeatured(services)
-  const tile = (listing: ServiceListing, wide: boolean) => (
-    <ServiceWallCard
-      listing={listing}
-      wide={wide}
-      selected={selection.selected(listing)}
-      onToggle={() => selection.toggle(listing)}
-    />
-  )
   return (
-    <ul aria-label="Services" className="grid grid-flow-row-dense gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-      {featured.map((listing, i) => (
-        // Wide tiles alternate sides, so proof and the rest of the wall interleave.
-        <li key={selectionKey(listing)} className={cn('min-w-0 sm:col-span-2', i % 2 === 1 && 'lg:col-start-2')}>
-          {tile(listing, true)}
-        </li>
-      ))}
-      {rest.map((listing) => (
-        <li key={selectionKey(listing)} className="min-w-0">
-          {tile(listing, false)}
-        </li>
-      ))}
+    <ul
+      aria-label="Services"
+      className="grid grid-flow-row-dense gap-x-5 gap-y-6 @md/wall:auto-rows-[18rem] @md/wall:grid-cols-2 @3xl/wall:grid-cols-3 @5xl/wall:grid-cols-4"
+    >
+      {bentoOrder(
+        featured,
+        interleaveBy(rest, (listing) => listing.category ?? ''),
+      ).map((listing, i) => {
+        const lead = i % BENTO_EVERY === 0
+        const right = lead && (i / BENTO_EVERY) % 2 === 1
+        return (
+          <li
+            key={selectionKey(listing)}
+            className={cn(
+              'min-w-0',
+              lead && '@md/wall:col-span-2 @md/wall:row-span-2',
+              right && '@3xl/wall:col-start-2 @5xl/wall:col-start-3',
+            )}
+          >
+            <ServiceWallCard
+              listing={listing}
+              fill
+              lead={lead}
+              selected={selection.selected(listing)}
+              onToggle={() => selection.toggle(listing)}
+            />
+          </li>
+        )
+      })}
     </ul>
   )
 }
@@ -253,7 +271,11 @@ const SKELETON = ['a', 'b', 'c', 'd', 'e', 'f']
 
 function WallSkeleton() {
   return (
-    <ul aria-label="Loading services" aria-busy className="grid gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+    <ul
+      aria-label="Loading services"
+      aria-busy
+      className="grid gap-x-5 gap-y-6 @md/wall:grid-cols-2 @3xl/wall:grid-cols-3 @5xl/wall:grid-cols-4"
+    >
       {SKELETON.map((key) => (
         <li key={key} className="grid gap-3">
           <div className="aspect-4/3 animate-pulse rounded-2xl bg-muted" />

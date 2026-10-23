@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { ServiceListing } from './services.ts'
 import {
+  BENTO_EVERY,
   CATEGORY_LABELS,
   CATEGORY_TINTS,
+  bentoOrder,
   categoriesOf,
   coverOf,
   filterServices,
+  interleaveBy,
   provenDelivery,
   sampleLabel,
   splitFeatured,
+  tileCoverOf,
 } from './service-wall.ts'
 
 const listing = (overrides: Partial<ServiceListing> = {}): ServiceListing => ({
@@ -85,6 +89,40 @@ describe('service wall helpers', () => {
     expect(coverOf({ samples: [delivery, illustration] })).toEqual(delivery)
     expect(sampleLabel(illustration)).toBe('Illustration')
     expect(sampleLabel({ ...delivery, verified: false })).toBe('Example')
+  })
+
+  it('gives the bento lead places to proven services and keeps the rest in order', () => {
+    const rest = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+    const order = bentoOrder(['P', 'Q'], rest)
+    expect(order).toHaveLength(10)
+    expect(order[0]).toBe('P')
+    expect(order[BENTO_EVERY]).toBe('Q')
+    expect(order.filter((x) => x === x.toLowerCase())).toEqual(rest)
+    expect(bentoOrder(['P', 'Q', 'R'], ['a'])).toEqual(['P', 'a', 'Q', 'R'])
+    expect(bentoOrder([], ['a', 'b'])).toEqual(['a', 'b'])
+  })
+
+  it('takes one of each kind in turn, each kind in its own order', () => {
+    const items = ['code1', 'code2', 'code3', 'video1', 'game1', 'video2']
+    expect(interleaveBy(items, (x) => x.replace(/\d$/, ''))).toEqual([
+      'code1',
+      'video1',
+      'game1',
+      'code2',
+      'video2',
+      'code3',
+    ])
+    expect(interleaveBy([], (x: string) => x)).toEqual([])
+  })
+
+  it('leads a tile with the first illustration, else the cover', () => {
+    const illustration = { url: 'a', caption: 'Art', kind: 'illustration' as const }
+    const delivery = { url: 'b', caption: 'Work', kind: 'delivery' as const, jobId: '1', verified: true }
+    const example = { url: 'c', caption: 'Sample', kind: 'example' as const }
+    expect(tileCoverOf({ samples: [delivery, illustration] })).toEqual(illustration)
+    expect(tileCoverOf({ samples: [example, delivery] })).toEqual(example)
+    expect(tileCoverOf({ samples: [{ ...delivery, verified: false }] })).toBeNull()
+    expect(tileCoverOf({})).toBeNull()
   })
 
   it('chooses a useful cover and labels verified deliveries', () => {

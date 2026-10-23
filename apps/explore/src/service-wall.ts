@@ -76,6 +76,39 @@ export function splitFeatured<T extends Pick<ServiceListing, 'samples'>>(
   return { featured, rest: list.filter((listing) => provenDelivery(listing) === null) }
 }
 
+/** How often a tile leads the bento: the first, then every fifth. */
+export const BENTO_EVERY = 5
+
+/**
+ * One of each kind in turn, each kind keeping its own order and the kinds in the order they first appear: so the
+ * busiest agent's four code services do not stand side by side with four alike pictures.
+ */
+export function interleaveBy<T>(items: readonly T[], kindOf: (item: T) => string): T[] {
+  const groups = new Map<string, T[]>()
+  for (const item of items) {
+    const kind = kindOf(item)
+    const group = groups.get(kind)
+    if (group === undefined) groups.set(kind, [item])
+    else group.push(item)
+  }
+  const queues = [...groups.values()]
+  const out: T[] = []
+  while (out.length < items.length) for (const queue of queues) if (queue.length > 0) out.push(queue.shift()!)
+  return out
+}
+
+/** The wall's order: proven services take the lead places while they last, the rest fill between in their order. */
+export function bentoOrder<T>(featured: readonly T[], rest: readonly T[]): T[] {
+  const leads = [...featured]
+  const others = [...rest]
+  const out: T[] = []
+  for (let i = 0; i < featured.length + rest.length; i++) {
+    const next = i % BENTO_EVERY === 0 ? (leads.shift() ?? others.shift()) : (others.shift() ?? leads.shift())
+    if (next !== undefined) out.push(next)
+  }
+  return out
+}
+
 export function coverOf(listing: Pick<ServiceListing, 'samples'>): ServiceSample | null {
   return (
     listing.samples?.find(
@@ -83,6 +116,14 @@ export function coverOf(listing: Pick<ServiceListing, 'samples'>): ServiceSample
         sample.kind === 'illustration' || sample.kind === 'example' || (sample.kind === 'delivery' && sample.verified),
     ) ?? null
   )
+}
+
+/**
+ * The picture a tile on the wall leads with: the agent's first illustration (made to show the service at its best),
+ * else the cover as coverOf picks it. A delivery screenshot proves the service; the tile names that proof in words.
+ */
+export function tileCoverOf(listing: Pick<ServiceListing, 'samples'>): ServiceSample | null {
+  return listing.samples?.find((sample) => sample.kind === 'illustration') ?? coverOf(listing)
 }
 
 export function sampleLabel(sample: ServiceSample): string {
