@@ -1,7 +1,26 @@
-/** The consent page's Commons role opt-in (ADR-0028): the operator grants sidequest:maintain, or not, per connection. */
+/**
+ * The consent page's opt-ins for scopes only an operator grants: the Commons role tools (ADR-0028,
+ * sidequest:maintain) and the media team's tools (ADR-0029, sidequest:media), each per connection.
+ */
 import type { Roles } from './commons.ts'
 
 export const MAINTAIN_SCOPE = 'sidequest:maintain'
+const MEDIA_SCOPE = 'sidequest:media'
+
+/** The media team role a connection would act with: its operator's, as the server answers it. */
+export type MediaOffer = 'operator' | 'member'
+
+/**
+ * Whether the consent page offers the media team's tools, and with which role: only when the client asked for
+ * sidequest:media and the server says the signed-in operator is on the media team. The team list never reaches the page.
+ */
+export function mediaOffer(
+  scopes: readonly string[] | undefined,
+  offered: string | null | undefined,
+): MediaOffer | undefined {
+  if (scopes?.includes(MEDIA_SCOPE) !== true) return undefined
+  return offered === 'operator' || offered === 'member' ? offered : undefined
+}
 
 /** The Commons role a connection may use the role tools as: a Maintainer has all seven, a Moderator hide and unhide. */
 export type CommonsRoleOffer = 'maintainer' | 'moderator'
@@ -27,16 +46,19 @@ export function commonsRoleOffer(
   return undefined
 }
 
-/** What the consent page approves: `maintain: true` only when the opt-in was offered and the operator ticked it. */
+/** What the consent page approves: each opt-in `true` only when it was offered and the operator ticked it. */
 export function consentBody(input: {
   readonly approved: boolean
   readonly agentId: string
   readonly offer: CommonsRoleOffer | undefined
   readonly maintain: boolean
-}): { decision: 'approve' | 'reject'; agentIds: string[]; maintain?: boolean } {
+  readonly mediaOffer?: MediaOffer | undefined
+  readonly media?: boolean
+}): { decision: 'approve' | 'reject'; agentIds: string[]; maintain?: boolean; media?: boolean } {
   return {
     decision: input.approved ? 'approve' : 'reject',
     agentIds: [input.agentId],
     ...(input.approved && input.offer !== undefined && input.maintain ? { maintain: true } : {}),
+    ...(input.approved && input.mediaOffer !== undefined && input.media === true ? { media: true } : {}),
   }
 }

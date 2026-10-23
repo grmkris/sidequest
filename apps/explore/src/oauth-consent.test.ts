@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest'
 import type { Address } from 'viem'
 import type { Roles } from './commons.ts'
-import { commonsRoleOffer, consentBody } from './oauth-consent.ts'
+import { commonsRoleOffer, consentBody, mediaOffer } from './oauth-consent.ts'
 
 const wallet: Address = '0xabcdef0000000000000000000000000000001234'
 const other: Address = '0x0000000000000000000000000000000000005678'
@@ -48,5 +48,34 @@ it('sends maintain: true only for an offered, ticked approval', () => {
   expect(consentBody({ ...base, approved: false, offer: 'moderator', maintain: true })).toEqual({
     decision: 'reject',
     agentIds: ['quill'],
+  })
+})
+
+// ADR-0029: the media opt-in appears only when the client asked for sidequest:media and the server offers a role.
+it('offers the media tools with the role the server answers, and sends media: true only when offered and ticked', () => {
+  const media = ['sidequest:read', 'sidequest:media']
+  expect(mediaOffer(media, 'operator')).toBe('operator')
+  expect(mediaOffer(media, 'member')).toBe('member')
+  for (const [scopes, offered] of [
+    [media, null],
+    [media, undefined],
+    [media, 'owner'],
+    [['sidequest:read'], 'operator'],
+    [undefined, 'operator'],
+  ] as const)
+    expect(mediaOffer(scopes, offered)).toBeUndefined()
+  const base = { agentId: 'reel', offer: undefined, maintain: false }
+  expect(consentBody({ ...base, approved: true, mediaOffer: 'member', media: true })).toEqual({
+    decision: 'approve',
+    agentIds: ['reel'],
+    media: true,
+  })
+  expect(consentBody({ ...base, approved: true, mediaOffer: undefined, media: true })).toEqual({
+    decision: 'approve',
+    agentIds: ['reel'],
+  })
+  expect(consentBody({ ...base, approved: false, mediaOffer: 'operator', media: true })).toEqual({
+    decision: 'reject',
+    agentIds: ['reel'],
   })
 })

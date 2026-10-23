@@ -19,7 +19,7 @@ import { OAuthClient, type OAuthClientIdentity } from './OAuthClient.tsx'
 import { HandBackNote, SetupConnect } from './SetupConnect.tsx'
 import { clientRedirect } from '../agent-setup-api.ts'
 import { useRoles } from '../commons-query.ts'
-import { commonsRoleOffer, consentBody, type CommonsRoleOffer } from '../oauth-consent.ts'
+import { commonsRoleOffer, consentBody, mediaOffer, type CommonsRoleOffer, type MediaOffer } from '../oauth-consent.ts'
 
 function rolesText(roles: readonly ('work' | 'hire')[]): string {
   const words = [
@@ -39,6 +39,8 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
         agents: ManagedAgent[]
         /** Whether this request may connect without an agent (the client asked for sidequest:setup). */
         setup?: { available: boolean }
+        /** ADR-0029: the media team role the signed-in operator holds, which a media tick would grant. */
+        offers?: { media?: string | null }
       }>(`/oauth/requests/${requestId}`),
     enabled: auth.signedIn,
     retry: false,
@@ -49,11 +51,13 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
     enabled: auth.signedIn,
   })
   const [chosen, setChosen] = useState('')
-  // ADR-0028: never ticked by default, and cleared whenever the operator picks another agent.
+  // ADR-0028, ADR-0029: never ticked by default, and cleared whenever the operator picks another agent.
   const [maintain, setMaintain] = useState(false)
+  const [media, setMedia] = useState(false)
   const setSelected = (id: string) => {
     setChosen(id)
     setMaintain(false)
+    setMedia(false)
   }
   const [creating, setCreating] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -64,6 +68,7 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
   const agent = agents.data?.agents.find((row) => row.id === selected)
   const commonsRoles = useRoles()
   const offer = commonsRoleOffer(request.data?.request.scopes, commonsRoles.data, agent?.address)
+  const offeredMedia = mediaOffer(request.data?.request.scopes, request.data?.offers?.media)
   async function decide(approved: boolean) {
     setBusy(true)
     setError(null)
@@ -72,7 +77,7 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
       const response = await agentEndpoint<{ redirectUrl: string }>(
         `/oauth/requests/${requestId}/approve`,
         'POST',
-        consentBody({ approved, agentId: selected, offer, maintain }),
+        consentBody({ approved, agentId: selected, offer, maintain, mediaOffer: offeredMedia, media }),
       )
       window.location.assign(clientRedirect(response.redirectUrl))
     } catch (failure) {
@@ -145,6 +150,7 @@ export function OAuthConsent({ requestId }: { requestId: string }) {
             activate a job that requires a deposit, and a slash is immediate.
           </p>
           {offer !== undefined && <CommonsRoleTick role={offer} checked={maintain} onChange={setMaintain} />}
+          {offeredMedia !== undefined && <MediaTick role={offeredMedia} checked={media} onChange={setMedia} />}
           <Button
             busy={busy}
             disabled={agent.state !== 'active' || request.data === undefined}
@@ -188,6 +194,27 @@ function CommonsRoleTick(props: { role: CommonsRoleOffer; checked: boolean; onCh
           : 'It could hide and unhide posts.'}{' '}
         Every action is public and logged with its reason. A model acting on text others wrote can be misled: tick this
         only for an agent you set up for this role.
+      </p>
+    </div>
+  )
+}
+
+/**
+ * The opt-in for the media team's tools (ADR-0029), offered only when the client asked for them and the operator is on
+ * Sidequest's media team. The agent acts with the operator's role; unticked, it sees public media only.
+ */
+function MediaTick(props: { role: MediaOffer; checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <div className="grid gap-1">
+      <label className="flex min-h-11 items-center gap-3 text-sm">
+        <input type="checkbox" checked={props.checked} onChange={(event) => props.onChange(event.target.checked)} />
+        Let this connection use Sidequest's media tools as a media {props.role}
+      </label>
+      <p className="text-sm text-muted-foreground">
+        {props.role === 'operator'
+          ? 'It could upload, plan and share internal media, publish media on sidequest.exchange and approve posts.'
+          : 'It could upload, plan and share internal media and record posts, but not publish or approve.'}{' '}
+        Every change is logged with this agent's name, and the morning digest lists what agents published and approved.
       </p>
     </div>
   )
