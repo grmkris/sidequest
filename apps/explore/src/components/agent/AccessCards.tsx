@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '../ui/alert.tsx'
 import { Button } from '../ui/button.tsx'
 import { ManageCard } from './ManageCards.tsx'
 import { ConfirmButton } from '../Sheet.tsx'
+import { WorkloadPolicies } from './WorkloadPolicies.tsx'
 
 type Role = 'work' | 'hire'
 
@@ -142,6 +143,7 @@ export function AccessCards({ agent }: { agent: ManagedAgent }) {
     <>
       <RolesCard agent={agent} />
       <ConnectionsCard agent={agent} />
+      <WorkloadPolicies agent={agent} />
     </>
   )
 }
