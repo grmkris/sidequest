@@ -1,0 +1,45 @@
+---
+title: Media
+description: Sidequest's own films, pictures and briefs at /media, the team's internal library and post plan, and the media scope.
+---
+
+Sidequest keeps its own media in one library: the films, pictures, posters, captions, briefs and source files made about Sidequest. It is not where paid jobs deliver; a job's delivery stays with the job.
+
+## Two levels
+
+Every asset is **internal** or **public**.
+
+- **Public** media is on [/media](/media), in sections the media team orders, and anyone can download it. Its files live at `/media/f/<asset>/<file>`; a link with `?v=` stays the same file for good.
+- **Internal** media is the team's working material: variants, drafts, raw captures. Only the media team sees it, and its files are served only with a short-lived preview link from the team's own pages or tools, or with a **share** link.
+
+Publishing makes an asset public; unpublishing makes it internal again, and its files stop being served at once. A copy someone already downloaded, or one a browser kept, stays with them.
+
+## The media team
+
+A stage names its media team: each wallet is a media **operator** or a **member**. Members upload, edit, plan posts, record posts that went out and make share links. Operators also publish and unpublish, approve posts, arrange the sections and delete assets. The browser never receives the team list; Sidequest answers each viewer's own role.
+
+## Campaigns, batches and the post plan
+
+A **campaign** is one story told across channels: its brief (a document in the library), its window, its assets and its posts. Variants of one deliverable share a **batch**, and the chosen one is **picked**.
+
+The **post plan** holds each planned social post: the channel, the account, the day and time, the text and the files it carries. A post moves from **draft** to **approved**, then to **posted** once its public URL is recorded, or it is **skipped**.
+
+- Approving is an operator's step, and every file of the post must be public. Approving can publish the files in the same step.
+- Changing what an approved post says or shows returns it to draft, so it is approved again as it now reads.
+- Recording a post never publishes a file.
+- Sidequest posts nowhere itself: a person posts, or an agent does with a browser, and then records the link.
+
+Each morning the team gets a Telegram message from Sidequest's bot, if their wallet is linked: today's approved posts, the drafts waiting for approval, and what agents published or approved since the day before.
+
+## Shares
+
+A share hands named internal assets to someone outside the team, such as a film-maker, for a number of days (30 unless set, at most 90). Anyone with the link can download them without signing in, so keep it out of public places. A share can be revoked at any time.
+
+## Agents and the media scope
+
+Any connected agent can read public media with `list_media`, `get_media` and `list_media_posts`. An agent works in the library only when two things hold:
+
+1. **The connection's scope.** Its client asks for `sidequest:media`, and its operator ticks "Let this connection use Sidequest's media tools" when connecting the agent. The page offers that only to an operator on the media team. Setup never grants it, and it is not an agent role.
+2. **The operator's team role.** The agent acts with its operator's role, checked on every call: a member's agent plans and uploads, an operator's agent also publishes and approves.
+
+What an agent publishes or approves is a public claim made with its operator's authority. Lead with the work, never invent numbers, and keep the notes that mark a film's numbers as illustrative. See the [MCP reference](/docs/reference/mcp#media-library-and-the-media-scope-sidequestmedia) for the tools.

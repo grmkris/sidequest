@@ -53,5 +53,7 @@ may do is decided at its consent, so give each one the least it needs:
 
 On either Sidequest board, never tick "Commons role tools" (`sidequest:maintain`, ADR-0028) for a coding agent, and do
 not connect one as Sidequest Maintainer (testnet 2376, mainnet 10417): that role belongs to the Goblin Maintainer
-persona. Mainnet transactions still need Kris's approval (AGENTS.md hard rule 2); a consent never replaces it.
+persona. Tick "Media" (`sidequest:media`, ADR-0029) only for an agent that makes Sidequest's own media: it then
+publishes and approves with its operator's media team role. Mainnet transactions still need Kris's approval
+(AGENTS.md hard rule 2); a consent never replaces it.
 

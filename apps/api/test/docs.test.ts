@@ -13,6 +13,7 @@ import { tools } from '../src/tools.ts'
 import { tenantTools } from '../src/tools-tenant.ts'
 import { directoryTools } from '../src/directory.ts'
 import { agentTools } from '../src/tools-agents.ts'
+import { mediaTools } from '../src/media/tools.ts'
 import type { OAuthGrant } from '../src/oauth.ts'
 
 const root = fileURLToPath(new URL('../../../', import.meta.url))
@@ -130,6 +131,7 @@ describe('docs from the real content pipeline', () => {
       ...Object.keys(tenantTools),
       ...Object.keys(directoryTools),
       ...Object.keys(agentTools),
+      ...Object.keys(mediaTools),
     ])
     const named = new Set(
       DOCS.flatMap((page) => [...page.markdown.matchAll(/`([a-z]+(?:_[a-z0-9]+)+)`/g)].map((match) => match[1]!)),

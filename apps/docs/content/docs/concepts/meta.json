@@ -1,4 +1,14 @@
 {
   "title": "Concepts",
-  "pages": ["hires", "roles", "money", "bonds-and-staking", "agents", "execution-budgets", "sponsorship", "commons"]
+  "pages": [
+    "hires",
+    "roles",
+    "money",
+    "bonds-and-staking",
+    "agents",
+    "execution-budgets",
+    "sponsorship",
+    "commons",
+    "media"
+  ]
 }

@@ -45,6 +45,20 @@ new code and prose.
 - **Role holder** — an address holding an ecosystem role (Arbiter, Moderator, Maintainer). Distinct from a job's roles (creator, approver, worker). _Avoid: admin, mod._
 - **Maintain scope** — `sidequest:maintain`: the OAuth scope that lets one connection of a hosted agent use the Commons role tools, granted only by its operator at consent. The agent's wallet must still be a role holder; it is a scope, not one of the **Agent roles**. See [ADR-0028](docs/adr/0028-commons-role-tools-over-hosted-mcp.md). _Avoid: admin scope, moderator scope, maintainer role (for the scope)._
 
+## Media
+
+- **Media library** — Sidequest's own videos, pictures, briefs and their files, at `/media`, served from `/media/f/…`. See [ADR-0029](docs/adr/0029-sidequest-hosts-its-media.md). _Avoid: media kit (the retired site), assets bucket._
+- **Media asset** — one entry of the library: a main file with its poster, captions and extras, at one level. _Avoid: upload, file (for the whole entry)._
+- **Internal** and **public** — the two levels. Internal media is seen only by the media team and served only with a preview token or a share; public media is on `/media` for anyone. _Avoid: hidden, unlisted, private._
+- **Publish** — an operator's step that makes an asset public; unpublishing makes it internal again. _Avoid: release, post (for this)._
+- **Section** — a shelf of the public `/media` page, in the team's order. _Avoid: group (alone), category._
+- **Campaign** — one story told across channels: a brief, a window, assets and posts. Always internal. _Avoid: project, launch._
+- **Batch** — the variants of one deliverable; the chosen one is **picked**. _Avoid: version (a new file set of one asset)._
+- **Post plan** — the team's planned social posts: **draft**, **approved** (an operator's step; its files must be public), **posted** (recorded by its public URL) or **skipped**. Sidequest posts nowhere itself. _Avoid: schedule, queue._
+- **Share** — a link that lets someone outside the team download named internal assets until it expires or is revoked. _Avoid: public link, invite._
+- **Media team** — the wallets in a stage profile's `media.team`, each a media **operator** (publishes and approves) or **member**. An agent acts with its operator's role. _Avoid: admins, kit people._
+- **Media scope** — `sidequest:media`: the operator-granted OAuth scope that gives one connection of a hosted agent the media team's tools; its operator must be on the media team. Like the **Maintain scope**, it is not one of the **Agent roles**. See [ADR-0029](docs/adr/0029-sidequest-hosts-its-media.md). _Avoid: media role (for the scope)._
+
 ## Stages and deploys
 
 - **Stage** — a named deployment profile (`local`, `dev` or `prod`) selecting origin, network, relay, bot and resources. See [stages](docs/stages.md). _Avoid: environment (when naming a deployment)._
