@@ -11,14 +11,18 @@ import { assertLiveRelease, stateMode } from '../../../scripts/sidequest/state.t
 
 afterEach(() => vi.unstubAllEnvs())
 
-test('Commons is enabled by validated roles: dev with its maintainers, prod with a moderator and no maintainer', () => {
+test('Commons is enabled by validated roles: dev and prod each with a moderator and their maintainers', () => {
   expect(stageProfile('dev')?.roles).toEqual({
     moderator: ['0xe834D5B7b9703E0BFB8a756Eb27bd9B4e41D1373'],
-    maintainer: ['0x5f3D114a607b5bBB71a2E11Ba045fC9f4F239Ce7', '0x77aEBfcCc5D10fDD4ca9A351B8D0eB75385BbC32'],
+    maintainer: [
+      '0x5f3D114a607b5bBB71a2E11Ba045fC9f4F239Ce7',
+      '0x77aEBfcCc5D10fDD4ca9A351B8D0eB75385BbC32',
+      '0xF1f2Aa797e63690045F506464bcb329Fc3f526d4',
+    ],
   })
   expect(stageProfile('prod')?.roles).toEqual({
     moderator: ['0xaC7F8233dc0CC8F613F73c220dFf2c1D7809f504'],
-    maintainer: [],
+    maintainer: ['0x45873F5286159eEF49De386ED74446190B1cBb64'],
   })
   for (const roles of [null, {}, { moderator: [], maintainer: ['invalid'] }, { moderator: 'invalid', maintainer: [] }])
     expect(() => validateStageProfile({ ...stageProfile('dev'), roles }, 'dev')).toThrow()
