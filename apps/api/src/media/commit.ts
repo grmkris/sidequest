@@ -67,6 +67,14 @@ async function replayOf(sql: AsyncSql, ctx: WriteContext, digest: string): Promi
 
 const OPERATION_KEY = /^[\x21-\x7e]{1,128}$/
 
+/**
+ * The first result of a write this actor already made with this operationKey, before any check that a retry would
+ * fail (an asset that now exists, a URL now taken); undefined when the key is new.
+ */
+export async function replayed(sql: AsyncSql, ctx: WriteContext): Promise<{ result: unknown } | undefined> {
+  return replayOf(sql, ctx, await digestOf(ctx.args))
+}
+
 /** Runs a change once per actor and operationKey. */
 export async function commit<R>(sql: AsyncSql, ctx: WriteContext, change: Change<R>): Promise<R> {
   if (!OPERATION_KEY.test(ctx.operationKey))
