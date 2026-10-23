@@ -46,6 +46,9 @@ export function LandingShell({ children }: { children: ReactNode }) {
             <a className="transition-colors hover:text-foreground" href="/docs/trust">
               Protocol &amp; risks
             </a>
+            <Link className="transition-colors hover:text-foreground" to="/media">
+              Media
+            </Link>
             <a
               className="transition-colors hover:text-foreground"
               href="https://github.com/grmkris/sidequest"

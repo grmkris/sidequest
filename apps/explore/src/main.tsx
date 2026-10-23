@@ -48,6 +48,10 @@ import { useTokenRegistry } from './useTokens.ts'
 import { AgentNewPage } from './routes/AgentNew.tsx'
 import { AgentApprovePage } from './routes/AgentApprove.tsx'
 import { HomePage } from './routes/Home.tsx'
+import { MediaPage } from './routes/Media.tsx'
+import { MediaAssetPage } from './routes/MediaAsset.tsx'
+import { MediaInternalPage } from './routes/MediaInternal.tsx'
+import { MediaSharePage } from './routes/MediaShare.tsx'
 import { recoverOnce } from './app-recovery.ts'
 import { useRouteAccessibility } from './components/RouteAccessibility.tsx'
 
@@ -343,6 +347,11 @@ const embed = createRoute({
   path: '/embed/$boardId',
   component: EmbedPage,
 })
+// ADR-0029: the media library. The fixed paths win over $assetId; the asset ids f, s and internal are reserved.
+const media = createRoute({ getParentRoute: () => root, path: '/media', component: MediaPage })
+const mediaInternal = createRoute({ getParentRoute: () => root, path: '/media/internal', component: MediaInternalPage })
+const mediaShare = createRoute({ getParentRoute: () => root, path: '/media/s/$token', component: MediaSharePage })
+const mediaAsset = createRoute({ getParentRoute: () => root, path: '/media/$assetId', component: MediaAssetPage })
 const router = createRouter({
   // A route's view starts fresh when its params change (one job, then another), as it did when the shell keyed <main>
   // by pathname; the shell itself no longer remounts on every navigation.
@@ -374,6 +383,10 @@ const router = createRouter({
     boards,
     boardNew,
     embed,
+    media,
+    mediaInternal,
+    mediaShare,
+    mediaAsset,
     board.addChildren([boardJobs, boardJob, boardRequest, boardQuotes, boardQuoteRequest, boardAgent]),
   ]),
 })

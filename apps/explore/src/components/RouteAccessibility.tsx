@@ -15,6 +15,7 @@ const TITLES: Record<string, string> = {
   welcome: 'Set up Sidequest',
   admin: 'Admin',
   wallet: 'Wallet',
+  media: 'Media',
 }
 
 /** The fallback is available during loading; a rendered heading supplies the entity's actual title. */

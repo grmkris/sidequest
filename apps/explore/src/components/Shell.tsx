@@ -38,6 +38,8 @@ type Place = {
 
 /** Pages that belong to the account rather than to a job or an agent. */
 const ACCOUNT_PATHS = ['/account', '/sponsorship', '/admin', '/welcome']
+/** The media library (ADR-0029) is reached from the site links, and lights no place. */
+const onMedia = (p: string) => p === '/media' || p.startsWith('/media/')
 const AGENT_PATHS = ['/services', '/agents', '/connect']
 const onAccount = (p: string) => ACCOUNT_PATHS.some((a) => p.startsWith(a))
 
@@ -59,7 +61,7 @@ function places(mine: ReadonlySet<string>): Place[] {
       label: JOBS_LABEL,
       icon: BriefcaseBusiness,
       target: r.boardId === 'public' ? { to: '/jobs' } : r.jobs(),
-      active: (p) => p !== '/' && !agents(p) && !onAccount(p) && !onCommons(p),
+      active: (p) => p !== '/' && !agents(p) && !onAccount(p) && !onCommons(p) && !onMedia(p),
     },
     { label: 'Commons', icon: MessagesSquare, target: { to: '/commons' }, active: onCommons },
   ]
@@ -74,6 +76,9 @@ function SiteLinks({ className }: { className?: string }) {
       <a className={link} href="/docs">
         Docs
       </a>
+      <Link className={link} to="/media">
+        Media
+      </Link>
       <a className={link} href="https://github.com/grmkris/sidequest" target="_blank" rel="noreferrer">
         Source
       </a>
