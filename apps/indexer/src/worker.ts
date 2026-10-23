@@ -23,6 +23,7 @@ import { reportRelayWatchFailure, watchRelay } from '@sidequest/indexer/relay-wa
 import { gasWatches, reportGasWatchFailure, watchGas } from '@sidequest/indexer/gas-watch'
 import { feedFromChain, feedFromDeadlines, pruneFeed, reportFeedFailure } from '@sidequest/indexer/feed'
 import { deliverWebhooks, reportWebhookFailure } from '@sidequest/indexer/webhooks'
+import { queueMediaDigest, stageMediaOf } from '@sidequest/indexer/media-digest'
 import { recordIndexerRun, type IndexerRunOutcome } from './run-record.ts'
 
 /** A poked run waits until the checkpoint is older than one cron period and a little. */
@@ -82,6 +83,8 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
       MONAD_RPC_URL: Redacted.make(rpcUrlForNetwork() || 'unset'),
       HYPERSYNC_API_TOKEN: Redacted.make(runtimeSecret('HYPERSYNC_API_TOKEN') || 'unset'),
       TELEGRAM_BOT_TOKEN: Redacted.make(runtimeSecret('TELEGRAM_BOT_TOKEN') || 'unset'),
+      // ADR-0029: which stage's media team the morning digest goes to, read at runtime from the bundled profile.
+      DEPLOY_STAGE: process.env.SIDEQUEST_STAGE ?? 'local',
     },
   },
   Effect.gen(function* () {
@@ -110,6 +113,15 @@ export default class Indexer extends Cloudflare.Worker<Indexer>()(
       const raw = yield* db.raw
       const sql = fromD1(raw as never)
       yield* Effect.promise(() => migrateTelegram(sql))
+      // ADR-0029: the media team's morning digest, queued before this run drains the outbox; it never fails the run.
+      const media = stageMediaOf(yield* Config.withDefault(Config.String('DEPLOY_STAGE'), 'local'))
+      if (telegramToken !== '' && media !== undefined)
+        yield* Effect.promise(() =>
+          queueMediaDigest(sql, network, media, Math.floor(Date.now() / 1000)).catch((error: unknown) => {
+            console.error(JSON.stringify({ event: 'media-digest-failed', message: String(error).slice(0, 200) }))
+            return 0
+          }),
+        )
       if (token === '' || rpcUrl === '') {
         if (telegramToken !== '')
           yield* Effect.promise(() =>
