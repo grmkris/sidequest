@@ -47,29 +47,6 @@ export function useMonPrice(): number | undefined {
   return price.data !== undefined && Number.isFinite(price.data) && price.data > 0 ? price.data : undefined
 }
 
-/** 1,000 SIDE: Trade's reference sale, so the price below and Trade's price impact read one query. */
-const SIDE_REF = 10n ** 21n
-
-/**
- * One SIDE in dollars from whichever market prices it: the pegged pool where there is one (testnet), else what
- * nad.fun pays in MON for a 1,000 SIDE sale times MON's price (mainnet). Undefined until both are read.
- */
-export function useSideUsd(): number | undefined {
-  const pooled = useSidePrice()
-  const mon = useMonPrice()
-  const l = deployment.launcher
-  const out = useQuery({
-    queryKey: publicKey('launcher-ref', l?.router, 'sell'),
-    queryFn: () => sdk.launcherQuote(stakeContext(), l!, 'sell', SIDE_REF),
-    enabled: deployed && l !== null && deployment.market === null,
-    refetchInterval: 30_000,
-    retry: false,
-  }).data
-  if (pooled !== undefined) return pooled
-  const perSide = out === undefined || mon === undefined ? undefined : (Number(formatUnits(out, 18)) / 1000) * mon
-  return perSide !== undefined && Number.isFinite(perSide) && perSide > 0 ? perSide : undefined
-}
-
 /** Dollars per whole token: 1 for a pegged token, the pool price for SIDE, undefined for anything else. */
 export function usdPerUnit(token: string | null, sidePrice: number | undefined): number | undefined {
   if (token === null) return undefined

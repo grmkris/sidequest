@@ -17,7 +17,7 @@ type Selection = ReturnType<typeof useServiceSelection>
 
 /**
  * The services, as a wall of pictures: a search, the categories, and the tiles, with services that can prove a
- * delivery first and wide. One wall for the front door (`landing`: the hero and the live rail around the search, the
+ * delivery first and wide. One wall for the front door (`landing`: a band of what this is and the search above it, the
  * category bar held under the header while the wall scrolls, a link to all of them) and the full directory.
  */
 export function ServiceWall({
@@ -25,13 +25,11 @@ export function ServiceWall({
   limit,
   landing = false,
   intro,
-  rail,
 }: {
   selection: Selection
   limit?: number
   landing?: boolean
   intro?: ReactNode
-  rail?: ReactNode
 }) {
   const [q, setQ] = useState('')
   const [category, setCategory] = useState<ServiceCategory | null>(null)
@@ -43,7 +41,6 @@ export function ServiceWall({
     <>
       {intro}
       <ServiceSearch value={q} onChange={setQ} />
-      {rail}
     </>
   )
   const wall = (
@@ -82,17 +79,11 @@ export function ServiceWall({
     </section>
   )
   if (!landing) return wall
-  // The front door is the catalogue: one band (what this is, the search), then the services beside who was paid lately.
+  // The front door is the catalogue: one band (what this is, the search), then the services.
   return (
     <>
-      <div className="landing-hero">
-        {intro}
-        <ServiceSearch value={q} onChange={setQ} />
-      </div>
-      <div className="landing-market">
-        {wall}
-        {rail}
-      </div>
+      <div className="landing-hero">{lead}</div>
+      {wall}
     </>
   )
 }
@@ -160,7 +151,7 @@ function CategoryBar({
     <PillDock landing={landing}>
       <fieldset className="w-fit max-w-full min-w-0 rounded-xl bg-muted p-1 shadow-groove">
         <legend className="sr-only">Service categories</legend>
-        <div className="flex snap-x gap-1 overflow-x-auto rounded-lg [scrollbar-width:none] max-lg:[mask-image:linear-gradient(to_right,var(--foreground)_calc(100%-2.5rem),transparent)] lg:flex-wrap lg:overflow-visible [&::-webkit-scrollbar]:hidden">
+        <div className="flex snap-x gap-0.5 overflow-x-auto rounded-lg [scrollbar-width:none] max-lg:[mask-image:linear-gradient(to_right,var(--foreground)_calc(100%-2.5rem),transparent)] [&::-webkit-scrollbar]:hidden">
           <CategoryPill pressed={selected === null} onClick={() => onChange(null)} label="All" count={total} />
           {categories.map(({ value, label, count }) => (
             <CategoryPill
@@ -193,7 +184,7 @@ function CategoryPill({
       type="button"
       aria-pressed={pressed}
       onClick={onClick}
-      className="inline-flex min-h-9 shrink-0 snap-start items-center gap-1.5 rounded-lg px-3.5 text-sm font-medium text-muted-foreground transition-[background-color,color,box-shadow,translate] duration-(--dur-fast) ease-(--ease-out-strong) active:translate-y-px aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-stock [@media(hover:hover)]:hover:text-foreground pointer-coarse:min-h-11"
+      className="inline-flex min-h-9 shrink-0 snap-start items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-[background-color,color,box-shadow,translate] duration-(--dur-fast) ease-(--ease-out-strong) active:translate-y-px aria-pressed:bg-card aria-pressed:text-foreground aria-pressed:shadow-stock [@media(hover:hover)]:hover:text-foreground pointer-coarse:min-h-11"
     >
       {label}
       <span className="text-muted-foreground tabular-nums">{count}</span>

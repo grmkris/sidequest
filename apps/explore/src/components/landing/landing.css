@@ -1,13 +1,13 @@
 /* Hallmark · shape: Catalogue (draw e00676, Workbench swapped at the owner's ask: services first) · genre: modern-minimal · theme: Coral (deal 3/3, seed marketplace-where-people-hire-d7f0·c8ce1008·2026-10-22·r0) · redesign: full · job: buy
  * hero: Index (/), the catalogue is the lead with a small head and the search above it · nav: edge-aligned · footer: mast, the wordmark over four links
- * signature: the receipt, the latest paid as lines on a cotton sheet beside the catalogue with Paid pressed at its total · imagery: the services' own cover photographs, muted · axes: light/roman-serif/cool · posture: restrained · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a services grid could front any marketplace; the receipt of who was paid lately sits beside it, chain facts only this board has */
+ * signature: the catalogue of offers, each cover a print on the desk; the app's receipt (Paid pressed in) lives in Activity and on a job · imagery: the services' own cover photographs, muted · axes: light/roman-serif/cool · posture: restrained · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S3 R5 V4 · weakest: S, a services grid could front any marketplace; the owner chose the catalogue alone over a live receipt beside it, and the covers carry it */
 /* Hallmark · reworded "Pay for the result. Not the tokens." to "Order the work. Pay when it’s delivered." · the owner asked for a smaller or renamed headline, and "tokens" sat above SIDE amounts */
 /* Hallmark · reworded "Pick a service from a specialist agent. You agree the price up front, and pay only when the work is delivered." to "Pick a service from a specialist agent and agree the price up front." · 69, the headline now says when you pay */
-/* Hallmark · answered F25 · on a phone the same settlements turn one at a time in the slip above the catalogue, with the same total */
+/* Hallmark · dropped the live rail (the latest paid, the newest block, the paid total) · the owner asked to remove it from the landing */
 /* Hallmark · dismissed 28a · the first covers sit under the headline band, which is the page's largest text paint; covers load lazily */
 
-/* The landing: one band (what this is, the search), the catalogue beside who was paid lately, the sellers' line. */
+/* The landing: one band (what this is, the search), the catalogue, the sellers' line. */
 .landing-content {
   display: grid;
   gap: 2.5rem;
@@ -52,39 +52,6 @@
   text-wrap: pretty;
 }
 
-/* The market: the catalogue, and the statement of the latest paid in a side column. */
-.landing-market {
-  display: grid;
-  gap: 2rem 2.5rem;
-  min-width: 0;
-}
-.landing-ledger {
-  order: -1;
-  min-width: 0;
-}
-@media (min-width: 64rem) {
-  .landing-market {
-    grid-template-columns: minmax(0, 1fr) 19rem;
-    align-items: start;
-  }
-  .landing-ledger {
-    order: 0;
-  }
-}
-
-/* The block's live mark: a still dot, a live state rather than a decoration. */
-.live-dot {
-  width: 0.45rem;
-  height: 0.45rem;
-  flex-shrink: 0;
-  border-radius: 999px;
-  background: var(--paid);
-}
-/* A settlement turning in on the phone slip: a short rise and fade, never on the first one shown. */
-.landing-rail-enter {
-  animation: view-in 0.3s var(--ease-out-strong) both;
-}
-
 .landing-sellers {
   display: flex;
   flex-wrap: wrap;
@@ -102,10 +69,4 @@
   font-weight: 400;
   line-height: 0.9;
   letter-spacing: -0.04em;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .landing-rail-enter {
-    animation: none;
-  }
 }

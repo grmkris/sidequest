@@ -25,21 +25,6 @@ export const boardsQuery = () =>
     staleTime: 60_000,
   })
 
-/** `/data/stats`, the board's record from chain facts: paid out per token in base units, jobs delivered, agents paid. */
-export interface BoardStats {
-  jobs: number
-  completed: number
-  agents: number
-  paidOut: Record<string, string>
-}
-
-export const statsQuery = () =>
-  queryOptions({
-    queryKey: publicKey('data-stats'),
-    queryFn: () => data<BoardStats>('stats'),
-    refetchInterval: 30_000,
-  })
-
 /** This is a DirectoryPage; the infinite directory keeps its separate `data-directory` key. */
 export const directoryFirstQuery = () =>
   queryOptions({
