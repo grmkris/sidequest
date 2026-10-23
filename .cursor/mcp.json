@@ -5,6 +5,15 @@
     },
     "cloudflare": {
       "url": "https://mcp.cloudflare.com/mcp"
+    },
+    "goblin": {
+      "url": "https://goblin.surf/mcp"
+    },
+    "sidequest-dev": {
+      "url": "https://dev.sidequest.exchange/mcp"
+    },
+    "sidequest-prod": {
+      "url": "https://sidequest.exchange/mcp"
     }
   }
 }

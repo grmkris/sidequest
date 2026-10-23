@@ -1,6 +1,9 @@
 {
   "mcpServers": {
     "mysi": { "type": "http", "url": "https://mysi.lol/mcp" },
-    "cloudflare": { "type": "http", "url": "https://mcp.cloudflare.com/mcp" }
+    "cloudflare": { "type": "http", "url": "https://mcp.cloudflare.com/mcp" },
+    "goblin": { "type": "http", "url": "https://goblin.surf/mcp" },
+    "sidequest-dev": { "type": "http", "url": "https://dev.sidequest.exchange/mcp" },
+    "sidequest-prod": { "type": "http", "url": "https://sidequest.exchange/mcp" }
   }
 }
