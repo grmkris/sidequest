@@ -333,3 +333,22 @@ describe('Explore docs worker', () => {
     expect(await guide.text()).toBe('# Start\nhttps://dev.sidequest.exchange/mcp')
   })
 })
+
+// ADR-0029: the media library's files and uploads, and Telegram's updates, belong to the API.
+describe('explore worker routing to media and Telegram', () => {
+  it('sends media files, uploads and Telegram updates to the API, and keeps the media pages in the app', async () => {
+    const e = env()
+    for (const path of ['/media/f/launch-75s/sidequest-75s-landscape.mp4', `/media/upload/${'a'.repeat(64)}`])
+      expect(isApiPath(path), path).toBe(true)
+    for (const page of ['/media', '/media/internal', '/media/launch-75s', `/media/s/${'b'.repeat(64)}`, '/media/f'])
+      expect(isApiPath(page), page).toBe(false)
+    expect(isApiPath('/telegram/webhook')).toBe(true)
+    expect(isApiPath('/telegram/webhook-extra')).toBe(false)
+    await worker.fetch(
+      new Request('https://dev.sidequest.exchange/telegram/webhook', { method: 'POST', body: '{}' }),
+      e.env,
+    )
+    await get('/media/f/launch-75s/poster.jpg', e)
+    expect(e.api).toEqual(['/telegram/webhook', '/media/f/launch-75s/poster.jpg'])
+  })
+})
