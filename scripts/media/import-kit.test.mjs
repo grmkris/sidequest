@@ -20,7 +20,7 @@ const manifest = {
       file: file('launch-75s/launch.mp4', 'b'.repeat(64)),
       poster: file('launch-75s/poster.jpg', 'c'.repeat(64), 'image/jpeg'),
       extras: [
-        { ...file('launch-75s/captions.vtt', 'd'.repeat(64), 'text/vtt'), label: 'Captions (VTT)' },
+        { ...file('launch-75s/captions.vtt', 'd'.repeat(64), 'text/vtt; charset=utf-8'), label: 'Captions (VTT)' },
         { ...file('launch-75s/source.zip', 'e'.repeat(64), 'application/zip'), label: 'Source zip' },
       ],
       posting: [

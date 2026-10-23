@@ -28,7 +28,8 @@ function fileOf(file, role, label) {
     label: clip(label, 80),
     sha256: file.sha256,
     sourceUrl: `${KIT}/f/${file.key}`,
-    type: file.type,
+    // The kit kept parameters (`text/vtt; charset=utf-8`); a media file's type is the bare one.
+    type: file.type.split(';')[0].trim().toLowerCase(),
   })
 }
 
