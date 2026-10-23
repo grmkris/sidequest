@@ -4,7 +4,12 @@
  * Commons role holder list still decides every call.
  */
 export const MAINTAIN_SCOPE = 'sidequest:maintain'
-export const OAUTH_SCOPES = ['sidequest:read', 'sidequest:hire', 'sidequest:work', MAINTAIN_SCOPE] as const
+/**
+ * The media team's tools (ADR-0029). The same kind of grant: only the operator ticks it, at consent, and the stage's
+ * media team decides every call by the operator's role.
+ */
+export const MEDIA_SCOPE = 'sidequest:media'
+export const OAUTH_SCOPES = ['sidequest:read', 'sidequest:hire', 'sidequest:work', MAINTAIN_SCOPE, MEDIA_SCOPE] as const
 
 export function parseScopes(value: unknown): string[] | undefined {
   if (typeof value !== 'string') return undefined

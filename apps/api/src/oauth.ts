@@ -132,6 +132,8 @@ export async function oauthRoute(input: {
   readonly owner?: string
   readonly now: number
   readonly revokeSubscriptions?: (principal: string, grantId: string, now: number) => Promise<void>
+  /** The signed-in operator's media team role (ADR-0029): the media tick is offered only with one. */
+  readonly mediaRole?: 'operator' | 'member'
 }): Promise<OAuthReply | undefined> {
   const { sql, method, path, query, body, origin, siteOrigin, owner, now } = input
   migrateAgentSchema(sql)
@@ -294,6 +296,8 @@ export async function oauthRoute(input: {
           agents,
           // Any client may connect before an agent exists; the operator decides at consent, not the client.
           setup: { available: true, scope: 'sidequest:setup' },
+          // ADR-0029: the media tick, offered only to an operator on the media team, with the role it carries.
+          offers: { media: input.mediaRole ?? null },
         },
       })
     if (method !== 'POST' || consent[2] === undefined)
@@ -310,12 +314,10 @@ export async function oauthRoute(input: {
     )
       return failure('invalid_request', 'Select one active agent owned by this operator')
     // The connection holds what its client asked for; the agent's own roles decide within that (ADR-0021).
-    const selectedScopes = consentScopes(
-      Schema.decodeUnknownSync(Schema.Array(Schema.String))(JSON.parse(request.scopes_json)),
-      approve ? body.maintain : undefined,
-    )
+    const requestedScopes = Schema.decodeUnknownSync(Schema.Array(Schema.String))(JSON.parse(request.scopes_json))
+    const selectedScopes = consentScopes(requestedScopes, approve ? body : {}, input.mediaRole !== undefined)
     if (selectedScopes === undefined)
-      return failure('invalid_request', `Tick ${MAINTAIN_SCOPE} (true or false) only for a client that asked for it`)
+      return failure('invalid_request', `Tick ${MAINTAIN_SCOPE} or media only when asked for and offered`)
     const code = randomToken()
     const codeHash = await tokenHash(code)
     let consumed = false

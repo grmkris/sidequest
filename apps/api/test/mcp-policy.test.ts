@@ -165,3 +165,26 @@ it('keeps sidequest:maintain to the role tools: it permits no Commons write and 
   expect(effectiveRoles({ scopes: [...both, 'sidequest:maintain'], roles: ['hire'] })).toEqual(['hire'])
   expect(effectiveRoles({ scopes: [...both, 'sidequest:maintain'] })).toEqual(['work', 'hire'])
 })
+
+it('lists the media reads on every connection and the media team tools only with sidequest:media, never as a step-up', () => {
+  const plain = { scopes: [...both], roles: ['work'] as const }
+  const media = { scopes: [...both, 'sidequest:media'], roles: ['work'] as const }
+  for (const name of ['list_media', 'get_media', 'list_media_posts', 'list_media_shares', 'get_media_share']) {
+    expect(requiredToolScope(name), name).toBe('sidequest:read')
+    expect(toolDecision(plain, name), name).toBe('allow')
+    expect(toolAnnotations(name).readOnlyHint, name).toBe(true)
+  }
+  for (const name of ['add_media', 'publish_media', 'save_media_post', 'record_media_post', 'share_media']) {
+    expect(requiredToolScope(name), name).toBe('sidequest:media')
+    expect(toolDecision(media, name), name).toBe('allow')
+    expect(listedTool(plain, name), name).toBe(false)
+    expect(toolRefusal(plain, name), name).toMatchObject({
+      result: { structuredContent: { ok: false, code: 'scope-required', scope: 'sidequest:media' } },
+    })
+  }
+  // A setup connection does not wait for media: no approval ever brings it, only the operator's tick.
+  expect(toolDecision({ scopes: ['sidequest:setup'], setup: true }, 'add_media')).toBe('scope')
+  expect(toolRefusal({ scopes: ['sidequest:setup'], setup: true }, 'add_media')).toMatchObject({
+    result: { structuredContent: { code: 'scope-required', scope: 'sidequest:media' } },
+  })
+})

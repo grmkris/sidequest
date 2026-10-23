@@ -84,6 +84,8 @@ it('never grants sidequest:maintain through setup: a setup consent naming it is 
     { setup: true, maintain: true },
     { setup: true, maintain: false },
     { setup: true, scopes: ['sidequest:setup', 'sidequest:maintain'] },
+    { setup: true, media: true },
+    { setup: true, scopes: ['sidequest:setup', 'sidequest:media'] },
   ]) {
     const refused = await f.route(`/oauth/requests/${r.requestId}/approve`, body)
     expect(refused, JSON.stringify(body)).toMatchObject({ status: 400, body: { error: 'invalid_request' } })

@@ -363,6 +363,7 @@ test(
           'sidequest:hire',
           'sidequest:work',
           'sidequest:maintain',
+          'sidequest:media',
           'sidequest:setup',
         ],
       })

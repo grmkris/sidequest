@@ -26,7 +26,7 @@ async function echoWebhookChallenge(_url: unknown, init?: RequestInit) {
   return Response.json({ challenge: envelope.challenge })
 }
 
-function fixture() {
+function fixture(mediaRole?: 'operator' | 'member') {
   const db = new DatabaseSync(':memory:')
   const sql = fromNodeSqlite(db)
   const d1 = asyncSql(db)
@@ -52,6 +52,7 @@ function fixture() {
       siteOrigin: origin,
       now: 1000,
       ...(operator === undefined ? {} : { owner: operator }),
+      ...(mediaRole === undefined ? {} : { mediaRole }),
       revokeSubscriptions: (principal, family, now) => terminateGrantSubscriptions(d1, principal, family, now),
     }) as Promise<OAuthReply>
   return { db, sql, d1, agents, route }
@@ -408,5 +409,62 @@ test('consent identifies each requesting client and exact callback', async () =>
     }
   } finally {
     f.db.close()
+  }
+})
+
+// ADR-0029: the media team's tools come only from the operator's tick, offered only to a media team operator.
+test('offers and grants sidequest:media only to an operator on the media team, for a client that asked for it', async () => {
+  const requested = 'sidequest:read sidequest:work sidequest:media'
+  const offered = async (f: ReturnType<typeof fixture>) => {
+    const registered = await f.route('/oauth/register', { redirect_uris: [redirectUri], client_name: 'SQLite client' })
+    const query = new URLSearchParams({
+      client_id: decode(Schema.Struct({ client_id: Schema.String }), registered).client_id,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: requested,
+      resource,
+      code_challenge_method: 'S256',
+      code_challenge: await pkceChallenge(verifier),
+      state: 'state-media',
+    })
+    const authorize = await f.route('/oauth/authorize', {}, query, 'GET')
+    const requestId = new URL(authorize.redirect!).searchParams.get('oauth_request')!
+    const shown = await f.route(`/oauth/requests/${requestId}`, {}, new URLSearchParams(), 'GET')
+    return {
+      requestId,
+      offers: decode(
+        Schema.Struct({ result: Schema.Struct({ offers: Schema.Struct({ media: Schema.NullOr(Schema.String) }) }) }),
+        shown,
+      ).result.offers,
+    }
+  }
+  const outside = fixture()
+  try {
+    const consent = await offered(outside)
+    expect(consent.offers.media).toBeNull()
+    const ticked = await outside.route(`/oauth/requests/${consent.requestId}/approve`, {
+      agentIds: ['one'],
+      media: true,
+    })
+    expect(ticked.status).toBe(400)
+  } finally {
+    outside.db.close()
+  }
+  const inside = fixture('member')
+  try {
+    expect((await offered(inside)).offers.media).toBe('member')
+    const granted = await connection(inside, undefined, requested, { media: true })
+    // SAFETY: a token reply for an approved consent carries the issued token pair and its scope.
+    const tokens = (await inside.route('/oauth/token', granted.tokenBody)).body as Tokens & { scope: string }
+    expect(tokens.scope).toBe('sidequest:media sidequest:read sidequest:work')
+    const unticked = await connection(inside, undefined, requested)
+    // SAFETY: as above.
+    expect(((await inside.route('/oauth/token', unticked.tokenBody)).body as { scope: string }).scope).toBe(
+      'sidequest:read sidequest:work',
+    )
+    const narrow = await connection(inside, undefined, 'sidequest:read sidequest:work').catch(() => undefined)
+    expect(narrow).toBeDefined()
+  } finally {
+    inside.db.close()
   }
 })

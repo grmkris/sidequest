@@ -4,6 +4,7 @@ import { Schema } from 'effect'
 import type { OAuthGrant, OAuthReply, oauthRoute } from './oauth.ts'
 import {
   MAINTAIN_SCOPE,
+  MEDIA_SCOPE,
   OAUTH_SCOPES as AGENT_SCOPES,
   pkceChallenge,
   randomToken,
@@ -119,15 +120,38 @@ export function boundScopes(requested: readonly string[]): string[] {
   return ['sidequest:read', ...roles].toSorted()
 }
 
-/**
- * What a consent for an existing agent grants: boundScopes, plus sidequest:maintain when its client asked for it and
- * the operator ticked the opt-in (ADR-0028). Undefined for a tick that is not a boolean or the client did not ask for.
- */
-export function consentScopes(requested: readonly string[], maintain: unknown): string[] | undefined {
-  if (maintain !== undefined && !Schema.is(Schema.Boolean)(maintain)) return undefined
-  if (maintain === true && !requested.includes(MAINTAIN_SCOPE)) return undefined
-  return [...boundScopes(requested), ...(maintain === true ? [MAINTAIN_SCOPE] : [])].toSorted()
+/** The consent ticks for scopes only an operator grants (ADR-0028, ADR-0029). */
+export interface ConsentTicks {
+  readonly maintain?: unknown
+  readonly media?: unknown
 }
+
+/** A tick: absent, or true or false for a scope the client asked for; media also needs the operator on the team. */
+const tickOk = (tick: unknown, asked: boolean, offered = true) =>
+  tick === undefined || (Schema.is(Schema.Boolean)(tick) && (!tick || (asked && offered)))
+
+/**
+ * What a consent for an existing agent grants: boundScopes, plus each operator-granted scope its client asked for and
+ * the operator ticked: sidequest:maintain (ADR-0028), and sidequest:media when the operator is on the media team
+ * (ADR-0029, `mediaOffered`). Undefined for a tick that is not a boolean, the client did not ask for, or was not offered.
+ */
+export function consentScopes(
+  requested: readonly string[],
+  ticks: ConsentTicks,
+  mediaOffered = false,
+): string[] | undefined {
+  if (!tickOk(ticks.maintain, requested.includes(MAINTAIN_SCOPE))) return undefined
+  if (!tickOk(ticks.media, requested.includes(MEDIA_SCOPE), mediaOffered)) return undefined
+  const granted = [...(ticks.maintain === true ? [MAINTAIN_SCOPE] : []), ...(ticks.media === true ? [MEDIA_SCOPE] : [])]
+  return [...boundScopes(requested), ...granted].toSorted()
+}
+
+/** Whether a setup consent asks for a scope only a consent for an existing agent grants. */
+const asksOperatorScope = (body: Record<string, unknown>) =>
+  body.maintain !== undefined ||
+  body.media !== undefined ||
+  (Schema.is(Schema.Array(Schema.String))(body.scopes) &&
+    (body.scopes.includes(MAINTAIN_SCOPE) || body.scopes.includes(MEDIA_SCOPE)))
 
 export async function setupOAuthRoute(input: Input): Promise<OAuthReply | undefined> {
   if (input.method !== 'POST') return undefined
@@ -154,16 +178,14 @@ async function approve(input: Input, requestId: string): Promise<OAuthReply> {
   // Any client may connect for setup. Its requested roles are kept only to pre-tick the approval page; the operator
   // chooses the roles there, so a role choice sent with this consent is ignored.
   const requested = scopes(request.scopes_json)
-  // ADR-0028: the Commons role tools are granted only at a consent for an existing agent, never through setup.
-  if (
-    body.maintain !== undefined ||
-    (Schema.is(Schema.Array(Schema.String))(body.scopes) && body.scopes.includes(MAINTAIN_SCOPE))
-  )
+  // ADR-0028, ADR-0029: the Commons role tools and the media team's tools come only from a consent for an existing
+  // agent, never through setup.
+  if (asksOperatorScope(body))
     return {
       status: 400,
       body: {
         error: 'invalid_request',
-        error_description: `Setup consent cannot grant ${MAINTAIN_SCOPE}; connect an existing agent to grant it`,
+        error_description: `Setup consent cannot grant ${MAINTAIN_SCOPE} or ${MEDIA_SCOPE}; connect an existing agent to grant them`,
       },
       headers,
     }

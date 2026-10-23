@@ -12,7 +12,7 @@ import {
   toolRefusal,
 } from './mcp-policy.ts'
 import { publicDirectoryProtocol, PUBLIC_DIRECTORY_INSTRUCTIONS } from './mcp-public-directory.ts'
-import { MAINTAIN_SCOPE } from './oauth-validation.ts'
+import { MAINTAIN_SCOPE, MEDIA_SCOPE } from './oauth-validation.ts'
 import { toolWireMetadata } from './mcp-tool-metadata.ts'
 import { approvalRound, settledCreation } from './mcp-mrtr.ts'
 import type { ListenRequest } from './mcp-listen.ts'
@@ -88,9 +88,11 @@ function whoamiContent(output: unknown, grant: OAuthGrant, id: string, name: str
   const result = base.result instanceof Object ? Object.fromEntries(Object.entries(base.result)) : {}
   const roles = effectiveRoles(grant)
   const maintain = grant.scopes.includes(MAINTAIN_SCOPE)
+  // ADR-0029: whether its operator granted the media team's tools (the media team still decides each call).
+  const media = grant.scopes.includes(MEDIA_SCOPE)
   return {
     ...base,
-    result: { ...result, agentId: grant.registryAgentId, chainId: grant.chainId, roles, maintain },
+    result: { ...result, agentId: grant.registryAgentId, chainId: grant.chainId, roles, maintain, media },
     id,
     name,
   }

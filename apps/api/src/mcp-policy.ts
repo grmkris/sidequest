@@ -2,7 +2,8 @@
 import type { OAuthGrant } from './oauth.ts'
 import { AGENT_ROLES, type AgentRole } from '@sidequest/board'
 import { commonsReadTools, commonsRoleTools, commonsWriteTools, toolSpecs } from '@sidequest/commons'
-import { MAINTAIN_SCOPE } from './oauth-validation.ts'
+import { MAINTAIN_SCOPE, MEDIA_SCOPE } from './oauth-validation.ts'
+import { MEDIA_READ_TOOLS, MEDIA_TEAM_TOOLS } from './media/names.ts'
 
 const READ_TOOLS = new Set([
   ...commonsReadTools,
@@ -45,6 +46,8 @@ const READ_TOOLS = new Set([
   'request_role',
   // Any agent may ask its operator for SIDE backing; the operator backs it from their own wallet.
   'request_backing',
+  // ADR-0029: public media for everyone; internal media only to the media team's connections.
+  ...MEDIA_READ_TOOLS,
 ])
 /** Hiring is publishing only: a host connection with hire alone cannot pay, move earnings or stake, or ask for wallet authority. */
 const HIRE_TOOLS = new Set([
@@ -102,6 +105,9 @@ export const SETUP_TOOLS = new Set([
  * unstake/cancel/withdraw     false  true         true        vault transaction
  * sweep/x402                  false  true         true        transfer / signed payment
  * Commons role tools          false  merge_* only true        public action, public reason, audit log (sidequest:maintain)
+ * media reads                 true   false        true        library and plan lookup (internal only for the team)
+ * media uploads/adds/edits    false  false        true        internal records and stored files (sidequest:media)
+ * publish/approve/delete      false  true         true        public media, approved posts, removal (operators only)
  * All effects are bounded to Sidequest, hence openWorldHint=false.
  */
 const REVIEW: Readonly<Record<string, readonly [boolean, boolean, boolean]>> = {
@@ -180,6 +186,21 @@ const REVIEW: Readonly<Record<string, readonly [boolean, boolean, boolean]>> = {
   revoke_service_ad: [false, false, true],
   prepare_heartbeat: [true, false, true],
   post_heartbeat: [false, false, true],
+  list_media: [true, false, true],
+  get_media: [true, false, true],
+  list_media_posts: [true, false, true],
+  list_media_shares: [true, false, true],
+  get_media_share: [true, false, true],
+  prepare_media_upload: [true, false, true],
+  add_media: [false, false, true],
+  update_media: [false, false, true],
+  publish_media: [false, true, true],
+  delete_media: [false, true, true],
+  save_media_group: [false, false, true],
+  save_media_post: [false, true, true],
+  record_media_post: [false, false, true],
+  share_media: [false, false, true],
+  revoke_media_share: [false, true, true],
 }
 
 export function toolAnnotations(name: string) {
@@ -247,12 +268,15 @@ export function requiredToolScope(
   | 'sidequest:work'
   | 'sidequest:setup'
   | typeof MAINTAIN_SCOPE
+  | typeof MEDIA_SCOPE
   | 'write'
   | undefined {
   if (name === 'create_agent' || name === 'setup_status') return 'sidequest:setup'
   if (READ_TOOLS.has(name)) return 'sidequest:read'
   // ADR-0028: the Commons role tools need the operator's consent-time grant; the role holder list is the second key.
   if (commonsRoleTools.has(name)) return MAINTAIN_SCOPE
+  // ADR-0029: the media team's tools, granted the same way; the stage's media team is the second key.
+  if (MEDIA_TEAM_TOOLS.has(name)) return MEDIA_SCOPE
   if (HIRE_TOOLS.has(name)) return 'sidequest:hire'
   if (WORK_TOOLS.has(name)) return 'sidequest:work'
   if (SHARED_TOOLS.has(name)) return 'write'
@@ -352,6 +376,7 @@ export function toolRefusal(
     }
   const scope = requiredToolScope(name)
   if (scope === MAINTAIN_SCOPE) return { result: maintainRefusal() }
+  if (scope === MEDIA_SCOPE) return { result: mediaRefusal() }
   if (scope === undefined || scope === 'sidequest:setup')
     return {
       result: {
@@ -398,6 +423,20 @@ function maintainRefusal() {
   }
 }
 
+/** A media team tool on a connection its operator did not grant sidequest:media (ADR-0029); no step-up either. */
+function mediaRefusal() {
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `scope-required: this connection was not granted ${MEDIA_SCOPE}, which the media team's tools need. Only your operator can grant it: they reconnect Sidequest in this app, pick this agent and tick Media. The operator must be on Sidequest's media team.`,
+      },
+    ],
+    structuredContent: { ok: false, code: 'scope-required', scope: MEDIA_SCOPE },
+    isError: true,
+  }
+}
+
 /**
  * A setup connection's call to a tool it gets only once its operator approves the agent. The Commons role tools never
  * come with an approval, so a setup connection does not wait for them.
@@ -409,7 +448,8 @@ function awaitsApproval(grant: Pick<OAuthGrant, 'scopes' | 'setup' | 'setupFamil
     !permittedTool(grant, name) &&
     scope !== undefined &&
     scope !== 'sidequest:setup' &&
-    scope !== MAINTAIN_SCOPE
+    scope !== MAINTAIN_SCOPE &&
+    scope !== MEDIA_SCOPE
   )
 }
 

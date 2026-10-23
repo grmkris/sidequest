@@ -71,6 +71,9 @@ import { commonsToolNames } from '@sidequest/commons'
 import { commonsHostFactory } from './commons/host.ts'
 import { commonsRpcs, disputeThreadReader } from './commons/rpc.ts'
 import { objectFor } from './commons/route.ts'
+import { stageMedia, teamRole } from './media/access.ts'
+
+const mediaRoleOf = <T>(mediaRole: T | undefined) => (mediaRole === undefined ? {} : { mediaRole })
 
 /** What the Worker passes on every call: the tool, its arguments, the caller's credentials and the runtime env. */
 export interface BoardCall {
@@ -488,6 +491,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               origin: req.origin,
               siteOrigin: req.origin,
               ...(session === undefined ? {} : { owner: session.address }),
+              ...mediaRoleOf(teamRole(stageMedia(bindings.DEPLOY_STAGE), session?.address)),
               now: Math.floor(Date.now() / 1000),
               revokeSubscriptions: async (principal, grantId, at) => {
                 await terminateGrantSubscriptions(fromD1(bindings.Database as never), principal, grantId, at)
