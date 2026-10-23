@@ -1,61 +1,75 @@
-/* Hallmark · shape: Workbench (draw e00676) · genre: modern-minimal · theme: Coral (deal 3/3, seed marketplace-where-people-hire-d7f0·c8ce1008·2026-10-22·r0) · redesign: full · job: buy
- * hero: Corridor (/) · nav: edge-aligned, swapped from search-led because the search is the hero's own action · footer: mast, swapped from index columns because there are four links
- * signature: the receipt, the latest settlement on a cotton slip with Paid pressed in · imagery: the services' own cover photographs, muted · axes: light/roman-serif/cool · posture: restrained · v2.0.0 */
-/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V3 · weakest: V, the wall of services is the page's range and stays one composition; the corridor and the receipt are what change */
-/* Hallmark · hero-review: fix · 5 findings · 2 resolved 2 partial 1 to the owner (leading the receipt with dollars) · finish-review: subagent · 7 findings · 7 resolved · gap: a cover in the hero is the owner's call */
-/* Hallmark · dismissed 28a · the first cover sits at the fold under the headline, which is the page's largest paint; covers load lazily below it */
+/* Hallmark · shape: Catalogue (draw e00676, Workbench swapped at the owner's ask: services first) · genre: modern-minimal · theme: Coral (deal 3/3, seed marketplace-where-people-hire-d7f0·c8ce1008·2026-10-22·r0) · redesign: full · job: buy
+ * hero: Index (/), the catalogue is the lead with a small head and the search above it · nav: edge-aligned · footer: mast, the wordmark over four links
+ * signature: the receipt, the latest paid as lines on a cotton sheet beside the catalogue with Paid pressed at its total · imagery: the services' own cover photographs, muted · axes: light/roman-serif/cool · posture: restrained · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S4 R4 V4 · weakest: S, a services grid could front any marketplace; the receipt of who was paid lately sits beside it, chain facts only this board has */
+/* Hallmark · reworded "Pay for the result. Not the tokens." to "Order the work. Pay when it’s delivered." · the owner asked for a smaller or renamed headline, and "tokens" sat above SIDE amounts */
+/* Hallmark · reworded "Pick a service from a specialist agent. You agree the price up front, and pay only when the work is delivered." to "Pick a service from a specialist agent and agree the price up front." · 69, the headline now says when you pay */
+/* Hallmark · answered F25 · on a phone the same settlements turn one at a time in the slip above the catalogue, with the same total */
+/* Hallmark · dismissed 28a · the first covers sit under the headline band, which is the page's largest text paint; covers load lazily */
 
-/* The landing: its first screen (the promise, the search, the latest receipt), then the wall of services. */
+/* The landing: one band (what this is, the search), the catalogue beside who was paid lately, the sellers' line. */
 .landing-content {
   display: grid;
-  gap: clamp(3rem, 6vw, 4.5rem);
+  gap: 2.5rem;
   min-width: 0;
 }
 
-/*
- * The hero is a corridor: it fills the first screen under the header, its content centred, so the categories and the
- * first covers start just above the fold. On a phone it is as tall as its content.
- */
+/* The band: the head and its line on the left, the search on the right on a wide screen, stacked on a phone. */
 .landing-hero {
   display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 1.5rem;
-  inline-size: 100%;
-  max-inline-size: 42rem;
-  margin-inline: auto;
-  padding-block-end: 2rem;
-  text-align: center;
+  align-items: end;
+  gap: 1.25rem 3rem;
+  padding-block: 1rem 0;
 }
-@media (min-width: 40rem) {
+@media (min-width: 64rem) {
   .landing-hero {
-    min-block-size: calc(100svh - 3.5rem - var(--safe-top) - 2rem - 8rem);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 26rem);
   }
 }
 
 .landing-promise {
   display: grid;
-  gap: 1rem;
-  justify-items: center;
+  gap: 0.625rem;
+  justify-items: start;
 }
 .landing-promise h1 {
   min-width: 0;
-  max-width: 14ch;
+  max-width: 18ch;
   font-family: var(--font-display);
   font-optical-sizing: auto;
-  font-size: clamp(2.75rem, 7vw, 5.5rem);
+  font-size: clamp(2.25rem, 4vw, 3.25rem);
   font-weight: 400;
-  line-height: 0.96;
-  letter-spacing: -0.035em;
+  line-height: 1;
+  letter-spacing: -0.03em;
   overflow-wrap: break-word;
   text-wrap: balance;
 }
 .landing-promise-lede {
-  max-width: 44ch;
+  max-width: 48ch;
   color: var(--muted-foreground);
-  font-size: 1.1875rem;
+  font-size: 1.0625rem;
   line-height: 1.5;
   text-wrap: pretty;
+}
+
+/* The market: the catalogue, and the statement of the latest paid in a side column. */
+.landing-market {
+  display: grid;
+  gap: 2rem 2.5rem;
+  min-width: 0;
+}
+.landing-ledger {
+  order: -1;
+  min-width: 0;
+}
+@media (min-width: 64rem) {
+  .landing-market {
+    grid-template-columns: minmax(0, 1fr) 19rem;
+    align-items: start;
+  }
+  .landing-ledger {
+    order: 0;
+  }
 }
 
 /* The block's live mark: a still dot, a live state rather than a decoration. */
@@ -66,7 +80,7 @@
   border-radius: 999px;
   background: var(--paid);
 }
-/* A settlement turning in: a short rise and fade, never on the first one shown. */
+/* A settlement turning in on the phone slip: a short rise and fade, never on the first one shown. */
 .landing-rail-enter {
   animation: view-in 0.3s var(--ease-out-strong) both;
 }
@@ -90,11 +104,6 @@
   letter-spacing: -0.04em;
 }
 
-@media (max-width: 520px) {
-  .landing-promise-lede {
-    font-size: 1.0625rem;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .landing-rail-enter {
     animation: none;

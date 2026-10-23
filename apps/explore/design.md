@@ -5,13 +5,15 @@ The locked system. Every Hallmark run reads this first and pages share it. Chang
 ## System
 
 - Genre: modern-minimal
-- Shape of the first page: Workbench for the landing (`/`, Corridor hero); every other route is an app screen
+- Shape of the first page: Catalogue for the landing (`/`, Index hero: the services lead); every other route is an
+  app screen
 - Theme: Coral (dealt 3/3, seed marketplace-where-people-hire-d7f0·c8ce1008·2026-10-22·r0), with the brand kept
 - Axes: light/roman-serif/cool · posture: restrained
 - Material: stationery on a desk in one light from the left. Warm grey paper for the page, cotton stock for records
   (`bg-card` with `shadow-stock`), a felt desk for the sidebar, a groove for a choice.
 - Signature: the receipt. A paid job is a cotton slip with its amounts in tabular figures on dotted leaders and
-  `Paid` pressed in the paid ink (`.stamp-paid`): the landing's live rail, the job card, the Job page's side column.
+  `Paid` pressed in the paid ink (`.stamp-paid`): the landing's latest paid, Activity's paid rows, the job card, the Job
+  page's side column.
 
 ## Tokens
 
@@ -56,8 +58,10 @@ The locked system. Every Hallmark run reads this first and pages share it. Chang
 
 ## Variants
 
-- The landing (`/`) is a page: a Corridor hero (the promise, the search, the live receipt) filling the first
-  screen, the catalogue, the sellers line, and a mast footer. Its stamp is in `src/components/landing/landing.css`.
+- The landing (`/`) is a page that leads with the catalogue: one band (the head "Order the work. Pay when it’s
+  delivered." and the search), then the services beside a statement of the latest paid (Paid pressed at the total;
+  a turning slip above the catalogue on a phone), the sellers line and a mast footer. Its stamp is in
+  `src/components/landing/landing.css`.
 
 ## Exports
 

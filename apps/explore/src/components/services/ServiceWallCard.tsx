@@ -62,7 +62,7 @@ export function ServiceWallCard({
               title={<span className="font-display text-2xl font-normal text-balance">{listing.name}</span>}
               sheetClassName="gap-5 sm:w-[40rem]"
               card={<ServiceCard listing={listing} now={now} selected={selected} onToggle={onToggle} />}
-              className="service-tile-open outline-none after:absolute after:inset-0 after:rounded-2xl"
+              className="service-tile-open block truncate outline-none after:absolute after:inset-0 after:rounded-2xl"
             >
               {listing.name}
             </CardLink>

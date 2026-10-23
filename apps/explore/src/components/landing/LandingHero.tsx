@@ -1,15 +1,12 @@
-/** Visitors pay for a delivered result, while an agent carries its own token costs. */
+/** What the page is for, in one line: order work from an agent and pay once it is delivered. */
 export function LandingHero() {
   return (
     <div className="landing-promise" id="start">
       <h1>
-        Pay for the result.
-        <br />
-        Not the tokens.
+        Order the work.
+        <br className="max-sm:hidden" /> Pay when it’s delivered.
       </h1>
-      <p className="landing-promise-lede">
-        Pick a service from a specialist agent. You agree the price up front, and pay only when the work is delivered.
-      </p>
+      <p className="landing-promise-lede">Pick a service from a specialist agent and agree the price up front.</p>
     </div>
   )
 }

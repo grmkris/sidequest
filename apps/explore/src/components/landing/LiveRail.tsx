@@ -22,27 +22,92 @@ import { paidFormat } from './live-format.ts'
 import { type Payer, RAIL_HOLD_MS, type Settlement, paidTotal, railTurns, settlementsOf } from './live-rail.ts'
 
 /**
- * The board, live, above the services, as a receipt slip: the chain's newest block and a way to all activity at its
- * head, the latest settlements one at a time (who earned what, from whom, for which job, Paid pressed in), and what
- * agents have been paid in all at its foot. Chain facts only; before anything has settled it shows the block alone.
+ * The board, live, beside the services: who was paid lately. On a wide screen it is a receipt in the catalogue's side
+ * column (the newest block, the latest settlements as lines, what agents have been paid in all with Paid pressed in at
+ * its foot); on a phone or tablet it is a slip above the catalogue, turning through the settlements one at a time.
+ * Chain facts only; before anything has settled it shows the block alone.
  */
 export function LiveRail() {
   const { events } = useActivityFeed()
   const settlements = useMemo(() => settlementsOf(events, firstParty), [events])
   return (
+    <div className="landing-ledger">
+      <LatestPaid settlements={settlements} />
+      <LiveSlip settlements={settlements} />
+    </div>
+  )
+}
+
+/** The wide screen's statement: what agents have been paid in all, Paid pressed beside it, then the latest settlements. */
+function LatestPaid({ settlements }: { settlements: Settlement[] }) {
+  return (
+    <section
+      aria-label="Latest paid"
+      className="hidden min-w-0 gap-2 rounded-lg bg-card px-5 pt-4 pb-5 text-ui shadow-stock lg:grid"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="font-display text-xl leading-tight font-normal tracking-tight">Latest paid</h2>
+        <AllActivity />
+      </div>
+      <BlockTick />
+      <PaidTotal stamp />
+      {settlements.length > 0 && (
+        <ol className="m-0 grid list-none border-t border-dashed border-border p-0">
+          {settlements.map((s) => (
+            <SettlementRow key={s.key} settlement={s} />
+          ))}
+        </ol>
+      )}
+    </section>
+  )
+}
+
+/** One settlement as a receipt line: who was paid and how much, for which job, when and by whom. */
+function SettlementRow({ settlement: s }: { settlement: Settlement }) {
+  const name = useAgentName(s.agentId)
+  return (
+    <li className="border-b border-dashed border-border last:border-b-0">
+      <BoardLink
+        target={boardRoutes().job(s.jobId)}
+        className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-0.5 py-2.5 underline-offset-4 [@media(hover:hover)]:hover:[&_.settlement-title]:underline"
+      >
+        <AgentOrb agentId={s.agentId} size="sm" className="row-span-3 mt-0.5" />
+        <span className="flex min-w-0 items-baseline justify-between gap-2">
+          <span className="truncate font-medium">{name ?? `Agent #${s.agentId}`}</span>
+          <TokenAmount value={s.amount} token={s.token} static className="shrink-0 font-medium tabular-nums" />
+        </span>
+        <span className="settlement-title text-pretty text-muted-foreground">for “{s.title}”</span>
+        <span className="text-micro text-muted-foreground">
+          <Ago at={s.at} />
+          <PayerText payer={s.payer} related={s.related} />
+        </span>
+      </BoardLink>
+    </li>
+  )
+}
+
+function AllActivity() {
+  return (
+    <Link
+      to="/jobs"
+      className="inline-flex min-h-10 shrink-0 items-center gap-1 font-medium text-muted-foreground transition-colors duration-(--dur-fast) [@media(hover:hover)]:hover:text-foreground"
+    >
+      All activity
+      <ArrowUpRight aria-hidden="true" className="size-3.5" />
+    </Link>
+  )
+}
+
+/** The phone and tablet slip: the block and a way to all activity, one settlement at a time, the total. */
+function LiveSlip({ settlements }: { settlements: Settlement[] }) {
+  return (
     <section
       aria-label={`Live on ${chain.name}`}
-      className="grid w-full max-w-md min-w-0 -rotate-1 gap-1 rounded-lg bg-card px-5 pt-1 pb-4 text-start text-ui shadow-stock-lift sm:justify-self-end"
+      className="grid w-full min-w-0 -rotate-1 gap-1 rounded-lg bg-card px-5 pt-1 pb-4 text-start text-ui shadow-stock-lift lg:hidden"
     >
       <div className="flex min-w-0 items-center justify-between gap-4">
         <BlockTick />
-        <Link
-          to="/jobs"
-          className="inline-flex min-h-10 shrink-0 items-center gap-1 font-medium text-muted-foreground transition-colors duration-(--dur-fast) [@media(hover:hover)]:hover:text-foreground"
-        >
-          All activity
-          <ArrowUpRight aria-hidden="true" className="size-3.5" />
-        </Link>
+        <AllActivity />
       </div>
       {settlements.length > 0 && <SettlementTicker settlements={settlements} />}
       <PaidTotal />
@@ -144,8 +209,8 @@ function PayerAgent({ id }: { id: string }) {
   return <> from {useAgentName(id) ?? `Agent #${id}`}</>
 }
 
-/** What agents have been paid in all, and for how many jobs; nothing until the board has paid out. */
-function PaidTotal() {
+/** What agents have been paid in all, and for how many jobs, Paid pressed beside it (`stamp`); nothing until paid. */
+function PaidTotal({ stamp = false }: { stamp?: boolean }) {
   const stats = useQuery(statsQuery()).data
   const total = stats === undefined ? null : paidTotal(stats.paidOut, deployment.factory)
   const read = useToken(total?.token)
@@ -162,6 +227,7 @@ function PaidTotal() {
       <span className="text-muted-foreground">
         {meta.symbol} paid for {stats.completed.toLocaleString('en-US')} {stats.completed === 1 ? 'job' : 'jobs'}
       </span>
+      {stamp && <span className="stamp-paid ms-auto text-lg">Paid</span>}
     </p>
   )
 }
