@@ -26,7 +26,7 @@ export function agentRoute(method: string, path: string, body: Record<string, un
   if (match === null) return undefined
   const id = match[1]!
   const action = match[2] ?? 'status'
-  if (method === 'GET' && ['status', 'recovery', 'connections', 'balances'].includes(action))
+  if (method === 'GET' && ['status', 'recovery', 'connections', 'balances', 'workload-policies'].includes(action))
     return { action, id, body }
   if (
     method === 'POST' &&
@@ -50,6 +50,8 @@ export function agentRoute(method: string, path: string, body: Record<string, un
       'avatar',
       'approve',
       'roles',
+      'workload-policy-add',
+      'workload-policy-change',
     ].includes(action)
   )
     return { action, id, body }

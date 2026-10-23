@@ -23,6 +23,7 @@ import { Schema } from 'effect'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { BoardCall, BoardReply } from './board.ts'
 import { resolveOAuth } from './oauth.ts'
+import { workloadOidcEnabled } from './workload-schema.ts'
 import { networkTool, requiredToolScope, SETUP_TOOLS, toolDecision } from './mcp-policy.ts'
 import { resourceBoard } from './oauth-validation.ts'
 import { toJson } from './tools.ts'
@@ -112,7 +113,13 @@ export async function runAgent(runtime: {
     throw new BoardError('forbidden', 'This tool is not available on this network yet')
   migrateAgentSchema(sql)
   if (req.operator === undefined) {
-    const grant = await resolveOAuth(sql, req.bearer, req.resource, Math.floor(Date.now() / 1000))
+    const grant = await resolveOAuth(
+      sql,
+      req.bearer,
+      req.resource,
+      Math.floor(Date.now() / 1000),
+      workloadOidcEnabled(bindings),
+    )
     const decision = grant === undefined ? 'scope' : toolDecision(grant, req.tool)
     if (
       grant === undefined ||

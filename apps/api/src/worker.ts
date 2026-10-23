@@ -224,6 +224,8 @@ export default class Api extends Cloudflare.Worker<Api>()(
       REQUIRE_POSTER_AGENT: stageProfile()?.boards?.requirePosterAgent === true ? '1' : '0',
       // tool-args.ts: 'log' at deploy opts out of refusing invalid calls; empty or anything else enforces, prod included.
       TOOL_ARGS_MODE: process.env.TOOL_ARGS_MODE ?? '',
+      // Default-off spike gate for workload assertions and their bearer tokens.
+      WORKLOAD_OIDC_ENABLED: process.env.WORKLOAD_OIDC_ENABLED === '1' ? '1' : '0',
     },
   },
   Effect.gen(function* () {
@@ -770,6 +772,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
             : json(reply.body, reply.status, { ...cors, ...reply.headers })
         }
         if (path === '/mcp') {
+          const workloadEnabled = (yield* Config.withDefault(Config.String('WORKLOAD_OIDC_ENABLED'), '0')) === '1'
           const runMcp = Effect.runPromiseWith(yield* Effect.context<RuntimeContext>())
           const resource = `${url.origin}${url.pathname}`
           const started = Date.now()
@@ -791,6 +794,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
               events: new McpEvents(sql, network),
               ...(grant === null ? {} : { grant }),
               tools: hostedMcpTools(network),
+              workloadEnabled,
               call: async (tool, args, agentId) => {
                 if (
                   [

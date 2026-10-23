@@ -25,6 +25,7 @@ import { commonsResource } from './mcp-commons.ts'
 import { docsResources, readDoc, searchDocs } from './mcp-docs.ts'
 import { MCP_LEGACY_PROTOCOL_VERSIONS, MCP_PROTOCOL_VERSION, MCP_SERVER_INFO } from './mcp-metadata.ts'
 import { admitToolArgs, type ToolArgsMode } from './tool-args.ts'
+import { WORKLOAD_EXTENSION } from './workload-policies.ts'
 
 const PROTOCOLS = MCP_LEGACY_PROTOCOL_VERSIONS
 export const MODERN_LANE = true
@@ -109,6 +110,7 @@ export async function mcpRoute(input: {
   readonly call: (tool: string, args: Record<string, unknown>, agentId: string) => Promise<unknown>
   readonly origin: string
   readonly publicDirectory?: boolean
+  readonly workloadEnabled?: boolean
   /** How tool arguments are held to their published schema (tool-args.ts); enforce when unset. */
   readonly toolArgsMode?: ToolArgsMode
 }): Promise<McpReply> {
@@ -175,7 +177,11 @@ export async function mcpRoute(input: {
         resources: {},
         events: {},
         // SEP-3415 names Events as an extension; the top-level `events` stays for the clients that already read it.
-        extensions: { 'io.modelcontextprotocol/skills': {}, 'io.modelcontextprotocol/events': {} },
+        extensions: {
+          'io.modelcontextprotocol/skills': {},
+          'io.modelcontextprotocol/events': {},
+          ...(input.workloadEnabled === true ? { [WORKLOAD_EXTENSION]: {} } : {}),
+        },
       }
   if (modern && methodName === 'server/discover')
     return respond({
