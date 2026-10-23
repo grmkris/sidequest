@@ -2077,3 +2077,32 @@ Not established: Reel's crew container rendering a real job through MySI.
   errorId and an `internal_error` alert; on `02bf4315` it answers `unauthenticated`. Callers that read both shapes
   went to prod first (CI run 39785484240), then the replies (CI run 39787284314). Live checks on prod (site, data
   profiles/services/directory, OAuth metadata and authorize, `protocol_info`, MCP 401) passed 12/12 after each.
+
+## Media library on dev (ADR-0029, 24 Oct 2026)
+
+Kris (23 Oct) approved folding the media kit into Sidequest at `/media`: two levels, a post plan, a media team, one
+prod cutover after a dev rehearsal. What is planned, implemented and tested, and live on dev:
+
+- **Implemented and tested** (dev `a1d6fdfa`, then `2a688fd2`): the six D1 tables and migration `0002_media.sql`; the
+  `sidequest:media` scope offered at consent only to a media team operator; the API's file routes and fifteen tools;
+  Explore's `/media`, `/media/<id>`, `/media/s/<token>` and `/media/internal` (Plan, Library, Campaigns, Shares); the
+  morning digest in the indexer's cron; `scripts/media/import-kit.mjs`. Store rules on SQLite, the file routes and the
+  revision guard on workerd's own D1 and R2 (`media-workerd.test.ts`), consent, policy and cache policy; floors API
+  887, Explore 684, indexer 67.
+- **Live on dev:** the deploy of `a1d6fdfa` (CI run 40034552734) created `sidequest-dev-media` through the release
+  guard's one admitted bucket create. A live pass as the dev-only media tester (SIWE, `0x86C5…6B90`) answered 20 of
+  20 checks against `https://dev.sidequest.exchange`: an upload streamed through the Worker (201), a pull from
+  media.sidequest.exchange, an internal file 404 without a token, a team preview 206 with `content-length: 1024`, the
+  sandbox CSP, a share serving and then 404 once revoked, a public `?v=` file 200 with its length and
+  `public, max-age=31536000, immutable`, an unpublish answering 404 at once, an approval refused while a file was
+  internal and accepted with `publishAssets`, a post recorded by its cleaned URL, and cleanup.
+- **Import rehearsal on dev:** `scripts/media/import-kit.mjs` imported the whole kit (163 assets less `cats-mjav`'s
+  12, plus the four public briefs) by pulling each file from media.sidequest.exchange with its sha256. The first run
+  found two bugs, both fixed and tested before the rerun: kit media types carried `; charset=…` (`84f6c97b`), and a
+  retried create answered "exists" instead of its first result (`2a688fd2`). The rerun on `2a688fd2` answered all
+  287 calls and served every one of the 210 public files at its exact length; dev's `/media` shows 110 public assets
+  in 14 sections, the five kit posts are recorded, and the since-launch brief links the film material's share.
+- **Telegram webhook:** `POST /telegram/webhook` answered 405 on dev and prod (23 Oct; not proxied by Explore). On dev
+  it now reaches the API (401 without the secret header). Prod still answers 405 until the cutover release.
+- **Not verified:** an agent over hosted MCP with the media tick (no media-team operator has consented a connection
+  yet); a morning digest delivered (needs a linked team wallet on dev); anything on prod.
