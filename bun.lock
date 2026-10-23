@@ -41,6 +41,7 @@
         "@sidequest/sdk": "workspace:*",
         "alchemy": "catalog:",
         "effect": "catalog:",
+        "jose": "^6",
         "viem": "catalog:",
       },
       "devDependencies": {

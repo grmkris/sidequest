@@ -31,6 +31,7 @@ import { hostedUserOpDesk } from './agent-userop.ts'
 import { agentGasAllowance } from './agent-gas-allowance.ts'
 import { agentBalances } from './agent-balances.ts'
 import { approvalDetails } from './approval-details.ts'
+import { manageWorkloadPolicies } from './workload-policies.ts'
 
 function text(body: Record<string, unknown>, key: string): string {
   const value = body[key]
@@ -71,6 +72,8 @@ export async function agentManagement(input: {
   const { action, body } = request
   const id = request.id ?? ''
   const agents = new AgentStore(sql, now)
+  if (['workload-policies', 'workload-policy-add', 'workload-policy-change'].includes(action))
+    return manageWorkloadPolicies({ sql, agentId: id, operator, action, body, bindings, now: now() })
   if (action === 'balances') {
     const agent = agents.owned(id, operator)
     if (agent.address === null) throw new BoardError('unavailable', 'This agent wallet is not ready')

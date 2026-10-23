@@ -14,6 +14,10 @@ import {
 import { Schema } from 'effect'
 import type { OAuthGrant as AgentOAuthGrant } from '@sidequest/indexer/oauth-types'
 import { bindWaitingSetupConnections, consentScopes, resolveSetupOAuth, setupOAuthRoute } from './oauth-setup.ts'
+import { migrateWorkloadSchema, workloadConnectionAllowed } from './workload-schema.ts'
+import { workloadToken } from './workload-token.ts'
+import { JWT_BEARER_GRANT } from './workload-policies.ts'
+import { oauthMetadata } from './oauth-metadata.ts'
 export type OAuthGrant = AgentOAuthGrant & {
   readonly setup?: boolean
   readonly setupFamilyId?: string
@@ -65,27 +69,15 @@ function consentId(): string {
   return `oauth_${randomToken().slice(0, 40)}`
 }
 
-function requestedResource(path: string, origin: string): string | undefined {
-  const suffix =
-    path === '/.well-known/oauth-protected-resource'
-      ? '/mcp'
-      : path.startsWith('/.well-known/oauth-protected-resource/')
-        ? path.slice('/.well-known/oauth-protected-resource'.length)
-        : undefined
-  return suffix === undefined
-    ? undefined
-    : resourceBoard(`${origin}${suffix}`, origin) === undefined
-      ? undefined
-      : `${origin}${suffix}`
-}
-
 export async function resolveOAuth(
   sql: Sql,
   token: string | undefined,
   resource: string,
   now: number,
+  workloadEnabled = false,
 ): Promise<OAuthGrant | undefined> {
   if (token === undefined || token === '') return undefined
+  migrateWorkloadSchema(sql)
   const hash = await tokenHash(token)
   const setup = resolveSetupOAuth(sql, hash, resource, now)
   if (setup !== undefined) return setup
@@ -107,6 +99,7 @@ export async function resolveOAuth(
     now,
   )[0]
   if (row === undefined || row.resource !== resource || row.state !== 'active') return undefined
+  if (!workloadConnectionAllowed(sql, row.grant_id, workloadEnabled)) return undefined
   return {
     owner: row.operator,
     scopes: JSON.parse(row.scopes_json) as string[],
@@ -132,6 +125,8 @@ export async function oauthRoute(input: {
   readonly owner?: string
   readonly now: number
   readonly revokeSubscriptions?: (principal: string, grantId: string, now: number) => Promise<void>
+  readonly workloadEnabled?: boolean
+  readonly workloadFetch?: typeof fetch
 }): Promise<OAuthReply | undefined> {
   const { sql, method, path, query, body, origin, siteOrigin, owner, now } = input
   migrateAgentSchema(sql)
@@ -144,27 +139,8 @@ export async function oauthRoute(input: {
     )[0]
     if (agent !== undefined) await input.revokeSubscriptions?.(agent.address, familyId, now)
   }
-  const protectedResource = requestedResource(path, origin)
-  if (protectedResource !== undefined)
-    return good({
-      resource: protectedResource,
-      authorization_servers: [origin],
-      scopes_supported: OAUTH_SCOPES,
-      bearer_methods_supported: ['header'],
-    })
-  if (path === '/.well-known/oauth-authorization-server' && method === 'GET')
-    return good({
-      issuer: origin,
-      authorization_endpoint: `${origin}/oauth/authorize`,
-      token_endpoint: `${origin}/oauth/token`,
-      registration_endpoint: `${origin}/oauth/register`,
-      revocation_endpoint: `${origin}/oauth/revoke`,
-      response_types_supported: ['code'],
-      grant_types_supported: ['authorization_code', 'refresh_token'],
-      token_endpoint_auth_methods_supported: ['none'],
-      code_challenge_methods_supported: ['S256'],
-      scopes_supported: OAUTH_SCOPES,
-    })
+  const metadata = oauthMetadata(path, method, origin, OAUTH_SCOPES, input.workloadEnabled === true)
+  if (metadata !== undefined) return metadata
   if (path === '/oauth/register' && method === 'POST') {
     const redirectUris = body.redirect_uris
     if (
@@ -361,6 +337,15 @@ export async function oauthRoute(input: {
     return good({ ok: true, result: { redirectUrl: target.href } })
   }
   if (path === '/oauth/token' && method === 'POST') {
+    if (body.grant_type === JWT_BEARER_GRANT)
+      return workloadToken({
+        sql,
+        body,
+        origin,
+        now,
+        enabled: input.workloadEnabled === true,
+        ...(input.workloadFetch === undefined ? {} : { fetch: input.workloadFetch }),
+      })
     const clientId = typeof body.client_id === 'string' ? body.client_id : ''
     const resource = typeof body.resource === 'string' ? body.resource : ''
     const boardId = resourceBoard(resource, origin)

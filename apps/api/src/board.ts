@@ -47,6 +47,7 @@ import {
 import { collectSnapshot } from './collect-index.ts'
 import { stakingSnapshot } from './staking-index.ts'
 import { oauthRoute, resolveOAuth } from './oauth.ts'
+import { workloadOidcEnabled } from './workload-schema.ts'
 import { terminateGrantSubscriptions } from './webhooks.ts'
 import type { OAuthGrant } from './oauth.ts'
 import { OPERATOR_CONTINUATIONS, requiredToolScope, toolAnnotations, toolDecision } from './mcp-policy.ts'
@@ -487,6 +488,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               body: req.body,
               origin: req.origin,
               siteOrigin: req.origin,
+              workloadEnabled: workloadOidcEnabled(bindings),
               ...(session === undefined ? {} : { owner: session.address }),
               now: Math.floor(Date.now() / 1000),
               revokeSubscriptions: async (principal, grantId, at) => {
@@ -508,7 +510,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
             const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
             migrateAgentSchema(sql)
             const now = Math.floor(Date.now() / 1000)
-            const grant = await resolveOAuth(sql, req.bearer, req.resource, now)
+            const grant = await resolveOAuth(sql, req.bearer, req.resource, now, workloadOidcEnabled(bindings))
             if (grant === undefined) return toJson(null)
             // An MCP call: the agent's directory presence and the connection's last use on its agent page.
             if (req.activity === true && grant.setup !== true) new AgentStore(sql, () => now).touch(grant.agentIds[0]!)
@@ -531,7 +533,13 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
             throw new Error('management object identity mismatch')
           const sql = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
           migrateAgentSchema(sql)
-          const grant = await resolveOAuth(sql, req.bearer, req.resource, Math.floor(Date.now() / 1000))
+          const grant = await resolveOAuth(
+            sql,
+            req.bearer,
+            req.resource,
+            Math.floor(Date.now() / 1000),
+            workloadOidcEnabled(bindings),
+          )
           const access = grant?.grantId === undefined ? undefined : connectionAccess(sql, grant.grantId)
           if (grant?.grantId === undefined || access === undefined)
             return new Response(null, { status: 401, headers: { 'cache-control': 'no-store' } })
@@ -556,7 +564,13 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
             throw new Error('management object identity mismatch')
           const local = fromDurableObjectSql(state.storage.sql.raw, (write) => state.raw.storage.transactionSync(write))
           migrateAgentSchema(local)
-          const grant = await resolveOAuth(local, req.bearer, req.resource, Math.floor(Date.now() / 1000))
+          const grant = await resolveOAuth(
+            local,
+            req.bearer,
+            req.resource,
+            Math.floor(Date.now() / 1000),
+            workloadOidcEnabled(bindings),
+          )
           // SAFETY: NETWORK is configured by the stage profile and validated by deployment.
           const network = bindings.NETWORK as sdk.Network
           const access =
