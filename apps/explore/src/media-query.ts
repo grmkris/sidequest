@@ -12,6 +12,7 @@ const mediaKeys = {
   all: ['media'] as const,
   library: (filter: Record<string, string>, viewer: string) => ['media', 'library', filter, viewer] as const,
   asset: (id: string, viewer: string) => ['media', 'asset', id, viewer] as const,
+  posts: (viewer: string) => ['media', 'posts', viewer] as const,
   share: (token: string) => ['media', 'share', token] as const,
   shares: (viewer: string) => ['media', 'shares', viewer] as const,
 }
@@ -44,6 +45,17 @@ export function useMediaAsset(id: string) {
     queryKey: mediaKeys.asset(id, viewer),
     queryFn: () => tool<MediaAssetPage>('get_media', { id }),
     retry: false,
+  })
+}
+
+/** The post plan: the whole of it for the team, what went out for everyone else. */
+export function useMediaPosts(enabled = true) {
+  const viewer = useViewer()
+  return useQuery({
+    queryKey: mediaKeys.posts(viewer),
+    queryFn: () => tool<{ viewer: MediaLibrary['viewer']; posts: MediaPost[] }>('list_media_posts'),
+    enabled,
+    staleTime: 30_000,
   })
 }
 

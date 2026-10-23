@@ -10,15 +10,17 @@ import { Button } from '../components/ui/button.tsx'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../components/ui/empty.tsx'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs.tsx'
 import { useAuth } from '../components/Wallet.tsx'
-import { useMediaLibrary, useMediaShares, useMediaWrite } from '../media-query.ts'
+import { useMediaLibrary, useMediaPosts, useMediaShares, useMediaWrite } from '../media-query.ts'
+import { CampaignsTab } from '../components/media/CampaignsTab.tsx'
+import { PlanTab } from '../components/media/PlanTab.tsx'
 import { campaignsOf, type MediaAsset, type MediaLibrary } from '../media.ts'
 import { useReplaceSearch } from '../page-search.ts'
 
-const TABS = ['library', 'shares'] as const
+const TABS = ['plan', 'library', 'campaigns', 'shares'] as const
 type Tab = (typeof TABS)[number]
 const tabOf = (search: string): Tab => {
   const asked = new URLSearchParams(search).get('tab')
-  return TABS.find((tab) => tab === asked) ?? 'library'
+  return TABS.find((tab) => tab === asked) ?? 'plan'
 }
 
 /**
@@ -28,6 +30,7 @@ const tabOf = (search: string): Tab => {
 export function MediaInternalPage() {
   const auth = useAuth()
   const library = useMediaLibrary()
+  const posts = useMediaPosts(auth.signedIn)
   const [tab, setTab] = useState<Tab>(() => tabOf(window.location.search))
   const replaceSearch = useReplaceSearch()
   if (!auth.signedIn)
@@ -53,11 +56,12 @@ export function MediaInternalPage() {
         </EmptyHeader>
       </Empty>
     )
+  const campaigns = library.data.groups.filter((group) => group.kind === 'campaign')
   return (
     <>
       <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <PageTitle sub="Everything the team made, internal and public. Agents upload here; what is public is on /media.">
-          Media library
+        <PageTitle sub="The post plan, everything the team made at both levels, campaigns and shares. What is public is on /media.">
+          Media
         </PageTitle>
         <Badge variant="neutral">Media {role}</Badge>
       </header>
@@ -66,15 +70,23 @@ export function MediaInternalPage() {
         onValueChange={(value) => {
           const next = tabOf(`?tab=${String(value)}`)
           setTab(next)
-          replaceSearch(next === 'library' ? '' : `?tab=${next}`)
+          replaceSearch(next === 'plan' ? '' : `?tab=${next}`)
         }}
       >
         <TabsList>
+          <TabsTrigger value="plan">Plan</TabsTrigger>
           <TabsTrigger value="library">Library</TabsTrigger>
+          <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
           <TabsTrigger value="shares">Shares</TabsTrigger>
         </TabsList>
+        <TabsContent value="plan" className="grid gap-8 pt-4">
+          <PlanTab assets={library.data.assets} campaigns={campaigns} operator={role === 'operator'} />
+        </TabsContent>
         <TabsContent value="library" className="grid gap-8 pt-4">
           <Library library={library.data} operator={role === 'operator'} />
+        </TabsContent>
+        <TabsContent value="campaigns" className="grid gap-6 pt-4">
+          <CampaignsTab campaigns={campaigns} assets={library.data.assets} posts={posts.data?.posts ?? []} />
         </TabsContent>
         <TabsContent value="shares" className="grid gap-8 pt-4">
           <Shares />

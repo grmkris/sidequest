@@ -214,3 +214,94 @@ export function batchesOf(assets: readonly MediaAsset[]): { batch: string | unde
 
 /** A fresh operationKey for one write from this page; a retry of the same click reuses it. */
 export const newOperationKey = (): string => `explore-${crypto.randomUUID()}`
+
+/** How long a post may be where it goes, in characters (YouTube: a description). */
+export const CHANNEL_LIMITS: Readonly<Record<string, number>> = {
+  x: 280,
+  linkedin: 3000,
+  instagram: 2200,
+  tiktok: 2200,
+  youtube: 5000,
+  threads: 500,
+  bluesky: 300,
+  farcaster: 320,
+  facebook: 63_206,
+  reddit: 40_000,
+  telegram: 4096,
+  discord: 2000,
+}
+
+/** The channels a planned post can go to, in the order the planner offers them. */
+export const PLAN_CHANNELS = [
+  'x',
+  'instagram',
+  'tiktok',
+  'youtube',
+  'linkedin',
+  'threads',
+  'bluesky',
+  'farcaster',
+] as const
+
+/**
+ * What to fix before a post goes out: text over the channel's limit, a TikTok without a video, a vertical channel
+ * given a wide film, files not public yet (approving publishes them only when asked).
+ */
+export function postChecks(
+  post: Pick<MediaPost, 'channel' | 'text' | 'assets'>,
+  assets: readonly MediaAsset[],
+): string[] {
+  const used = assets.filter((asset) => post.assets.includes(asset.id))
+  const limit = CHANNEL_LIMITS[post.channel]
+  const checks: string[] = []
+  if (limit !== undefined && post.text.length > limit)
+    checks.push(`${post.text.length - limit} characters over ${channelName(post.channel)}'s ${limit}`)
+  const videos = used.filter((asset) => asset.kind === 'video')
+  if (post.channel === 'tiktok' && videos.length === 0) checks.push('TikTok needs a video')
+  if (['tiktok', 'instagram'].includes(post.channel) && videos.some((asset) => shapeOf(asset) === 'landscape'))
+    checks.push(`${channelName(post.channel)} shows a wide film small; a 9:16 cut fits it`)
+  const internal = used.filter((asset) => !asset.public)
+  if (internal.length > 0) checks.push(`Not public yet: ${internal.map((asset) => asset.title).join(', ')}`)
+  return checks
+}
+
+const isoDay = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+const addDays = (day: string, days: number) => {
+  const date = new Date(`${day}T12:00:00`)
+  date.setDate(date.getDate() + days)
+  return isoDay(date)
+}
+export const todayOf = (now = new Date()): string => isoDay(now)
+
+/** A planned day as people say it: Today, Tomorrow, Yesterday, else the weekday and date. */
+export function planDayLabel(day: string, today: string): string {
+  if (day === today) return 'Today'
+  if (day === addDays(today, 1)) return 'Tomorrow'
+  if (day === addDays(today, -1)) return 'Yesterday'
+  return new Date(`${day}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+/**
+ * The plan by day: the last week and everything ahead in order, each day's posts by time, then the posts with no day.
+ * Older days are history and stay out.
+ */
+export function planDays(
+  posts: readonly MediaPost[],
+  today: string,
+): { day: string | null; label: string; posts: MediaPost[] }[] {
+  const from = addDays(today, -7)
+  const byDay = new Map<string, MediaPost[]>()
+  const undated: MediaPost[] = []
+  for (const post of posts) {
+    if (post.day === undefined) undated.push(post)
+    else if (post.day >= from) byDay.set(post.day, [...(byDay.get(post.day) ?? []), post])
+  }
+  const byTime = (a: MediaPost, b: MediaPost) => (a.time ?? '').localeCompare(b.time ?? '')
+  return [
+    ...[...byDay.entries()]
+      .toSorted(([a], [b]) => a.localeCompare(b))
+      .map(([day, list]) => ({ day, label: planDayLabel(day, today), posts: list.toSorted(byTime) })),
+    ...(undated.length === 0 ? [] : [{ day: null, label: 'No day yet', posts: undated }]),
+  ]
+}

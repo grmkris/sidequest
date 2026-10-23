@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   batchesOf,
+  planDayLabel,
+  planDays,
+  postChecks,
   campaignsOf,
   channelName,
   downloads,
@@ -152,5 +155,48 @@ describe('the team library', () => {
     ])
     expect(rest.map((x) => x.id)).toEqual(['loose'])
     expect(batchesOf([])).toEqual([])
+  })
+})
+
+const plan = (id: string, day?: string, time?: string) => ({
+  id,
+  channel: 'x',
+  text: id,
+  assets: [],
+  status: 'draft' as const,
+  revision: 1,
+  ...(day === undefined ? {} : { day }),
+  ...(time === undefined ? {} : { time }),
+})
+
+describe('the plan', () => {
+  it('lays the plan out by day from a week back, each day by time, the undated last', () => {
+    const days = planDays(
+      [
+        plan('old', '2026-10-10'),
+        plan('b', '2026-10-24', '12:00'),
+        plan('a', '2026-10-24', '09:00'),
+        plan('n'),
+        plan('t', '2026-10-25'),
+      ],
+      '2026-10-24',
+    )
+    expect(days.map((d) => [d.label, d.posts.map((p) => p.id)])).toEqual([
+      ['Today', ['a', 'b']],
+      ['Tomorrow', ['t']],
+      ['No day yet', ['n']],
+    ])
+    expect(planDayLabel('2026-10-23', '2026-10-24')).toBe('Yesterday')
+    expect(planDayLabel('2026-10-30', '2026-10-24')).toBe('Fri 30 Oct')
+  })
+  it('names what to fix before posting', () => {
+    const wide = asset('wide', { width: 1920, height: 1080, public: false, level: 'internal' })
+    expect(postChecks({ channel: 'x', text: 'x'.repeat(290), assets: [] }, [])).toEqual(["10 characters over X's 280"])
+    expect(postChecks({ channel: 'tiktok', text: 'hi', assets: [] }, [])).toEqual(['TikTok needs a video'])
+    expect(postChecks({ channel: 'tiktok', text: 'hi', assets: ['wide'] }, [wide])).toEqual([
+      'TikTok shows a wide film small; a 9:16 cut fits it',
+      'Not public yet: wide',
+    ])
+    expect(postChecks({ channel: 'linkedin', text: 'fine', assets: [] }, [])).toEqual([])
   })
 })
