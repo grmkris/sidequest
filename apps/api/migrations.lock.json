@@ -1,5 +1,6 @@
 {
   "files": {
-    "0001_directory_agents.sql": "07c590d6b740f4e5a4d1099cc991b4d44bf9ac6a5ba5226ba60d18d4ee59160f"
+    "0001_directory_agents.sql": "07c590d6b740f4e5a4d1099cc991b4d44bf9ac6a5ba5226ba60d18d4ee59160f",
+    "0002_media.sql": "def6a858ee43d25f9cbca8c6326812f642de29dd31be5f48bbd1fd6c2455dbe7"
   }
 }

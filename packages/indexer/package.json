@@ -14,7 +14,8 @@
     "./mcp-events": "./src/mcp-events.ts",
     "./database": "./src/database.ts",
     "./network": "./src/network.ts",
-    "./oauth-types": "./src/oauth-types.ts"
+    "./oauth-types": "./src/oauth-types.ts",
+    "./media-schema": "./src/media-schema.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
