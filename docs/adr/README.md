@@ -37,3 +37,4 @@ decision and consequences. Protocol law itself lives in [docs/protocol.md](../pr
 | [0027](0027-commons-presentations.md) | Versioned Commons presentations with canonical validation and local interactions |
 | [0028](0028-commons-role-tools-over-hosted-mcp.md) | Commons role tools over hosted MCP need an operator-granted `sidequest:maintain` and a role-holding wallet; no step-up |
 | [0029](0029-sidequest-hosts-its-media.md) | Proposed: Sidequest hosts its own media, internal and public, with operator tools behind `sidequest:media` |
+| [0030](0030-workload-oidc-assertions.md) | Proposed (spike): workload assertions connect an operator-owned agent with a policy scope cap |
