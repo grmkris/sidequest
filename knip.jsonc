@@ -46,6 +46,8 @@
         // Operator commands run by hand from the runbooks: contracts.mjs (deploy-plan, deploy, promote, accept,
         // verify) and testnet-setup.mjs (G1d seeding). Knip cannot see a human caller.
         "scripts/sidequest/*.mjs!",
+        // ADR-0029 cutover: node scripts/media/import-kit.mjs, run by hand.
+        "scripts/media/*.mjs!",
         // Live probes and outside-agent examples, run by hand: bun scripts/probes/<name>.ts.
         "scripts/probes/*.ts!",
         "crew/bin/*.ts!",
