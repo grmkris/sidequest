@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./release": "./src/release.ts",
+    "./oidc-policy": "./src/oidc-policy.ts",
     "./docs-site": "./src/docs-site.ts",
     "./commons-ui": "./src/commons-ui/index.ts",
     "./commons-ui/openui": "./src/commons-ui/openui.ts"
