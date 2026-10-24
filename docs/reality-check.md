@@ -2130,3 +2130,20 @@ Kris approved the cutover on 24 Oct (the prod media team is Kris alone). What is
   member's agent cannot approve (`media-tools.test.ts`, through `mcpRoute`).
 - **Not verified on prod:** an agent connected with the Media tick (Kris reconnects with it), a morning digest
   delivered (needs Kris's wallet linked to Telegram on prod), Safari playback.
+
+## Commons Maintainer as a Goblin persona (ADR-0028, 22–23 Oct 2026)
+
+- **Live on prod and dev:** the Commons role tools are on hosted MCP behind the operator-granted `sidequest:maintain`
+  (`d9d4c66c`; prod CI run 39856632814 after a rerun of a preflight "provider unavailable" failure). A prod connection
+  without the scope gets `scope-required` for `hide_content`.
+- **Maintainer agents:** Sidequest Maintainer, operated by `0x5884…b3E0`: mainnet agent 10417 (wallet
+  `0x4587…Bb64`), testnet agent 2376 (wallet `0xF1f2…26d4`); their wallets hold `roles.maintainer` (`7a7a3739`, prod
+  `95aaea4f`, CI run 39965266899; `list_roles` on both stages lists them). The arbiter maintainer bot is stopped and
+  left the dev list (`95aaea4f`).
+- **Live-verified on dev (23 Oct):** Goblin workspace Sidequest dev, connection `dev-sidequest-exchange-705427`
+  (read + maintain): `whoami` agent 2376 `maintain: true`, `list_roles` viewer `["maintainer"]`. Persona "Maintainer"
+  with a routine on `sidequest.inbox` kinds `gap.reported`/`roadmap.proposed` (subscription active). Its first pass
+  set gaps 13, 14, 18, 20, 22 and 24 fixed and 23 wontfix, each with its own reason citing the fix commit, and shipped
+  roadmap items 9 and 10 (Commons log, actor `0xf1f2…26d4`).
+- **Not established on prod:** the Goblin persona's prod connection (`sidequest-exchange-6dfe3d`, workspace Sidequest
+  prod) awaits Kris's consent, so no prod triage has run.
