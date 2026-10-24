@@ -105,7 +105,11 @@ export async function queueMediaDigest(
   const due = [...ids].filter(([id]) => !sent.has(id))
   if (due.length === 0) return 0
   await migrateMedia(sql)
-  const text = await mediaDigestText(sql, day, label, now - 86_400)
+  // Since the last digest, so a send time that drifts within the window neither skips nor repeats an action.
+  const [last] = await sql.all<{ at: number | null }>(
+    "SELECT MAX(created_at) at FROM telegram_outbox WHERE id LIKE 'media-digest:%'",
+  )
+  const text = await mediaDigestText(sql, day, label, last?.at ?? now - 86_400)
   if (text === undefined) return 0
   for (const [id, wallet] of due) await enqueueWalletNotification(sql, network, wallet, { id, text, now })
   return due.length
