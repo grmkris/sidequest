@@ -14,6 +14,7 @@ import {
 import { Schema } from 'effect'
 import type { OAuthGrant as AgentOAuthGrant } from '@sidequest/indexer/oauth-types'
 import { bindWaitingSetupConnections, consentScopes, resolveSetupOAuth, setupOAuthRoute } from './oauth-setup.ts'
+import { TOKEN_REFUSALS, useRefreshToken } from './oauth-refresh.ts'
 export type OAuthGrant = AgentOAuthGrant & {
   readonly setup?: boolean
   readonly setupFamilyId?: string
@@ -428,8 +429,8 @@ export async function oauthRoute(input: {
       agentId = row.agent_id
       scopes = JSON.parse(row.scopes_json) as string[]
     } else return failure('unsupported_grant_type', 'Supported grants: authorization_code and refresh_token')
-    const issued = sql.atomic!(() => {
-      if (new AgentStore(sql, () => now).get(agentId).state !== 'active') return false
+    const issued = sql.atomic!((): 'issued' | 'stopped' | 'used' | 'replayed' => {
+      if (new AgentStore(sql, () => now).get(agentId).state !== 'active') return 'stopped'
       if (codeRequest !== undefined) {
         const used = sql.all<{ hash: string }>(
           'UPDATE agent_oauth_codes SET consumed_at=? WHERE hash=? AND consumed_at IS NULL AND expires_at>? RETURNING hash',
@@ -437,7 +438,7 @@ export async function oauthRoute(input: {
           consumeHash,
           now,
         )
-        if (used[0] === undefined) return false
+        if (used[0] === undefined) return 'used'
         sql.run(
           'INSERT INTO agent_oauth_families (id,client_id,agent_id,board_id,scopes_json,resource,created_at) VALUES (?,?,?,?,?,?,?)',
           familyId,
@@ -459,12 +460,10 @@ export async function oauthRoute(input: {
           'SELECT revoked_at FROM agent_oauth_families WHERE id=?',
           familyId,
         )[0]
-        if (token === undefined || family === undefined || family.revoked_at !== null) return false
-        if (token.consumed_at !== null) {
-          sql.run('UPDATE agent_oauth_families SET revoked_at=? WHERE id=?', now, familyId)
-          return false
-        }
-        sql.run('UPDATE agent_oauth_tokens SET consumed_at=? WHERE hash=?', now, consumeHash)
+        if (token === undefined || family === undefined || family.revoked_at !== null) return 'used'
+        const consumedAt = token.consumed_at
+        if (useRefreshToken(sql, 'agent', { hash: consumeHash, familyId, consumedAt }, now) === 'replayed')
+          return 'replayed'
       }
       sql.run(
         "INSERT INTO agent_oauth_tokens (hash,family_id,kind,expires_at) VALUES (?,?,'access',?)",
@@ -478,12 +477,12 @@ export async function oauthRoute(input: {
         familyId,
         now + 30 * 86400,
       )
-      return true
+      return 'issued'
     })
-    if (!issued) {
+    if (issued !== 'issued') {
       if (sql.all('SELECT id FROM agent_oauth_families WHERE id=? AND revoked_at IS NOT NULL', familyId).length > 0)
         await terminateFamily(familyId)
-      return failure('invalid_grant', 'Code already used, refresh replayed, or agent access stopped')
+      return failure('invalid_grant', TOKEN_REFUSALS[issued])
     }
     return good({
       access_token: access,

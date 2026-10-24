@@ -19,6 +19,8 @@ const verifier = 'a'.repeat(43)
 const redirectUri = 'http://127.0.0.1:3210/callback'
 
 type Tokens = { access_token: string; refresh_token: string }
+const TokenPair = Schema.Struct({ access_token: Schema.String, refresh_token: Schema.String })
+const Refusal = Schema.Struct({ error: Schema.String, error_description: Schema.String })
 const decode = <A>(schema: Schema.Codec<A, unknown>, reply: OAuthReply) => Schema.decodeUnknownSync(schema)(reply.body)
 
 async function echoWebhookChallenge(_url: unknown, init?: RequestInit) {
@@ -35,6 +37,10 @@ function fixture(mediaRole?: 'operator' | 'member') {
   agents.bindWallet('one', 'wallet-one', wallet)
   agents.bindRegistry('one', '10')
   for (const state of ['upgraded', 'grants-live', 'registered', 'active'] as const) agents.advance('one', state)
+  let time = 1000
+  const clock = (at: number) => {
+    time = at
+  }
   const route = (
     path: string,
     body: Record<string, unknown> = {},
@@ -50,12 +56,12 @@ function fixture(mediaRole?: 'operator' | 'member') {
       method,
       origin,
       siteOrigin: origin,
-      now: 1000,
+      now: time,
       ...(operator === undefined ? {} : { owner: operator }),
       ...(mediaRole === undefined ? {} : { mediaRole }),
       revokeSubscriptions: (principal, family, now) => terminateGrantSubscriptions(d1, principal, family, now),
     }) as Promise<OAuthReply>
-  return { db, sql, d1, agents, route }
+  return { db, sql, d1, agents, route, clock }
 }
 
 async function connection(
@@ -120,7 +126,7 @@ test('one-agent OAuth code is bound to PKCE, client, redirect and exact tenant r
   }
 })
 
-test('refresh rotates; replay revokes every token in the connection, including the rotated token', async () => {
+test('refresh rotates; a replay after the grace revokes every token in the connection, the rotated ones too', async () => {
   const f = fixture()
   try {
     const c = await connection(f)
@@ -128,9 +134,39 @@ test('refresh rotates; replay revokes every token in the connection, including t
     const input = { grant_type: 'refresh_token', client_id: c.clientId, resource, refresh_token: first.refresh_token }
     const second = (await f.route('/oauth/token', input)).body as Tokens
     expect(await resolveOAuth(f.sql, second.access_token, resource, 1000)).toBeDefined()
-    expect((await f.route('/oauth/token', input)).status).toBe(400)
+    f.clock(1061)
+    const replay = await f.route('/oauth/token', input)
+    expect(replay).toMatchObject({ status: 400, body: { error: 'invalid_grant' } })
+    expect(decode(Refusal, replay).error_description).toMatch(/^Refresh token reused .*sign in again$/)
     expect(await resolveOAuth(f.sql, second.access_token, resource, 1000)).toBeUndefined()
     expect(await resolveOAuth(f.sql, first.access_token, resource, 1000)).toBeUndefined()
+    expect((await f.route('/oauth/token', { ...input, refresh_token: second.refresh_token })).status).toBe(400)
+  } finally {
+    f.db.close()
+  }
+})
+
+test('a refresh token sent again within 60 seconds (a lost response) gets a fresh pair; one stays live (prod gap 9)', async () => {
+  const f = fixture()
+  try {
+    const c = await connection(f)
+    const first = decode(TokenPair, await f.route('/oauth/token', c.tokenBody))
+    const input = { grant_type: 'refresh_token', client_id: c.clientId, resource, refresh_token: first.refresh_token }
+    const lost = decode(TokenPair, await f.route('/oauth/token', input))
+    f.clock(1060)
+    const retried = await f.route('/oauth/token', input)
+    expect(retried.status).toBe(200)
+    const kept = decode(TokenPair, retried)
+    expect(kept.refresh_token).not.toBe(lost.refresh_token)
+    expect(await resolveOAuth(f.sql, kept.access_token, resource, 1060)).toBeDefined()
+    // The pair whose response was lost retired its refresh token; the connection itself lives on.
+    expect(
+      f.sql.all("SELECT COUNT(*) n FROM agent_oauth_tokens WHERE kind='refresh' AND consumed_at IS NULL")[0],
+    ).toEqual({ n: 1 })
+    f.clock(1200)
+    const next = await f.route('/oauth/token', { ...input, refresh_token: kept.refresh_token })
+    expect(next.status).toBe(200)
+    expect(await resolveOAuth(f.sql, decode(TokenPair, next).access_token, resource, 1200)).toBeDefined()
   } finally {
     f.db.close()
   }
@@ -160,6 +196,7 @@ test.each(['access', 'refresh-replay'])('disconnect %s stops callbacks under tha
         refresh_token: tokens.refresh_token,
       }
       await f.route('/oauth/token', input)
+      f.clock(1061)
       await f.route('/oauth/token', input)
     }
     expect(f.sql.all('SELECT status FROM event_subscriptions WHERE id=?', String(subscription.id))).toEqual([
@@ -299,7 +336,6 @@ test('refuses a maintain tick the client did not ask for, and a maintain value t
       return new URL(authorize.redirect!).searchParams.get('oauth_request')!
     }
     const narrow = await consent('sidequest:read sidequest:hire')
-    const Refusal = Schema.Struct({ error: Schema.String, error_description: Schema.String })
     for (const maintain of [true, 'yes']) {
       const refused = await f.route(`/oauth/requests/${narrow}/approve`, { agentIds: ['one'], maintain })
       expect(refused.status).toBe(400)

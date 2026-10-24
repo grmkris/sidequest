@@ -138,8 +138,16 @@ it('rotates refresh tokens and revokes the whole setup family on replay or expli
   const body = { grant_type: 'refresh_token', client_id: c.clientId, resource, refresh_token: c.tokens.refresh_token }
   expect((await f.route('/oauth/token', { ...body, resource: `${origin}/mcp` }))?.status).toBe(400)
   expect((await f.route('/oauth/token', body))?.status).toBe(200)
-  expect((await f.route('/oauth/token', body))?.status).toBe(400)
-  expect(await resolveOAuth(f.sql, c.tokens.access_token, resource, 1000)).toBeUndefined()
+  // Sent again within the grace (a lost response): a fresh pair, the family lives on.
+  f.clock(f.now() + 60)
+  expect((await f.route('/oauth/token', body))?.status).toBe(200)
+  expect(await resolveOAuth(f.sql, c.tokens.access_token, resource, f.now())).toBeDefined()
+  f.clock(f.now() + 61)
+  expect(await f.route('/oauth/token', body)).toMatchObject({
+    status: 400,
+    body: { error_description: expect.stringMatching(/^Refresh token reused/) },
+  })
+  expect(await resolveOAuth(f.sql, c.tokens.access_token, resource, f.now())).toBeUndefined()
   const other = await f.connection()
   await f.route('/oauth/revoke', { token: other.tokens.access_token, client_id: other.clientId })
   expect(await resolveOAuth(f.sql, other.tokens.access_token, resource, 1000)).toBeUndefined()

@@ -2,6 +2,7 @@
 import { AgentStore, agentRoles, type Sql } from '@sidequest/board'
 import { Schema } from 'effect'
 import type { OAuthGrant, OAuthReply, oauthRoute } from './oauth.ts'
+import { TOKEN_REFUSALS, useRefreshToken } from './oauth-refresh.ts'
 import {
   MAINTAIN_SCOPE,
   MEDIA_SCOPE,
@@ -293,7 +294,7 @@ async function issue(input: Input, familyId: string, hash: string, code?: SetupC
     refresh = randomToken()
   const accessHash = await tokenHash(access),
     refreshHash = await tokenHash(refresh)
-  const issued = sql.atomic!(() => {
+  const issued = sql.atomic!((): 'issued' | 'used' | 'replayed' => {
     if (code !== undefined) {
       const used = sql.all<{ hash: string }>(
         'UPDATE agent_oauth_setup_codes SET consumed_at=? WHERE hash=? AND consumed_at IS NULL AND expires_at>? RETURNING hash',
@@ -301,7 +302,7 @@ async function issue(input: Input, familyId: string, hash: string, code?: SetupC
         hash,
         now,
       )[0]
-      if (used === undefined) return false
+      if (used === undefined) return 'used'
       sql.run(
         `INSERT INTO agent_oauth_setup_families (id,client_id,operator,board_id,scopes_json,requested_scopes_json,resource,created_at)
         VALUES (?,?,?,?,?,?,?,?)`,
@@ -322,12 +323,9 @@ async function issue(input: Input, familyId: string, hash: string, code?: SetupC
         familyId,
         now,
       )[0]
-      if (row === undefined || row.revoked_at !== null) return false
-      if (row.consumed_at !== null) {
-        sql.run('UPDATE agent_oauth_setup_families SET revoked_at=? WHERE id=?', now, familyId)
-        return false
-      }
-      sql.run('UPDATE agent_oauth_setup_tokens SET consumed_at=? WHERE hash=?', now, hash)
+      if (row === undefined || row.revoked_at !== null) return 'used'
+      if (useRefreshToken(sql, 'setup', { hash, familyId, consumedAt: row.consumed_at }, now) === 'replayed')
+        return 'replayed'
     }
     sql.run(
       "INSERT INTO agent_oauth_setup_tokens (hash,family_id,kind,expires_at) VALUES (?,?,'access',?)",
@@ -341,11 +339,11 @@ async function issue(input: Input, familyId: string, hash: string, code?: SetupC
       familyId,
       now + 30 * 86400,
     )
-    return true
+    return 'issued'
   })
-  if (!issued) {
+  if (issued !== 'issued') {
     await terminate(input, familyId)
-    return failure('Code already used or refresh replayed')
+    return failure(TOKEN_REFUSALS[issued])
   }
   const family = sql.all<SetupFamily>('SELECT * FROM agent_oauth_setup_families WHERE id=?', familyId)[0]!
   return good({
