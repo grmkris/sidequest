@@ -1,0 +1,70 @@
+baseline run 1
+$ vitest run test/approval-context.test.ts test/hiring-handoff.test.ts test/commons-authoring.test.ts
+
+ RUN  v5.0.3 /home/kristjan/code/agent-jobs.wt/spike-cache-sidequest/apps/explore
+
+
+ Test Files  3 passed (3)
+      Tests  42 passed (42)
+   Start at  02:12:20
+   Duration  42.07s (tests 93%, import 4%, transform 3%)
+
+
+baseline run 2
+$ vitest run test/approval-context.test.ts test/hiring-handoff.test.ts test/commons-authoring.test.ts
+
+ RUN  v5.0.3 /home/kristjan/code/agent-jobs.wt/spike-cache-sidequest/apps/explore
+
+
+ Test Files  3 passed (3)
+      Tests  42 passed (42)
+   Start at  02:13:03
+   Duration  43.57s (tests 92%, import 5%, transform 3%)
+
+
+baseline run 3
+$ vitest run test/approval-context.test.ts test/hiring-handoff.test.ts test/commons-authoring.test.ts
+
+ RUN  v5.0.3 /home/kristjan/code/agent-jobs.wt/spike-cache-sidequest/apps/explore
+
+
+ Test Files  3 passed (3)
+      Tests  42 passed (42)
+   Start at  02:13:48
+   Duration  41.41s (tests 92%, transform 4%, import 4%)
+
+
+after run 1
+$ vitest run test/approval-context.test.ts test/hiring-handoff.test.ts test/commons-authoring.test.ts
+
+ RUN  v5.0.3 /home/kristjan/code/agent-jobs.wt/spike-cache-sidequest/apps/explore
+
+
+ Test Files  3 passed (3)
+      Tests  44 passed (44)
+   Start at  02:23:54
+   Duration  37.01s (tests 95%, import 3%, transform 2%)
+
+
+after run 2
+$ vitest run test/approval-context.test.ts test/hiring-handoff.test.ts test/commons-authoring.test.ts
+
+ RUN  v5.0.3 /home/kristjan/code/agent-jobs.wt/spike-cache-sidequest/apps/explore
+
+
+ Test Files  3 passed (3)
+      Tests  44 passed (44)
+   Start at  02:24:32
+   Duration  35.58s (tests 96%, import 3%, transform 2%)
+
+
+after run 3
+$ vitest run test/approval-context.test.ts test/hiring-handoff.test.ts test/commons-authoring.test.ts
+
+ RUN  v5.0.3 /home/kristjan/code/agent-jobs.wt/spike-cache-sidequest/apps/explore
+
+
+ Test Files  3 passed (3)
+      Tests  44 passed (44)
+   Start at  02:25:09
+   Duration  36.35s (tests 95%, import 3%, transform 2%)

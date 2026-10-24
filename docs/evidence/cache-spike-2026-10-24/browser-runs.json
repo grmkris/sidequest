@@ -1,0 +1,110 @@
+[
+  {
+    "command": [
+      "heavy",
+      "bun",
+      "--no-env-file",
+      "run",
+      "--cwd",
+      "apps/explore",
+      "test",
+      "test/approval-context.test.ts",
+      "test/hiring-handoff.test.ts",
+      "test/commons-authoring.test.ts"
+    ],
+    "run": 1,
+    "seconds": 43.444,
+    "exit": 0,
+    "arm": "baseline"
+  },
+  {
+    "command": [
+      "heavy",
+      "bun",
+      "--no-env-file",
+      "run",
+      "--cwd",
+      "apps/explore",
+      "test",
+      "test/approval-context.test.ts",
+      "test/hiring-handoff.test.ts",
+      "test/commons-authoring.test.ts"
+    ],
+    "run": 2,
+    "seconds": 45.041,
+    "exit": 0,
+    "arm": "baseline"
+  },
+  {
+    "command": [
+      "heavy",
+      "bun",
+      "--no-env-file",
+      "run",
+      "--cwd",
+      "apps/explore",
+      "test",
+      "test/approval-context.test.ts",
+      "test/hiring-handoff.test.ts",
+      "test/commons-authoring.test.ts"
+    ],
+    "run": 3,
+    "seconds": 42.53,
+    "exit": 0,
+    "arm": "baseline"
+  },
+  {
+    "command": [
+      "heavy",
+      "bun",
+      "--no-env-file",
+      "run",
+      "--cwd",
+      "apps/explore",
+      "test",
+      "test/approval-context.test.ts",
+      "test/hiring-handoff.test.ts",
+      "test/commons-authoring.test.ts"
+    ],
+    "run": 1,
+    "seconds": 38.161,
+    "exit": 0,
+    "arm": "after"
+  },
+  {
+    "command": [
+      "heavy",
+      "bun",
+      "--no-env-file",
+      "run",
+      "--cwd",
+      "apps/explore",
+      "test",
+      "test/approval-context.test.ts",
+      "test/hiring-handoff.test.ts",
+      "test/commons-authoring.test.ts"
+    ],
+    "run": 2,
+    "seconds": 36.508,
+    "exit": 0,
+    "arm": "after"
+  },
+  {
+    "command": [
+      "heavy",
+      "bun",
+      "--no-env-file",
+      "run",
+      "--cwd",
+      "apps/explore",
+      "test",
+      "test/approval-context.test.ts",
+      "test/hiring-handoff.test.ts",
+      "test/commons-authoring.test.ts"
+    ],
+    "run": 3,
+    "seconds": 37.556,
+    "exit": 0,
+    "arm": "after"
+  }
+]

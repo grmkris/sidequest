@@ -1,0 +1,39 @@
+import { approvalBrowser } from '../../apps/explore/test/approval-browser.ts'
+import { backend, connectBackend } from '../../apps/explore/test/approval-fixture.ts'
+
+const fixture = await approvalBrowser()
+try {
+  const origin = 'origin' in fixture ? fixture.origin : 'http://approval.test'
+  for (let run = 1; run <= 3; run++) {
+    const page = await fixture.browser.newPage()
+    if ('serve' in fixture) await fixture.serve(page)
+    await connectBackend(page, backend())
+    const session = await page.context().newCDPSession(page)
+    await session.send('Network.enable')
+    let cached = new Set<string>()
+    let assets = new Set<string>()
+    let bytes = 0
+    session.on('Network.requestServedFromCache', ({ requestId }) => cached.add(requestId))
+    session.on('Network.responseReceived', ({ requestId, type, response }) => {
+      if (type !== 'Script' && type !== 'Stylesheet') return
+      assets.add(requestId)
+      if (response.fromDiskCache) cached.add(requestId)
+    })
+    session.on('Network.loadingFinished', ({ requestId, encodedDataLength }) => {
+      if (assets.has(requestId)) bytes += encodedDataLength
+    })
+    for (let navigation = 1; navigation <= 3; navigation++) {
+      cached = new Set()
+      assets = new Set()
+      bytes = 0
+      const started = performance.now()
+      await page.goto(`${origin}/?approval=v${navigation % 2 + 1}`)
+      await page.getByText('karl-v1', { exact: true }).waitFor()
+      console.log(JSON.stringify({ run, navigation, ms: +(performance.now() - started).toFixed(1), assets: assets.size, cachedAssets: [...assets].filter(id => cached.has(id)).length, encodedAssetBytes: bytes }))
+    }
+    await page.close()
+  }
+} finally {
+  await fixture.browser.close()
+  if ('close' in fixture) await fixture.close()
+}
