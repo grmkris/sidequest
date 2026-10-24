@@ -69,19 +69,8 @@ export function PlanTab({
   )
 }
 
-/** What a post's save must send back unchanged: a save replaces every field of the post. */
-const keepOf = (post: MediaPost) => ({
-  id: post.id,
-  revision: post.revision,
-  channel: post.channel,
-  text: post.text,
-  assets: post.assets,
-  ...(post.account === undefined ? {} : { account: post.account }),
-  ...(post.day === undefined ? {} : { day: post.day }),
-  ...(post.time === undefined ? {} : { time: post.time }),
-  ...(post.note === undefined ? {} : { note: post.note }),
-  ...(post.campaign === undefined ? {} : { campaign: post.campaign }),
-})
+/** A skip or an approval names the post as read; a save keeps every field it does not send. */
+const keepOf = (post: MediaPost) => ({ id: post.id, revision: post.revision, channel: post.channel, text: post.text })
 
 interface RowProps {
   post: MediaPost
