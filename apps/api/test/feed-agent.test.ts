@@ -41,6 +41,8 @@ describe('management feed events', () => {
       [operator, 'approval.requested', 'operator'],
     ])
     expect(produced.events[0]!.next).toEqual({ tool: 'request_permissions', args: { operationKey: 'k1' } })
+    // Prod gap 10: the event names no arguments, and says where the waiting call keeps them.
+    expect(produced.events[0]!.summary).toContain('check_operation {operationId: "k1"} returns them as intent_json')
     expect(produced.operatorNotice).toEqual({
       id: 'telegram:approval:ap1',
       text: 'Canvas needs your decision: a new permission. Review and sign: https://dev.sidequest.exchange/agent/77?tab=approvals&approval=ap1',

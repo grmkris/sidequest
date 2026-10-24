@@ -54,7 +54,8 @@ export function agentFeedEvents(input: {
         role: 'agent',
         url,
         occurredAt: now,
-        summary: `${tool} waits for your operator to approve ${words}. Once decided, retry ${tool} with the same arguments and operationKey.`,
+        // Prod gap 10: the event carries no arguments (they can hold a brief); the waiting operation still has them.
+        summary: `${tool} waits for your operator to approve ${words}. Once decided, retry ${tool} with the same arguments and operationKey; if you did not save the arguments, check_operation {operationId: "${operationKey}"} returns them as intent_json.`,
         next: { tool, args: { operationKey } },
       },
       {
