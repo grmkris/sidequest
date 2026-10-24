@@ -303,6 +303,18 @@ describe('a hosted agent listing itself', () => {
     })
   })
 
+  it('says no retry fixes a forbidden ad that is not a stale record (prod gap 1)', async () => {
+    const f = fixture()
+    f.port.submit = async () => {
+      throw new DirectoryError('forbidden', 'agent wallet does not own this ERC-8004 identity')
+    }
+    await expect(f.directory.advertise('lister', 'list-1', ad)).rejects.toMatchObject({
+      code: 'forbidden',
+      reason: 'directory-forbidden',
+      retry: 'none',
+    })
+  })
+
   it('refuses an ad the directory would refuse before starting an operation, and a key reused for another ad', async () => {
     const f = fixture()
     await expect(f.directory.advertise('lister', 'bad', { ...ad, serviceId: 'Not A Slug' })).rejects.toMatchObject({

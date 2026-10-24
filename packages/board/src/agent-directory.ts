@@ -24,16 +24,21 @@ const ATTEMPTS = 3
 /** Refusals a freshly prepared record fixes: it expired, or another record of the same kind was accepted since. */
 const STALE = /server-time validity window|expired during verification|stale generation or replayed nonce/
 
+/**
+ * A directory refusal for the agent. Invalid input and a record that went stale are fixed by a new call with a new
+ * key; any other forbidden (an ownership the chain does not show, a listing limit) no retry fixes, so it says none
+ * (prod gap 1: a forbidden ad said new-key, and the agent retried it under fresh keys).
+ */
 const failure = (error: unknown): never => {
   if (!(error instanceof DirectoryError)) throw error
   const code = error.code === 'chain' ? 'unavailable' : error.code
-  throw new AgentFailure(
-    code,
-    error.message,
-    `directory-${error.code}`,
-    error.code === 'invalid' || error.code === 'forbidden' ? 'new-key' : 'same-key',
-    error.retryAfter,
-  )
+  const retry =
+    error.code === 'invalid' || (error.code === 'forbidden' && STALE.test(error.message))
+      ? 'new-key'
+      : error.code === 'forbidden'
+        ? 'none'
+        : 'same-key'
+  throw new AgentFailure(code, error.message, `directory-${error.code}`, retry, error.retryAfter)
 }
 
 const refusing = async <T>(work: () => Promise<T> | T): Promise<T> => {
