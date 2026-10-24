@@ -34,6 +34,10 @@
       {
         "wallet": "0xB9970A6371358F6C74DFb15A7cB2653E3AE3E471",
         "role": "operator"
+      },
+      {
+        "wallet": "0x8Aaa587a0478f021a5466be4912871E04C5D31Ad",
+        "role": "operator"
       }
     ],
     "timezone": "Europe/Ljubljana",
