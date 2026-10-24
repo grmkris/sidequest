@@ -471,6 +471,8 @@ export const expectedCreates = (snapshot: Snapshot, infra: StageFile, buckets: C
     return (
       row.action === 'create' &&
       EXPECTED_BUCKET_CREATES.includes(row.fqn) &&
+      // An adopt-move already counts a deferred-adoption create as an adoption.
+      !(snapshot.deferredAdoption ?? []).includes(row.fqn) &&
       name !== undefined &&
       !buckets.some((bucket) => bucket.name === name)
     )

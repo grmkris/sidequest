@@ -357,3 +357,18 @@ test('a first deploy also refuses an existing media bucket of the stage name', (
   }
   expect(() => validateFirstDeployCensus(infra, census)).toThrow('already exist')
 })
+
+test('an adopt-move never counts the media bucket twice', () => {
+  const summary: PlanCounts = { create: 2, update: 0, adopted: 0, replace: 0, delete: 0, orphaned: 0, noop: 0 }
+  const snapshot = {
+    summary,
+    resources: [
+      { fqn: 'Media', action: 'create', bindings: [] },
+      { fqn: 'Api', action: 'create', bindings: [] },
+    ],
+    actions: [],
+    deferredAdoption: ['Media'],
+  }
+  expect(expectedCreates(snapshot, infra, [])).toBe(0)
+  expect(() => assertSnapshotSafe(snapshot, false, true, expectedCreates(snapshot, infra, []))).toThrow('create=1')
+})
