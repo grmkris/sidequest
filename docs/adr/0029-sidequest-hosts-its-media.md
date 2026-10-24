@@ -2,8 +2,8 @@
 
 Status: accepted (Kris, 23 Oct 2026: fold the media kit into Sidequest under `/media`, two levels, plan social media
 there; agents with the media tick act with their operator's rights; posting stays manual with a morning Telegram
-digest; one prod cutover after a dev rehearsal. 24 Oct: the prod team is Kris alone, and his agents do most media work
-over MCP). Build plan:
+digest; one prod cutover after a dev rehearsal. 24 Oct: the prod team is Kris alone, and the agents Kris connects do
+most media work over MCP). Build plan:
 [docs/plans/sidequest-media.md](../plans/sidequest-media.md).
 Date: 2026-10-23
 

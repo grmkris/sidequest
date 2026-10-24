@@ -2106,3 +2106,27 @@ prod cutover after a dev rehearsal. What is planned, implemented and tested, and
   it now reaches the API (401 without the secret header). Prod still answers 405 until the cutover release.
 - **Not verified:** an agent over hosted MCP with the media tick (no media-team operator has consented a connection
   yet); a morning digest delivered (needs a linked team wallet on dev); anything on prod.
+
+## Media library on prod: the kit moves in (ADR-0029, 24 Oct 2026)
+
+Kris approved the cutover on 24 Oct (the prod media team is Kris alone). What is live on prod:
+
+- **Release:** prod `d7f7f722` (CI run 40082115807, verify and deploy-prod green) created `sidequest-prod-media`
+  through the release guard's one admitted bucket create, with `MEDIA_SIGNING_KEY` from the prod GitHub environment.
+- **Import:** `scripts/media/import-kit.mjs`, signed in over SIWE as a temporary prod-only media operator
+  (`0x8Aaa…31Ad`, taken off the team again in `6f42cd29`), answered all 287 calls and served each of the 210 public
+  files at its exact length. The four film-material assets are internal behind one share (90 days, to 22 Jan 2027),
+  and the since-launch brief links it.
+- **Read as a public visitor after the import:** `list_media` gives 110 assets (44 videos) in 14 sections;
+  `list_media_posts` gives the kit's 5 posts, all `posted`; `/media` is 200; an internal file is 404 and `get_media`
+  of an internal asset is `not-found`; the share page is 200. `POST /telegram/webhook` answers 401 (was 405).
+- **Redirector:** media.sidequest.exchange runs the kit repo's `src/redirect.ts` (versions c2f9a513, then c719bd0e;
+  commits `33d31e2`, `047e8a0`). Checked link by link: `/` 301 to `/media`; a launch film 301 to `/media/f/…`,
+  followed to 206; a brief 301 to its document asset; a film-material file 302 to the share; an archived `cats-mjav`
+  draft 200 from the old bucket; `/crew/landed` 200; `/mcp` (GET and POST) and `/manifest.json` 410. The user-level
+  `sidequest-media` MCP was removed from Claude Code on netcup.
+- **Implemented and tested, not live-verified:** an operator's agent with the Media tick sees internal media and has
+  every operator action; without the tick it reads public media and the team tools answer `scope-required`; a
+  member's agent cannot approve (`media-tools.test.ts`, through `mcpRoute`).
+- **Not verified on prod:** an agent connected with the Media tick (Kris reconnects with it), a morning digest
+  delivered (needs Kris's wallet linked to Telegram on prod), Safari playback.
