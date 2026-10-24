@@ -1,0 +1,132 @@
+Command: env -u MONAD_TESTNET_RPC_URL -u MONAD_MAINNET_RPC_URL -u HYPERSYNC_API_TOKEN -u SIDEQUEST_LIVE_PREVIEW TURBO_CACHE=local:rw heavy bun --no-env-file run check
+Source HEAD: b7c4983e
+Exit: 0
+
+$ bun run format:check && bun run agents:check && bun run graph && bun run migrations:check && bun run dupes && bun run typecheck && bun run lint:gate && bun run test && bun run test:scripts
+$ oxfmt -c oxfmt.config.ts --check
+All matched files use the correct format.
+$ bunx repoagents@1 check && bun tools/agents-check.ts
+agents:check passed
+$ bun tools/check-graph.ts
+Graph check passed (12 workspaces, 10 reachable from an app)
+$ bun scripts/migrations-lock.ts check
+migrations:check passed (0 new files; apps/api/migrations.lock.json)
+$ jscpd
+$ tsc -p scripts/ci/tsconfig.json && tsc -p crew/tsconfig.json && turbo run typecheck
+ Tasks:    11 successful, 11 total
+Cached:    1 cached, 11 total
+  Time:    28.347s
+$ bun tools/lint-baseline.ts
+lint:gate: passed; the baseline holds 2782 findings in 364 files (oxlint 2782, knip 0).
+lint:gate: 35 s
+$ turbo run test --concurrency=2
+@sidequest/sdk:test: cache miss, executing 60f7255dc59de8d0
+@sidequest/contracts:test: cache hit, replaying logs 54a058bdd41d9167
+@sidequest/board:test: cache miss, executing 74462b003c862974
+@sidequest/sdk:test:  Test Files  54 passed | 4 skipped (58)
+@sidequest/sdk:test:       Tests  430 passed | 33 skipped (463)
+@sidequest/commons:test: cache miss, executing fa65b7d3f81fc3a2
+@sidequest/commons:test:  Test Files  9 passed (9)
+@sidequest/commons:test:       Tests  112 passed (112)
+@sidequest/docs:test: cache miss, executing 033a1cbb0aa78f65
+@sidequest/board:test:  Test Files  61 passed | 8 skipped (69)
+@sidequest/board:test:       Tests  642 passed | 52 skipped (694)
+@sidequest/react:test: cache miss, executing c0c18651fad4b8f9
+@sidequest/react:test:  Test Files  3 passed (3)
+@sidequest/react:test:       Tests  8 passed (8)
+tools:test: cache hit, replaying logs 81d673e6e39d0a38
+tools:test:  Test Files  5 passed (5)
+tools:test:       Tests  53 passed (53)
+@sidequest/explore:test: cache miss, executing 1c40cd4c4c1ab7a3
+@sidequest/docs:test:  Test Files  8 passed (8)
+@sidequest/docs:test:       Tests  62 passed (62)
+@sidequest/indexer:test: cache miss, executing 12d4fcbadb7f21a7
+@sidequest/indexer:test:  Test Files  12 passed | 1 skipped (13)
+@sidequest/indexer:test:       Tests  67 passed | 1 skipped (68)
+@sidequest/arbiter:test: cache miss, executing 9a8f9887bc64d7b2
+@sidequest/arbiter:test:  Test Files  8 passed (8)
+@sidequest/arbiter:test:       Tests  69 passed (69)
+@sidequest/api:test: cache miss, executing 0ca8983bc63795ea
+@sidequest/explore:test:  Test Files  134 passed (134)
+@sidequest/explore:test:       Tests  689 passed (689)
+@sidequest/indexer-worker:test: cache miss, executing 416b2b6c717f11e0
+@sidequest/indexer-worker:test:  Test Files  1 passed (1)
+@sidequest/indexer-worker:test:       Tests  9 passed (9)
+@sidequest/api:test:  Test Files  99 passed | 2 skipped (101)
+@sidequest/api:test:       Tests  887 passed | 17 skipped (904)
+ Tasks:    18 successful, 18 total
+Cached:    8 cached, 18 total
+  Time:    6m11.575s
+$ bun tools/test-scripts.ts && bun test scripts/ci crew/bin
+# tests 36
+# pass 36
+# fail 0
+# skipped 0
+ 77 pass
+ 0 fail
+Ran 77 tests across 8 files. [980.00ms]
+
+Scoped implementation gate (full original output):
+$ bun scripts/check-files.ts apps/explore/AGENTS.md apps/explore/package.json apps/explore/test/approval-browser.ts apps/explore/test/approval-context.test.ts apps/explore/test/approval-fixture.ts apps/explore/test/cache-measure.ts apps/explore/test/commons-authoring.test.ts apps/explore/test/init-script-mock.ts apps/explore/test/init-script-mock.test.ts
+
+$ node_modules/.bin/oxfmt -c oxfmt.config.ts --check --no-error-on-unmatched-pattern apps/explore/AGENTS.md apps/explore/package.json apps/explore/test/approval-browser.ts apps/explore/test/approval-context.test.ts apps/explore/test/approval-fixture.ts apps/explore/test/cache-measure.ts apps/explore/test/commons-authoring.test.ts apps/explore/test/init-script-mock.test.ts apps/explore/test/init-script-mock.ts
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 443ms on 9 files using 16 threads.
+
+$ node_modules/.bin/oxlint -c oxlint.config.ts apps/explore/test/approval-browser.ts apps/explore/test/approval-context.test.ts apps/explore/test/approval-fixture.ts apps/explore/test/cache-measure.ts apps/explore/test/commons-authoring.test.ts apps/explore/test/init-script-mock.test.ts apps/explore/test/init-script-mock.ts
+
+$ node_modules/.bin/turbo run typecheck --output-logs=errors-only --filter=@sidequest/explore
+
+   • turbo 2.11.7
+   • Packages in scope: @sidequest/explore
+   • Running typecheck in 1 package
+   • Remote caching disabled (by flags), using shared worktree cache
+
+
+ Tasks:    3 successful, 3 total
+Cached:    3 cached, 3 total
+  Time:    114ms >>> FULL TURBO
+
+
+$ bun run graph
+$ bun tools/check-graph.ts
+Graph check passed (12 workspaces, 10 reachable from an app)
+
+$ bun run agents:check
+$ bunx repoagents@1 check && bun tools/agents-check.ts
+repoagents: ok
+agents:check passed
+
+check:files: 9 files
+| Step | Result | Detail |
+| :-- | :-- | :-- |
+| format | pass | 9 files |
+| lint | pass | 7 files |
+| typecheck | pass | @sidequest/explore |
+| graph | pass | a manifest or tools/graph.ts changed |
+| agents:check | pass | an agent file changed |
+
+Standalone Explore suite (original output):
+$ vitest run
+
+ RUN  v5.0.3 /home/kristjan/code/agent-jobs.wt/spike-cache-sidequest/apps/explore
+
+(node:1983334) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+ Test Files  134 passed (134)
+      Tests  689 passed (689)
+   Start at  02:26:17
+   Duration  74.76s (import 55%, tests 28%, transform 17%)
+
+     Import  829 modules were evaluated 3755 times · 437.64s total, 55% of tracked time
+             ~8.80s faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
+
+Earlier failed gate excerpts:
+  knip configuration hints must be fixed:
+    contracts/lib/**    knip.jsonc  Remove from ignore
+lint:gate: 1 collection failures; the findings are incomplete, so nothing is compared
+  oxlint exited 75

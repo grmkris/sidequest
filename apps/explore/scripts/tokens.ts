@@ -116,6 +116,7 @@ rmSync(out, { recursive: true, force: true })
 mkdirSync(out, { recursive: true })
 const browser = await chromium.launch({ headless: true })
 const context = await browser.newContext({ viewport: { width: SIZE, height: SIZE }, deviceScaleFactor: 1 })
+// Keep a network route: untrusted logo rendering must make no network request; every page uses an in-page data URL.
 await context.route('**/*', (route) => route.abort())
 
 async function render(image: { mime: string; bytes: Uint8Array }, path: string) {

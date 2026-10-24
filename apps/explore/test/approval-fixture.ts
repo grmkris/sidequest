@@ -3,6 +3,7 @@ import { encodeFunctionData, keccak256, stringToHex } from 'viem'
 import type { AgentApproval } from '../src/agent-api.ts'
 import type { ManagedAgent } from '../src/api.ts'
 import type { Page } from 'playwright-core'
+import { installFetchMock, jsonResponse, type InitScriptRequest } from './init-script-mock.ts'
 
 const operator = '0x1111111111111111111111111111111111111111'
 const wallet = '0x2222222222222222222222222222222222222222'
@@ -90,11 +91,12 @@ function preparedGrant() {
   }
 }
 
+const send = (result: unknown) => jsonResponse({ ok: true, result })
+const unavailable = () => jsonResponse({ ok: false, message: 'Records unavailable' }, 503)
+
 export async function connectBackend(page: Page, state: ReturnType<typeof backend>) {
-  await page.route('**/api/**', async (route) => {
-    const pathname = new URL(route.request().url()).pathname
-    const send = (result: unknown) => route.fulfill({ json: { ok: true, result } })
-    const unavailable = () => route.fulfill({ status: 503, json: { ok: false, message: 'Records unavailable' } })
+  await installFetchMock(page, async (input: InitScriptRequest) => {
+    const pathname = new URL(input.url).pathname
     if (pathname === '/api/agents') {
       await state.holdAgents
       return state.agentError ? unavailable() : send({ agents: state.agents })
@@ -106,7 +108,8 @@ export async function connectBackend(page: Page, state: ReturnType<typeof backen
     }
     const approval = state.approvals.find((item) => pathname.includes(`/${item.id}/`))
     if (approval === undefined) return unavailable()
-    const body = route.request().postDataJSON() ?? {}
+    // SAFETY: fixture callers send JSON objects through agentEndpoint; no live input reaches this test backend.
+    const body = JSON.parse(input.body || '{}') as Record<string, unknown>
     state.writes.push({ path: pathname, body })
     if (pathname.endsWith('/prepare')) {
       return send(preparedGrant())
@@ -115,7 +118,7 @@ export async function connectBackend(page: Page, state: ReturnType<typeof backen
     await state.holdDecision
     if (body.approved === false) return send({ approval })
     if (state.outcome === 'confirmed') approval.status = 'executed'
-    if (state.loseResponse) return route.abort('failed')
+    if (state.loseResponse) throw new Error('simulated lost response')
     return send({ status: state.outcome, operationId: approval.operation_id })
   })
 }

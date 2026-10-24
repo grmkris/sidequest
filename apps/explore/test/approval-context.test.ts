@@ -13,20 +13,21 @@ declare global {
 }
 
 let browser: Browser
-let serve: (page: Page) => Promise<void>
+let closeFixture: () => Promise<void>
+let origin: string
 beforeAll(async () => {
   const fixture = await approvalBrowser()
   browser = fixture.browser
-  serve = fixture.serve
+  origin = fixture.origin
+  closeFixture = fixture.close
 }, 30_000)
-afterAll(async () => browser?.close())
+afterAll(async () => closeFixture?.())
 
 async function open(state = backend(), search = '') {
   const page = await browser.newPage({ viewport: { width: 800, height: 900 } })
   page.setDefaultTimeout(3000)
-  await serve(page)
   await connectBackend(page, state)
-  await page.goto(`http://approval.test/?${search}`)
+  await page.goto(`${origin}/?${search}`)
   return { page, state }
 }
 
@@ -104,9 +105,59 @@ it('opens the linked rejected request with its brief, and warns for a missing li
   try {
     await page.locator('details#approval-v2[open]').waitFor()
     await page.getByText('Reserved for Agent Minimum', { exact: false }).waitFor()
-    await page.goto('http://approval.test/?approval=missing')
+    await page.goto(`${origin}/?approval=missing`)
     await page.getByRole('alert').filter({ hasText: 'linked approval was not found' }).waitFor()
     expect(state.writes).toEqual([])
+  } finally {
+    await page.close()
+  }
+})
+
+it('reuses script and style cache across navigation while reading fresh approval state', async () => {
+  const { page, state } = await open()
+  try {
+    await page.getByText('karl-v1', { exact: true }).waitFor()
+    const session = await page.context().newCDPSession(page)
+    await session.send('Network.enable')
+    const cached = new Set<string>()
+    const assets = new Set<string>()
+    session.on('Network.requestServedFromCache', ({ requestId }) => cached.add(requestId))
+    session.on('Network.responseReceived', ({ requestId, type, response }) => {
+      if (type !== 'Script' && type !== 'Stylesheet') return
+      assets.add(requestId)
+      if (response.fromDiskCache) cached.add(requestId)
+    })
+    state.approvals[1]!.status = 'rejected'
+    const reads = state.reads
+    await page.goto(`${origin}/?approval=v2`)
+    await page.locator('details#approval-v2[open]').waitFor()
+    expect(state.reads).toBeGreaterThan(reads)
+    expect(assets.size).toBeGreaterThan(0)
+    expect([...assets].every((id) => cached.has(id))).toBe(true)
+  } finally {
+    await page.close()
+  }
+})
+
+it('keeps requests to another origin behind the harness CSP rather than mocking them', async () => {
+  const { page } = await open()
+  try {
+    // Another loopback origin exercises the external-traffic fence without contacting an external host.
+    const otherOrigin = `http://localhost:${new URL(origin).port}/api/agents`
+    expect(
+      await page.evaluate(async (target) => {
+        const violation = new Promise<string>((resolve) => {
+          window.addEventListener('securitypolicyviolation', (event) => resolve(event.effectiveDirective), {
+            once: true,
+          })
+        })
+        const blocked = await fetch(target).then(
+          () => false,
+          () => true,
+        )
+        return { blocked, directive: await violation }
+      }, otherOrigin),
+    ).toEqual({ blocked: true, directive: 'connect-src' })
   } finally {
     await page.close()
   }

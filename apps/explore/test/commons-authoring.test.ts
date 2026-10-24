@@ -161,6 +161,7 @@ it('contains an unavailable plan chunk without losing the editable draft', async
   const page = await open('?signedIn')
   try {
     await page.getByLabel('Message', { exact: true }).fill('Keep my message')
+    // Native dynamic import needs a network-level chunk failure; a fetch mock cannot intercept the module loader.
     await page.route('**/AttachmentEditor-*.js', (route) => route.fulfill({ status: 404, body: 'not found' }))
     await page.getByRole('button', { name: 'Attach interactive plan' }).click()
     await page.getByText('Plan editor could not load. Reload to try again.').waitFor()

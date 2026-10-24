@@ -74,7 +74,7 @@ export class HostedBrowser {
       this.#pending.add(pending)
     })
     if (readonly) {
-      // Abort writes; there is no replacement response and no injected wallet.
+      // Keep a network route: this read-only smoke must abort every native write/unknown POST, with no replacement response.
       await this.context.route('**/*', async (route) => {
         const request = route.request()
         if (request.method() === 'GET' || request.method() === 'HEAD' || request.method() === 'OPTIONS')
