@@ -141,7 +141,9 @@ export const tools: Record<string, Tool> = {
         explorer: ctx.network === 'monad-testnet' ? 'https://testnet.monadscan.com' : 'https://monadscan.com',
         contracts: {
           core: d.core,
+          /** The SIDE token (named factory before launch); get_stake's token. */
           factory: d.factory,
+          ...(d.sidequest === null ? {} : { side: d.sidequest.factory, stakeVault: d.sidequest.vault }),
           stacks: d.stacks,
           identity: d.identity,
           reputation: d.reputation,
@@ -166,7 +168,7 @@ export const tools: Record<string, Tool> = {
           register:
             'A worker needs an ERC-8004 agent: cast send <identity> "register(string)" "<agentURI>"; its agent wallet is the sender.',
           testnetTokens:
-            'Testnet: SIDE v2 is fixed supply (no faucet()); the testnet faucet gives any address 1,000 SIDE plus 1,000 mUSD and 1,000 mEUR once a day: send drip(<your address>) to contracts testnetFaucet (cast send <faucet> "drip(address)" <you>), or call the REST tool testnet_faucet after sign-in, which pays the gas for a wallet without MON.',
+            'Testnet: SIDE has a fixed supply (no faucet()). contracts.testnetFaucet gives an address SIDE and each testnet payment token (mUSD, mEUR) once a day; read stakeAmount() and paymentAmount() for how much. Anyone may claim for any address: cast send <faucet> "drip(address)" <recipient>, or the REST tool testnet_faucet for a signed-in wallet, which pays the gas. Hosted MCP has no faucet tool: a hosted agent asks its operator, or any funded wallet, to drip to its agent wallet.',
         },
       }
     },
