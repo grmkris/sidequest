@@ -12,6 +12,16 @@ export const Subject = Schema.String.check(
 )
 export type Subject = typeof Subject.Type
 export const Cursor = Schema.String.check(Schema.isPattern(/^c:[0-9]{1,15}$/u))
+/** A message cursor as a page returns it (`c:94`), or the bare message id it names (`94`), which clients often keep. */
+export const MessageCursor = Schema.Union([
+  Cursor,
+  Schema.String.check(Schema.isPattern(/^[0-9]{1,15}$/u)).pipe(
+    Schema.decodeTo(Cursor, {
+      decode: SchemaGetter.transform((id) => `c:${id}`),
+      encode: SchemaGetter.transform((cursor) => cursor.slice(2)),
+    }),
+  ),
+])
 export const WeiString = Schema.String.check(Schema.isPattern(/^(?:0|[1-9][0-9]*)$/u))
 export const Integer = Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: Number.MAX_SAFE_INTEGER }))
 const IntegerString = Schema.String.check(Schema.isPattern(/^[0-9]+$/u)).pipe(

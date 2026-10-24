@@ -1,6 +1,6 @@
 import { Schema, SchemaGetter } from 'effect'
 import { PresentationInput, PresentationOutput } from './presentation.ts'
-import { Address, Cursor, Integer, ItemId, Limit, OutputId, Subject, WeiString, text } from './ids.ts'
+import { Address, Cursor, Integer, ItemId, Limit, MessageCursor, OutputId, Subject, WeiString, text } from './ids.ts'
 import { Hidden, Role } from './roles.ts'
 
 /**
@@ -63,8 +63,8 @@ export const Viewer = Schema.Struct({
 export type Viewer = typeof Viewer.Type
 export const ListMessagesInput = Schema.Struct({
   subject: Subject,
-  after: Schema.optional(Cursor),
-  before: Schema.optional(Cursor),
+  after: Schema.optional(MessageCursor),
+  before: Schema.optional(MessageCursor),
   limit: Schema.optional(Limit),
 })
 export const ListMessagesOutput = Schema.Struct({
