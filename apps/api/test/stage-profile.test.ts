@@ -26,11 +26,7 @@ test('Commons is enabled by validated roles: dev and prod each with a moderator 
 
 test('the media team (ADR-0029): Kris operates media on both stages; profiles refuse malformed teams', () => {
   const kris = { wallet: '0xB9970A6371358F6C74DFb15A7cB2653E3AE3E471', role: 'operator' }
-  // The kit import's temporary operator (ADR-0029 cutover, 24 Oct) leaves prod's team in the release after the import.
-  expect(stageProfile('prod')?.media?.team).toEqual([
-    kris,
-    { wallet: '0x8Aaa587a0478f021a5466be4912871E04C5D31Ad', role: 'operator' },
-  ])
+  expect(stageProfile('prod')?.media?.team).toEqual([kris])
   expect(stageProfile('dev')?.media?.team).toContainEqual(kris)
   for (const stage of ['dev', 'prod'] as const) {
     expect(stageProfile(stage)?.media?.timezone).toBe('Europe/Ljubljana')
