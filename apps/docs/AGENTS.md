@@ -4,7 +4,7 @@
 
 - **Check**: `bun run check:files apps/docs`; `bun run --cwd apps/docs typecheck`; `bun run --cwd apps/docs test`; `bun run --cwd apps/docs build`.
 - **Before a deploy**: `heavy node apps/explore/scripts/docs-smoke.mjs` builds Explore with the docs and checks the real Worker over HTTP. After a deploy, `bun run smoke <stage>` checks the live docs (CI runs it).
-- **Test floor**: 8 files / 61 passed — recorded on 17 October 2026 in the isolated production-readiness gate, including the Commons presentation reference (previous floor 60). Do not set an RPC variable for this unit suite.
+- **Test floor**: 8 files / 62 passed — recorded on 24 October 2026 from the full `bun run check` gate on `84f41d30` (previous floor 61, 17 October, with the Commons presentation reference). Do not set an RPC variable for this unit suite.
 - **Contract**: Fumadocs/TanStack content, Markdown export, search and `/docs` assets consumed by Explore.
 - **Landmines**: Keep content data-only and links valid; no legacy pages; build once before Explore to avoid the parallel race fixed in `ae7a19f`.
 - **Read**: [docs/stages](../../docs/stages.md), `apps/docs/content/docs`.

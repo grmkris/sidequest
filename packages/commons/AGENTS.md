@@ -3,7 +3,7 @@
 `@sidequest/commons` owns Commons schemas, SQLite persistence and domain effects and runs as the `shared` runtime class declared in [tools/graph.ts](../../tools/graph.ts).
 
 - **Check**: `bun run check:files packages/commons`; `bun run --cwd packages/commons typecheck`; `bun run --cwd packages/commons test`.
-- **Test floor**: 9 files / 112 passed — recorded from `bun run --cwd packages/commons test` on 22 October 2026 (gap reports and proposals reach maintainers as well as moderators; role tool descriptions keep the reason the holder's own; previous recorded floor 103, 14 October: message bodies keep their line breaks). 101 before, recorded from `heavy bun run check` on 10 October 2026 (gap status, link_gaps, hidden text for reviewers). Earlier floors: A1 1 file / 32; A2 2 files / 47. Do not set an RPC variable for this unit suite.
+- **Test floor**: 9 files / 113 passed — recorded from the full `bun run check` gate on `84f41d30`, 24 October 2026 (list_messages takes a bare message id as its cursor; previous recorded floor 112, 22 October: gap reports and proposals reach maintainers as well as moderators). Do not set an RPC variable for this unit suite.
 - **Contract**: Public threads, gap reports, stake-weighted roadmap and ecosystem role actions in one reserved Board object.
 - **Landmines**: Public timestamps use Unix seconds, cache TTLs use Effect Clock milliseconds. Feed events never include user text; hidden bodies stay null to everyone but moderators and maintainers (who review hides; never the dispute thread or arbiters); user goals are role-only; chain read failures never grant stake authority.
 - **Read**: [protocol](../../docs/protocol.md), [GLOSSARY](../../GLOSSARY.md).
