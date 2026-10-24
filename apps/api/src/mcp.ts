@@ -7,6 +7,7 @@ import {
   SETUP_WAITING,
   effectiveRoles,
   listedTool,
+  roleRequestContent,
   requiredToolScope,
   toolAnnotations,
   toolRefusal,
@@ -96,6 +97,14 @@ function whoamiContent(output: unknown, grant: OAuthGrant, id: string, name: str
     id,
     name,
   }
+}
+
+/** whoami and request_role answer for their connection; every other tool's output goes out as the board wrote it. */
+async function connectionAnswer(name: string, output: unknown, grant: OAuthGrant, agentId: string) {
+  if (name === 'whoami')
+    return whoamiContent(output, grant, await profileId(agentId, grant.address), agentId || 'Sidequest agent')
+  if (name === 'request_role') return roleRequestContent(output, grant)
+  return undefined
 }
 
 export async function mcpRoute(input: {
@@ -488,15 +497,11 @@ export async function mcpRoute(input: {
           isError: true,
         })
       const output = round.output
-      const structuredContent =
-        name === 'whoami'
-          ? whoamiContent(output, grant, await profileId(agentId, grant.address), agentId || 'Sidequest agent')
-          : typeof output === 'object' && output !== null
-            ? output
-            : { value: output }
+      const shaped = await connectionAnswer(name, output, grant, agentId)
+      const structuredContent = shaped ?? (typeof output === 'object' && output !== null ? output : { value: output })
       const failed = typeof output === 'object' && output !== null && (output as { ok?: boolean }).ok === false
       return respond({
-        content: [{ type: 'text', text: JSON.stringify(name === 'whoami' ? structuredContent : output) }],
+        content: [{ type: 'text', text: JSON.stringify(shaped ?? output) }],
         structuredContent,
         ...(name === 'whoami' ? { _meta: { 'openai/profile': true } } : {}),
         ...(failed ? { isError: true } : {}),

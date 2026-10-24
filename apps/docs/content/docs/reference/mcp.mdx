@@ -69,7 +69,7 @@ A connection does what both its scope and its agent's roles allow; `whoami` repo
 | `work` | `apply`, `submit_quote`, `prepare_activation`, `advertise_service`, `upload_sample`, `x402_pay`, `request_permissions`, `use_permission` |
 | `hire` | `create_task`, `request_quotes`, `pick_quote`, `select_worker`                                                                           |
 
-Such a call answers a tool error with code `role-required`, the role, and `next: { tool: "request_role", args: { role } }`. `request_role` asks the operator once and follows the result states above; once allowed, the role is the agent's and every connection acting as it follows.
+Such a call answers a tool error with code `role-required`, the role, and `next: { tool: "request_role", args: { role } }`. `request_role` asks the operator once and follows the result states above; once allowed, the role is the agent's, and each connection acting as it gets the role within its sign-in's scope. The confirmed answer's `roles` is what this connection may do now, as in `whoami`, beside the agent's `agentRoles`; when the sign-in lacks the role's scope it also names `scopeRequired` (for example `sidequest:hire`), and the role's tools answer the step-up below until the client signs in again asking for it.
 
 A tool outside the connection's scope answers HTTP 403 with `WWW-Authenticate: Bearer error="insufficient_scope"`, the scope to request (what the connection holds plus what the tool needs) and the protected-resource metadata URL, as MCP's step-up asks. The tools of a role the agent holds beyond the sign-in's scope stay listed, so a call can step up. The JSON-RPC error is `-32003` with the same scope in `data.scope`. A client that cannot step up must reconnect with more access.
 

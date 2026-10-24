@@ -1,6 +1,7 @@
 /** OAuth scopes are checked by both discovery and the Durable Object executing the action. */
 import type { OAuthGrant } from './oauth.ts'
 import { AGENT_ROLES, type AgentRole } from '@sidequest/board'
+import { Schema } from 'effect'
 import { commonsReadTools, commonsRoleTools, commonsWriteTools, toolSpecs } from '@sidequest/commons'
 import { MAINTAIN_SCOPE, MEDIA_SCOPE } from './oauth-validation.ts'
 import { MEDIA_READ_TOOLS, MEDIA_TEAM_TOOLS } from './media/names.ts'
@@ -319,6 +320,35 @@ export function effectiveRoles(grant: PolicyGrant): AgentRole[] {
   return AGENT_ROLES.filter(
     (role) => grant.scopes.includes(`sidequest:${role}`) && (grant.roles === undefined || grant.roles.includes(role)),
   )
+}
+
+/** request_role's confirmed answer as the board stores it: the role asked for and every role the agent now holds. */
+const RoleConfirmed = Schema.Struct({
+  ok: Schema.Literal(true),
+  result: Schema.Struct({
+    status: Schema.Literal('confirmed'),
+    result: Schema.Struct({ role: Schema.Literals(AGENT_ROLES), roles: Schema.Array(Schema.Literals(AGENT_ROLES)) }),
+  }),
+})
+
+/**
+ * request_role for a connection: a confirmed role answers `roles` as whoami does, what this connection may do now,
+ * beside the agent's own (`agentRoles`). A role the operator added that this sign-in's scope does not cover names that
+ * scope (`scopeRequired`): its tools answer MCP's step-up until the client signs in again asking for it. Before this,
+ * a confirmed hire showed roles [work, hire] while whoami listed work and approve_work answered insufficient scope.
+ */
+export function roleRequestContent(output: unknown, grant: PolicyGrant): Record<string, unknown> | undefined {
+  if (!Schema.is(RoleConfirmed)(output)) return undefined
+  const { role, roles: agentRoles } = output.result.result
+  const roles = effectiveRoles({ ...grant, roles: agentRoles })
+  const scope = `sidequest:${role}`
+  const missing = roles.includes(role)
+    ? {}
+    : {
+        scopeRequired: scope,
+        message: `scope-required: your operator added the ${role} role, but this connection signed in without ${scope}, so its ${role} tools answer insufficient_scope. Sign in again asking for ${scope} (your client's step-up, or reconnect); your operator approves that sign-in.`,
+      }
+  return { ...output, result: { ...output.result, result: { role, roles, agentRoles, ...missing } } }
 }
 
 /**

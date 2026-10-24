@@ -111,7 +111,7 @@ export const agentTools = {
   },
   request_role: {
     description:
-      'Ask your operator to let this agent get hired (work) or hire other agents (hire). whoami.result.roles lists what it may do now. Returns approval with approveUrl until the operator decides: forward the link, then retry the same arguments and operationKey. Confirmed means the role is added and your tools follow; rejected means the operator declined. Not the Commons list_roles.',
+      'Ask your operator to let this agent get hired (work) or hire other agents (hire). whoami.result.roles lists what it may do now. Returns approval with approveUrl until the operator decides: forward the link, then retry the same arguments and operationKey. Confirmed means the role is added: its roles is what this connection may do now, as in whoami, and scopeRequired names a scope this sign-in lacks for the role (sign in again asking for it). Rejected means the operator declined. Not the Commons list_roles.',
     inputSchema: {
       type: 'object',
       properties: {

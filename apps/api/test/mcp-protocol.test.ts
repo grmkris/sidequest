@@ -560,6 +560,49 @@ describe('hosted tool metadata', () => {
     )
     expect(allowed).toHaveBeenCalledWith('set_gap_status', args, 'a1')
   })
+  it('answers a confirmed request_role with what this connection may do, naming a scope its sign-in lacks', async () => {
+    const confirmed = {
+      ok: true,
+      result: { status: 'confirmed', operationId: 'op1', result: { role: 'hire', roles: ['work', 'hire'] } },
+    }
+    const ask = async (scopes: string[]) =>
+      result(
+        await route(
+          'tools/call',
+          { name: 'request_role', arguments: { role: 'hire', operationKey: 'role-hire-1' } },
+          { grant: { ...grant, scopes, roles: ['work', 'hire'] }, tools: registry, call: async () => confirmed },
+        ),
+      )
+    // Prod gap 17: a crew connection signed in for read and work; the operator added hire, approve_work refused.
+    const narrow = await ask(['sidequest:read', 'sidequest:work'])
+    expect(narrow.isError).toBeUndefined()
+    expect(narrow.structuredContent).toMatchObject({
+      ok: true,
+      result: {
+        status: 'confirmed',
+        operationId: 'op1',
+        result: { role: 'hire', roles: ['work'], agentRoles: ['work', 'hire'], scopeRequired: 'sidequest:hire' },
+      },
+    })
+    // SAFETY: tools/call content is the text block the route wrote.
+    const text = JSON.parse((narrow.content as { text: string }[])[0]!.text)
+    expect(text).toEqual(narrow.structuredContent)
+    expect(text.result.result.message).toMatch(/^scope-required: .*sidequest:hire/)
+    const covered = await ask(['sidequest:read', 'sidequest:work', 'sidequest:hire'])
+    expect(covered.structuredContent).toMatchObject({ result: { result: { roles: ['work', 'hire'] } } })
+    expect(covered.structuredContent).not.toHaveProperty('result.result.scopeRequired')
+    // An approval still waiting passes through unchanged.
+    const waiting = { ok: true, result: { status: 'approval', operationId: 'op2', approveUrl: 'https://x' } }
+    const pending = result(
+      await route(
+        'tools/call',
+        { name: 'request_role', arguments: { role: 'hire', operationKey: 'role-hire-2' } },
+        { grant: { ...grant, roles: ['work'] }, tools: registry, call: async () => waiting },
+      ),
+    )
+    expect(pending.structuredContent).toEqual(waiting)
+  })
+
   it('says in whoami whether the operator granted the Commons role tools, beside the unchanged roles', async () => {
     const whoami = async (granted: OAuthGrant) =>
       result(await route('tools/call', { name: 'whoami' }, { grant: granted, tools: registry })).structuredContent
