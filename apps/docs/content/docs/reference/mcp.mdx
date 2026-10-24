@@ -315,18 +315,18 @@ Two keys turn for the rest, as for the Commons role tools:
 1. **The connection's scope.** The client asks for `sidequest:media`. When an operator on the media team connects an existing agent, the consent page offers an unticked opt-in, "Let this connection use Sidequest's media tools as a media operator" (or member); only a tick grants it. Setup never grants it, refresh keeps it, and `whoami` reports `media: true`.
 2. **The operator's role.** The agent acts with its operator's media team role, checked on every call.
 
-| Tool                   | Who            | Effect                                                                                     |
-| ---------------------- | -------------- | ------------------------------------------------------------------------------------------ |
-| `prepare_media_upload` | Team           | A one-hour PUT link per file (sha256, size, type); `curl -T` it, at most 100 MB a file.    |
-| `add_media`            | Team           | Add an internal asset, or a new version, from uploads or a `sourceUrl` on an allowed host. |
-| `update_media`         | Team           | Change its title, notes, section, campaign, batch, pick, order or captions.                |
-| `save_media_group`     | Team, operator | Start or change a campaign (team) or a section of /media (operator).                       |
-| `save_media_post`      | Team, operator | Plan, change or skip a post; approve it (operator, every file public or `publishAssets`).  |
-| `record_media_post`    | Team           | Record a post that went out by its public URL; never publishes a file.                     |
-| `share_media`          | Team           | A link to download named internal assets without signing in, 1 to 90 days.                 |
-| `revoke_media_share`   | Team           | Stop a share link at once.                                                                 |
-| `publish_media`        | Operator       | Make an asset public, or internal again; unpublished files stop being served at once.      |
-| `delete_media`         | Operator       | Remove an asset from the library.                                                          |
+| Tool                   | Who            | Effect                                                                                       |
+| ---------------------- | -------------- | -------------------------------------------------------------------------------------------- |
+| `prepare_media_upload` | Team           | A one-hour PUT link per file (sha256, size, type); `curl -T` it, at most 100 MB a file.      |
+| `add_media`            | Team           | Add an internal asset, or a new version, from uploads or a `sourceUrl` on an allowed host.   |
+| `update_media`         | Team           | Change its title, notes, section, campaign, batch, pick, order or captions.                  |
+| `save_media_group`     | Team, operator | Start or change a campaign (team) or a section of /media (operator).                         |
+| `save_media_post`      | Team, operator | Plan, change or skip a post; approve it (operator, every file public or `publishAssets`).    |
+| `record_media_post`    | Team, operator | Record an approved post's public URL (team); one outside the plan, or a new link (operator). |
+| `share_media`          | Team           | A link to download named internal assets without signing in, 1 to 90 days.                   |
+| `revoke_media_share`   | Team           | Stop a share link at once.                                                                   |
+| `publish_media`        | Operator       | Make an asset public, or internal again; unpublished files stop being served at once.        |
+| `delete_media`         | Operator       | Remove an asset from the library.                                                            |
 
 Each is a write: send a stable `operationKey` and reuse it with the same arguments after a lost response. A change that names a `revision` is refused with `conflict` when the asset or post changed since it was read. Without the scope these tools are not listed, and a call answers `{"ok":false,"code":"scope-required","scope":"sidequest:media"}` rather than a step-up. To stop an agent, disconnect its connection or stop the agent; to take back what it published, unpublish it.
 
