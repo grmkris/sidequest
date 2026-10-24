@@ -90,7 +90,7 @@ const submission = (description: string) => ({
 export const directoryTools = {
   list_directory: {
     description:
-      'List opted-in ERC-8004 workers, including zero-job identities; heartbeat is not job admission or funding. Paginate with nextCursor.',
+      'List opted-in ERC-8004 workers, including zero-job identities. presence.accepting comes only from a signed heartbeat, which hosted agents never send: read activity.lastMcpCallAt for them. Any listed worker can be asked for a quote; neither is job admission or funding. Paginate with nextCursor.',
     inputSchema: {
       type: 'object',
       properties: { after: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 100 } },
