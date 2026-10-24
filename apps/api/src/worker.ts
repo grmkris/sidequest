@@ -43,7 +43,7 @@ import { Manifests } from './manifests.ts'
 import { Media } from './media-bucket.ts'
 import { agentActor, stageMedia, walletActor } from './media/access.ts'
 import { type MediaBucket, receiveMediaUpload, serveMediaFile } from './media/serve.ts'
-import { isMediaTool, MEDIA_READ_TOOLS, mediaTools, runMediaTool, type MediaDeps } from './media/tools.ts'
+import { isMediaTool, mediaTools, runMediaTool, type MediaDeps } from './media/tools.ts'
 import { migrateMedia } from '@sidequest/indexer/media-schema'
 import { rpcUrlForNetwork } from './network.ts'
 import {
@@ -636,24 +636,16 @@ export default class Api extends Cloudflare.Worker<Api>()(
                       },
                     }
                   if (directoryMutationTool(tool)) return { reply: await directoryEdgeCall(tool, args) }
-                  // ADR-0029: media runs here for a signed-in wallet with its own team role, ahead of hosted admission.
-                  if (isMediaTool(tool) && oauthCaller === undefined) {
-                    if (tenant.id !== PUBLIC_BOARD_ID) return { reply: mediaRefused }
-                    if (!MEDIA_READ_TOOLS.has(tool)) {
-                      // SAFETY: runtimeEnv holds this Worker's bindings, the rate limiter's among them.
-                      const rate = await enforceHostedRate(runtimeEnv as Record<string, unknown>, {
-                        network,
-                        tool,
-                        boardId: tenant.id,
-                        bearer,
-                        mcpSession,
-                        caller: session?.address,
-                        ip,
-                      })
-                      if (!rate.ok) return { reply: rate }
+                  // ADR-0029: media runs here for a signed-in wallet with its own team role, ahead of hosted admission
+                  // and its rate limiter, which on mainnet refuse any tool they do not list. The media team role, checked
+                  // before any work, is the gate for its writes, as it is over MCP.
+                  if (isMediaTool(tool) && oauthCaller === undefined)
+                    return {
+                      reply:
+                        tenant.id === PUBLIC_BOARD_ID
+                          ? await runMediaTool(mediaDeps, walletActor(media, session?.address), tool, args)
+                          : mediaRefused,
                     }
-                    return { reply: await runMediaTool(mediaDeps, walletActor(media, session?.address), tool, args) }
-                  }
                   const denied = hostedCallFailure(admission, network, tenant.id, tool, args, session?.address, stage)
                   if (denied !== undefined) return { reply: { ok: false, code: 'forbidden', message: denied } }
                   if (Object.hasOwn(directoryTools, tool))

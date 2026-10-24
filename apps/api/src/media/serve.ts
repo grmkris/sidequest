@@ -8,7 +8,7 @@ import type { AsyncSql } from '@sidequest/indexer'
 import { fileForServing } from './library.ts'
 import type { FileRow } from './rows.ts'
 import { liveShare } from './shares.ts'
-import { isShareToken, shareHash, verifyPreview, verifyUpload, type UploadGrant } from './tokens.ts'
+import { hex, isShareToken, shareHash, verifyPreview, verifyUpload, type UploadGrant } from './tokens.ts'
 
 /** The R2 calls the media routes make; the Worker's raw `Media` binding satisfies it. */
 interface MediaObject {
@@ -54,15 +54,15 @@ const plain = (status: number, text: string, extra: Record<string, string> = {})
 const notFound = () => plain(404, 'not found')
 
 export const checksumHex = (buffer: ArrayBuffer | undefined): string | undefined =>
-  buffer === undefined
-    ? undefined
-    : Array.from(new Uint8Array(buffer), (byte) => byte.toString(16).padStart(2, '0')).join('')
+  buffer === undefined ? undefined : hex(buffer)
 
 /** A single `bytes=a-b`, `bytes=a-` or `bytes=-n`; anything else serves the whole file. */
 function parseRange(header: string | null): { start: number; end?: number } | { suffix: number } | undefined {
   const match = header?.match(/^bytes=(\d*)-(\d*)$/)
   if (!match || (!match[1] && !match[2])) return undefined
   if (!match[1]) return { suffix: Number(match[2]) }
+  // A reversed range is not satisfiable as written; RFC 9110 serves the whole file instead.
+  if (match[2] && Number(match[2]) < Number(match[1])) return undefined
   return { start: Number(match[1]), ...(match[2] ? { end: Number(match[2]) } : {}) }
 }
 
@@ -92,13 +92,20 @@ async function access(deps: ServeDeps, url: URL, assetId: string, found: { file:
   return undefined
 }
 
+/**
+ * Scripts and stylesheets an upload carries: served as plain text and as a download, so this origin's pages, whose CSP
+ * trusts `'self'`, can never run or apply one. HTML and SVG stay viewable under the sandbox CSP.
+ */
+const ACTIVE = /^(text\/(javascript|ecmascript|css)|application\/(javascript|ecmascript|x-javascript))$/
+
 function fileHeaders(file: FileRow, isPublic: boolean, cacheControl: string, download: boolean): Headers {
   const headers = new Headers(BASE_HEADERS)
-  headers.set('content-type', file.type)
+  const active = ACTIVE.test(file.type)
+  headers.set('content-type', active ? 'text/plain; charset=utf-8' : file.type)
   headers.set('cache-control', cacheControl)
   headers.set('accept-ranges', 'bytes')
   if (!isPublic) headers.set('x-robots-tag', 'noindex')
-  if (download) headers.set('content-disposition', `attachment; filename="${file.name}"`)
+  if (download || active) headers.set('content-disposition', `attachment; filename="${file.name}"`)
   return headers
 }
 
@@ -119,7 +126,8 @@ async function body(bucket: MediaBucket, key: string, request: Request, headers:
   try {
     object = await bucket.get(key, { ...r2Range(range), onlyIf: request.headers })
   } catch {
-    // R2 refuses a range it cannot satisfy.
+    // R2 refuses a range it cannot satisfy; any other failure is storage, not the request.
+    if (range === undefined) return plain(503, 'storage unavailable; try again')
     const head = await bucket.head(key)
     return head === null ? notFound() : plain(416, 'range not satisfiable', { 'content-range': `bytes */${head.size}` })
   }

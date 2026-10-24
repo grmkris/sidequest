@@ -6,13 +6,12 @@
 import { BoardError } from '@sidequest/board'
 import type { MediaActor } from './access.ts'
 import { replayed } from './commit.ts'
-import { MEDIA_READ_TOOLS, MEDIA_TEAM_TOOLS } from './names.ts'
+import { MEDIA_TEAM_TOOLS } from './names.ts'
 import { type MediaDeps, type MediaTool, writeContext } from './tool-kit.ts'
 import { libraryTools } from './tools-library.ts'
 import { planTools } from './tools-plan.ts'
 
 export type { MediaDeps, MediaTool } from './tool-kit.ts'
-export { MEDIA_READ_TOOLS }
 
 export const mediaTools: Readonly<Record<string, MediaTool>> = { ...libraryTools, ...planTools }
 

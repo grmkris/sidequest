@@ -154,10 +154,43 @@ test(
         `bytes ${video.length - 10}-${video.length - 1}/${video.length}`,
       ])
       expect((await fetch(plain, { headers: { range: `bytes=${video.length + 5}-` } })).status).toBe(416)
+      // A reversed range is served whole (RFC 9110), not refused.
+      const reversed = await fetch(plain, { headers: { range: 'bytes=10-5' } })
+      expect([reversed.status, reversed.headers.get('content-length')]).toEqual([200, String(video.length)])
       const etag = whole.headers.get('etag')!
       expect((await fetch(plain, { headers: { 'if-none-match': etag } })).status).toBe(304)
       expect((await fetch(`${plain}?dl=1`)).headers.get('content-disposition')).toBe('attachment; filename="cut.mp4"')
       expect((await tool(url!, 'list_media', {})).result.assets.map((asset: { id: string }) => asset.id)).toContain(cut)
+
+      // An uploaded script comes back as a plain-text download: this origin never runs or applies one.
+      const script = new TextEncoder().encode(`console.log(${run})`)
+      const scriptSha = hex(script)
+      const scriptUpload = await tool(
+        url!,
+        'prepare_media_upload',
+        { files: [{ sha256: scriptSha, bytes: script.length, type: 'text/javascript' }] },
+        MEMBER,
+      )
+      const scriptUrl = new URL(scriptUpload.result.files[0].url)
+      await fetch(`${url}${scriptUrl.pathname}${scriptUrl.search}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'text/javascript' },
+        body: script,
+      })
+      await tool(
+        url!,
+        'add_media',
+        { id: `probe-js-${run}`, title: 'Script', files: [{ name: 'a.js', role: 'main', sha256: scriptSha }] },
+        MEMBER,
+      )
+      // SAFETY: a team read of an internal asset carries a preview URL for each file.
+      const jsPreview = (await tool(url!, 'get_media', { id: `probe-js-${run}` }, MEMBER)).result.asset.files[0]
+        .url as string
+      const js = await fetch(`${url}${new URL(jsPreview).pathname}${new URL(jsPreview).search}`)
+      expect([js.headers.get('content-type'), js.headers.get('content-disposition')]).toEqual([
+        'text/plain; charset=utf-8',
+        'attachment; filename="a.js"',
+      ])
 
       // Unpublished: gone at once.
       expect((await tool(url!, 'publish_media', { id: cut, public: false }, OPERATOR)).ok).toBe(true)
@@ -199,6 +232,9 @@ it('production admission refuses a media tool it was not told about, so the Work
   ).toBeDefined()
   const worker = readFileSync(new URL('../src/worker.ts', import.meta.url), 'utf8')
   const media = worker.indexOf('if (isMediaTool(tool) && oauthCaller === undefined)')
+  const denied = worker.indexOf('const denied = hostedCallFailure(')
   expect(media).toBeGreaterThan(0)
-  expect(media).toBeLessThan(worker.indexOf('const denied = hostedCallFailure('))
+  expect(media).toBeLessThan(denied)
+  // Nor through the hosted rate limiter: on mainnet it runs the same admission and refuses an unlisted tool.
+  expect(worker.slice(media, denied)).not.toContain('enforceHostedRate')
 })
