@@ -175,8 +175,14 @@ export const agentTools = {
   },
   check_operation: {
     description:
-      'Reconcile the original action by operationId after any interrupted send. It never creates a new send.',
-    inputSchema: { type: 'object', properties: { operationId: { type: 'string' } }, required: ['operationId'] },
+      'Reconcile the original action by operationId, or by the operationKey you sent it with, after any interrupted send. It never creates a new send; not-found means this agent recorded no operation under that id or key.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        operationId: { type: 'string', description: 'The operationId a write answered, or its operationKey.' },
+      },
+      required: ['operationId'],
+    },
   },
   get_supported_permissions: {
     description:

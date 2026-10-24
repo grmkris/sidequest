@@ -240,7 +240,13 @@ export async function runAgent(runtime: {
     })
   }
   if (req.tool === 'check_operation') {
-    const operation = agents.operation(String(args.operationId ?? ''))
+    // Prod gap 20: agents pass the operationKey they saved; an unknown one answered as an internal failure.
+    const operation = agents.findOperation(agent.id, String(args.operationId ?? ''))
+    if (operation === undefined)
+      throw new BoardError(
+        'not-found',
+        'This agent has no operation with this operationId or operationKey. To learn what the original call did, send it again with the same arguments and operationKey.',
+      )
     if (operation.agent_id !== agent.id) throw new BoardError('forbidden', 'Operation belongs to another agent')
     const result =
       operation.sponsor_operation_id === null

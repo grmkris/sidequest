@@ -324,6 +324,15 @@ export class AgentStore {
     return row
   }
 
+  /** An operation by its operationId, or by the operationKey this agent sent it with; undefined when neither names one. */
+  findOperation(agentId: string, idOrKey: string): AgentOperationRow | undefined {
+    return this.sql.all<AgentOperationRow>(
+      'SELECT * FROM agent_operations WHERE id IN (?,?)',
+      idOrKey,
+      agentOperationId(agentId, idOrKey),
+    )[0]
+  }
+
   saveOperation(
     id: string,
     stage: AgentOperationStage,

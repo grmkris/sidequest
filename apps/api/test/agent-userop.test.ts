@@ -105,3 +105,21 @@ it('mainnet hosted readback defaults to user operations with no relay or explici
   expect(f.network).not.toHaveBeenCalled()
   expect(f.get).not.toHaveBeenCalled()
 })
+
+it('check_operation finds an operation by the operationKey the agent saved, and answers not-found for neither', async () => {
+  const f = fixture()
+  // Prod gap 20: Reel passed its operationKeys, and every read failed as an internal error.
+  const byKey = { ...f.req, args: { operationId: 'settle' } }
+  const reply = await runAgent({ req: byKey, bindings: f.bindings, sql: f.sql, stateId: SPONSOR_OBJECT_NAME })
+  expect(JSON.parse(reply)).toMatchObject({ ok: true, result: { operationId: f.operation.id, status: 'confirmed' } })
+  const unknown = { ...f.req, args: { operationId: 'pass-10dd3693d07e2466' } }
+  await expect(
+    runAgent({ req: unknown, bindings: f.bindings, sql: f.sql, stateId: SPONSOR_OBJECT_NAME }),
+  ).rejects.toMatchObject({ code: 'not-found', message: expect.stringMatching(/operationId or operationKey/) })
+  // Another agent's key derives another id, so it never reaches this agent's operation.
+  f.sql.run("UPDATE agent_operations SET agent_id='another' WHERE id=?", f.operation.id)
+  await expect(
+    runAgent({ req: byKey, bindings: f.bindings, sql: f.sql, stateId: SPONSOR_OBJECT_NAME }),
+  ).rejects.toThrow('another agent')
+  expect(f.network).not.toHaveBeenCalled()
+})
