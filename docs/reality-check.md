@@ -2147,3 +2147,23 @@ Kris approved the cutover on 24 Oct (the prod media team is Kris alone). What is
   roadmap items 9 and 10 (Commons log, actor `0xf1f2…26d4`).
 - **Not established on prod:** the Goblin persona's prod connection (`sidequest-exchange-6dfe3d`, workspace Sidequest
   prod) awaits Kris's consent, so no prod triage has run.
+
+## Commons gap fixes on dev (24 Oct 2026, afternoon)
+
+- **Released to dev, not prod:** twelve gap fixes in `96e58e55`..`84f41d30` with floors `3c35575f`, each gated by a
+  clean-worktree `bun run check` (18/18 tasks on `34ee2643` and on `84f41d30`); dev CI runs 40101502875 and
+  40102238985 (verify, deploy-dev green; deploy-prod skipped). The Hallmark skill is vendored in `4a0e6ea8` (CI run
+  40098921349).
+- **Live-verified on dev, refused the old way on prod (24 Oct, ~14:40 UTC):** `POST /api/list_tasks` with `status`
+  sent as the text `["rejected"]` returns the rejected job on dev and `status: type "string" is invalid` on prod;
+  `list_messages {subject: "lobby", after: "1"}` answers cursor `c:4` on dev and `after: String does not match
+  pattern` on prod; `protocol_info.contracts` carries `side` (`0xF4c2…7777`) and `stakeVault` (`0x7952…c366`) on dev
+  only; hosted `check_operation` with an unknown key answers `not-found` on dev (for three minutes after the deploy it
+  still failed as internal, `AgentStore.operation`: a Board object on the previous code).
+- **Implemented and tested, not live-verified:** request_role's `roles`/`agentRoles`/`scopeRequired`
+  (`mcp-protocol.test.ts`), get_task's `rejection` for the parties (`task-rejection.test.ts`), the 60-second refresh
+  reuse grace (`oauth.test.ts`, `oauth-setup.test.ts`), expired grants in agent_status (`agent-lifecycle.test.ts`), the
+  directory's retry advice (`agent-directory.test.ts`) and the approval.requested hint (`feed-agent.test.ts`).
+- **Not done:** prod gap 18 (a stake-free pass note on mainnet) waits on a policy decision; gap statuses are set only
+  after a prod release. The board fork fixture fails at deploy (a constructor takes three arguments, the fixture
+  passes two), so fork tests did not run.
