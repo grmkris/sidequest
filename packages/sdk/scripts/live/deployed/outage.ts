@@ -23,6 +23,7 @@ export async function outage(runtime: Runtime): Promise<Proof> {
   const card = browser.page.locator('article').filter({ hasText: agent.name })
   await card.waitFor()
   let blocked = 0
+  // Keep a network route: this case must abort the real revoke request while reads continue and no response is replaced.
   await browser.context.route('**/api/**', async (route) => {
     const request = route.request()
     if (new URL(request.url()).pathname.endsWith('/revoke')) {
