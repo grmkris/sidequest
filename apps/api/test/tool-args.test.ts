@@ -66,6 +66,38 @@ describe('checkToolArgs', () => {
     expect(checkToolArgs(numeric, { limit: '5' })).toMatchObject({ ok: false, error: { field: 'limit' } })
   })
 
+  it('parses an array sent as its JSON text where the schema takes an array and not a string (dev gap 19)', () => {
+    const propose = hostedMcpTools('monad-testnet').propose_item!.inputSchema
+    const base = { title: 'Compact task scan', problem: 'p', proposal: 'q' }
+    // gapIds is anyOf [array of integer|digit string, null]: the text "[18]" an MCP client sent becomes [18].
+    expect(checkToolArgs(propose, { ...base, gapIds: '[18]' })).toEqual({
+      ok: true,
+      args: { ...base, gapIds: [18] },
+      coerced: ['gapIds'],
+    })
+    expect(checkToolArgs(propose, { ...base, gapIds: ' ["18", 19]' })).toMatchObject({
+      ok: true,
+      args: { gapIds: ['18', 19] },
+    })
+    // Not the text of a JSON array: refused with the field, as before.
+    for (const gapIds of ['18', '[18', '{"0":18}'])
+      expect(checkToolArgs(propose, { ...base, gapIds })).toMatchObject({ ok: false, error: { field: 'gapIds' } })
+    // A parsed array is still checked item by item.
+    expect(checkToolArgs(propose, { ...base, gapIds: '[true]' })).toMatchObject({
+      ok: false,
+      error: { field: 'gapIds[0]' },
+    })
+    // Where a string is allowed, text that looks like an array stays text.
+    const either = { type: 'object', properties: { note: { anyOf: [{ type: 'string' }, { type: 'array' }] } } }
+    expect(checkToolArgs(either, { note: '[1]' })).toEqual({ ok: true, args: { note: '[1]' }, coerced: [] })
+  })
+
+  it('turns an integer into its string inside a nullable string field (anyOf branches count)', () => {
+    const nullable = { type: 'object', properties: { agentId: { anyOf: [{ type: 'string' }, { type: 'null' }] } } }
+    expect(checkToolArgs(nullable, { agentId: 7 })).toEqual({ ok: true, args: { agentId: '7' }, coerced: ['agentId'] })
+    expect(checkToolArgs(nullable, { agentId: null })).toEqual({ ok: true, args: { agentId: null }, coerced: [] })
+  })
+
   it('names nested fields and array items in the path', () => {
     const schema = {
       type: 'object',

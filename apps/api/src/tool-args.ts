@@ -4,8 +4,10 @@
  * declared reached a handler's `as string` cast and was stored as "10415.0".
  *
  * Coercion is deliberately narrow: a JSON integer in the safe range becomes its decimal string where the schema says
- * string (and not number or integer). Nothing else is coerced. Envelope keys (operationKey, managedAgentId,
- * idempotencyKey) pass through unchecked: the transports and the hosted runtime own them.
+ * string (and not number or integer), and a JSON array sent as its text (`"[18]"`, as some MCP clients send array
+ * arguments) becomes that array where the schema takes an array and not a string. A node's types include its
+ * anyOf/oneOf branches, the shape optional and nullable fields publish. Nothing else is coerced. Envelope keys
+ * (operationKey, managedAgentId, idempotencyKey) pass through unchecked: the transports and the hosted runtime own them.
  *
  * `enforce` (the default on every stage, production included) refuses an invalid call with code invalid, the failing
  * field path and an error id, and logs one `tool-args-invalid` line with that id; `log` (an explicit opt-out) logs the
@@ -66,10 +68,35 @@ function validatorFor(schema: object): Validator {
   return validator
 }
 
-/** The JSON types a schema node allows. */
+/** A schema node and its anyOf/oneOf alternatives. */
+const branchesOf = (schema: Args): readonly Args[] => [
+  schema,
+  ...[schema.anyOf, schema.oneOf].flatMap((list) => (Array.isArray(list) ? list.filter(isRecord) : [])),
+]
+
+/** The JSON types a schema node allows, its branches' included. */
 function typesOf(schema: Args): readonly string[] {
-  if (isText(schema.type)) return [schema.type]
-  return Array.isArray(schema.type) ? schema.type.filter(isText) : []
+  return branchesOf(schema).flatMap((branch) => {
+    if (isText(branch.type)) return [branch.type]
+    return Array.isArray(branch.type) ? branch.type.filter(isText) : []
+  })
+}
+
+/** The item schema of a node's array branch. */
+const itemsOf = (schema: Args): Args | undefined =>
+  branchesOf(schema)
+    .map((branch) => branch.items)
+    .find(isRecord)
+
+/** `"[18]"` as `[18]`; anything that is not the text of a JSON array stays a string. */
+function arrayFromText(value: string): unknown[] | undefined {
+  if (!value.trimStart().startsWith('[')) return undefined
+  try {
+    const parsed: unknown = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : undefined
+  } catch {
+    return undefined
+  }
 }
 
 /** Paths found while coercing: integers turned into strings, and numbers left alone because they were not safe. */
@@ -85,16 +112,23 @@ function coerceAt(schema: unknown, holder: Args | unknown[], key: string | numbe
   if (!isRecord(schema)) return
   // SAFETY: key indexes this holder (a property name of a record or an index of an array), for reading and writing.
   const target = holder as Args
-  const value = target[key]
   const allowed = typesOf(schema)
-  if (isNumber(value)) {
+  const sent = target[key]
+  if (isNumber(sent)) {
     if (!allowed.includes('string') || allowed.includes('number') || allowed.includes('integer')) return
-    if (!Number.isSafeInteger(value)) return void found.refused.add(path)
-    target[key] = String(value)
+    if (!Number.isSafeInteger(sent)) return void found.refused.add(path)
+    target[key] = String(sent)
     return void found.coerced.push(path)
   }
+  const parsed =
+    isText(sent) && allowed.includes('array') && !allowed.includes('string') ? arrayFromText(sent) : undefined
+  if (parsed !== undefined) {
+    target[key] = parsed
+    found.coerced.push(path)
+  }
+  const value = parsed ?? sent
   if (isRecord(value) && isRecord(schema.properties)) coerceObject(schema.properties, value, path, found)
-  if (Array.isArray(value)) value.forEach((_, i) => coerceAt(schema.items, value, i, `${path}[${i}]`, found))
+  if (Array.isArray(value)) value.forEach((_, i) => coerceAt(itemsOf(schema), value, i, `${path}[${i}]`, found))
 }
 
 function coerceObject(properties: Args, value: Args, path: string, found: Coercion) {
