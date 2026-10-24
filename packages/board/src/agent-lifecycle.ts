@@ -77,9 +77,13 @@ export class AgentLifecycle {
       permissions: new AgentPermissions(this.deps).list(agent),
       allowances: usage,
       gasAllowances: await new GasAllowances(this.deps).status(agent),
-      grants: this.grants
-        .list(agent.address ?? operator)
-        .map((row) => ({ hash: row.delegation_hash, kind: row.kind, status: row.status, expiresAt: row.expires_at })),
+      // Dev gap 25: a live grant past its expiry read as live. Routine grants are renewed when a write needs them.
+      grants: this.grants.list(agent.address ?? operator).map((row) => ({
+        hash: row.delegation_hash,
+        kind: row.kind,
+        status: row.status === 'live' && row.expires_at <= now ? 'expired' : row.status,
+        expiresAt: row.expires_at,
+      })),
       revocation: {
         ...JSON.parse(agent.revoke_json),
         receipts: this.deps.sql.all<{ tx_hash: Hex; status: string }>(

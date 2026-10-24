@@ -158,7 +158,8 @@ export const agentTools = {
     },
   },
   agent_status: {
-    description: "Read this agent's state, last MCP activity, allowances and revocation receipts.",
+    description:
+      "Read this agent's state, last MCP activity, allowances, grants and revocation receipts. A grant past its expiresAt reads expired. The hosted runtime renews the routine work, approve and sweep grants when a write needs them, so an expired one alone does not stop board writes.",
     inputSchema: object,
   },
   list_approvals: {

@@ -89,4 +89,34 @@ describe('authoritative coding-agent connection status', () => {
     f.sql.run("UPDATE agents SET state='revoked' WHERE id='agent'")
     expect((await f.status()).connected).toBe(false)
   })
+
+  it('reports a live grant past its expiry as expired, and leaves the others as stored (dev gap 25)', async () => {
+    const f = fixture()
+    // The agent's own grants are listed by its wallet; the operator's (with templates) are not involved.
+    const wallet = '0x2222222222222222222222222222222222222222'
+    f.lifecycle.agents.bindWallet('agent', 'wallet', wallet)
+    const grant = (hash: string, kind: string, status: string, expiresAt: number) =>
+      f.sql.run(
+        `INSERT INTO grants (delegation_hash,kind,delegator,delegate,owner,delegation_json,signature,status,expires_at)
+         VALUES (?,?,?,?,?,?,?,?,?)`,
+        hash,
+        kind,
+        wallet,
+        operator.toLowerCase(),
+        wallet,
+        '{}',
+        null,
+        status,
+        expiresAt,
+      )
+    grant('0x01', 'agent-work', 'live', now - 1)
+    grant('0x02', 'agent-approve', 'live', now + 3600)
+    grant('0x03', 'agent-sweep', 'revoked', now - 1)
+    const grants = (await f.status()).grants
+    expect(Object.fromEntries(grants.map((g) => [g.kind, g.status]))).toEqual({
+      'agent-work': 'expired',
+      'agent-approve': 'live',
+      'agent-sweep': 'revoked',
+    })
+  })
 })
