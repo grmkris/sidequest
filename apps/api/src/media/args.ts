@@ -5,6 +5,7 @@
 import { BoardError } from '@sidequest/board'
 import { Schema, SchemaIssue } from 'effect'
 import { MEDIA_CHANNELS } from './channels.ts'
+import { RESERVED_IDS } from './rows.ts'
 
 const said = <S extends Schema.Top>(schema: S, description: string) => schema.annotate({ description })
 const text = (max: number) => Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(max))
@@ -14,7 +15,9 @@ const clearable = <S extends Schema.Top>(schema: S, description: string) =>
   Schema.optionalKey(said(Schema.NullOr(schema), description))
 
 /** An asset or group id: a-z, 0-9 and "-", and none of the words /media uses for its own routes. */
-const Slug = Schema.String.check(Schema.isPattern(/^(?!(?:f|s|internal|new|upload)$)[a-z0-9][a-z0-9-]{0,63}$/u))
+const Slug = Schema.String.check(
+  Schema.isPattern(new RegExp(`^(?!(?:${[...RESERVED_IDS].join('|')})$)[a-z0-9][a-z0-9-]{0,63}$`, 'u')),
+)
 const Sha256 = Schema.String.check(Schema.isPattern(/^[0-9a-f]{64}$/u))
 const MediaType = Schema.String.check(Schema.isPattern(/^[a-z0-9][a-z0-9.+-]*\/[a-z0-9][a-z0-9.+-]*$/u))
 const Day = Schema.String.check(Schema.isPattern(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/u))

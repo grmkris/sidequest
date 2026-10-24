@@ -3,7 +3,8 @@
  * operator's role, and only on a connection its operator granted `sidequest:media`. Everyone else sees public media.
  */
 import { BoardError } from '@sidequest/board'
-import { stageProfile, type StageMedia } from '../../../../infra/stage.ts'
+import { stageMediaOf } from '@sidequest/indexer/media-digest'
+import type { StageMedia } from '../../../../infra/stage.ts'
 
 export type { StageMedia }
 import { MEDIA_SCOPE } from '../oauth-validation.ts'
@@ -22,8 +23,7 @@ export type MediaActor =
     }
 
 /** The media team of a deployed stage, read at runtime from the bundled profile; none locally. */
-export const stageMedia = (stage: unknown): StageMedia | undefined =>
-  stage === 'dev' || stage === 'prod' ? stageProfile(stage)?.media : undefined
+export const stageMedia = stageMediaOf
 
 export function teamRole(media: StageMedia | undefined, wallet: string | undefined): MediaRole | undefined {
   if (wallet === undefined) return undefined

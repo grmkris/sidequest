@@ -22,6 +22,9 @@ import {
   type MediaLevel,
   type PostRow,
   postView,
+  publicAssetIds,
+  publicAssetView,
+  publicPostView,
 } from './rows.ts'
 
 export interface MediaFilter {
@@ -65,9 +68,11 @@ export async function listMedia(sql: AsyncSql, actor: MediaActor, filter: MediaF
     groups: [...groups.values()]
       .filter((group) => team || (group.kind === 'section' && group.level === 'public'))
       .map(groupView),
-    assets: await Promise.all(
-      assets.map((asset) => assetView(asset, files.get(asset.id) ?? [], effectivePublic(asset, groups), link)),
-    ),
+    assets: (
+      await Promise.all(
+        assets.map((asset) => assetView(asset, files.get(asset.id) ?? [], effectivePublic(asset, groups), link)),
+      )
+    ).map((view) => (team ? view : publicAssetView(view))),
   }
 }
 
@@ -83,11 +88,16 @@ export async function getMedia(sql: AsyncSql, actor: MediaActor, id: string, lin
     id,
   )
   const section = asset.section === null ? undefined : groups.get(asset.section)
+  const view = await assetView(asset, (await filesOf(sql, [id])).get(id) ?? [], isPublic, link)
+  const shown = team ? undefined : await publicAssetIds(sql)
   return {
     viewer: { role: roleOf(actor) ?? null },
-    asset: await assetView(asset, (await filesOf(sql, [id])).get(id) ?? [], isPublic, link),
+    asset: shown === undefined ? view : publicAssetView(view),
     ...(section === undefined || (!team && section.level !== 'public') ? {} : { section: groupView(section) }),
-    posts: posts.filter((post) => team || post.status === 'posted').map(postView),
+    posts:
+      shown === undefined
+        ? posts.map(postView)
+        : posts.filter((post) => post.status === 'posted').map((post) => publicPostView(postView(post), shown)),
   }
 }
 
@@ -112,7 +122,11 @@ export async function sharedAssets(sql: AsyncSql, assetIds: readonly string[], l
     sql,
     rows.map((row) => row.id),
   )
-  return Promise.all(rows.map((row) => assetView(row, files.get(row.id) ?? [], effectivePublic(row, groups), link)))
+  // Shares reach people outside the team: they see the assets as the public does.
+  const views = await Promise.all(
+    rows.map((row) => assetView(row, files.get(row.id) ?? [], effectivePublic(row, groups), link)),
+  )
+  return views.map(publicAssetView)
 }
 
 export interface GroupFields {

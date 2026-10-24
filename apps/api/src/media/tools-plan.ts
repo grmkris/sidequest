@@ -1,10 +1,10 @@
 /** The post plan's and the shares' tools (ADR-0029). */
 import { BoardError } from '@sidequest/board'
-import { requireRole } from './access.ts'
 import * as Args from './args.ts'
 import * as store from './store.ts'
-import { linker, type MediaDeps, type MediaTool, mediaTool, randomId, shareToken, writeContext } from './tool-kit.ts'
-import { shareHash } from './tokens.ts'
+import { actorName, requireRole } from './access.ts'
+import { linker, type MediaDeps, type MediaTool, mediaTool, randomId, writeContext } from './tool-kit.ts'
+import { shareHash, shareToken } from './tokens.ts'
 
 type Actor = Parameters<MediaTool['run']>[1]
 
@@ -24,7 +24,7 @@ async function share(
         )
   const assets = [...new Set([...(input.assets ?? []), ...ofCampaign])]
   if (assets.length === 0 || assets.length > 50) throw new BoardError('invalid', 'share 1–50 assets')
-  const token = await shareToken(deps, actor, ctx.operationKey)
+  const token = await shareToken(deps.signingKey, actorName(actor), ctx.operationKey)
   const result = await store.createShare(deps.sql, ctx, {
     id: randomId('sh_'),
     hash: await shareHash(token),
@@ -66,7 +66,7 @@ export const planTools: Record<string, MediaTool> = {
     },
   ),
   record_media_post: mediaTool(
-    'Record a post that went out, by its public URL: a planned post once approved (id), or one made outside the plan (channel from the URL; name the assets it used). One record per post URL; tracking parameters are dropped. Recording never publishes a file.',
+    "Record a post that went out, by its public URL: a planned post once approved (id; any team member), or one made outside the plan (a media operator; channel from the URL; name the assets it used). Changing the link of a post that is out is an operator's. One record per post URL; tracking parameters are dropped. Recording never publishes a file.",
     Args.RecordPost,
     (deps, actor, input, args) => {
       const { id, url, postedAt, ...fields } = input

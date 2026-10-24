@@ -9,6 +9,7 @@ import { type AsyncSql, type Statement, stmt } from '@sidequest/indexer'
 import { Schema } from 'effect'
 import { actorName, type MediaActor } from './access.ts'
 import type { GroupKind } from './rows.ts'
+import { hex } from './tokens.ts'
 
 export interface WriteContext {
   readonly actor: MediaActor
@@ -45,9 +46,9 @@ const canonical = (args: object): string =>
         : value,
   )
 
-async function digestOf(args: object): Promise<string> {
-  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical(args)))
-  return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, '0')).join('')
+/** The call's digest: its tool and its arguments, so one key on two tools never answers the other's result. */
+async function digestOf(tool: string, args: object): Promise<string> {
+  return hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${tool}|${canonical(args)}`)))
 }
 
 const Stored = Schema.fromJsonString(Schema.Struct({ digest: Schema.String, result: Schema.Unknown }))
@@ -72,14 +73,14 @@ const OPERATION_KEY = /^[\x21-\x7e]{1,128}$/
  * fail (an asset that now exists, a URL now taken); undefined when the key is new.
  */
 export async function replayed(sql: AsyncSql, ctx: WriteContext): Promise<{ result: unknown } | undefined> {
-  return replayOf(sql, ctx, await digestOf(ctx.args))
+  return replayOf(sql, ctx, await digestOf(ctx.tool, ctx.args))
 }
 
 /** Runs a change once per actor and operationKey. */
 export async function commit<R>(sql: AsyncSql, ctx: WriteContext, change: Change<R>): Promise<R> {
   if (!OPERATION_KEY.test(ctx.operationKey))
     throw new BoardError('invalid', 'operationKey must be 1–128 printable characters')
-  const digest = await digestOf(ctx.args)
+  const digest = await digestOf(ctx.tool, ctx.args)
   const earlier = await replayOf(sql, ctx, digest)
   if (earlier !== undefined)
     // SAFETY: the log holds the result this same change produced for these arguments.

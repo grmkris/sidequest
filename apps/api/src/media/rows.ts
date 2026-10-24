@@ -229,3 +229,33 @@ export function postView(row: PostRow) {
     revision: row.revision,
   }
 }
+
+type AssetView = Awaited<ReturnType<typeof assetView>>
+type PostView = ReturnType<typeof postView>
+
+/** What anyone outside the media team sees of an asset: no team wallets, agent ids, campaigns or batches. */
+export function publicAssetView(view: AssetView) {
+  const { createdBy: _createdBy, campaign: _campaign, batch: _batch, picked: _picked, ...shown } = view
+  return shown
+}
+
+/** What anyone outside the team sees of a post that went out: who did what stays with the team, so do internal files. */
+export function publicPostView(view: PostView, publicIds: ReadonlySet<string>) {
+  const {
+    createdBy: _createdBy,
+    approvedBy: _approvedBy,
+    approvedAt: _approvedAt,
+    recordedBy: _recordedBy,
+    note: _note,
+    campaign: _campaign,
+    ...shown
+  } = view
+  return { ...shown, assets: shown.assets.filter((id) => publicIds.has(id)) }
+}
+
+/** The ids of the assets that are public now. */
+export async function publicAssetIds(sql: AsyncSql): Promise<Set<string>> {
+  const groups = await groupsById(sql)
+  const rows = await sql.all<AssetRow>('SELECT * FROM media_assets WHERE deleted_at IS NULL')
+  return new Set(rows.filter((row) => effectivePublic(row, groups)).map((row) => row.id))
+}

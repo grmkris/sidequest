@@ -1,14 +1,22 @@
 /**
  * Bearer capabilities for media files (ADR-0029). A preview token lets a team view play one internal asset for at most
  * two hours, because `<video src>` cannot send the session header. An upload token lets its holder PUT one exact file
- * (sha256, size, type) for an hour. Both are HMACs under the stage's `MEDIA_SIGNING_KEY` with their own prefix. A share
- * token is random; only its hash is stored, so a database read never yields a working link.
+ * (sha256, size, type) for an hour. A share token is the HMAC of its actor and operationKey, so a retried share answers
+ * the same link; only its hash is stored, so a database read never yields a working link. Each kind has its own prefix
+ * under the stage's `MEDIA_SIGNING_KEY`.
  */
 import { BoardError } from '@sidequest/board'
 import { Schema } from 'effect'
 import { tokenHash } from '../oauth-validation.ts'
 
 const encoder = new TextEncoder()
+
+/** Bytes as lowercase hex. */
+export const hex = (bytes: ArrayBuffer | Uint8Array): string =>
+  Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, '0')).join('')
+
+/** Whether this stage can sign media links at all. */
+export const canSign = (secret: string): boolean => secret.length >= 32
 
 const base64url = (bytes: ArrayBuffer | Uint8Array): string =>
   btoa(String.fromCharCode(...new Uint8Array(bytes)))
@@ -28,7 +36,8 @@ const fromBase64url = (text: string): Uint8Array | undefined => {
 type HmacKey = Awaited<ReturnType<typeof crypto.subtle.importKey>>
 const keys = new Map<string, Promise<HmacKey>>()
 function hmacKey(secret: string): Promise<HmacKey> {
-  if (secret.length < 32) throw new BoardError('unavailable', 'media uploads and previews are not configured here')
+  if (!canSign(secret))
+    throw new BoardError('unavailable', 'media uploads, previews and shares are not configured here')
   let key = keys.get(secret)
   if (key === undefined) {
     key = crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [
@@ -45,7 +54,7 @@ const sign = async (secret: string, message: string) =>
 
 const verify = async (secret: string, message: string, signature: string) => {
   const bytes = fromBase64url(signature)
-  if (bytes === undefined || secret.length < 32) return false
+  if (bytes === undefined || !canSign(secret)) return false
   return crypto.subtle.verify('HMAC', await hmacKey(secret), bytes, encoder.encode(message))
 }
 
@@ -97,6 +106,13 @@ export async function verifyUpload(
   } catch {
     return undefined
   }
+}
+
+/** A share's token, the same for the same actor and operationKey, so a retried share answers the same link. */
+export async function shareToken(secret: string, actor: string, operationKey: string): Promise<string> {
+  return hex(
+    await crypto.subtle.sign('HMAC', await hmacKey(secret), encoder.encode(`media-share-v1|${actor}|${operationKey}`)),
+  )
 }
 
 export const shareHash = (token: string): Promise<string> => tokenHash(token)

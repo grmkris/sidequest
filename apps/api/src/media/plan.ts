@@ -17,6 +17,8 @@ import {
   postRow,
   type PostStatus,
   postView,
+  publicAssetIds,
+  publicPostView,
 } from './rows.ts'
 
 export interface PostFilter {
@@ -39,9 +41,11 @@ export async function listPosts(sql: AsyncSql, actor: MediaActor, filter: PostFi
   const rows = await sql.all<PostRow>(
     "SELECT * FROM media_posts ORDER BY COALESCE(day, ''), COALESCE(time, ''), created_at, id",
   )
+  const listed = rows.filter((post) => (team || post.status === 'posted') && inFilter(post, filter)).map(postView)
+  const shown = team ? undefined : await publicAssetIds(sql)
   return {
     viewer: { role: roleOf(actor) ?? null },
-    posts: rows.filter((post) => (team || post.status === 'posted') && inFilter(post, filter)).map(postView),
+    posts: shown === undefined ? listed : listed.map((post) => publicPostView(post, shown)),
   }
 }
 
@@ -64,13 +68,22 @@ export interface SavePost {
   readonly publishAssets?: boolean
 }
 
-/** The assets of a post that are not public now, which approving it would put in front of everyone. */
+/**
+ * The assets of a post that are not public now, which approving it would put in front of everyone. One on an internal
+ * section would stay unserved however it is published, so the approval is refused until it moves.
+ */
 async function unpublished(sql: AsyncSql, ids: readonly string[]): Promise<string[]> {
   const groups = await groupsById(sql)
   const missing: string[] = []
   for (const id of ids) {
     const asset = await assetRow(sql, id)
     if (asset === undefined || asset.deleted_at !== null) throw new BoardError('invalid', `no media asset "${id}"`)
+    const section = asset.section === null ? undefined : groups.get(asset.section)
+    if (section?.level === 'internal')
+      throw new BoardError(
+        'invalid',
+        `"${id}" sits on the internal section "${section.id}"; move it to a public one first`,
+      )
     if (!effectivePublic(asset, groups)) missing.push(id)
   }
   return missing
@@ -120,26 +133,44 @@ async function existingPost(sql: AsyncSql, input: SavePost): Promise<PostRow | u
   return existing
 }
 
+/** A post's fields after a save: each one given replaces it, `null` clears it, an absent one keeps it. */
+interface Merged {
+  readonly campaign: string | null
+  readonly channel: string
+  readonly account: string | null
+  readonly day: string | null
+  readonly time: string | null
+  readonly text: string
+  readonly note: string | null
+}
+
+const kept = <V>(value: V | undefined, current: V): V => (value === undefined ? current : value)
+
+function mergedOf(existing: PostRow | undefined, fields: PostFields): Merged {
+  return {
+    campaign: kept(fields.campaign, existing?.campaign ?? null),
+    channel: fields.channel,
+    account: kept(fields.account, existing?.account ?? null),
+    day: kept(fields.day, existing?.day ?? null),
+    time: kept(fields.time, existing?.time ?? null),
+    text: fields.text,
+    note: kept(fields.note, existing?.note ?? null),
+  }
+}
+
 interface Decision {
   readonly status: PostStatus
   readonly approving: boolean
   readonly assets: readonly string[]
+  readonly merged: Merged
 }
 
 function decide(existing: PostRow | undefined, input: SavePost): Decision {
   const assets = [...new Set(input.fields.assets ?? (existing === undefined ? [] : idsOf(existing.asset_ids_json)))]
-  const { fields } = input
-  const content = contentOf({
-    channel: fields.channel,
-    account: fields.account ?? null,
-    day: fields.day ?? null,
-    time: fields.time ?? null,
-    text: fields.text,
-    assets,
-  })
-  const edited = existing !== undefined && content !== savedContent(existing)
+  const merged = mergedOf(existing, input.fields)
+  const edited = existing !== undefined && contentOf({ ...merged, assets }) !== savedContent(existing)
   const status = nextStatus(existing, input.status, edited)
-  return { status, assets, approving: status === 'approved' && (existing?.status !== 'approved' || edited) }
+  return { status, assets, merged, approving: status === 'approved' && (existing?.status !== 'approved' || edited) }
 }
 
 /** Who approved and when: this call when it approves, the standing approval when kept, none otherwise. */
@@ -156,15 +187,15 @@ function actionOf(existing: PostRow | undefined, decision: Decision): string {
 }
 
 function postGuard(existing: PostRow | undefined, input: SavePost, decision: Decision, ctx: WriteContext): Statement {
-  const { fields } = input
+  const { merged } = decision
   const columns = [
-    fields.campaign ?? null,
-    fields.channel,
-    fields.account ?? null,
-    fields.day ?? null,
-    fields.time ?? null,
-    fields.text,
-    fields.note ?? null,
+    merged.campaign,
+    merged.channel,
+    merged.account,
+    merged.day,
+    merged.time,
+    merged.text,
+    merged.note,
     JSON.stringify(decision.assets),
     decision.status,
     ...approvalStamp(existing, decision, ctx),
@@ -238,6 +269,8 @@ async function recordPlanned(sql: AsyncSql, ctx: WriteContext, input: RecordPost
   if (existing === undefined) throw new BoardError('not-found', `no post "${input.id}"`)
   if (existing.status !== 'approved' && existing.status !== 'posted')
     throw new BoardError('invalid', 'only an approved post is recorded as posted; approve it first')
+  // The link is shown on /media: changing the link of a post that is out is an operator's call.
+  if (existing.status === 'posted' && existing.url !== url) requireRole(ctx.actor, 'operator')
   return commit(sql, ctx, {
     action: 'post.record',
     target: input.id,
@@ -257,6 +290,8 @@ async function recordPlanned(sql: AsyncSql, ctx: WriteContext, input: RecordPost
 }
 
 async function recordOutside(sql: AsyncSql, ctx: WriteContext, input: RecordPost, url: string) {
+  // A post nobody planned or approved puts its link on /media: an operator's call.
+  requireRole(ctx.actor, 'operator')
   const assets = [...new Set(input.fields?.assets ?? [])]
   for (const asset of assets) {
     const row = await assetRow(sql, asset)
@@ -291,8 +326,8 @@ async function recordOutside(sql: AsyncSql, ctx: WriteContext, input: RecordPost
 }
 
 /**
- * Records a post that went out, by its public URL: a planned post once approved, or one made outside the plan. One
- * record per cleaned URL.
+ * Records a post that went out, by its public URL: a planned post once approved (any team member), or one made outside
+ * the plan (an operator). One record per cleaned URL.
  */
 export async function recordPost(sql: AsyncSql, ctx: WriteContext, input: RecordPost) {
   requireRole(ctx.actor, 'member')
@@ -301,12 +336,4 @@ export async function recordPost(sql: AsyncSql, ctx: WriteContext, input: Record
   if (taken !== undefined && taken.id !== input.id)
     throw new BoardError('conflict', `that post is already recorded as "${taken.id}"`)
   return input.planned ? recordPlanned(sql, ctx, input, url) : recordOutside(sql, ctx, input, url)
-}
-
-/** What agents published, unpublished and approved since a time: the digest's "since yesterday". */
-export async function agentActionsSince(sql: AsyncSql, since: number) {
-  return sql.all<{ actor: string; operator: string | null; action: string; target: string; at: number }>(
-    "SELECT actor, operator, action, target, at FROM media_log WHERE actor_kind = 'agent' AND at > ? AND action IN ('asset.publish', 'asset.unpublish', 'post.approve') ORDER BY at",
-    since,
-  )
 }
