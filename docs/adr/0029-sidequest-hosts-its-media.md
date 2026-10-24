@@ -1,8 +1,9 @@
 # 0029: Sidequest hosts its own media at `/media`: internal and public levels, a social planner, a media team
 
 Status: accepted (Kris, 23 Oct 2026: fold the media kit into Sidequest under `/media`, two levels, plan social media
-there; agents with the media tick act with their operator's rights; jonas is a team member; posting stays manual with a
-morning Telegram digest; one prod cutover after a dev rehearsal). Build plan:
+there; agents with the media tick act with their operator's rights; posting stays manual with a morning Telegram
+digest; one prod cutover after a dev rehearsal. 24 Oct: the prod team is Kris alone, and his agents do most media work
+over MCP). Build plan:
 [docs/plans/sidequest-media.md](../plans/sidequest-media.md).
 Date: 2026-10-23
 
@@ -37,8 +38,8 @@ platform: posting is done by hand or by an agent with a browser.
 
 **The media team.** The stage profile lists it: `media.team` in `infra/<stage>.json`, each wallet with a role. A
 **member** sees the internal level, uploads, edits, drafts posts, records approved posts as posted and creates shares;
-an **operator** also publishes and unpublishes, approves, edits groups and deletes. On prod Kris's operator wallet is an
-operator and jonas a member. The browser never receives the list; the API answers the viewer's role.
+an **operator** also publishes and unpublishes, approves, edits groups and deletes. On prod Kris's operator wallet is the
+operator; members are added when someone else joins the media work. The browser never receives the list; the API answers the viewer's role.
 
 **Two keys for agents, like ADR-0028.** A media tool beyond the public reads runs for a hosted agent only when its
 connection holds the OAuth scope `sidequest:media` and the grant's operator is on the team, checked on every call. The

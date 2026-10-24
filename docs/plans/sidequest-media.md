@@ -44,7 +44,7 @@ one coherent change at a time; M5 is the one prod cutover, with Kris present (AG
 ## Milestones
 
 **M0: spikes, inventory, docs (no deploy).** The facts above; ADR-0029 accepted and amended; this plan. Kris reads
-`getWebhookInfo` back (sanitized) and gives jonas's wallet.
+`getWebhookInfo` back (sanitized). The prod team is Kris alone (24 Oct).
 
 **M1: API library core.**
 - `infra/{dev,prod}.json`: `resources.Media` and `media { team, timezone, pullHosts }`; `infra/stage.ts` validates them.
