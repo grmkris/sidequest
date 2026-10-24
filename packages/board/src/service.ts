@@ -3392,6 +3392,29 @@ export class Board {
     return withDisputeThread(bundle, this.#config.disputeThread)
   }
 
+  /** The stored text of an on-chain reason hash: only text whose hash is that hash counts as the published reason. */
+  #publishedReason(reasonHash: Hex): string | null {
+    const reason = this.#sql.all<{ text: string }>('SELECT text FROM reasons WHERE hash = ?', reasonHash)[0]
+    return reason === undefined || sdk.hashText(reason.text) !== reasonHash ? null : reason.text
+  }
+
+  /**
+   * The approver's rejection for the job's parties from the moment it lands, not only in a dispute's bundle: its
+   * violation, the on-chain reason hash and the published text (dev gap 17: a worker deciding whether to dispute could
+   * not read why it was rejected).
+   */
+  async #rejection(task: TaskRow, view: ChainView, you: readonly string[] | null) {
+    if (view.violation === null || you === null || you.length === 0) return undefined
+    const ctx = this.#taskCtx(task)
+    const reasonHash = await ctx.publicClient.readContract({
+      address: ctx.stack.evaluator,
+      abi: sidequest.evaluatorAbi(ctx),
+      functionName: 'rejectionReasonOf',
+      args: [this.#jobId(task)],
+    })
+    return { violation: view.violation, reasonHash, reasonText: this.#publishedReason(reasonHash) }
+  }
+
   async #bundle(task: TaskRow): Promise<DisputeBundle> {
     const ctx = this.#taskCtx(task)
     const jobId = this.#jobId(task)
@@ -3413,7 +3436,6 @@ export class Board {
       this.#arbitratorOf(task),
     ])
     if (disputedAt === 0) throw new BoardError('conflict', 'this job has not been disputed')
-    const reason = this.#sql.all<{ text: string }>('SELECT text FROM reasons WHERE hash = ?', reasonHash)[0]
     const onchain = this.#sql.all<{ deliverable_hash: string }>(
       'SELECT deliverable_hash FROM onchain_submissions WHERE task_id = ?',
       task.id,
@@ -3460,8 +3482,7 @@ export class Board {
       rejection: {
         violation: (view.violation ?? 'None') as ViolationName,
         reasonHash,
-        // Only text whose hash is the on-chain reason hash counts as the published reason.
-        reasonText: reason === undefined || sdk.hashText(reason.text) !== reasonHash ? null : reason.text,
+        reasonText: this.#publishedReason(reasonHash),
       },
       submission: {
         deliverableHash: (onchain?.deliverable_hash ?? null) as Hex | null,
@@ -3953,6 +3974,7 @@ export class Board {
         'SELECT deliverable_hash, tx_hash FROM onchain_submissions WHERE task_id = ?',
         task.id,
       )[0] ?? null
+    const rejection = await this.#rejection(task, summary.chain, summary.you)
     return {
       ...summary,
       terms: JSON.parse(task.terms_json) as unknown,
@@ -3964,6 +3986,7 @@ export class Board {
       onchainSubmission: onchain,
       evidence: this.#evidence(task),
       operations,
+      ...(rejection === undefined ? {} : { rejection }),
     }
   }
 

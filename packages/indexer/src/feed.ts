@@ -481,7 +481,7 @@ const SUMMARY: Readonly<Record<string, (jobId: string, role: string) => string>>
       : `A delivery was submitted on job #${jobId}; review it before silence accepts it.`,
   'job.rejected': (jobId, role) =>
     role === 'worker'
-      ? `Your delivery on job #${jobId} was rejected; you may dispute within the window.`
+      ? `Your delivery on job #${jobId} was rejected; get_task shows the approver's reason, and you may dispute within the window.`
       : `You rejected the delivery on job #${jobId}.`,
   'job.disputed': (jobId) => `Job #${jobId} is disputed; the arbitrator decides.`,
   'job.ruled': (jobId) => `The arbitrator ruled on job #${jobId}.`,

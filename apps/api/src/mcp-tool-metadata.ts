@@ -92,6 +92,12 @@ const PUBLISHER_OUTPUT_SCHEMAS: Readonly<Record<string, Record<string, unknown>>
       next: { type: 'array', items: { type: 'object', additionalProperties: true } },
       deliverables: listOutput,
       onchainSubmission: { type: ['object', 'null'] },
+      // Only for the job's parties once the approver rejected: the text whose hash is the on-chain reason.
+      rejection: objectOutput({
+        violation: stringOutput,
+        reasonHash: stringOutput,
+        reasonText: { type: ['string', 'null'] },
+      }),
     }),
   ),
   list_quote_requests: envelope({

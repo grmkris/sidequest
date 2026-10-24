@@ -332,6 +332,13 @@ fork('Sidequest board on a local Monad fork', () => {
         )
       ).transactions,
     )
+    // Dev gap 17: the worker reads the approver's reason before deciding to dispute; a stranger does not.
+    expect((await board.getTask({ address: f.worker.account.address }, { taskId: x.taskId })).rejection).toEqual({
+      violation: 'None',
+      reasonHash: sdk.hashText('The criteria were not met.'),
+      reasonText: 'The criteria were not met.',
+    })
+    expect(await board.getTask({}, { taskId: x.taskId })).not.toHaveProperty('rejection')
     await sdk.sendAll(
       f.worker,
       f.ctx.publicClient,
