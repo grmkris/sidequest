@@ -25,6 +25,8 @@
   // Foundry supplies forge/cast/anvil; the acceptance harness invokes the installed Codex CLI; a crew bot's container
   // (crew/sandbox, util-linux) supplies setpriv.
   "ignoreBinaries": ["forge", "anvil", "codex", "setpriv"],
+  // The Effect language-service plugin is named in tsconfig.base.json for editors and effect-tsrs, never imported.
+  "ignoreDependencies": ["@effect/language-service"],
   // Vendored upstream code is maintained as one unit, not pruned by repository gates.
   "ignore": [
     // Foundry dependencies and generated outputs are not Sidequest TypeScript sources.
@@ -58,6 +60,8 @@
     "tools": {
       // Root scripts load these CLIs; oxlint loads the repository plugins by filename.
       "entry": ["*.ts!", "oxlint/*.ts!"],
+      // Run as binaries by path (tools/effect.ts): effect-tsrs's native executable, and effect-tsgo for the fallback.
+      "ignoreDependencies": ["@effect/tsgo", "@yielded/effect-tsrs"],
     },
     "packages/sdk": {
       // Developer/operator scripts are invoked directly with Bun.

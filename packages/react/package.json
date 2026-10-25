@@ -10,7 +10,7 @@
     "./commons-ui.css": "./src/commons-ui/styles.css"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "bun ../../tools/typecheck.ts tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {

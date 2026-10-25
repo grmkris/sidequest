@@ -4,14 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "bun typecheck.ts tsconfig.json",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@effect/tsgo": "catalog:",
     "@oxlint/plugins": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
+    "@yielded/effect-tsrs": "catalog:",
     "effect": "catalog:",
+    "oxc-parser": "catalog:",
     "oxlint": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",

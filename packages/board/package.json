@@ -8,7 +8,7 @@
     "./runtime": "./src/runtime.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "bun ../../tools/typecheck.ts tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {

@@ -19,7 +19,7 @@ unit/local-binding evidence, not live or authenticated acceptance.
 | `packages/board` | 454 | 52 | `@sidequest/board` |
 | `packages/indexer` | 53 | 1 | `@sidequest/indexer` |
 | `packages/react` | 6 | 0 | `@sidequest/react` |
-| `tools` | 53 | 0 | `tools` |
+| `tools` | 60 | 0 | `tools` |
 
 Run a workspace with `bunx turbo run test --filter <filter>`. The contracts floor is 416 passing unit tests (fork tests excluded); see
 [contracts/AGENTS.md](../../contracts/AGENTS.md). The mandatory MainnetRunbook check passed 10 tests with
@@ -27,7 +27,9 @@ Run a workspace with `bunx turbo run test --filter <filter>`. The contracts floo
 
 ## Cleanup checks
 
-Use `bun run check:files <owned paths>` after a change, or workspace typecheck plus `bun run lint:gate`.
+Use `bun run check:files <owned paths>` after a change, or workspace typecheck plus `bun run lint:gate`. `typecheck` runs
+the TypeScript diagnostics on tsrs; `lint:gate` adds the Effect diagnostics to oxlint and knip, all against
+`tools/lint-baseline.json` (ADR 0030; `EFFECT_CHECKER=tsgo` falls back to tsc and effect-tsgo).
 Do not set `MONAD_TESTNET_RPC_URL`, and do not run fork, live, browser, Playwright, end-to-end or full repository checks in
 a cleanup lane. Contracts unit runs explicitly exclude `test/fork/*`. The coordinator runs the full suite after merging.
 

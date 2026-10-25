@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "SIDEQUEST_DOCS_PREBUILT=1 vite build",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "bun ../../tools/typecheck.ts tsconfig.json",
     "test": "vitest run",
     "test:cache": "bun --no-env-file test/cache-measure.ts",
     "perf": "node scripts/perf-measure.mjs"

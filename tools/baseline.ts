@@ -126,9 +126,10 @@ export const updateBaseline = (
   return { written: true, baseline: next }
 }
 
-/** The gate a rule belongs to, from its prefix: `knip(…)`; every other rule is oxlint's. */
+/** The gate a rule belongs to, from its prefix: `knip(…)`, `effect(…)`; every other rule is oxlint's. */
 export const sourceOfRule = (rule: string): Source => {
-  return rule.startsWith('knip(') ? 'knip' : 'oxlint'
+  if (rule.startsWith('knip(')) return 'knip'
+  return rule.startsWith('effect(') ? 'effect' : 'oxlint'
 }
 
 export interface Totals {
@@ -138,10 +139,10 @@ export interface Totals {
 }
 
 export const totals = (baseline: Baseline): Totals => {
-  const bySource: Record<Source, number> = { oxlint: 0, knip: 0 }
+  const bySource: Record<Source, number> = { oxlint: 0, effect: 0, knip: 0 }
   for (const [, rule, n] of flatten(baseline)) bySource[sourceOfRule(rule)] += n
   return {
-    findings: bySource.oxlint + bySource.knip,
+    findings: bySource.oxlint + bySource.effect + bySource.knip,
     files: Object.keys(baseline).length,
     bySource,
   }
@@ -165,4 +166,4 @@ export const renderStale = (stale: readonly Stale[]): string[] =>
   stale.map((row) => `  ${row.file}  ${row.rule}  ${row.baseline} → ${row.actual}`)
 
 export const renderTotals = ({ findings, files, bySource }: Totals): string =>
-  `${findings} findings in ${files} files (oxlint ${bySource.oxlint}, knip ${bySource.knip})`
+  `${findings} findings in ${files} files (oxlint ${bySource.oxlint}, effect ${bySource.effect}, knip ${bySource.knip})`

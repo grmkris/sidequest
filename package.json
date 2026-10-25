@@ -75,14 +75,17 @@
       "oxfmt": "0.72.0",
       "knip": "6.40.0",
       "oxlint-plugin-complexity": "2.1.8",
-      "jscpd": "5.4.0"
+      "jscpd": "5.4.0",
+      "@yielded/effect-tsrs": "0.2.0",
+      "@effect/tsgo": "0.54.0",
+      "oxc-parser": "0.150.0"
     }
   },
   "type": "module",
   "scripts": {
     "check": "bun run format:check && bun run agents:check && bun run graph && bun run migrations:check && bun run dupes && bun run typecheck && bun run lint:gate && bun run test && bun run test:scripts",
     "check:fast": "bun run typecheck && bun run lint",
-    "typecheck": "tsc -p scripts/ci/tsconfig.json && tsc -p crew/tsconfig.json && turbo run typecheck",
+    "typecheck": "bun tools/typecheck.ts --workspaces scripts/ci/tsconfig.json crew/tsconfig.json",
     "test": "turbo run test --concurrency=2",
     "lint": "oxlint -c oxlint.config.ts .",
     "lint:fix": "oxlint -c oxlint.config.ts --fix .",
@@ -93,7 +96,7 @@
     "plan": "bun scripts/ci/release.ts plan",
     "drift": "bun scripts/ci/release.ts drift",
     "smoke": "bun scripts/ci/smoke.ts",
-    "ci:typecheck": "tsc -p scripts/ci/tsconfig.json",
+    "ci:typecheck": "bun tools/typecheck.ts scripts/ci/tsconfig.json",
     "ci:test": "bun test scripts/ci",
     "alchemy": "alchemy",
     "reality-check": "bun scripts/reality-check.ts",

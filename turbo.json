@@ -6,9 +6,12 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.base.json",
+        "$TURBO_ROOT$/tools/*.ts",
+        "$TURBO_ROOT$/tools/package.json",
         "$TURBO_ROOT$/bun.lock",
         "$TURBO_ROOT$/contracts/config/**"
       ],
+      "env": ["EFFECT_CHECKER"],
       "outputs": []
     },
     "test": {
@@ -42,6 +45,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.base.json",
+        "$TURBO_ROOT$/tools/*.ts",
+        "$TURBO_ROOT$/tools/package.json",
         "$TURBO_ROOT$/bun.lock",
         "$TURBO_ROOT$/contracts/config/**",
         "$TURBO_ROOT$/alchemy.run.ts",
@@ -53,6 +58,7 @@
         "$TURBO_ROOT$/apps/docs/content/**",
         "$TURBO_ROOT$/scripts/gen-docs.mjs"
       ],
+      "env": ["EFFECT_CHECKER"],
       "outputs": []
     },
     "@sidequest/indexer-worker#typecheck": {
@@ -60,12 +66,15 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.base.json",
+        "$TURBO_ROOT$/tools/*.ts",
+        "$TURBO_ROOT$/tools/package.json",
         "$TURBO_ROOT$/bun.lock",
         "$TURBO_ROOT$/contracts/config/**",
         "$TURBO_ROOT$/apps/api/src/**",
         "$TURBO_ROOT$/apps/explore/src/**",
         "$TURBO_ROOT$/infra/**"
       ],
+      "env": ["EFFECT_CHECKER"],
       "outputs": []
     },
     "@sidequest/explore#typecheck": {
@@ -73,6 +82,8 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.base.json",
+        "$TURBO_ROOT$/tools/*.ts",
+        "$TURBO_ROOT$/tools/package.json",
         "$TURBO_ROOT$/bun.lock",
         "$TURBO_ROOT$/contracts/config/**",
         "$TURBO_ROOT$/skill/start.md",
@@ -80,6 +91,7 @@
         "$TURBO_ROOT$/apps/docs/content/**",
         "$TURBO_ROOT$/apps/docs/site-output.*"
       ],
+      "env": ["EFFECT_CHECKER"],
       "outputs": []
     },
     "@sidequest/sdk#typecheck": {
@@ -87,10 +99,13 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.base.json",
+        "$TURBO_ROOT$/tools/*.ts",
+        "$TURBO_ROOT$/tools/package.json",
         "$TURBO_ROOT$/bun.lock",
         "$TURBO_ROOT$/contracts/config/**",
         "$TURBO_ROOT$/packages/board/src/**"
       ],
+      "env": ["EFFECT_CHECKER"],
       "outputs": []
     },
     "@sidequest/docs#typecheck": {
@@ -98,10 +113,13 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/tsconfig.base.json",
+        "$TURBO_ROOT$/tools/*.ts",
+        "$TURBO_ROOT$/tools/package.json",
         "$TURBO_ROOT$/bun.lock",
         "$TURBO_ROOT$/contracts/config/**",
         "$TURBO_ROOT$/infra/**"
       ],
+      "env": ["EFFECT_CHECKER"],
       "outputs": []
     },
     "@sidequest/api#test": {
@@ -261,6 +279,7 @@
         "$TURBO_ROOT$/scripts/check-files.ts",
         "$TURBO_ROOT$/tsconfig.base.json"
       ],
+      "env": ["EFFECT_CHECKER"],
       "outputs": []
     }
   },

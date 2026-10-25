@@ -4,10 +4,12 @@
  * gates and feeds this module.
  */
 import { Schema } from 'effect'
+import path from 'node:path'
 import { nodes } from './graph.ts'
+import { repoRoot } from './run.ts'
 
 /** Which gate reported a finding. Each new gate adds its own source. */
-export type Source = 'oxlint' | 'knip'
+export type Source = 'oxlint' | 'effect' | 'knip'
 
 export interface Finding {
   readonly source: Source
@@ -81,6 +83,96 @@ export const safeFixCodes = (rules: unknown): Set<string> =>
 
 /** The code oxlint prints for a rule. `--rules` spells scopes with `_` (`jsx_a11y`), diagnostics with `-`. */
 export const ruleCode = (scope: string, rule: string): string => `${scope.split('_').join('-')}(${rule})`
+
+// ---------------------------------------------------------------------------------------------------------------------
+// effect-tsrs and effect-tsgo
+
+const EffectDiagnostic = Schema.Struct({
+  file: Schema.String,
+  line: Schema.Number,
+  column: Schema.Number,
+  severity: Schema.String,
+  code: Schema.Number,
+  name: Schema.String,
+  message: Schema.String,
+})
+export type EffectDiagnostic = typeof EffectDiagnostic.Type
+
+/** A TypeScript diagnostic in effect-tsrs output; one about the options or the program as a whole has no location. */
+const TypescriptDiagnostic = Schema.Struct({
+  code: Schema.Number,
+  severity: Schema.String,
+  message: Schema.String,
+  location: Schema.optional(Schema.Struct({ file: Schema.String, line: Schema.Number, column: Schema.Number })),
+})
+
+const EffectOutput = Schema.Struct({
+  diagnostics: Schema.Array(EffectDiagnostic),
+  // effect-tsrs reports the TypeScript diagnostics of the same program; effect-tsgo reports none and counts the files
+  // it checked without the plugin instead.
+  typescriptDiagnostics: Schema.optional(Schema.Array(TypescriptDiagnostic)),
+  summary: Schema.Struct({ filesChecked: Schema.Number, filesWithoutPlugin: Schema.optional(Schema.Number) }),
+})
+export type EffectOutput = typeof EffectOutput.Type
+
+/** `effect-tsrs diagnostics --format json` or `effect-tsgo diagnostics --format json` output. */
+export const decodeEffect = Schema.decodeUnknownSync(EffectOutput)
+
+/**
+ * The code of an `@effect-diagnostics` directive that changes nothing. effect-tsrs names it `unusedDirective`,
+ * effect-tsgo `effect(377000)`.
+ */
+export const UNUSED_DIRECTIVE = 377000
+
+/** The TypeScript errors of effect-tsrs output, one line each as `tsc --pretty false` prints them. */
+export const typescriptErrors = (output: EffectOutput): string[] =>
+  (output.typescriptDiagnostics ?? [])
+    .filter((diagnostic) => diagnostic.severity === 'error')
+    .map(({ code, message, location }) => {
+      const where =
+        location === undefined
+          ? ''
+          : `${path.relative(repoRoot, location.file).split(path.sep).join('/')}(${location.line},${location.column}): `
+      return `${where}error TS${code}: ${message}`
+    })
+
+/**
+ * The diagnostics that count, with repository-relative paths: errors, warnings (a warning left on in tsconfig.base.json
+ * is a finding) and directives that change nothing, whatever their severity, named `unusedDirective`. Messages and
+ * suggestions are editor advice.
+ */
+export const gatingDiagnostics = (output: EffectOutput): EffectDiagnostic[] =>
+  output.diagnostics
+    .filter(
+      (diagnostic) =>
+        diagnostic.severity === 'error' || diagnostic.severity === 'warning' || diagnostic.code === UNUSED_DIRECTIVE,
+    )
+    .map((diagnostic) => ({
+      ...diagnostic,
+      name: diagnostic.code === UNUSED_DIRECTIVE ? 'unusedDirective' : diagnostic.name,
+      file: path.relative(repoRoot, diagnostic.file).split(path.sep).join('/'),
+    }))
+
+/**
+ * Why a project's diagnostics are incomplete by effect-tsgo's count: files its tsconfig checks without the plugin, which
+ * go unchecked. `label` names the project in the message. Undefined when every file was checked, and for effect-tsrs,
+ * which does not count them (`missingPlugin` in effect.ts reads the tsconfig instead).
+ */
+export const uncheckedFiles = (label: string, output: EffectOutput): string | undefined =>
+  (output.summary.filesWithoutPlugin ?? 0) > 0
+    ? `${label}: ${output.summary.filesWithoutPlugin} files went unchecked because this tsconfig does not enable ` +
+      `@effect/language-service. Extend tsconfig.base.json, or copy its plugin block (ADR 0030).`
+    : undefined
+
+/** Effect diagnostics as findings. They have no automatic fix here (quick fixes are editor-only). */
+export const fromEffect = (output: EffectOutput): Finding[] =>
+  gatingDiagnostics(output).map((diagnostic) => ({
+    source: 'effect',
+    rule: `effect(${diagnostic.name})`,
+    file: diagnostic.file,
+    line: diagnostic.line,
+    fixable: false,
+  }))
 
 // ---------------------------------------------------------------------------------------------------------------------
 // knip

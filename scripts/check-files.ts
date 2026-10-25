@@ -10,7 +10,7 @@
  * Steps, all of them run and a summary table at the end; the exit status is non-zero if any step failed:
  *   1. format     oxfmt --check on the files oxfmt.config.ts does not ignore
  *   2. lint       oxlint (type-aware through the config) on lintable files oxlint.config.ts does not ignore
- *   3. typecheck  turbo typecheck for the owning workspaces (tools/graph.ts); tsc on
+ *   3. typecheck  turbo typecheck for the owning workspaces (tools/graph.ts); tools/typecheck.ts (tsrs) on
  *                 the root tsconfig for root files
  *   4. graph      bun run graph, when a package.json or tools/graph.ts is among the files
  *   5. agents     bun run agents:check, once it exists, when an agent file is among the files
@@ -112,7 +112,7 @@ const rootChecks = async (files: readonly string[]): Promise<StepResult[]> => {
   }
   const results: StepResult[] = []
   for (const config of configs) {
-    const argv = [bin('tsc'), '-p', config]
+    const argv = ['bun', 'tools/typecheck.ts', config]
     announce(argv)
     const result = await run(argv, { heavy: true, inherit: true })
     results.push({ step: 'typecheck', outcome: result.exitCode === 0 ? 'pass' : 'fail', detail: config })

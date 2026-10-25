@@ -2,6 +2,9 @@
   ".github/actions/state-store/main.mjs": {
     "anti-slop(no-runtime-typeof)": 4
   },
+  "alchemy.run.ts": {
+    "effect(processEnvInEffect)": 1
+  },
   "apps/api/src/admission-rate.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(no-runtime-typeof)": 1,
@@ -41,10 +44,30 @@
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 48,
     "complexity(complexity)": 3,
+    "effect(globalDateInEffect)": 4,
+    "effect(globalTimersInEffect)": 2,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 4,
     "eslint(max-params)": 1,
     "typescript(no-base-to-string)": 3
+  },
+  "apps/api/src/commons/directory-live.ts": {
+    "effect(globalDateInEffect)": 1
+  },
+  "apps/api/src/commons/feed-live.ts": {
+    "effect(globalDateInEffect)": 1
+  },
+  "apps/api/src/commons/host.ts": {
+    "effect(schemaSyncInEffect)": 2
+  },
+  "apps/api/src/commons/participants.ts": {
+    "effect(schemaSyncInEffect)": 2
+  },
+  "apps/api/src/commons/rpc.ts": {
+    "effect(schemaSyncInEffect)": 1
+  },
+  "apps/api/src/commons/stake-live.ts": {
+    "effect(globalDateInEffect)": 1
   },
   "apps/api/src/deadlines.ts": {
     "anti-slop(no-runtime-typeof)": 6,
@@ -53,7 +76,9 @@
   "apps/api/src/deploy-preflight.ts": {
     "anti-slop(no-runtime-typeof)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 7,
-    "complexity(complexity)": 2
+    "complexity(complexity)": 2,
+    "effect(nodeBuiltinImport)": 1,
+    "effect(processEnv)": 11
   },
   "apps/api/src/directory-object.ts": {
     "anti-slop(no-unknown-returns)": 1,
@@ -68,6 +93,7 @@
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 5,
     "complexity(complexity)": 1,
+    "effect(extendsNativeError)": 1,
     "eslint(max-lines-per-function)": 1,
     "typescript(no-base-to-string)": 1
   },
@@ -108,6 +134,9 @@
     "complexity(complexity)": 1,
     "typescript(no-base-to-string)": 1
   },
+  "apps/api/src/mcp-metadata.ts": {
+    "effect(nodeBuiltinImport)": 1
+  },
   "apps/api/src/mcp.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(no-runtime-typeof)": 17,
@@ -126,6 +155,9 @@
     "complexity(complexity)": 1,
     "eslint(max-lines-per-function)": 1,
     "typescript(no-base-to-string)": 1
+  },
+  "apps/api/src/observability.ts": {
+    "effect(cryptoRandomUUIDInEffect)": 1
   },
   "apps/api/src/privy-identity.ts": {
     "anti-slop(no-runtime-typeof)": 2,
@@ -171,6 +203,10 @@
   "apps/api/src/worker.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 17,
     "complexity(complexity)": 3,
+    "effect(globalConsoleInEffect)": 1,
+    "effect(globalDateInEffect)": 2,
+    "effect(processEnv)": 14,
+    "effect(tryCatchInEffectGen)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 5,
     "typescript(no-base-to-string)": 3,
@@ -184,7 +220,8 @@
     "eslint(max-lines-per-function)": 1
   },
   "apps/api/test/admission-do.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 5
+    "anti-slop(require-safety-comment-for-type-assertion)": 5,
+    "effect(cryptoRandomUUIDInEffect)": 3
   },
   "apps/api/test/admission-worker.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
@@ -202,12 +239,14 @@
   },
   "apps/api/test/agent-offers-worker.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 4,
+    "effect(multipleEffectProvide)": 1,
     "typescript(no-unnecessary-type-assertion)": 1,
     "typescript(restrict-template-expressions)": 1
   },
   "apps/api/test/agent-offers.test.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 6
+    "anti-slop(require-safety-comment-for-type-assertion)": 6,
+    "effect(cryptoRandomUUIDInEffect)": 2
   },
   "apps/api/test/agent-stop-events.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 3,
@@ -236,6 +275,7 @@
   },
   "apps/api/test/directory-do.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 6,
+    "effect(cryptoRandomUUIDInEffect)": 3,
     "typescript(no-unnecessary-type-assertion)": 4
   },
   "apps/api/test/directory-worker-handler.ts": {
@@ -271,6 +311,9 @@
   "apps/api/test/listing-tools.test.ts": {
     "anti-slop-effect(prefer-effect-match)": 1
   },
+  "apps/api/test/mcp-event-stream-worker.ts": {
+    "effect(cryptoRandomUUIDInEffect)": 1
+  },
   "apps/api/test/mcp-events.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2
   },
@@ -281,6 +324,9 @@
   },
   "apps/api/test/mcp-protocol.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 10
+  },
+  "apps/api/test/media-worker.ts": {
+    "effect(multipleEffectProvide)": 1
   },
   "apps/api/test/oauth.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 15,
@@ -308,6 +354,8 @@
   },
   "apps/api/test/stack.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 12,
+    "effect(globalRandomInEffect)": 1,
+    "effect(schemaSyncInEffect)": 3,
     "typescript(no-unnecessary-type-parameters)": 1,
     "typescript(restrict-template-expressions)": 3
   },
@@ -357,8 +405,32 @@
     "complexity(complexity)": 1,
     "typescript(no-explicit-any)": 1
   },
+  "apps/arbiter/src/keygen.ts": {
+    "effect(nodeBuiltinImport)": 2,
+    "effect(processEnv)": 2
+  },
+  "apps/arbiter/src/maintainer-ship.ts": {
+    "effect(extendsNativeError)": 1
+  },
+  "apps/arbiter/src/maintainer.ts": {
+    "effect(nodeBuiltinImport)": 2,
+    "effect(processEnv)": 1
+  },
+  "apps/arbiter/src/moderation.ts": {
+    "effect(globalFetchInEffect)": 1,
+    "effect(schemaSyncInEffect)": 1
+  },
+  "apps/arbiter/src/moderator.ts": {
+    "effect(nodeBuiltinImport)": 2
+  },
+  "apps/arbiter/src/ruling-journal.ts": {
+    "effect(nodeBuiltinImport)": 2
+  },
   "apps/docs/scripts/verify-output.mjs": {
     "complexity(complexity)": 1
+  },
+  "apps/docs/source.config.ts": {
+    "effect(processEnv)": 1
   },
   "apps/docs/src/lib/content-contract.ts": {
     "anti-slop(no-runtime-typeof)": 6,
@@ -373,6 +445,7 @@
     "typescript(no-unnecessary-boolean-literal-compare)": 1
   },
   "apps/docs/src/lib/remark-addresses.ts": {
+    "effect(processEnv)": 1,
     "typescript(no-base-to-string)": 1
   },
   "apps/docs/src/lib/remark-origin.ts": {
@@ -408,7 +481,9 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "apps/explore/docs-site-plugin.ts": {
-    "complexity(complexity)": 1
+    "complexity(complexity)": 1,
+    "effect(nodeBuiltinImport)": 3,
+    "effect(processEnv)": 1
   },
   "apps/explore/scripts/docs-smoke.mjs": {
     "complexity(complexity)": 1,
@@ -828,7 +903,8 @@
   },
   "apps/explore/src/vault-lock.ts": {
     "anti-slop(no-runtime-typeof)": 4,
-    "anti-slop(require-safety-comment-for-type-assertion)": 3
+    "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "effect(extendsNativeError)": 1
   },
   "apps/explore/src/vault-proof.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2
@@ -845,6 +921,9 @@
     "anti-slop(no-runtime-typeof)": 4,
     "anti-slop(require-safety-comment-for-type-assertion)": 3
   },
+  "apps/explore/start-guide-plugin.ts": {
+    "effect(nodeBuiltinImport)": 1
+  },
   "apps/explore/start-guide.test.ts": {
     "anti-slop(no-runtime-typeof)": 2,
     "typescript(no-deprecated)": 1
@@ -860,13 +939,47 @@
   },
   "apps/indexer/src/worker.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 6,
+    "effect(cryptoRandomUUIDInEffect)": 1,
+    "effect(globalDateInEffect)": 6,
+    "effect(processEnv)": 5,
     "eslint(max-lines-per-function)": 1,
     "typescript(no-unnecessary-type-assertion)": 3
   },
+  "crew/bin/activity.ts": {
+    "effect(processEnv)": 3
+  },
+  "crew/bin/backers.ts": {
+    "effect(processEnv)": 2
+  },
   "crew/bin/crew.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 3,
+    "effect(processEnv)": 8,
     "eslint(max-lines)": 1,
     "typescript(no-misused-promises)": 1
+  },
+  "crew/bin/hirer-grok.ts": {
+    "effect(processEnv)": 3
+  },
+  "crew/bin/hirers.ts": {
+    "effect(processEnv)": 4
+  },
+  "crew/bin/hosted-hirer.ts": {
+    "effect(processEnv)": 2
+  },
+  "crew/bin/hosted-hirers.ts": {
+    "effect(processEnv)": 4
+  },
+  "crew/bin/hosted-mcp.ts": {
+    "effect(extendsNativeError)": 1
+  },
+  "crew/bin/mcp-oauth.ts": {
+    "effect(processEnv)": 1
+  },
+  "crew/bin/publish.ts": {
+    "effect(processEnv)": 1
+  },
+  "crew/bin/roles.ts": {
+    "effect(processEnv)": 2
   },
   "infra/stage.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1
@@ -979,6 +1092,9 @@
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 2
   },
+  "packages/board/src/board-error.ts": {
+    "effect(extendsNativeError)": 1
+  },
   "packages/board/src/budget.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 14,
@@ -1001,9 +1117,13 @@
     "anti-slop(no-runtime-typeof)": 3,
     "anti-slop(require-safety-comment-for-type-assertion)": 4,
     "complexity(complexity)": 2,
+    "effect(extendsNativeError)": 1,
     "typescript(no-base-to-string)": 2,
     "typescript(no-unnecessary-type-assertion)": 1,
     "typescript(no-unnecessary-type-conversion)": 1
+  },
+  "packages/board/src/directory-error.ts": {
+    "effect(extendsNativeError)": 1
   },
   "packages/board/src/directory.test.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
@@ -1086,6 +1206,9 @@
     "complexity(complexity)": 1,
     "typescript(no-unnecessary-type-arguments)": 1
   },
+  "packages/board/src/runtime.ts": {
+    "effect(processEnv)": 1
+  },
   "packages/board/src/screening.test.ts": {
     "anti-slop(no-runtime-typeof)": 1
   },
@@ -1110,7 +1233,8 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "packages/board/src/sessions.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "effect(extendsNativeError)": 1
   },
   "packages/board/src/sidequest-backing.test.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
@@ -1160,13 +1284,15 @@
     "anti-slop(no-runtime-typeof)": 4,
     "anti-slop(require-safety-comment-for-type-assertion)": 9,
     "complexity(complexity)": 1,
+    "effect(extendsNativeError)": 1,
     "eslint(max-lines-per-function)": 1
   },
   "packages/board/src/terms.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(no-runtime-typeof)": 2,
     "anti-slop(require-safety-comment-for-type-assertion)": 16,
-    "complexity(complexity)": 1
+    "complexity(complexity)": 1,
+    "effect(extendsNativeError)": 1
   },
   "packages/board/src/testnet-relay.test.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
@@ -1188,6 +1314,12 @@
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 6,
     "complexity(complexity)": 1
+  },
+  "packages/commons/src/thread/dispute.ts": {
+    "effect(schemaSyncInEffect)": 1
+  },
+  "packages/indexer/src/database.ts": {
+    "effect(processEnv)": 1
   },
   "packages/indexer/src/delegations.test.ts": {
     "typescript(no-unnecessary-type-assertion)": 1
@@ -1258,6 +1390,7 @@
     "anti-slop(no-runtime-typeof)": 3,
     "anti-slop(require-safety-comment-for-type-assertion)": 4,
     "complexity(complexity)": 2,
+    "effect(extendsNativeError)": 2,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 2,
     "eslint(max-params)": 2,
@@ -1268,6 +1401,7 @@
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 6,
     "complexity(complexity)": 3,
+    "effect(extendsNativeError)": 1,
     "eslint(max-lines)": 1,
     "eslint(max-lines-per-function)": 3,
     "eslint(max-params)": 3
@@ -1286,7 +1420,8 @@
     "anti-slop(no-runtime-typeof)": 1,
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 5,
-    "complexity(complexity)": 1
+    "complexity(complexity)": 1,
+    "effect(extendsNativeError)": 1
   },
   "packages/react/src/components/TxSteps.tsx": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
@@ -1301,7 +1436,17 @@
     "typescript(no-unnecessary-type-assertion)": 1
   },
   "packages/react/src/send.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 5
+    "anti-slop(require-safety-comment-for-type-assertion)": 5,
+    "effect(extendsNativeError)": 1
+  },
+  "packages/sdk/scripts/examples/self-run-hire.ts": {
+    "effect(processEnv)": 4
+  },
+  "packages/sdk/scripts/live/aa-privy-probe.ts": {
+    "effect(processEnv)": 3
+  },
+  "packages/sdk/scripts/live/aa-probe.ts": {
+    "effect(processEnv)": 1
   },
   "packages/sdk/scripts/live/authority-allowance.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1,
@@ -1353,6 +1498,7 @@
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 23,
     "complexity(complexity)": 1,
+    "effect(processEnv)": 1,
     "eslint(max-lines-per-function)": 1,
     "typescript(no-redundant-type-constituents)": 1
   },
@@ -1364,6 +1510,7 @@
     "anti-slop(no-runtime-typeof)": 3,
     "anti-slop(require-safety-comment-for-type-assertion)": 2,
     "complexity(complexity)": 1,
+    "effect(processEnv)": 1,
     "typescript(only-throw-error)": 1
   },
   "packages/sdk/scripts/live/deployed/fork.ts": {
@@ -1372,7 +1519,8 @@
     "eslint(max-lines-per-function)": 1
   },
   "packages/sdk/scripts/live/deployed/guards.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 2
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "effect(processEnv)": 2
   },
   "packages/sdk/scripts/live/deployed/limits.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 3,
@@ -1395,7 +1543,8 @@
   },
   "packages/sdk/scripts/live/deployed/runtime.ts": {
     "anti-slop(no-runtime-typeof)": 2,
-    "anti-slop(require-safety-comment-for-type-assertion)": 5
+    "anti-slop(require-safety-comment-for-type-assertion)": 5,
+    "effect(processEnv)": 2
   },
   "packages/sdk/scripts/live/deployed/smoke.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 1
@@ -1410,6 +1559,9 @@
     "complexity(complexity)": 1,
     "eslint(max-lines-per-function)": 1
   },
+  "packages/sdk/scripts/live/operators.ts": {
+    "effect(processEnv)": 1
+  },
   "packages/sdk/scripts/live/prove-authority.ts": {
     "anti-slop(no-runtime-typeof)": 6,
     "anti-slop(require-safety-comment-for-type-assertion)": 9,
@@ -1422,18 +1574,21 @@
   },
   "packages/sdk/scripts/privy/client.ts": {
     "anti-slop(no-runtime-typeof)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 2
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "effect(extendsNativeError)": 1
   },
   "packages/sdk/scripts/privy/cutover-policy.ts": {
     "anti-slop(no-runtime-typeof)": 3,
-    "anti-slop(require-safety-comment-for-type-assertion)": 2
+    "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "effect(extendsNativeError)": 1
   },
   "packages/sdk/scripts/privy/env.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2
   },
   "packages/sdk/scripts/privy/policy-document.ts": {
     "anti-slop(no-runtime-typeof)": 1,
-    "anti-slop(require-safety-comment-for-type-assertion)": 1
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "effect(extendsNativeError)": 1
   },
   "packages/sdk/scripts/privy/setup.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 5,
@@ -1443,6 +1598,8 @@
     "anti-slop(no-runtime-typeof)": 2,
     "anti-slop(require-safety-comment-for-type-assertion)": 7,
     "complexity(complexity)": 2,
+    "effect(extendsNativeError)": 1,
+    "effect(processEnv)": 3,
     "eslint(max-lines-per-function)": 1,
     "typescript(await-thenable)": 2
   },
@@ -1451,6 +1608,7 @@
   },
   "packages/sdk/scripts/privy/update-agent-rules.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2,
+    "effect(extendsNativeError)": 1,
     "typescript(no-unnecessary-type-assertion)": 1
   },
   "packages/sdk/scripts/v1-flow-keys.ts": {
@@ -1461,9 +1619,13 @@
     "anti-slop(no-runtime-typeof)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 18,
     "complexity(complexity)": 1,
+    "effect(processEnv)": 1,
     "eslint(max-lines-per-function)": 1,
     "typescript(no-explicit-any)": 1,
     "typescript(no-unnecessary-type-assertion)": 1
+  },
+  "packages/sdk/src/aa/rpc.ts": {
+    "effect(extendsNativeError)": 1
   },
   "packages/sdk/src/actions.test.ts": {
     "anti-slop(no-chained-type-assertions)": 2,
@@ -1490,11 +1652,15 @@
   "packages/sdk/src/board-client.ts": {
     "anti-slop(no-runtime-typeof)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 5,
+    "effect(extendsNativeError)": 1,
     "typescript(no-explicit-any)": 1
   },
   "packages/sdk/src/clocks.test.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 4
+  },
+  "packages/sdk/src/clocks.ts": {
+    "effect(extendsNativeError)": 1
   },
   "packages/sdk/src/delegation/delegation.test.ts": {
     "anti-slop(no-chained-type-assertions)": 1,
@@ -1513,6 +1679,7 @@
     "anti-slop(no-runtime-typeof)": 9,
     "anti-slop(require-safety-comment-for-type-assertion)": 10,
     "complexity(complexity)": 3,
+    "effect(extendsNativeError)": 1,
     "eslint(max-lines-per-function)": 1,
     "typescript(no-unnecessary-type-assertion)": 2
   },
@@ -1527,6 +1694,7 @@
     "anti-slop(no-runtime-typeof)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 29,
     "complexity(complexity)": 2,
+    "effect(extendsNativeError)": 1,
     "typescript(no-unnecessary-type-assertion)": 1
   },
   "packages/sdk/src/directory.test.ts": {
@@ -1537,7 +1705,8 @@
     "anti-slop(require-safety-comment-for-type-assertion)": 1
   },
   "packages/sdk/src/docs-site.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 1
+    "anti-slop(require-safety-comment-for-type-assertion)": 1,
+    "effect(nodeBuiltinImport)": 2
   },
   "packages/sdk/src/flow-journal.test.ts": {
     "anti-slop(no-chained-type-assertions)": 3,
@@ -1576,12 +1745,14 @@
   "packages/sdk/src/privy-server.ts": {
     "anti-slop(no-runtime-typeof)": 6,
     "anti-slop(require-safety-comment-for-type-assertion)": 7,
+    "effect(extendsNativeError)": 1,
     "typescript(no-unnecessary-type-arguments)": 1
   },
   "packages/sdk/src/privy.ts": {
     "anti-slop(no-chained-type-assertions)": 2,
     "anti-slop(no-runtime-typeof)": 5,
     "anti-slop(require-safety-comment-for-type-assertion)": 19,
+    "effect(extendsNativeError)": 1,
     "eslint(max-lines-per-function)": 1
   },
   "packages/sdk/src/registry.test.ts": {
@@ -1654,6 +1825,7 @@
   "packages/sdk/src/v1-flows.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2,
     "complexity(complexity)": 1,
+    "effect(extendsNativeError)": 1,
     "eslint(max-depth)": 4,
     "eslint(max-lines-per-function)": 1,
     "typescript(no-unnecessary-type-conversion)": 3
@@ -1690,6 +1862,8 @@
     "anti-slop(no-unknown-returns)": 1,
     "anti-slop(require-safety-comment-for-type-assertion)": 9,
     "complexity(complexity)": 1,
+    "effect(extendsNativeError)": 1,
+    "effect(processEnv)": 2,
     "eslint(max-lines)": 1,
     "typescript(no-explicit-any)": 6,
     "typescript(no-unnecessary-type-assertion)": 1
@@ -1702,7 +1876,8 @@
   "scripts/ci/smoke.ts": {
     "anti-slop(no-runtime-typeof)": 3,
     "anti-slop(require-safety-comment-for-type-assertion)": 3,
-    "complexity(complexity)": 1
+    "complexity(complexity)": 1,
+    "effect(processEnv)": 1
   },
   "scripts/gen-abi.ts": {
     "anti-slop(require-safety-comment-for-type-assertion)": 2

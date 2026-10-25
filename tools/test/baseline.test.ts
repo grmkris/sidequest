@@ -175,11 +175,12 @@ describe('parseBaseline', () => {
 
 describe('totals and rendering', () => {
   test('counts findings per gate from the rule prefix', () => {
-    expect(totals({ ...baseline, [B]: { [ANY]: 1, 'knip(types)': 2 } })).toEqual({
-      findings: 6,
+    expect(totals({ ...baseline, [B]: { [ANY]: 1, 'knip(types)': 2, 'effect(processEnv)': 4 } })).toEqual({
+      findings: 10,
       files: 2,
-      bySource: { oxlint: 3, knip: 3 },
+      bySource: { oxlint: 3, effect: 4, knip: 3 },
     })
+    expect(sourceOfRule('effect(extendsNativeError)')).toBe('effect')
   })
 
   test('an increase line names the file, the rule, baseline → actual and the known lines', () => {

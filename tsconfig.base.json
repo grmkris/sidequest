@@ -16,6 +16,114 @@
     "isolatedModules": true,
     "noEmit": true,
     "singleThreaded": true,
-    "types": ["node"]
+    "types": ["node"],
+    // Effect language-service diagnostics (ADR 0030), adopted from goblin's severities: run by `bun run lint:gate`
+    // (tools/pass.ts on effect-tsrs) and judged against tools/lint-baseline.json; editors read the same block through
+    // @effect/tsgo. Errors, warnings and `@effect-diagnostics` directives that change nothing count; messages and
+    // suggestions show in editors only. Diagnostics left out keep their default severity. Override globs are relative to the
+    // tsconfig that holds this block and must end in a file pattern (`**/*`, not `**`).
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnosticSeverity": {
+          // Structural: Effects that are dropped, untyped or wired wrong. floatingEffect, missingEffectContext,
+          // missingEffectError, missingReturnYieldStar and the other default errors stay errors.
+          "missingEffectServiceDependency": "error",
+          "leakingRequirements": "error",
+          "unknownInEffectCatch": "error",
+          "tryCatchInEffectGen": "error",
+          "globalErrorInEffectFailure": "error",
+          "globalErrorInEffectCatch": "error",
+          "schemaSyncInEffect": "error",
+          "outdatedApi": "error",
+          "duplicatePackage": "error",
+          "effectFnIife": "error",
+          "effectGenUsesAdapter": "error",
+          "effectInFailure": "error",
+          "effectInVoidSuccess": "error",
+          "genericEffectServices": "error",
+          "layerMergeAllWithDependencies": "error",
+          "lazyPromiseInEffectSync": "error",
+          "multipleEffectProvide": "error",
+          "obsoleteMatchImport": "error",
+          "obsoleteSchemaImport": "error",
+          "promiseInEffectSuccess": "error",
+          "scopeInLayerEffect": "error",
+          "runEffectInsideEffect": "error",
+          // Errors are tagged classes, and a handler on an Effect that cannot fail is dead code.
+          "extendsNativeError": "error",
+          "catchUnfailableEffect": "error",
+          // Off: the typed API and the HTTP clients are built on Effect's HTTP modules, which 4.0 marks unstable. The
+          // exact version pinned in package.json is the stability boundary; a bump runs every gate.
+          "unstableApiUsage": "off",
+          // Global APIs inside Effect programs: use HttpClient, Clock/DateTime, Effect.log, Effect.sleep and Schedule,
+          // Random and Crypto there. Plain async code at the Worker/DO/SDK edges may use the platform APIs directly
+          // (Effect is used at service seams, not as a wrapper around every clock read).
+          "globalFetchInEffect": "error",
+          "globalDateInEffect": "error",
+          "globalConsoleInEffect": "error",
+          "globalTimersInEffect": "error",
+          "globalRandomInEffect": "error",
+          "cryptoRandomUUIDInEffect": "error",
+          "processEnv": "error",
+          "processEnvInEffect": "error",
+          "nodeBuiltinImport": "error"
+        },
+        "overrides": [
+          {
+            // Tests drive the harness over real HTTP and ports, wait on real time and read fixtures from disk.
+            "include": ["**/test/**/*", "**/*.test.ts", "**/*.test.tsx", "**/fixtures/**/*"],
+            "options": {
+              "diagnosticSeverity": {
+                "globalFetch": "off",
+                "globalFetchInEffect": "off",
+                "globalTimers": "off",
+                "globalTimersInEffect": "off",
+                "globalDate": "off",
+                "globalDateInEffect": "off",
+                "processEnv": "off",
+                "processEnvInEffect": "off",
+                "nodeBuiltinImport": "off"
+              }
+            }
+          },
+          {
+            "include": ["**/vite.config.ts", "**/vitest*.config.ts"],
+            "options": { "diagnosticSeverity": { "processEnv": "off", "nodeBuiltinImport": "off" } }
+          },
+          {
+            // React and JSX views: formatting a date, a cleanup timer or a fetch in an event handler needs no Effect
+            // runtime. Effect code inside a view (the *InEffect variants) and every structural diagnostic still gate.
+            "include": ["**/*.tsx"],
+            "options": {
+              "diagnosticSeverity": {
+                "globalDate": "off",
+                "globalTimers": "off",
+                "globalFetch": "off",
+                "globalConsole": "off",
+                "globalRandom": "off"
+              }
+            }
+          },
+          {
+            // Operator scripts, repository tooling and the crew CLI: stdout and files are their interface, and host
+            // orchestration reads the clock, sleeps and calls HTTP directly. Inside an Effect program the *InEffect
+            // variants still gate; environment reads stay governed by Config and the stage env files (processEnv is
+            // not relaxed).
+            "include": ["**/scripts/**/*", "tools/**/*", "crew/**/*"],
+            "options": {
+              "diagnosticSeverity": {
+                "globalConsole": "off",
+                "globalConsoleInEffect": "off",
+                "globalDate": "off",
+                "globalFetch": "off",
+                "globalTimers": "off",
+                "nodeBuiltinImport": "off"
+              }
+            }
+          }
+        ]
+      }
+    ]
   }
 }

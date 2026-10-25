@@ -1,16 +1,20 @@
 /**
- * The collectors of `bun run lint:report` and `bun run lint:gate`: every finding of oxlint (type-aware), and
- * unused code and dependency issues from knip, together with the reasons a collection is incomplete. Each
- * tool runs from the repository root, through `heavy` when it is installed (tools/run.ts).
+ * The collectors of `bun run lint:report` and `bun run lint:gate`: every finding of oxlint (type-aware), the Effect
+ * diagnostics of every typecheck project (tools/pass.ts, ADR 0030), and unused code and dependency issues from knip,
+ * together with the reasons a collection is incomplete. Each tool runs from the repository root, through `heavy` when
+ * it is installed (tools/run.ts).
  */
 import { Schema } from 'effect'
 import path from 'node:path'
-import { fromKnip, fromOxlint, safeFixCodes } from './report.ts'
+import { checker, effectProjects } from './effect.ts'
+import type { Project } from './effect.ts'
+import { effectPass, ownFiles } from './pass.ts'
+import { fromEffect, fromKnip, fromOxlint, safeFixCodes } from './report.ts'
 import type { Finding, Source } from './report.ts'
 import { bin, repoRoot, run } from './run.ts'
 import type { RunResult } from './run.ts'
 
-export const SOURCES: readonly Source[] = ['oxlint', 'knip']
+export const SOURCES: readonly Source[] = ['oxlint', 'effect', 'knip']
 
 /** The oxlint config the gates lint with. */
 export const OXLINT_CONFIG = path.join(repoRoot, 'oxlint.config.ts')
@@ -81,6 +85,62 @@ export const oxlintFindings = async (config: string): Promise<Collected> => {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
+// Effect diagnostics
+
+/**
+ * Projects checked at the same time. Each is a full type check: effect-tsrs holds at most about 0.5 GB on one thread,
+ * effect-tsgo about 1.5 GB.
+ */
+const EFFECT_CONCURRENCY = { tsrs: 4, tsgo: 1 } as const
+
+/**
+ * One project's Effect findings. effect-tsrs reports the project's TypeScript errors in the same run; a project with any
+ * fails the collection, since its Effect diagnostics are incomplete.
+ */
+const effectProject = async ({ dir, tsconfig }: Project): Promise<Collected> => {
+  const result = await effectPass(path.join(dir, tsconfig), checker())
+  const typescript =
+    result.typescript.length === 0
+      ? []
+      : [`${result.label}: ${result.typescript.length} TypeScript errors (\`bun run typecheck\` lists them)`]
+  return {
+    findings: result.effect === undefined ? [] : fromEffect(result.effect),
+    failures: [...result.failures, ...typescript],
+  }
+}
+
+/** `fn` over `items`, at most `limit` at a time; the results keep the order of `items`. */
+const mapLimit = async <A, B>(items: readonly A[], limit: number, fn: (item: A) => Promise<B>): Promise<B[]> => {
+  const pending = items.entries()
+  const results = new Map<number, B>()
+  const worker = async (): Promise<void> => {
+    for (const [index, item] of pending) results.set(index, await fn(item))
+  }
+  await Promise.all(Array.from({ length: limit }, worker))
+  return [...results].toSorted(([a], [b]) => a - b).map(([, result]) => result)
+}
+
+/**
+ * Every project's Effect findings; one a file gets in several programs counts once. Only files some typecheck tsconfig
+ * includes count: effect-tsrs also reports a file a project merely imports (`infra/stage.ts` through `alchemy.run.ts`),
+ * which effect-tsgo does not, and the baseline must hold under either checker.
+ */
+export const effectFindings = async (): Promise<Collected> => {
+  const projects = effectProjects()
+  const owned = await Promise.all(projects.map(({ dir, tsconfig }) => ownFiles(path.join(dir, tsconfig))))
+  const covered = new Set(owned.flatMap((own) => own.files))
+  const results = await mapLimit(projects, EFFECT_CONCURRENCY[checker()], effectProject)
+  const seen = new Map<string, Finding>()
+  for (const finding of results.flatMap((result) => result.findings)) {
+    if (covered.has(finding.file)) seen.set(`${finding.file}:${finding.line}:${finding.rule}`, finding)
+  }
+  return {
+    findings: [...seen.values()],
+    failures: [...owned.flatMap((own) => own.failures), ...results.flatMap((result) => result.failures)],
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
 // knip
 
 /** JSON omits configuration hints; the symbols reporter writes them to stderr in the same run. */
@@ -114,6 +174,7 @@ export const knipFindings = async (): Promise<Collected> =>
 export const collect = async (sources: readonly Source[], config: string = OXLINT_CONFIG): Promise<Collected> => {
   const parts = [
     sources.includes('oxlint') ? await oxlintFindings(config) : NOTHING,
+    sources.includes('effect') ? await effectFindings() : NOTHING,
     sources.includes('knip') ? await knipFindings() : NOTHING,
   ]
   return { findings: parts.flatMap((part) => part.findings), failures: parts.flatMap((part) => part.failures) }
