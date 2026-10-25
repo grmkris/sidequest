@@ -528,47 +528,51 @@ test('RFC 9207 issuer responses are advertised in authorization server metadata 
   }
 })
 
-test.each(['127.0.0.1', '[::1]'])(
-  'loopback %s accepts a fresh port; exchange requires that actual URI (M3)',
-  async (host) => {
-    const f = fixture()
-    try {
-      const registered = `http://${host}:1111/cb?fixed=1`
-      const actual = `http://${host}:2222/cb?fixed=1`
-      const client = await f.route('/oauth/register', { redirect_uris: [registered] })
-      const clientId = decode(Schema.Struct({ client_id: Schema.String }), client).client_id
-      const query = new URLSearchParams({
-        client_id: clientId,
-        redirect_uri: actual,
-        response_type: 'code',
-        scope: 'sidequest:read',
-        resource,
-        code_challenge_method: 'S256',
-        code_challenge: await pkceChallenge(verifier),
-      })
-      const authorize = await f.route('/oauth/authorize', {}, query, 'GET')
-      expect(authorize.status).toBe(302)
-      const requestId = new URL(authorize.redirect!).searchParams.get('oauth_request')!
-      const approve = await f.route(`/oauth/requests/${requestId}/approve`, { agentIds: ['one'] })
-      const callback = new URL(
-        decode(Schema.Struct({ result: Schema.Struct({ redirectUrl: Schema.String }) }), approve).result.redirectUrl,
-      )
-      expect(callback.host).toBe(`${host}:2222`)
-      const token = {
-        grant_type: 'authorization_code',
-        client_id: clientId,
-        redirect_uri: registered,
-        resource,
-        code: callback.searchParams.get('code'),
-        code_verifier: verifier,
-      }
-      expect((await f.route('/oauth/token', token)).status).toBe(400)
-      expect((await f.route('/oauth/token', { ...token, redirect_uri: actual })).status).toBe(200)
-    } finally {
-      f.db.close()
+test.each([
+  ['127.0.0.1', '/cb?fixed=1'],
+  ['[::1]', '/cb?fixed=1'],
+  ['127.0.0.1', ''],
+  ['[::1]', ''],
+  ['127.0.0.1', '?fixed=1'],
+  ['[::1]', '?fixed=1'],
+])('loopback %s%s accepts a fresh port; exchange requires that actual URI (M3)', async (host, suffix) => {
+  const f = fixture()
+  try {
+    const registered = `http://${host}:1111${suffix}`
+    const actual = `http://${host}:2222${suffix}`
+    const client = await f.route('/oauth/register', { redirect_uris: [registered] })
+    const clientId = decode(Schema.Struct({ client_id: Schema.String }), client).client_id
+    const query = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: actual,
+      response_type: 'code',
+      scope: 'sidequest:read',
+      resource,
+      code_challenge_method: 'S256',
+      code_challenge: await pkceChallenge(verifier),
+    })
+    const authorize = await f.route('/oauth/authorize', {}, query, 'GET')
+    expect(authorize.status).toBe(302)
+    const requestId = new URL(authorize.redirect!).searchParams.get('oauth_request')!
+    const approve = await f.route(`/oauth/requests/${requestId}/approve`, { agentIds: ['one'] })
+    const callback = new URL(
+      decode(Schema.Struct({ result: Schema.Struct({ redirectUrl: Schema.String }) }), approve).result.redirectUrl,
+    )
+    expect(callback.host).toBe(`${host}:2222`)
+    const token = {
+      grant_type: 'authorization_code',
+      client_id: clientId,
+      redirect_uri: registered,
+      resource,
+      code: callback.searchParams.get('code'),
+      code_verifier: verifier,
     }
-  },
-)
+    expect((await f.route('/oauth/token', token)).status).toBe(400)
+    expect((await f.route('/oauth/token', { ...token, redirect_uri: actual })).status).toBe(200)
+  } finally {
+    f.db.close()
+  }
+})
 
 test.each([
   ['http://127.0.0.1:1111/cb', 'http://127.0.0.1:2222/other'],
