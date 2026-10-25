@@ -49,6 +49,7 @@ exit 75 means the shared box is busy and should be retried. Never pipe `heavy`.
 8. Addresses and networks come from `contracts/config/<network>.json`, never from code literals.
 9. Persist an operation before a money-moving call and reconcile the original operation before retrying.
 10. Planned, implemented/tested, and live-verified are distinct claims; cite live evidence in `docs/reality-check.md`.
+11. No speculative complexity without the user's buy-in: build what was asked, not robustness or abstraction nobody requested.
 
 ## Task map
 

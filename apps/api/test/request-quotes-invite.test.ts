@@ -33,7 +33,7 @@ it('advertises invite to quote and maps it through request_quotes', async () => 
   const requestQuotes = vi.spyOn(board, 'requestQuotes').mockResolvedValue({
     requestId: 'request-1',
     requestHash: '0xhash',
-    status: 'Accepting quotes — reward not escrowed',
+    status: 'Accepting quotes, reward not escrowed',
     next: 'Wait for quotes',
     deliveryDeadline: 200,
     quoteDeadline: 100,

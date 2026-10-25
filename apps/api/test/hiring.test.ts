@@ -114,9 +114,9 @@ it('groups by chain stage and keeps funding separate from confirmed operations',
       name === 'list_quote_requests'
         ? {
             requests: [
-              { requestId: 'r', taskId: null, status: 'Accepting quotes — reward not escrowed' },
-              { requestId: 'closed', taskId: null, status: 'Quotes closed — reward not escrowed' },
-              { requestId: 'old', taskId: null, status: 'Expired — reward not escrowed' },
+              { requestId: 'r', taskId: null, status: 'Accepting quotes, reward not escrowed' },
+              { requestId: 'closed', taskId: null, status: 'Quotes closed, reward not escrowed' },
+              { requestId: 'old', taskId: null, status: 'Expired, reward not escrowed' },
             ],
           }
         : name === 'list_quotes'

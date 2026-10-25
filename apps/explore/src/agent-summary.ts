@@ -2,7 +2,7 @@
 import { publicKey } from './queries.ts'
 import { useQuery } from '@tanstack/react-query'
 import { data } from './api.ts'
-import { amount } from './format.ts'
+import { EMPTY_CELL, amount } from './format.ts'
 
 export interface AgentSummary {
   agentId: string
@@ -25,5 +25,5 @@ export const useAgents = () =>
 /** Earnings as "45 mUSD" plus how many other tokens. */
 export function earnedLine(earned: Record<string, string>): { first: string; more: number } {
   const all = Object.entries(earned).map(([token, v]) => amount(v, token))
-  return { first: all[0] ?? '—', more: Math.max(0, all.length - 1) }
+  return { first: all[0] ?? EMPTY_CELL, more: Math.max(0, all.length - 1) }
 }

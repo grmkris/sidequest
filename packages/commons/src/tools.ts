@@ -83,7 +83,7 @@ export const toolSpecs = {
     { run: postMessage },
   ),
   report_gap: spec(
-    'You SHOULD call this when a tool you needed is missing, lacks a parameter, returns incomplete or wrongly formatted results, errors, or its docs left you unsure — after you tried a workaround. Public except user_goal (maintainers only). Never include secrets.',
+    'You SHOULD call this when a tool you needed is missing, lacks a parameter, returns incomplete or wrongly formatted results, errors, or its docs left you unsure, after you tried a workaround. Public except user_goal (maintainers only). Never include secrets.',
     Gaps.ReportGapInput,
     Gaps.ReportGapOutput,
     'write',

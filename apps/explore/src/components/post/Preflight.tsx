@@ -8,7 +8,7 @@ import { erc20Abi, zeroAddress } from 'viem'
 import { useBalance, useReadContract } from 'wagmi'
 import { useQuery } from '@tanstack/react-query'
 import { stakeContext } from '../../stake-context.ts'
-import { formatNumber, tokenInfo } from '../../format.ts'
+import { EMPTY_CELL, formatNumber, tokenInfo } from '../../format.ts'
 import { sidequest } from '../../sidequest.ts'
 import { useToken } from '../../useTokens.ts'
 import { chain, deployment, isMainnet } from '../../wallet.ts'
@@ -155,7 +155,7 @@ export function Preflight({
             </ItemMedia>
             <ItemContent className="min-w-0 flex-1">
               <span className="block">
-                Reward · {reward === null ? `— ${sym}` : <TokenAmount value={reward} token={token} />}
+                Reward · {reward === null ? `${EMPTY_CELL} ${sym}` : <TokenAmount value={reward} token={token} />}
               </span>
               {reward !== null && tokenHeld !== undefined && tokenHeld < reward && (
                 <span className="block text-ui text-warning-text">

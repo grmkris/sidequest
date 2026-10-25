@@ -2,6 +2,9 @@ import { parseUnits, formatUnits } from 'viem'
 import type { AdvanceBudgetTerms, CallBudgetTerms } from './api.ts'
 import { deployment, isMainnet } from './wallet.ts'
 
+/** The single marker used for an empty value cell. */
+export const EMPTY_CELL = '—'
+
 export interface TokenMeta {
   symbol: string
   decimals: number
@@ -102,9 +105,9 @@ export function formatAmount(value: bigint, decimals: number): string {
 
 /** "7 mUSD". That testnet tokens have no value is said by the TESTNET tag and the wallet, not after every amount. */
 export function amount(value: string | null | undefined, token: string | null | undefined): string {
-  if (value === null || value === undefined) return '—'
+  if (value === null || value === undefined) return EMPTY_CELL
   const t = tokenMeta((token ?? '').toLowerCase())
-  if (t === undefined) return '— tokens'
+  if (t === undefined) return `${EMPTY_CELL} tokens`
   return `${formatNumber(BigInt(value), t.decimals)} ${t.symbol}`
 }
 
@@ -116,7 +119,7 @@ export function budgetCap(eb: AdvanceBudgetTerms | CallBudgetTerms): string {
 }
 
 export const bond = (value: string | null | undefined) =>
-  value === null || value === undefined ? '—' : `${formatNumber(BigInt(value), 18)} SIDE`
+  value === null || value === undefined ? EMPTY_CELL : `${formatNumber(BigInt(value), 18)} SIDE`
 
 /** "3 h 5 min", "2 d 4 h", "40 s": a span of seconds at two units of precision. */
 export function span(seconds: number): string {

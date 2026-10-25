@@ -195,8 +195,8 @@ it('owned requests include picked and expired history and page identical timesta
   const second = await board.listQuoteRequests({ address: alice }, { mine: true, cursor: first.nextCursor! })
   expect(second.requests).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ requestId: 'r001', taskId: 'alice-own', status: 'Picked — hire linked' }),
-      expect.objectContaining({ requestId: 'r000', status: 'Quotes closed — reward not escrowed' }),
+      expect.objectContaining({ requestId: 'r001', taskId: 'alice-own', status: 'Picked, hire linked' }),
+      expect.objectContaining({ requestId: 'r000', status: 'Quotes closed, reward not escrowed' }),
     ]),
   )
   expect([...first.requests, ...second.requests].map((r) => r.requestId)).toHaveLength(52)
@@ -236,16 +236,16 @@ it('reads a request outside discovery lists and distinguishes quoting closed fro
     requestId: 'closed-before-delivery',
     title: 'Frozen public request',
     brief: 'Read me after discovery closes',
-    status: 'Quotes closed — reward not escrowed',
+    status: 'Quotes closed, reward not escrowed',
     quotesCount: 0,
     taskId: null,
   })
   expect(closed).not.toHaveProperty('quotes')
   expect(await board.getQuoteRequest({}, { requestId: 'expired-delivery' })).toMatchObject({
-    status: 'Expired — reward not escrowed',
+    status: 'Expired, reward not escrowed',
   })
   expect(await board.getQuoteRequest({}, { requestId: 'picked-history' })).toMatchObject({
-    status: 'Picked — hire linked',
+    status: 'Picked, hire linked',
     taskId: 'alice-own',
   })
   await expect(board.getQuoteRequest({}, { requestId: 'missing' })).rejects.toMatchObject({ code: 'not-found' })
@@ -295,14 +295,14 @@ it('the public list carries record time and bidder count; recent adds the last w
   expect(open[0]).toMatchObject({
     createdAt: 500,
     quotesCount: 2,
-    status: 'Accepting quotes — reward not escrowed',
+    status: 'Accepting quotes, reward not escrowed',
     taskId: null,
   })
   const recent = await board.listQuoteRequests({}, { recent: true })
   expect(recent.map((r) => [r.requestId, r.status, r.quotesCount])).toEqual([
-    ['open', 'Accepting quotes — reward not escrowed', 2],
-    ['picked', 'Picked — hire linked', 0],
-    ['closed', 'Quotes closed — reward not escrowed', 0],
+    ['open', 'Accepting quotes, reward not escrowed', 2],
+    ['picked', 'Picked, hire linked', 0],
+    ['closed', 'Quotes closed, reward not escrowed', 0],
   ])
   expect(recent.find((r) => r.requestId === 'picked')).toMatchObject({ taskId: 'alice-own' })
   await expect(board.listQuoteRequests({ address: alice }, { mine: true, recent: true } as never)).rejects.toThrow(

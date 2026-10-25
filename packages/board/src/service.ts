@@ -1880,7 +1880,7 @@ export class Board {
   // -----------------------------------------------------------------------------------------------
 
   /**
-   * A quote request: "Accepting quotes — reward not escrowed". It names the work, the accepted reward tokens, both
+   * A quote request: "Accepting quotes, reward not escrowed". It names the work, the accepted reward tokens, both
    * bonds and the deadlines; bidders answer with one token and an exact amount. Nothing moves until a pick.
    */
   async requestQuotes(
@@ -2036,7 +2036,7 @@ export class Board {
         this.#remember(creator, 'request_quotes', input.idempotencyKey, {
           requestId: id,
           requestHash,
-          status: 'Accepting quotes — reward not escrowed',
+          status: 'Accepting quotes, reward not escrowed',
           next: 'Wait for quotes; list_quotes, then pick_quote.',
         }),
       )
@@ -2187,12 +2187,12 @@ export class Board {
         taskId: r.task_id,
         status:
           r.task_id !== null
-            ? 'Picked — hire linked'
+            ? 'Picked, hire linked'
             : now >= r.quote_deadline
               ? request.deliveryDeadline !== undefined && now >= request.deliveryDeadline
-                ? 'Expired — reward not escrowed'
-                : 'Quotes closed — reward not escrowed'
-              : 'Accepting quotes — reward not escrowed',
+                ? 'Expired, reward not escrowed'
+                : 'Quotes closed, reward not escrowed'
+              : 'Accepting quotes, reward not escrowed',
         createdAt: r.created_at,
         // One quote per bidder (UNIQUE request_id, worker), so this counts bidders.
         quotesCount: counts.get(r.id) ?? 0,

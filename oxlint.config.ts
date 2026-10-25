@@ -93,6 +93,11 @@ export default defineConfig({
     'sidequest/require-disable-description': 'error',
   },
   overrides: [
+    // Shipped UI, agent tool descriptions and error copy. Tests may carry arbitrary remote text.
+    {
+      files: ['apps/*/src/**', 'packages/*/src/**', 'packages/ui/gallery/**'],
+      rules: { 'sidequest/no-em-dash-copy': 'error' },
+    },
     // Explicit rule names are required: override plugins do not inherit category rules.
     {
       files: ['apps/explore/**', 'packages/react/**'],

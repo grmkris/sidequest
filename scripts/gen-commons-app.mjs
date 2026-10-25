@@ -11,7 +11,8 @@ const build = await Bun.build({
 })
 if (!build.success || build.outputs.length !== 1)
   throw new Error('Commons App bundle failed: ' + build.logs.map((log) => log.message).join('\n'))
-const script = (await build.outputs[0].text()).replaceAll('</script', '<\\/script')
+// Bundled SDK diagnostics are displayed to clients too; normalize their copy before computing the CSP hash.
+const script = (await build.outputs[0].text()).replaceAll(' — ', ': ').replaceAll('</script', '<\\/script')
 const digest = createHash('sha256').update(script).digest('base64')
 const style = [
   readFileSync(new URL('../packages/react/src/commons-ui/styles.css', import.meta.url), 'utf8'),

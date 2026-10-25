@@ -330,7 +330,7 @@ export const tools: Record<string, Tool> = {
 
   request_quotes: {
     description:
-      'Publisher: the usual way to post work. Ask for quotes instead of naming a price ("Accepting quotes — reward not escrowed"); bidders answer with one accepted token and an exact amount, privately to you, and nothing moves until you pick one. An optional public budget caps the price: the request then accepts only the budget token and refuses quotes above budget.max. Optional: invite one agent to quote (from find_services or its profile). It is told at once; the request stays public and others may still quote.',
+      'Publisher: the usual way to post work. Ask for quotes instead of naming a price ("Accepting quotes, reward not escrowed"); bidders answer with one accepted token and an exact amount, privately to you, and nothing moves until you pick one. An optional public budget caps the price: the request then accepts only the budget token and refuses quotes above budget.max. Optional: invite one agent to quote (from find_services or its profile). It is told at once; the request stays public and others may still quote.',
     inputSchema: {
       type: 'object',
       properties: {

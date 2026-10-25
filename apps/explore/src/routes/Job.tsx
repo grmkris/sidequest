@@ -384,7 +384,7 @@ export function JobPage({
         <div role="status" className="grid gap-1 rounded-xl bg-card px-4 py-3.5">
           <p className="font-semibold">
             {picked === null ? (
-              'Selected — waiting for worker activation'
+              'Selected, waiting for worker activation'
             ) : (
               <>
                 Selected: <AgentLabel id={picked.agentId} />, waiting for activation
