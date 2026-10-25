@@ -80,6 +80,40 @@ bun run smoke dev
 Use `heavy` for a command that may take over a minute. Exit 75 means the shared box is busy; retry after it clears. Never
 pipe `heavy`. Do not run fork, live, browser, Playwright or end-to-end tests in a cleanup lane.
 
+## Editors
+
+TypeScript language features run on tsrs, the compiler the gates use, pinned in the root `package.json`; lint runs on
+the repository's oxlint and `oxlint.config.ts`. Each editor starts the binaries in `node_modules`, so everyone gets the
+lockfile's versions.
+
+- **VS Code and Cursor:** install the recommended extensions (`.vscode/extensions.json`: TypeScript 7 native preview
+  and oxc). `.vscode/settings.json` turns on `js/ts.experimental.useTsgo` and points `js/ts.tsdk.path` at
+  `.vscode/tsrs`, whose `tsgo` runs `node_modules/.bin/tsrs` (npm's tsrs ships its own `tsdk/` only from 0.19.0).
+  Accept the workspace-trust prompt; "TypeScript 7: Restart Server" picks up a new pin.
+- **Zed:** install the "TypeScript Language Server" (id `tsgo`) and "Oxc" extensions. `.zed/settings.json` replaces the
+  `typescript-ls` binary with `node_modules/.bin/tsrs --lsp --stdio` and turns off vtsls and typescript-language-server.
+- **Neovim 0.11+:**
+
+  ```lua
+  local function local_bin(name, args)
+    return function(dispatchers, config)
+      local cmd = vim.list_extend({ config.root_dir .. '/node_modules/.bin/' .. name }, args)
+      return vim.lsp.rpc.start(cmd, dispatchers, { cwd = config.root_dir })
+    end
+  end
+  local filetypes = { 'typescript', 'typescriptreact', 'javascript', 'javascriptreact' }
+  vim.lsp.config('tsrs', { cmd = local_bin('tsrs', { '--lsp', '-stdio' }), filetypes = filetypes, root_markers = { 'bun.lock' } })
+  vim.lsp.config('oxlint', { cmd = local_bin('oxlint', { '--lsp' }), filetypes = filetypes, root_markers = { 'bun.lock' } })
+  vim.lsp.enable({ 'tsrs', 'oxlint' })
+  ```
+
+  Disable other TypeScript servers (`ts_ls`, `vtsls`) for the same buffers.
+
+Effect diagnostics are not in the editor: effect-tsrs has no language server, and its Oxlint route patches
+`node_modules` (`effect-tsrs patch --oxlint`), which the repository does not do. They come from `bun run typecheck`
+(and `lint:gate`). Effect quick fixes and refactors exist only in `@effect/tsgo` (kept for editors) until effect-tsrs
+ports them.
+
 ## Secrets
 
 Local stage values are in mode-600 `~/.config/sidequest/dev.env` and `~/.config/sidequest/prod.env`; local flow and test

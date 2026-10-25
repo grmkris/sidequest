@@ -1,0 +1,4 @@
+#!/bin/sh
+# The TypeScript 7 extension starts `<js/ts.tsdk.path>/tsgo --lsp --stdio`; this runs the repository's pinned tsrs
+# instead (package.json, README.md "Editors"). From tsrs 0.19.0 the package ships its own `tsdk/tsgo`.
+exec "$(dirname "$0")/../../node_modules/.bin/tsrs" "$@"

@@ -26,7 +26,9 @@
   // (crew/sandbox, util-linux) supplies setpriv.
   "ignoreBinaries": ["forge", "anvil", "codex", "setpriv"],
   // The Effect language-service plugin is named in tsconfig.base.json for editors and effect-tsrs, never imported.
-  "ignoreDependencies": ["@effect/language-service"],
+  // tsrs is the editors' TypeScript language server (.vscode/tsrs/tsgo, .zed/settings.json; README.md "Editors"),
+  // which no script runs.
+  "ignoreDependencies": ["@effect/language-service", "tsrs"],
   // Vendored upstream code is maintained as one unit, not pruned by repository gates.
   "ignore": [
     // Foundry dependencies and generated outputs are not Sidequest TypeScript sources.

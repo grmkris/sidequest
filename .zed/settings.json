@@ -1,0 +1,21 @@
+{
+  // TypeScript on the repository's pinned tsrs, through the `typescript-ls` server of Zed's "TypeScript Language
+  // Server" extension (id tsgo) with its binary replaced; lint on node_modules' oxlint with oxlint.config.ts through
+  // the Oxc extension (README.md "Editors").
+  "lsp": {
+    "typescript-ls": {
+      "binary": { "path": "node_modules/.bin/tsrs", "arguments": ["--lsp", "--stdio"] }
+    }
+  },
+  "languages": {
+    "TypeScript": {
+      "language_servers": ["typescript-ls", "oxlint", "!vtsls", "!typescript-language-server", "..."]
+    },
+    "TSX": {
+      "language_servers": ["typescript-ls", "oxlint", "!vtsls", "!typescript-language-server", "..."]
+    },
+    "JavaScript": {
+      "language_servers": ["typescript-ls", "oxlint", "!vtsls", "!typescript-language-server", "..."]
+    }
+  }
+}
