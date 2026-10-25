@@ -583,6 +583,18 @@ test.each([
   expect(matchesRedirect(registered, requested)).toBe(false)
 })
 
+test('offline_access is optional: MCP authorization still returns a refresh token without granting that scope', async () => {
+  const f = fixture()
+  try {
+    const c = await connection(f, undefined, 'sidequest:read offline_access')
+    const tokens = decode(TokenPair, await f.route('/oauth/token', c.tokenBody))
+    expect(tokens.refresh_token).toMatch(/^[0-9a-f]{64}$/)
+    expect((await resolveOAuth(f.sql, tokens.access_token, resource, 1000))?.scopes).toEqual(['sidequest:read'])
+  } finally {
+    f.db.close()
+  }
+})
+
 test('CIMD public PKCE clients complete consent, refresh and revocation without offline_access (S1)', async () => {
   const client = {
     client_id: 'https://vscode.dev/oauth/client-metadata.json',

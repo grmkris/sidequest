@@ -31,7 +31,7 @@ export const OAUTH_SCOPES = [...AGENT_SCOPES, 'sidequest:setup'] as const
 function parseScopes(value: string): string[] | undefined {
   const roles = value
     .split(' ')
-    .filter((scope) => scope !== 'sidequest:setup')
+    .filter((scope) => scope !== 'sidequest:setup' && scope !== 'offline_access')
     .join(' ')
   const parsed = roles.trim() === '' ? [] : parseAgentScopes(roles)
   if (parsed === undefined) return undefined
