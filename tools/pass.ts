@@ -4,12 +4,11 @@
  * (tools/findings.ts) runs the Effect pass: effect-tsrs with every rule, judged against tools/lint-baseline.json. Commands run from the repository root without `heavy`: run the whole task through
  * it.
  */
-import { Schema } from 'effect'
 import path from 'node:path'
 import { effectArgs, missingPlugin, verifiedEffectOutput } from './effect.ts'
 import { decodeEffect, typescriptErrors, uncheckedFiles } from './report.ts'
 import type { EffectOutput } from './report.ts'
-import { bin, repoRoot, run } from './run.ts'
+import { repoRoot, run } from './run.ts'
 
 /** effect-tsrs exits 1 when it reports errors; anything else non-zero means it did not run. */
 const FOUND = 1
@@ -61,34 +60,5 @@ export const effectPass = async (tsconfig: string): Promise<Pass> => {
       ...result.failures,
       ...(unchecked === undefined ? [] : [unchecked]),
     ],
-  }
-}
-
-const ShowConfig = Schema.Struct({ files: Schema.optional(Schema.Array(Schema.String)) })
-const decodeShowConfig = Schema.decodeUnknownSync(ShowConfig)
-
-/**
- * The files a tsconfig itself includes, repository-relative, as `tsc --showConfig` lists them (configuration only, no
- * type check). effect-tsrs also reports files a project merely imports.
- */
-export const ownFiles = async (
-  tsconfig: string,
-): Promise<{ files: readonly string[]; failures: readonly string[] }> => {
-  const project = path.resolve(repoRoot, tsconfig)
-  const result = await run([bin('tsc'), '-p', project, '--showConfig'])
-  if (result.exitCode !== 0) {
-    return {
-      files: [],
-      failures: [`${labelOf(project)}: tsc --showConfig exited ${result.exitCode}\n${result.stderr.trim()}`],
-    }
-  }
-  const files = decodeShowConfig(JSON.parse(result.stdout)).files ?? []
-  return {
-    files: files.map((file) =>
-      labelOf(path.resolve(path.dirname(project), file))
-        .split(path.sep)
-        .join('/'),
-    ),
-    failures: [],
   }
 }

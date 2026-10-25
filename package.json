@@ -76,7 +76,7 @@
       "knip": "6.40.0",
       "oxlint-plugin-complexity": "2.1.8",
       "jscpd": "5.4.0",
-      "@yielded/effect-tsrs": "0.2.0",
+      "@yielded/effect-tsrs": "0.2.2",
       "@effect/tsgo": "0.54.0",
       "oxc-parser": "0.150.0"
     }

@@ -153,8 +153,8 @@ export const gatingDiagnostics = (output: EffectOutput): EffectDiagnostic[] =>
     }))
 
 /**
- * Why a project's diagnostics are incomplete by the checker's own count: files its tsconfig checks without the plugin,
- * which go unchecked. `label` names the project in the message. Undefined when every file was checked, and when the
+ * Why a project's diagnostics are incomplete by effect-tsrs's own count: files its tsconfig checks without the plugin,
+ * which go unchecked. `label` names the project in the message. Undefined when every file was checked, or when the
  * output has no count (`missingPlugin` in effect.ts reads the tsconfig before the run either way).
  */
 export const uncheckedFiles = (label: string, output: EffectOutput): string | undefined =>

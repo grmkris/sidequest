@@ -24,6 +24,7 @@ describe('the checker (ADR 0030)', () => {
       'diagnostics',
       '-p',
       path.join(repoRoot, 'tools/tsconfig.json'),
+      '--type-check',
       '--format',
       'json',
       '--rules',

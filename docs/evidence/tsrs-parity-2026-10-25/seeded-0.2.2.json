@@ -1,0 +1,132 @@
+{
+ "typeCheck": [
+  {
+   "project": "tools/tsconfig.json",
+   "tscExit": 1,
+   "tsrsExit": 1,
+   "tsc": 6,
+   "tsrs": 6,
+   "positionsAndCodesEqual": true,
+   "firstLinesEqual": false,
+   "codes": [
+    1294,
+    2307,
+    2322,
+    2375
+   ],
+   "onlyTsc": [
+    [
+     "tools/zz-seed.ts",
+     13,
+     26,
+     2322,
+     "Type '{ (path: PathOrFileDescriptor, options?: { encoding?: null | undefined; flag?: string | undefined; } | null | undefined): NonSharedBuffer; (path: PathOrFileDescriptor, options: { ...; } | BufferEncoding): string; (path: PathOrFileDescriptor, options?: BufferEncoding | ... 2 more ... | undefined): string | NonSharedB...' is not assignable to type 'string'."
+    ]
+   ],
+   "onlyTsrs": [
+    [
+     "tools/zz-seed.ts",
+     13,
+     26,
+     2322,
+     "Type '{ (path: PathOrFileDescriptor, options?: { encoding?: null | undefined; flag?: string | undefined; } | null | undefined): NonSharedBuffer; (path: PathOrFileDescriptor, options: ... | BufferEncoding): string; (path: PathOrFileDescriptor, options?: BufferEncoding | ... 2 more ... | undefined): string | NonSharedBuffer...' is not assignable to type 'string'."
+    ]
+   ]
+  },
+  {
+   "project": "packages/commons/tsconfig.json",
+   "tscExit": 1,
+   "tsrsExit": 1,
+   "tsc": 4,
+   "tsrs": 4,
+   "positionsAndCodesEqual": true,
+   "firstLinesEqual": true,
+   "codes": [
+    2322
+   ],
+   "onlyTsc": [],
+   "onlyTsrs": []
+  },
+  {
+   "project": "apps/explore/tsconfig.json",
+   "tscExit": 1,
+   "tsrsExit": 1,
+   "tsc": 4,
+   "tsrs": 4,
+   "positionsAndCodesEqual": true,
+   "firstLinesEqual": true,
+   "codes": [
+    2322,
+    2339,
+    2345
+   ],
+   "onlyTsc": [],
+   "onlyTsrs": []
+  }
+ ],
+ "typeCheckRulesNone": [
+  {
+   "project": "tools/tsconfig.json",
+   "tscExit": 1,
+   "tsrsExit": 1,
+   "tsc": 6,
+   "tsrs": 6,
+   "positionsAndCodesEqual": true,
+   "firstLinesEqual": false,
+   "codes": [
+    1294,
+    2307,
+    2322,
+    2375
+   ],
+   "onlyTsc": [
+    [
+     "tools/zz-seed.ts",
+     13,
+     26,
+     2322,
+     "Type '{ (path: PathOrFileDescriptor, options?: { encoding?: null | undefined; flag?: string | undefined; } | null | undefined): NonSharedBuffer; (path: PathOrFileDescriptor, options: { ...; } | BufferEncoding): string; (path: PathOrFileDescriptor, options?: BufferEncoding | ... 2 more ... | undefined): string | NonSharedB...' is not assignable to type 'string'."
+    ]
+   ],
+   "onlyTsrs": [
+    [
+     "tools/zz-seed.ts",
+     13,
+     26,
+     2322,
+     "Type '{ (path: PathOrFileDescriptor, options?: { encoding?: null | undefined; flag?: string | undefined; } | null | undefined): NonSharedBuffer; (path: PathOrFileDescriptor, options: ... | BufferEncoding): string; (path: PathOrFileDescriptor, options?: BufferEncoding | ... 2 more ... | undefined): string | NonSharedBuffer...' is not assignable to type 'string'."
+    ]
+   ]
+  },
+  {
+   "project": "packages/commons/tsconfig.json",
+   "tscExit": 1,
+   "tsrsExit": 1,
+   "tsc": 4,
+   "tsrs": 4,
+   "positionsAndCodesEqual": true,
+   "firstLinesEqual": true,
+   "codes": [
+    2322
+   ],
+   "onlyTsc": [],
+   "onlyTsrs": []
+  },
+  {
+   "project": "apps/explore/tsconfig.json",
+   "tscExit": 1,
+   "tsrsExit": 1,
+   "tsc": 4,
+   "tsrs": 4,
+   "positionsAndCodesEqual": true,
+   "firstLinesEqual": true,
+   "codes": [
+    2322,
+    2339,
+    2345
+   ],
+   "onlyTsc": [],
+   "onlyTsrs": []
+  }
+ ]
+}

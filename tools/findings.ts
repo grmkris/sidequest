@@ -8,7 +8,7 @@ import { Schema } from 'effect'
 import path from 'node:path'
 import { effectProjects } from './effect.ts'
 import type { Project } from './effect.ts'
-import { effectPass, ownFiles } from './pass.ts'
+import { effectPass } from './pass.ts'
 import { fromEffect, fromKnip, fromOxlint, safeFixCodes } from './report.ts'
 import type { Finding, Source } from './report.ts'
 import { bin, repoRoot, run } from './run.ts'
@@ -118,23 +118,17 @@ const mapLimit = async <A, B>(items: readonly A[], limit: number, fn: (item: A) 
 }
 
 /**
- * Every project's Effect findings; one a file gets in several programs counts once. Only files some typecheck tsconfig
- * includes count: effect-tsrs also reports a file a project merely imports (`infra/stage.ts` through `alchemy.run.ts`),
- * which no tsconfig covers.
+ * Every project's Effect findings; one a file gets in several programs counts once. effect-tsrs reports only the files a
+ * project's tsconfig includes (since 0.2.2, as effect-tsgo did), so a file a project merely imports (`infra/stage.ts`
+ * through `alchemy.run.ts`) counts nowhere.
  */
 export const effectFindings = async (): Promise<Collected> => {
-  const projects = effectProjects()
-  const owned = await Promise.all(projects.map(({ dir, tsconfig }) => ownFiles(path.join(dir, tsconfig))))
-  const covered = new Set(owned.flatMap((own) => own.files))
-  const results = await mapLimit(projects, EFFECT_CONCURRENCY, effectProject)
+  const results = await mapLimit(effectProjects(), EFFECT_CONCURRENCY, effectProject)
   const seen = new Map<string, Finding>()
   for (const finding of results.flatMap((result) => result.findings)) {
-    if (covered.has(finding.file)) seen.set(`${finding.file}:${finding.line}:${finding.rule}`, finding)
+    seen.set(`${finding.file}:${finding.line}:${finding.rule}`, finding)
   }
-  return {
-    findings: [...seen.values()],
-    failures: [...owned.flatMap((own) => own.failures), ...results.flatMap((result) => result.failures)],
-  }
+  return { findings: [...seen.values()], failures: results.flatMap((result) => result.failures) }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
