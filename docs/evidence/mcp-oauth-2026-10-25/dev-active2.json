@@ -1,0 +1,139 @@
+{
+  "label": "sidequest-dev",
+  "at": "2026-10-25T12:29:59.740Z",
+  "resource": "https://dev.sidequest.exchange/mcp",
+  "scope": "sidequest:read sidequest:hire sidequest:work",
+  "dcr": {
+    "deviceCodeExtra": {
+      "status": 201,
+      "client_id": "hl_b31e8c3e5c646bbc05a0ea2440f59f6c",
+      "grant_types": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "redirect_uris": [
+        "http://127.0.0.1:33430/callback"
+      ]
+    },
+    "jwtBearerExtra": {
+      "status": 201,
+      "client_id": "hl_298b891a1e6e246978ff1db2a7e2fa83",
+      "grant_types": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "redirect_uris": [
+        "https://claude.ai/api/mcp/auth_callback"
+      ]
+    },
+    "vscodeShape": {
+      "status": 201,
+      "client_id": "hl_00041a2e1f386ccb4cd97233f34aaeac",
+      "grant_types": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "redirect_uris": [
+        "http://127.0.0.1:33418/",
+        "https://vscode.dev/redirect"
+      ]
+    },
+    "customScheme": {
+      "status": 400,
+      "error": "invalid_client_metadata",
+      "error_description": "Provide exact HTTPS or loopback redirect URIs"
+    },
+    "ipLoopback": {
+      "status": 201,
+      "client_id": "hl_e199b8de903ec19372456ef6347e600a",
+      "grant_types": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "redirect_uris": [
+        "http://127.0.0.1:33431/callback"
+      ]
+    }
+  },
+  "authorize": {
+    "ipSamePort": {
+      "status": 302,
+      "ms": 113,
+      "location": "https://dev.sidequest.exchange/connect",
+      "error": null,
+      "error_description": ""
+    },
+    "ipOtherPort": {
+      "status": 302,
+      "ms": 104,
+      "location": "https://dev.sidequest.exchange/connect",
+      "error": null,
+      "error_description": ""
+    },
+    "ipOtherPath": {
+      "status": 400,
+      "ms": 92,
+      "location": null,
+      "error": "invalid_request",
+      "error_description": "Unknown client or redirect URI"
+    },
+    "uppercaseResource": {
+      "status": 302,
+      "ms": 112,
+      "location": "https://dev.sidequest.exchange/connect",
+      "error": null,
+      "error_description": ""
+    },
+    "trailingSlashResource": {
+      "status": 400,
+      "ms": 130,
+      "location": null,
+      "error": "invalid_request",
+      "error_description": "Require authorization code, PKCE S256, supported scope and explicit MCP resource"
+    },
+    "originResource": {
+      "status": 400,
+      "ms": 74,
+      "location": null,
+      "error": "invalid_request",
+      "error_description": "Require authorization code, PKCE S256, supported scope and explicit MCP resource"
+    }
+  },
+  "cimd": {
+    "https://claude.ai/oauth/mcp-oauth-client-metadata": {
+      "status": 302,
+      "ms": 238,
+      "location": "https://dev.sidequest.exchange/connect",
+      "error": null,
+      "error_description": ""
+    },
+    "https://chatgpt.com/oauth/client.json": {
+      "status": 400,
+      "ms": 120,
+      "location": null,
+      "error": "invalid_client",
+      "error_description": "Client metadata is unavailable or invalid"
+    },
+    "https://chatgpt.com/oauth/codex/client.json": {
+      "status": 302,
+      "ms": 169,
+      "location": "https://dev.sidequest.exchange/connect",
+      "error": null,
+      "error_description": ""
+    },
+    "https://vscode.dev/oauth/client-metadata.json": {
+      "status": 302,
+      "ms": 295,
+      "location": "https://dev.sidequest.exchange/connect",
+      "error": null,
+      "error_description": ""
+    },
+    "https://audit.example/client-metadata.json": {
+      "status": 400,
+      "ms": 57,
+      "location": null,
+      "error": "invalid_client",
+      "error_description": "Client metadata is unavailable or invalid"
+    }
+  }
+}

@@ -86,7 +86,6 @@
       }
     }
   ],
-  "cors": null,
   "findings": [
     "SHOULD: 401 WWW-Authenticate has no scope",
     "RFC6750 \u00a73.1 SHOULD: 401 for a bad token has no error=\"invalid_token\"",
@@ -191,5 +190,24 @@
       ]
     }
   },
-  "interpretation": "Public/anonymous probes only; no signed-in session or tokens."
+  "interpretation": "Public/anonymous probes only; no signed-in session or tokens.",
+  "prmWithOrigin": {
+    "status": 403,
+    "acao": null,
+    "body": {
+      "error": "invalid_request",
+      "error_description": "OAuth requests require the website origin"
+    }
+  },
+  "http": {
+    "prm": {
+      "status": 200,
+      "location": null
+    },
+    "token": {
+      "status": 400,
+      "location": null
+    },
+    "hsts": null
+  }
 }

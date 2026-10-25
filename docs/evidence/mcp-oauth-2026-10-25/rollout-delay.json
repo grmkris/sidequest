@@ -1,0 +1,17 @@
+{
+  "observedAt": "2026-10-25T12:25:33.997Z",
+  "workerVersion": "eca82b14-11ea-45b0-9891-40d222fb7b89",
+  "uploadedAt": "2026-10-25T12:23:47Z",
+  "initialFindings": [
+    "SHOULD: CIMD not advertised (client_id_metadata_document_supported != true)",
+    "SHOULD: RFC 9207 iss not advertised"
+  ],
+  "initialOtherPort": {
+    "status": 400,
+    "ms": 103,
+    "location": null,
+    "error": "invalid_request",
+    "error_description": "Unknown client or redirect URI"
+  },
+  "explanation": "Worker changed before sponsor Durable Object. New metadata became visible on the next bounded readback; final after evidence is recorded separately. Existing worker.ts documents eventual DO rollout."
+}

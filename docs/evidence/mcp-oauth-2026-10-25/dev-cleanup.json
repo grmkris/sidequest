@@ -1,0 +1,23 @@
+{
+  "stage": "dev",
+  "clientNameFilter": "mcp-oauth-audit 2026-10-25 %",
+  "before": {
+    "clients": 30,
+    "requests": 10,
+    "agentFamilies": 0,
+    "setupFamilies": 0,
+    "cimdAuditPendingRequests": 3
+  },
+  "removed": {
+    "clients": 30,
+    "requests": 10,
+    "cimdAuditPendingRequests": 3,
+    "tokens": 0,
+    "families": 0
+  },
+  "after": {
+    "clients": 0,
+    "cimdAuditPendingRequests": 0
+  },
+  "scope": "Only tagged dev clients and their rows, plus three pending CIMD requests matched by exact client ID, audit state and PKCE challenge. Production untouched."
+}

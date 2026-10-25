@@ -1,0 +1,408 @@
+{
+  "label": "sidequest-dev",
+  "mcpUrl": "https://dev.sidequest.exchange/mcp",
+  "at": "2026-10-25T12:29:45.666Z",
+  "active": {
+    "registrations": {
+      "claudeCode": {
+        "status": 201,
+        "body": {
+          "client_id": "hl_63d0125a5aa740c455c60afdac2992a8",
+          "client_id_issued_at": 1792931387,
+          "client_name": "mcp-oauth-audit 2026-10-25 claude-code-like",
+          "redirect_uris": [
+            "http://localhost:33418/callback"
+          ],
+          "token_endpoint_auth_method": "none",
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ]
+        }
+      },
+      "native": {
+        "status": 201,
+        "body": {
+          "client_id": "hl_ede5523dc6ee9dd25442700c4925fba5",
+          "client_id_issued_at": 1792931387,
+          "client_name": "mcp-oauth-audit 2026-10-25 native-127",
+          "redirect_uris": [
+            "http://127.0.0.1:33419/callback"
+          ],
+          "token_endpoint_auth_method": "none",
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ]
+        }
+      },
+      "ipv6": {
+        "status": 201,
+        "body": {
+          "client_id": "hl_e24f4362e5f2594e64f18fcc621352be",
+          "client_id_issued_at": 1792931387,
+          "client_name": "mcp-oauth-audit 2026-10-25 native-ipv6",
+          "redirect_uris": [
+            "http://[::1]:33420/callback"
+          ],
+          "token_endpoint_auth_method": "none",
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ]
+        }
+      },
+      "web": {
+        "status": 201,
+        "body": {
+          "client_id": "hl_00f59898bcb77d219a10e8f556e307bd",
+          "client_id_issued_at": 1792931387,
+          "client_name": "mcp-oauth-audit 2026-10-25 web-claude-ai-like",
+          "redirect_uris": [
+            "https://claude.ai/api/mcp/auth_callback"
+          ],
+          "token_endpoint_auth_method": "none",
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ]
+        }
+      },
+      "extraGrants": {
+        "status": 201,
+        "body": {
+          "client_id": "hl_2d930ca86917d4be5c66b8cd9e9d3bdb",
+          "client_id_issued_at": 1792931387,
+          "client_name": "mcp-oauth-audit 2026-10-25 extra-grants",
+          "redirect_uris": [
+            "http://127.0.0.1:33421/callback"
+          ],
+          "token_endpoint_auth_method": "none",
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ]
+        }
+      },
+      "httpNonLoopback": {
+        "status": 400,
+        "body": {
+          "error": "invalid_client_metadata",
+          "error_description": "Provide exact HTTPS or loopback redirect URIs"
+        }
+      },
+      "noAuthMethod": {
+        "status": 201,
+        "body": {
+          "client_id": "hl_bba9ae1b0e84000c120332cebe7cfc61",
+          "client_id_issued_at": 1792931387,
+          "client_name": "mcp-oauth-audit 2026-10-25 no-auth-method",
+          "redirect_uris": [
+            "http://127.0.0.1:33422/callback"
+          ],
+          "token_endpoint_auth_method": "none",
+          "grant_types": [
+            "authorization_code",
+            "refresh_token"
+          ],
+          "response_types": [
+            "code"
+          ]
+        }
+      }
+    },
+    "authorize": [
+      {
+        "name": "baseline",
+        "status": 302,
+        "location": "https://dev.sidequest.exchange/connect?oauth_request=[test-request-removed]",
+        "body": ""
+      },
+      {
+        "name": "no-pkce",
+        "status": 400,
+        "location": null,
+        "body": {
+          "error": "invalid_request",
+          "error_description": "Require authorization code, PKCE S256, supported scope and explicit MCP resource"
+        }
+      },
+      {
+        "name": "plain-pkce",
+        "status": 400,
+        "location": null,
+        "body": {
+          "error": "invalid_request",
+          "error_description": "Require authorization code, PKCE S256, supported scope and explicit MCP resource"
+        }
+      },
+      {
+        "name": "foreign-resource",
+        "status": 400,
+        "location": null,
+        "body": {
+          "error": "invalid_request",
+          "error_description": "Require authorization code, PKCE S256, supported scope and explicit MCP resource"
+        }
+      },
+      {
+        "name": "no-resource",
+        "status": 400,
+        "location": null,
+        "body": {
+          "error": "invalid_request",
+          "error_description": "Require authorization code, PKCE S256, supported scope and explicit MCP resource"
+        }
+      },
+      {
+        "name": "unregistered-redirect",
+        "status": 400,
+        "location": null,
+        "body": {
+          "error": "invalid_request",
+          "error_description": "Unknown client or redirect URI"
+        }
+      },
+      {
+        "name": "loopback-other-port",
+        "status": 400,
+        "location": null,
+        "body": {
+          "error": "invalid_request",
+          "error_description": "Unknown client or redirect URI"
+        }
+      },
+      {
+        "name": "unknown-client",
+        "status": 400,
+        "location": null,
+        "body": {
+          "error": "invalid_request",
+          "error_description": "Unknown client or redirect URI"
+        }
+      }
+    ],
+    "token": [
+      {
+        "name": "bogus-code",
+        "status": 400,
+        "headers": {
+          "content-type": "application/json",
+          "cache-control": "no-store",
+          "access-control-allow-origin": "*",
+          "access-control-allow-headers": "authorization, content-type"
+        },
+        "body": {
+          "error": "invalid_grant",
+          "error_description": "Code, resource, redirect or verifier does not match"
+        }
+      },
+      {
+        "name": "bogus-refresh",
+        "status": 400,
+        "headers": {
+          "content-type": "application/json",
+          "cache-control": "no-store",
+          "access-control-allow-origin": "*",
+          "access-control-allow-headers": "authorization, content-type"
+        },
+        "body": {
+          "error": "invalid_grant",
+          "error_description": "Refresh token expired, revoked or bound to another resource"
+        }
+      },
+      {
+        "name": "client-credentials-public",
+        "status": 400,
+        "headers": {
+          "content-type": "application/json",
+          "cache-control": "no-store",
+          "access-control-allow-origin": "*",
+          "access-control-allow-headers": "authorization, content-type"
+        },
+        "body": {
+          "error": "unsupported_grant_type",
+          "error_description": "Supported grants: authorization_code and refresh_token"
+        }
+      }
+    ],
+    "revoke": {
+      "status": 200,
+      "body": {}
+    }
+  },
+  "challenge": {
+    "post": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer resource_metadata=\"https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp\", scope=\"sidequest:read sidequest:hire sidequest:work\"",
+      "parsed": {
+        "resource_metadata": "https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp",
+        "scope": "sidequest:read sidequest:hire sidequest:work"
+      },
+      "body": {
+        "ok": false,
+        "code": "unauthenticated",
+        "message": "A resource-scoped OAuth bearer token is required"
+      }
+    },
+    "get": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer resource_metadata=\"https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp\", scope=\"sidequest:read sidequest:hire sidequest:work\""
+    },
+    "invalidToken": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer error=\"invalid_token\", resource_metadata=\"https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp\", scope=\"sidequest:read sidequest:hire sidequest:work\""
+    },
+    "forgedJwt": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer error=\"invalid_token\", resource_metadata=\"https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp\", scope=\"sidequest:read sidequest:hire sidequest:work\""
+    }
+  },
+  "prm": [
+    {
+      "url": "https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "access-control-allow-origin": "*",
+        "access-control-allow-headers": "authorization, content-type"
+      },
+      "body": {
+        "resource": "https://dev.sidequest.exchange/mcp",
+        "authorization_servers": [
+          "https://dev.sidequest.exchange"
+        ],
+        "scopes_supported": [
+          "sidequest:read",
+          "sidequest:hire",
+          "sidequest:work",
+          "sidequest:maintain",
+          "sidequest:media",
+          "sidequest:setup"
+        ],
+        "bearer_methods_supported": [
+          "header"
+        ]
+      }
+    },
+    {
+      "url": "https://dev.sidequest.exchange/.well-known/oauth-protected-resource",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "access-control-allow-origin": "*",
+        "access-control-allow-headers": "authorization, content-type"
+      },
+      "body": {
+        "resource": "https://dev.sidequest.exchange/mcp",
+        "authorization_servers": [
+          "https://dev.sidequest.exchange"
+        ],
+        "scopes_supported": [
+          "sidequest:read",
+          "sidequest:hire",
+          "sidequest:work",
+          "sidequest:maintain",
+          "sidequest:media",
+          "sidequest:setup"
+        ],
+        "bearer_methods_supported": [
+          "header"
+        ]
+      }
+    }
+  ],
+  "prmWithOrigin": {
+    "status": 200,
+    "acao": "*"
+  },
+  "as": [
+    {
+      "issuer": "https://dev.sidequest.exchange",
+      "tries": [
+        {
+          "url": "https://dev.sidequest.exchange/.well-known/oauth-authorization-server",
+          "status": 200,
+          "issuer": "https://dev.sidequest.exchange",
+          "contentType": "application/json",
+          "cors": "*"
+        },
+        {
+          "url": "https://dev.sidequest.exchange/.well-known/openid-configuration",
+          "status": 404,
+          "contentType": "text/plain"
+        }
+      ],
+      "bareRoot": {
+        "status": 200,
+        "issuer": "https://dev.sidequest.exchange"
+      },
+      "selected": "https://dev.sidequest.exchange/.well-known/oauth-authorization-server",
+      "fields": {
+        "issuer": "https://dev.sidequest.exchange",
+        "authorization_endpoint": "https://dev.sidequest.exchange/oauth/authorize",
+        "token_endpoint": "https://dev.sidequest.exchange/oauth/token",
+        "registration_endpoint": "https://dev.sidequest.exchange/oauth/register",
+        "revocation_endpoint": "https://dev.sidequest.exchange/oauth/revoke",
+        "introspection_endpoint": null,
+        "jwks_uri": null,
+        "response_types_supported": [
+          "code"
+        ],
+        "grant_types_supported": [
+          "authorization_code",
+          "refresh_token"
+        ],
+        "code_challenge_methods_supported": [
+          "S256"
+        ],
+        "token_endpoint_auth_methods_supported": [
+          "none"
+        ],
+        "scopes_supported": [
+          "sidequest:read",
+          "sidequest:hire",
+          "sidequest:work",
+          "sidequest:maintain",
+          "sidequest:media",
+          "sidequest:setup"
+        ],
+        "client_id_metadata_document_supported": true,
+        "authorization_response_iss_parameter_supported": true,
+        "dpop_signing_alg_values_supported": null,
+        "response_modes_supported": null,
+        "resource_indicators_supported": null,
+        "protected_resources": null
+      }
+    }
+  ],
+  "http": {
+    "prm": {
+      "status": 301,
+      "location": "https://dev.sidequest.exchange/.well-known/oauth-protected-resource"
+    },
+    "token": {
+      "status": 301,
+      "location": "https://dev.sidequest.exchange/oauth/token"
+    },
+    "hsts": "max-age=31536000; includeSubDomains"
+  },
+  "findings": []
+}
