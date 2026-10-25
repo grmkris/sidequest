@@ -14,5 +14,7 @@ with its protected stage credentials. No credential was copied or changed.
 The range has no `apps/arbiter/**` change. The changed `crew/shared/COMMON.md` is read by the crew runner, not the
 arbiter/moderator role containers. No role restart or mainnet transaction is part of this release.
 
-Production promotion and readback are pending. Public smoke establishes health/discovery and anonymous refusals,
+Promotion passed under the overnight repository lock. [Production CI](https://github.com/grmkris/sidequest/actions/runs/40153851571)
+passed verify, deploy-prod, smoke and drift. A separate local `bun run smoke prod` passed against
+`https://sidequest.exchange`; `acceptance.json` retains the status-only receipt. Public smoke establishes health/discovery and anonymous refusals,
 not authenticated hiring, paid-provider acceptance or a mainnet transaction.

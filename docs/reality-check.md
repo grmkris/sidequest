@@ -2176,3 +2176,7 @@ Kris approved the cutover on 24 Oct (the prod media team is Kris alone). What is
   deploy-dev, smoke and drift for `https://dev.sidequest.exchange`. Anonymous smoke is public proof; authenticated hiring
   and paid-provider acceptance were not run. The A06f outage probe needs a prepared operator session and released fixture,
   so no outage success is claimed.
+
+- **Released to prod:** `28e4615e` passed [production CI](https://github.com/grmkris/sidequest/actions/runs/40153851571),
+  including deploy, smoke and drift; a separate local public smoke passed. The [release receipt](evidence/prod-release-2026-10-25/README.md)
+  records the owner approval, complete range and evidence limits. No mainnet transaction was triggered.

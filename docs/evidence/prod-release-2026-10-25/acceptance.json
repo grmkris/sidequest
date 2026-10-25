@@ -1,0 +1,30 @@
+{
+  "sha": "28e4615e1b444c47720eb481eb050b4921e64f92",
+  "ci": "https://github.com/grmkris/sidequest/actions/runs/40153851571",
+  "conclusion": "success",
+  "promotionExit": 0,
+  "localGateExit": 0,
+  "localBuildExit": 0,
+  "localPublicSmokeExit": 0,
+  "proof": "public",
+  "steps": [
+    {
+      "name": "Deploy prod",
+      "conclusion": "success",
+      "startedAt": "2026-10-25T02:19:20Z",
+      "completedAt": "2026-10-25T02:20:26Z"
+    },
+    {
+      "name": "Smoke prod",
+      "conclusion": "success",
+      "startedAt": "2026-10-25T02:20:26Z",
+      "completedAt": "2026-10-25T02:20:28Z"
+    },
+    {
+      "name": "Drift prod",
+      "conclusion": "success",
+      "startedAt": "2026-10-25T02:20:28Z",
+      "completedAt": "2026-10-25T02:20:40Z"
+    }
+  ]
+}
