@@ -283,8 +283,8 @@ export default class Api extends Cloudflare.Worker<Api>()(
         const rpcUrl = yield* secret('MONAD_RPC_URL')
         if (url.pathname === '/aa/rpc') {
           const origin = request.headers.origin
-          const publicOrigin = yield* Config.String('PUBLIC_ORIGIN')
-          const cors = corsHeaders(origin, origin === publicOrigin || origin === url.origin)
+          const aaPublicOrigin = yield* Config.String('PUBLIC_ORIGIN')
+          const cors = corsHeaders(origin, origin === aaPublicOrigin || origin === url.origin)
           const webRequest = request.source
           if (!(webRequest instanceof Request))
             return HttpServerResponse.jsonUnsafe(
@@ -938,9 +938,9 @@ export default class Api extends Cloudflare.Worker<Api>()(
             : json(reply.body, reply.status, reply.headers)
         }
         if (request.method === 'GET' && isProfilePath(path)) {
-          const publicOrigin = yield* Config.String('PUBLIC_ORIGIN')
+          const profileOrigin = yield* Config.String('PUBLIC_ORIGIN')
           return yield* Effect.promise(() =>
-            profileRoute(path, publicOrigin, {
+            profileRoute(path, profileOrigin, {
               // SAFETY: Manifests is this Worker's R2 binding (manifests.ts); its raw form serves the stored bytes.
               bucket: (runtimeEnv as Record<string, unknown>).Manifests as AvatarBucket | undefined,
               read: (req) => runRequest(boards.getByName(SPONSOR_OBJECT_NAME).managedProfiles(req)),
