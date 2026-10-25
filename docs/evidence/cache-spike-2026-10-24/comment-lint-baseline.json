@@ -1,0 +1,53 @@
+{
+  "command": [
+    "bun",
+    "--no-env-file",
+    "run",
+    "check:files",
+    "--lint-only",
+    "apps/explore/scripts/tokens.ts",
+    "packages/sdk/scripts/live/deployed/browser.ts",
+    "packages/sdk/scripts/live/deployed/outage.ts"
+  ],
+  "exit": 1,
+  "reason": "Existing raw lint findings match the recorded per-file baseline exactly.",
+  "files": {
+    "apps/explore/scripts/tokens.ts": {
+      "actual": {
+        "anti-slop(require-safety-comment-for-type-assertion)": 4,
+        "anti-slop(no-runtime-typeof)": 1
+      },
+      "recorded_baseline": {
+        "anti-slop(no-runtime-typeof)": 1,
+        "anti-slop(require-safety-comment-for-type-assertion)": 4
+      },
+      "matches": true
+    },
+    "packages/sdk/scripts/live/deployed/browser.ts": {
+      "actual": {
+        "eslint(max-lines-per-function)": 1,
+        "anti-slop(no-unknown-returns)": 1,
+        "anti-slop(no-chained-type-assertions)": 8,
+        "anti-slop(require-safety-comment-for-type-assertion)": 23,
+        "complexity(complexity)": 1,
+        "anti-slop(no-runtime-typeof)": 3,
+        "typescript(no-redundant-type-constituents)": 1
+      },
+      "recorded_baseline": {
+        "anti-slop(no-chained-type-assertions)": 8,
+        "anti-slop(no-runtime-typeof)": 3,
+        "anti-slop(no-unknown-returns)": 1,
+        "anti-slop(require-safety-comment-for-type-assertion)": 23,
+        "complexity(complexity)": 1,
+        "eslint(max-lines-per-function)": 1,
+        "typescript(no-redundant-type-constituents)": 1
+      },
+      "matches": true
+    },
+    "packages/sdk/scripts/live/deployed/outage.ts": {
+      "actual": {},
+      "recorded_baseline": {},
+      "matches": true
+    }
+  }
+}

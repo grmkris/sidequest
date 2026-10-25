@@ -1,0 +1,28 @@
+{
+  "command": [
+    "env",
+    "-u",
+    "MONAD_TESTNET_RPC_URL",
+    "-u",
+    "MONAD_MAINNET_RPC_URL",
+    "-u",
+    "HYPERSYNC_API_TOKEN",
+    "-u",
+    "SIDEQUEST_LIVE_PREVIEW",
+    "TURBO_CACHE=local:rw",
+    "heavy",
+    "bun",
+    "--no-env-file",
+    "run",
+    "check"
+  ],
+  "attempt": 3,
+  "seconds": 449.825,
+  "exit": 0,
+  "source_head": "b7c4983eb7359223f7baf24c8c769bc859d9a8cb",
+  "fresh_test_workspaces": [
+    "@sidequest/explore",
+    "@sidequest/sdk"
+  ],
+  "test_cache_note": "18 Turbo tasks succeeded; 8 reused local cache, including unchanged contracts/tools tests and dependency typechecks."
+}
