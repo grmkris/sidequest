@@ -39,3 +39,4 @@ decision and consequences. Protocol law itself lives in [docs/protocol.md](../pr
 | [0029](0029-sidequest-hosts-its-media.md) | Sidequest hosts its own media at `/media`: internal and public levels, a social planner, a media team, operator tools behind `sidequest:media` |
 | [0030](0030-effect-diagnostics-on-tsrs.md) | Effect diagnostics on tsrs: `typecheck` on tsrs, the Effect diagnostics a `lint:gate` source judged against the baseline; amended 25 Oct: the `EFFECT_CHECKER=tsgo` fallback removed, effect-tsrs 0.2.2 |
 | [0031](0031-mcp-oauth-standards.md) | Standards-first MCP OAuth: CIMD primary, HTTPS/loopback redirects, Bearer-only tokens, offline access and canonical issuer |
+| [0032](0032-type-aware-lint-runs-on-tsrs-lint.md) | Type-aware lint runs on tsrs-lint, a pinned release of our tsrs fork: `tools/tsrs-lint.ts` fetches and verifies it, oxlint-tsgolint is gone, no fallback |

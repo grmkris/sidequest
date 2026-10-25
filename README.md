@@ -89,9 +89,12 @@ lockfile's versions.
 - **VS Code and Cursor:** install the recommended extensions (`.vscode/extensions.json`: TypeScript 7 native preview
   and oxc). `.vscode/settings.json` turns on `js/ts.experimental.useTsgo` and points `js/ts.tsdk.path` at
   `.vscode/tsrs`, whose `tsgo` runs `node_modules/.bin/tsrs` (npm's tsrs ships its own `tsdk/` only from 0.19.0).
-  Accept the workspace-trust prompt; "TypeScript 7: Restart Server" picks up a new pin.
+  Accept the workspace-trust prompt; "TypeScript 7: Restart Server" picks up a new pin. `oxc.path.tsgolint` names the
+  cached tsrs-lint (below), so the type-aware rules in the editor run on the gates' backend.
 - **Zed:** install the "TypeScript Language Server" (id `tsgo`) and "Oxc" extensions. `.zed/settings.json` replaces the
   `typescript-ls` binary with `node_modules/.bin/tsrs --lsp --stdio` and turns off vtsls and typescript-language-server.
+  Zed's oxlint server has no setting for the type-aware backend: it reads `OXLINT_TSGOLINT_PATH` from the environment it
+  starts in, so export it in the shell that launches Zed (below). The committed settings stay on the default.
 - **Neovim 0.11+:**
 
   ```lua
@@ -108,6 +111,12 @@ lockfile's versions.
   ```
 
   Disable other TypeScript servers (`ts_ls`, `vtsls`) for the same buffers.
+
+The type-aware lint rules run on tsrs-lint, a pinned release binary (ADR 0032). Any gate downloads it once into
+`~/.cache/tsrs-lint/<tag>/tsrs-lint` and verifies its checksum; `bun tools/tsrs-lint.ts` does the same and prints the
+path. VS Code reads it from `oxc.path.tsgolint`; for Zed and Neovim, `export OXLINT_TSGOLINT_PATH=$(bun tools/tsrs-lint.ts)`
+before starting the editor. Nothing falls back to oxlint-tsgolint, which is not installed: a bare `oxlint` fails on its
+first type-aware rule, so lint from the command line is `bun run lint`.
 
 Effect diagnostics are not in the editor: effect-tsrs has no language server, and its Oxlint route patches
 `node_modules` (`effect-tsrs patch --oxlint`), which the repository does not do. They come from `bun run typecheck`
