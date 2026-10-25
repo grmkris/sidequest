@@ -46,6 +46,8 @@ import {
 } from './admission-rate.ts'
 import { collectSnapshot } from './collect-index.ts'
 import { stakingSnapshot } from './staking-index.ts'
+import { oauthOrigin } from './oauth-origin.ts'
+import type { ClientMetadata } from './oauth-cimd.ts'
 import { oauthRoute, resolveOAuth } from './oauth.ts'
 import { terminateGrantSubscriptions } from './webhooks.ts'
 import type { OAuthGrant } from './oauth.ts'
@@ -461,6 +463,7 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
         method: string
         path: string
         query: string
+        clientMetadata?: ClientMetadata
         body: Record<string, unknown>
         origin: string
         bearer?: string
@@ -488,8 +491,9 @@ export default class Board extends Cloudflare.DurableObject<Board>()(
               path: req.path,
               query: new URLSearchParams(req.query),
               body: req.body,
-              origin: req.origin,
-              siteOrigin: req.origin,
+              origin: oauthOrigin(req.origin, bindings.PUBLIC_ORIGIN),
+              siteOrigin: oauthOrigin(req.origin, bindings.PUBLIC_ORIGIN),
+              ...(req.clientMetadata === undefined ? {} : { clientMetadata: req.clientMetadata }),
               ...(session === undefined ? {} : { owner: session.address }),
               ...mediaRoleOf(teamRole(stageMedia(bindings.DEPLOY_STAGE), session?.address)),
               now: Math.floor(Date.now() / 1000),

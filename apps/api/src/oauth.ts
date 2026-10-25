@@ -1,3 +1,4 @@
+import { oauthMetadata } from './oauth-metadata.ts'
 import { AgentStore, agentRoles, migrateAgentSchema, type AgentRole, type Sql } from '@sidequest/board'
 import type { Statement } from '@sidequest/indexer'
 import {
@@ -12,6 +13,7 @@ import {
   OAUTH_SCOPES as AGENT_SCOPES,
 } from './oauth-validation.ts'
 
+import type { ClientMetadata } from './oauth-cimd.ts'
 import { Schema } from 'effect'
 import type { OAuthGrant as AgentOAuthGrant } from '@sidequest/indexer/oauth-types'
 import { bindWaitingSetupConnections, consentScopes, resolveSetupOAuth, setupOAuthRoute } from './oauth-setup.ts'
@@ -67,20 +69,6 @@ function consentId(): string {
   return `oauth_${randomToken().slice(0, 40)}`
 }
 
-function requestedResource(path: string, origin: string): string | undefined {
-  const suffix =
-    path === '/.well-known/oauth-protected-resource'
-      ? '/mcp'
-      : path.startsWith('/.well-known/oauth-protected-resource/')
-        ? path.slice('/.well-known/oauth-protected-resource'.length)
-        : undefined
-  return suffix === undefined
-    ? undefined
-    : resourceBoard(`${origin}${suffix}`, origin) === undefined
-      ? undefined
-      : `${origin}${suffix}`
-}
-
 export async function resolveOAuth(
   sql: Sql,
   token: string | undefined,
@@ -130,6 +118,7 @@ export async function oauthRoute(input: {
   readonly query: URLSearchParams
   readonly body: Record<string, unknown>
   readonly origin: string
+  readonly clientMetadata?: ClientMetadata
   readonly siteOrigin: string
   readonly owner?: string
   readonly now: number
@@ -148,28 +137,8 @@ export async function oauthRoute(input: {
     )[0]
     if (agent !== undefined) await input.revokeSubscriptions?.(agent.address, familyId, now)
   }
-  const protectedResource = requestedResource(path, origin)
-  if (protectedResource !== undefined)
-    return good({
-      resource: protectedResource,
-      authorization_servers: [origin],
-      scopes_supported: OAUTH_SCOPES,
-      bearer_methods_supported: ['header'],
-    })
-  if (path === '/.well-known/oauth-authorization-server' && method === 'GET')
-    return good({
-      issuer: origin,
-      authorization_endpoint: `${origin}/oauth/authorize`,
-      token_endpoint: `${origin}/oauth/token`,
-      registration_endpoint: `${origin}/oauth/register`,
-      revocation_endpoint: `${origin}/oauth/revoke`,
-      authorization_response_iss_parameter_supported: true,
-      response_types_supported: ['code'],
-      grant_types_supported: ['authorization_code', 'refresh_token'],
-      token_endpoint_auth_methods_supported: ['none'],
-      code_challenge_methods_supported: ['S256'],
-      scopes_supported: OAUTH_SCOPES,
-    })
+  const metadata = oauthMetadata(method, path, origin, OAUTH_SCOPES)
+  if (metadata !== undefined) return good(metadata)
   if (path === '/oauth/register' && method === 'POST') {
     const redirectUris = body.redirect_uris
     if (
@@ -205,6 +174,17 @@ export async function oauthRoute(input: {
   if (path === '/oauth/authorize' && method === 'GET') {
     const clientId = query.get('client_id') ?? ''
     const redirectUri = query.get('redirect_uri') ?? ''
+    if (clientId.startsWith('https:')) {
+      if (input.clientMetadata?.client_id !== clientId)
+        return failure('invalid_client', 'Validated client metadata required')
+      sql.run(
+        'INSERT INTO agent_oauth_clients (id,name,redirect_uris_json,created_at) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,redirect_uris_json=excluded.redirect_uris_json',
+        clientId,
+        input.clientMetadata.client_name,
+        JSON.stringify(input.clientMetadata.redirect_uris),
+        now,
+      )
+    }
     const client = sql.all<{ redirect_uris_json: string }>(
       'SELECT redirect_uris_json FROM agent_oauth_clients WHERE id=?',
       clientId,

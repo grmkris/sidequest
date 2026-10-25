@@ -5,6 +5,7 @@ import { Schema } from 'effect'
 import { AgentStore, fromNodeSqlite } from '@sidequest/board'
 import type { Address } from 'viem'
 import { oauthRoute, resolveOAuth, type OAuthReply } from '../src/oauth.ts'
+import type { ClientMetadata } from '../src/oauth-cimd.ts'
 import { pkceChallenge, matchesRedirect } from '../src/oauth-validation.ts'
 import { fromNodeSqlite as asyncSql, stmt } from '@sidequest/indexer'
 import { McpEvents } from '../src/mcp-events.ts'
@@ -28,7 +29,7 @@ async function echoWebhookChallenge(_url: unknown, init?: RequestInit) {
   return Response.json({ challenge: envelope.challenge })
 }
 
-function fixture(mediaRole?: 'operator' | 'member') {
+function fixture(mediaRole?: 'operator' | 'member', clientMetadata?: ClientMetadata) {
   const db = new DatabaseSync(':memory:')
   const sql = fromNodeSqlite(db)
   const d1 = asyncSql(db)
@@ -57,11 +58,12 @@ function fixture(mediaRole?: 'operator' | 'member') {
       origin,
       siteOrigin: origin,
       now: time,
+      ...(clientMetadata === undefined ? {} : { clientMetadata }),
       ...(operator === undefined ? {} : { owner: operator }),
       ...(mediaRole === undefined ? {} : { mediaRole }),
       revokeSubscriptions: (principal, family, now) => terminateGrantSubscriptions(d1, principal, family, now),
     }) as Promise<OAuthReply>
-  return { db, sql, d1, agents, route, clock }
+  return { db, sql, d1, agents, route, clock, clientMetadata }
 }
 
 async function connection(
@@ -70,8 +72,13 @@ async function connection(
   requested = 'sidequest:read sidequest:work sidequest:hire',
   consentBody: Record<string, unknown> = {},
 ) {
-  const registered = await f.route('/oauth/register', { redirect_uris: [redirectUri], client_name: 'SQLite client' })
-  const clientId = (registered.body as { client_id: string }).client_id
+  const registered =
+    f.clientMetadata ??
+    decode(
+      Schema.Struct({ client_id: Schema.String }),
+      await f.route('/oauth/register', { redirect_uris: [redirectUri], client_name: 'SQLite client' }),
+    )
+  const clientId = registered.client_id
   const query = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
@@ -90,7 +97,9 @@ async function connection(
     ...consentBody,
   })
   expect(
-    new URL((approve.body as { result: { redirectUrl: string } }).result.redirectUrl).searchParams.get('iss'),
+    new URL(
+      decode(Schema.Struct({ result: Schema.Struct({ redirectUrl: Schema.String }) }), approve).result.redirectUrl,
+    ).searchParams.get('iss'),
   ).toBe(origin)
   const code = new URL((approve.body as { result: { redirectUrl: string } }).result.redirectUrl).searchParams.get(
     'code',
@@ -527,7 +536,7 @@ test.each(['127.0.0.1', '[::1]'])(
       const registered = `http://${host}:1111/cb?fixed=1`
       const actual = `http://${host}:2222/cb?fixed=1`
       const client = await f.route('/oauth/register', { redirect_uris: [registered] })
-      const clientId = (client.body as { client_id: string }).client_id
+      const clientId = decode(Schema.Struct({ client_id: Schema.String }), client).client_id
       const query = new URLSearchParams({
         client_id: clientId,
         redirect_uri: actual,
@@ -541,7 +550,9 @@ test.each(['127.0.0.1', '[::1]'])(
       expect(authorize.status).toBe(302)
       const requestId = new URL(authorize.redirect!).searchParams.get('oauth_request')!
       const approve = await f.route(`/oauth/requests/${requestId}/approve`, { agentIds: ['one'] })
-      const callback = new URL((approve.body as { result: { redirectUrl: string } }).result.redirectUrl)
+      const callback = new URL(
+        decode(Schema.Struct({ result: Schema.Struct({ redirectUrl: Schema.String }) }), approve).result.redirectUrl,
+      )
       expect(callback.host).toBe(`${host}:2222`)
       const token = {
         grant_type: 'authorization_code',
@@ -570,4 +581,73 @@ test.each([
   ['http://localhost:1111/cb', 'http://localhost:2222/cb'],
 ])('does not relax redirect binding from %s to %s', (registered, requested) => {
   expect(matchesRedirect(registered, requested)).toBe(false)
+})
+
+test('CIMD public PKCE clients complete consent, refresh and revocation without offline_access (S1)', async () => {
+  const client = {
+    client_id: 'https://vscode.dev/oauth/client-metadata.json',
+    client_name: 'Visual Studio Code',
+    redirect_uris: [redirectUri],
+    token_endpoint_auth_method: 'none' as const,
+  }
+  const f = fixture(undefined, client)
+  try {
+    const c = await connection(f, undefined, 'sidequest:read')
+    expect(c.clientId).toBe(client.client_id)
+    const first = decode(TokenPair, await f.route('/oauth/token', c.tokenBody))
+    expect(await resolveOAuth(f.sql, first.access_token, resource, 1000)).toMatchObject({ clientId: client.client_id })
+    const rotated = decode(
+      TokenPair,
+      await f.route('/oauth/token', {
+        grant_type: 'refresh_token',
+        client_id: c.clientId,
+        resource,
+        refresh_token: first.refresh_token,
+      }),
+    )
+    expect((await f.route('/oauth/revoke', { client_id: c.clientId, token: rotated.refresh_token })).status).toBe(200)
+    expect(await resolveOAuth(f.sql, rotated.access_token, resource, 1000)).toBeUndefined()
+    // A stale URL row cannot authorize when its current document was not validated by the Worker.
+    expect(
+      await oauthRoute({
+        sql: f.sql,
+        method: 'GET',
+        path: '/oauth/authorize',
+        query: c.query,
+        body: {},
+        origin,
+        siteOrigin: origin,
+        now: 1000,
+      }),
+    ).toMatchObject({ status: 400, body: { error: 'invalid_client' } })
+  } finally {
+    f.db.close()
+  }
+})
+
+test('DCR returns supported grants and refuses every custom callback scheme', async () => {
+  const f = fixture()
+  try {
+    expect(
+      (
+        await f.route('/oauth/register', {
+          redirect_uris: [redirectUri],
+          grant_types: [
+            'authorization_code',
+            'refresh_token',
+            'client_credentials',
+            'urn:ietf:params:oauth:grant-type:device_code',
+          ],
+        })
+      ).body,
+    ).toMatchObject({ grant_types: ['authorization_code', 'refresh_token'] })
+    for (const uri of [
+      'cursor://anysphere.cursor-mcp/oauth/callback',
+      'vscode://oauth/callback',
+      'http://remote.example/cb',
+    ])
+      expect((await f.route('/oauth/register', { redirect_uris: [uri] })).status).toBe(400)
+  } finally {
+    f.db.close()
+  }
 })

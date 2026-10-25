@@ -12,6 +12,10 @@ test('identical self-declared names cannot hide different client destinations', 
       client={{ clientId: 'second', clientName: name, redirectUri: 'https://untrusted.example/callback' }}
     />,
   )
+  expect(first).toContain('Recipient: 127.0.0.1')
+  expect(first).toContain('Only approve if you started this connection in an app on this device.')
+  expect(second).toContain('Recipient: untrusted.example')
+  expect(second).not.toContain('Only approve if')
   expect(first).toContain('(unverified name)')
   expect(second).toContain('(unverified name)')
   expect(first).toContain('http://127.0.0.1:3210/callback')

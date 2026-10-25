@@ -35,6 +35,9 @@ import * as sdk from '@sidequest/sdk'
 import { stageProfile } from '../../../infra/stage.ts'
 import type { Address, Hex } from 'viem'
 import Board, { type BoardCall, type BoardReply } from './board.ts'
+import { oauthOrigin, oauthHostRedirect } from './oauth-origin.ts'
+import { resolveClientMetadata } from './oauth-cimd.ts'
+import type { ClientMetadata } from './oauth-cimd.ts'
 import { publicOAuthCors } from './oauth-cors.ts'
 import { corsHeaders } from './cors.ts'
 import { Database } from './database.ts'
@@ -189,7 +192,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
   {
     main: import.meta.url,
     ...(stageProfile() ? { name: stageProfile()!.resources.Api } : {}),
-    compatibility: { date: '2026-09-01', flags: ['nodejs_compat'] },
+    compatibility: { date: '2026-09-01', flags: ['nodejs_compat', 'global_fetch_strictly_public'] },
     // Cloudflare.Telemetry enables the trace channel below. Setting observability replaces Alchemy's whole
     // default, so its logs block (worker and invocation logs) is spelled out here.
     observability: { enabled: true, logs: { enabled: true, invocationLogs: true } },
@@ -259,6 +262,11 @@ export default class Api extends Cloudflare.Worker<Api>()(
         const runRequest = Effect.runPromiseWith(yield* Effect.context<RuntimeContext>())
         const request = yield* HttpServerRequest.HttpServerRequest
         const url = new URL(request.originalUrl)
+        const publicOrigin = yield* Config.String('PUBLIC_ORIGIN')
+        const canonicalHost = oauthHostRedirect(url, publicOrigin)
+        if (canonicalHost !== undefined)
+          return HttpServerResponse.empty({ status: 308, headers: { location: canonicalHost } })
+        const issuer = oauthOrigin(url.origin, publicOrigin)
         const network = (yield* Config.String('NETWORK')) as sdk.Network
         const relayAddress = yield* Config.withDefault(Config.String('RELAY_ADDRESS'), '')
         // SAFETY: the testnet-only binding is the validated stage or SDK relay address.
@@ -789,6 +797,18 @@ export default class Api extends Cloudflare.Worker<Api>()(
               { error: 'invalid_request', error_description: 'OAuth requests require the website origin' },
               403,
             )
+          let clientMetadata: ClientMetadata | undefined
+          const clientId = url.searchParams.get('client_id') ?? ''
+          if (path === '/oauth/authorize' && request.method === 'GET' && clientId.startsWith('https:')) {
+            clientMetadata = yield* Effect.tryPromise(() => resolveClientMetadata(clientId)).pipe(
+              Effect.catch(() => Effect.succeed(undefined)),
+            )
+            if (clientMetadata === undefined)
+              return json(
+                { error: 'invalid_client', error_description: 'Client metadata is unavailable or invalid' },
+                400,
+              )
+          }
           // SAFETY: the management object's oauth answers the route's reply, or null for a path it does not serve.
           const reply = unwrapReply(
             yield* boards.getByName(SPONSOR_OBJECT_NAME).oauth({
@@ -797,7 +817,8 @@ export default class Api extends Cloudflare.Worker<Api>()(
               path: url.pathname,
               query: url.searchParams.toString(),
               body: oauthBody,
-              origin: url.origin,
+              origin: issuer,
+              ...(clientMetadata === undefined ? {} : { clientMetadata }),
               ...(bearer === undefined ? {} : { bearer }),
             }),
           ).result as OAuthReply | null
@@ -816,7 +837,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
               toolArgsMode: argsMode,
               pathname: url.pathname,
               body: oauthBody,
-              origin: url.origin,
+              origin: issuer,
               headers: request.headers,
               publicDirectory: true,
               tools: directoryTools,
@@ -829,7 +850,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
         }
         if (path === '/mcp') {
           const runMcp = Effect.runPromiseWith(yield* Effect.context<RuntimeContext>())
-          const resource = `${url.origin}${url.pathname}`
+          const resource = `${issuer}${url.pathname}`
           const started = Date.now()
           // One resolution per MCP request, which also records the connection's use.
           // SAFETY: oauthResolve answers the resolved grant, or null when the bearer resolves to none.
@@ -844,7 +865,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
               toolArgsMode: argsMode,
               pathname: url.pathname,
               body: oauthBody,
-              origin: url.origin,
+              origin: issuer,
               headers: request.headers,
               events: new McpEvents(sql, network),
               ...(grant === null ? {} : { grant }),
