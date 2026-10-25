@@ -5,6 +5,19 @@ overnight plan brought them here after goblin's ADR 0120). Changes how `bun run 
 no runtime change.
 Date: 2026-10-25
 
+**Amended (25 Oct 2026): the fallback is removed, and effect-tsrs moves to 0.2.2.** Kris: "if we're at the same
+parity, the `EFFECT_CHECKER=tsgo` fallback can be dropped." Parity held, so `typecheck` and the Effect source run
+effect-tsrs only; `EFFECT_CHECKER` is no longer read or hashed by turbo, and nothing in the gates runs tsc or
+effect-tsgo. The pin is 0.2.2 (same tsrs rev 8f135f1), after the same parity method reran identical on all 13 projects
+([evidence](../evidence/tsrs-parity-2026-10-25/README.md), "Rerun on effect-tsrs 0.2.2"). 0.2.2 needs `--type-check` for
+the TypeScript diagnostics, which both passes now pass, and reports Effect diagnostics only on a project's own files, so
+the "only files some typecheck tsconfig includes" rule below now holds by itself and its `tsc --showConfig` filter is
+gone. `typescript` and `@effect/tsgo` stay installed for editors. `check` still compiles each project twice
+(`typecheck`, then the Effect source): turbo's `test` tasks depend on `^typecheck`, and the baseline is judged across
+all projects at once, so folding the two would mean caching each project's Effect findings as a turbo output for
+`lint:gate` to read; not done. Revert the commits `tools: the EFFECT_CHECKER=tsgo fallback is gone …` and `tools:
+effect-tsrs 0.2.2 …` to restore the fallback.
+
 ## Context
 
 `bun run typecheck` ran tsc (TypeScript 7.0.2, the Go compiler) on the 13 tsconfigs the gates cover: `scripts/ci`,
