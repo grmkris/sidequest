@@ -2190,3 +2190,14 @@ Release `1a562ae727897a02f0ee82b9aed8bd1579825073` passed [dev CI](https://githu
 
 
 The same runtime SHA was promoted under the approved overnight lock. [Production CI](https://github.com/grmkris/sidequest/actions/runs/40194845004), smoke and drift passed. At 12:58 UTC the production Durable Object had converged; [public OAuth readback](evidence/mcp-oauth-2026-10-25/prod-probe.json) has no findings and confirms CIMD/issuer metadata and edge HTTPS/HSTS. Production acceptance remains public/discovery only, with no mainnet transaction.
+
+## Type-aware lint runs on tsrs-lint, a pinned release of our tsrs fork (ADR 0032, 25 Oct 2026)
+
+- **Implemented and tested:** `tools/tsrs-lint.ts` fetches the pinned `tsrs-lint` release binary, verifies its sha256 on
+  every use and names it in `OXLINT_TSGOLINT_PATH` for every oxlint run; `oxlint-tsgolint` is gone and nothing falls
+  back. Parity on `dev` ([docs/evidence/tsrs-lint-parity-2026-10-25](evidence/tsrs-lint-parity-2026-10-25/README.md)):
+  2,666 findings on both backends, identical sets, 42% less CPU and half the process-tree memory. The dev commits are
+  `89a8e70e`, `2b2e57ae` and `89cc8a48`; local `bun run check` and `bun run build` passed on the rebased branch.
+- **Live-verified on dev:** CI run [40198011444](https://github.com/grmkris/sidequest/actions/runs/40198011444) passed
+  verify (the lint gate on the new backend, fetched by checksum on a GitHub-hosted runner), deploy-dev, smoke and drift
+  for `https://dev.sidequest.exchange`. Tooling only: no runtime code changed, so nothing is promoted to prod.
