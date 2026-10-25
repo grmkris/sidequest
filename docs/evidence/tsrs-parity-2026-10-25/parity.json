@@ -1,0 +1,1042 @@
+[
+  {
+    "project": "scripts/ci/tsconfig.json",
+    "ownFiles": 3,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 1.61,
+      "peak_rss_mb": 307,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 1.9,
+      "peak_rss_mb": 271,
+      "diagnostics": 4,
+      "gating": 4,
+      "filesChecked": 3,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 0.87,
+        "peak_rss_mb": 131
+      },
+      {
+        "exit": 1,
+        "wall_s": 0.68,
+        "peak_rss_mb": 131
+      },
+      {
+        "exit": 1,
+        "wall_s": 0.68,
+        "peak_rss_mb": 131
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 0.58,
+      "peak_rss_mb": 126
+    },
+    "effectTsrsDiagnostics": 8,
+    "effectTsrsOwnFileDiagnostics": 4,
+    "effectTsrsGatingOwn": 4,
+    "effectTsrsGatingAll": 8,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [
+      [
+        "apps/api/src/mcp-metadata.ts",
+        1,
+        377057,
+        "error"
+      ],
+      [
+        "packages/sdk/src/board-client.ts",
+        9,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/clocks.ts",
+        159,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/deployment.ts",
+        336,
+        377055,
+        "error"
+      ]
+    ],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "crew/tsconfig.json",
+    "ownFiles": 27,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 2.97,
+      "peak_rss_mb": 555,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 2.17,
+      "peak_rss_mb": 350,
+      "diagnostics": 41,
+      "gating": 31,
+      "filesChecked": 27,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 1.48,
+        "peak_rss_mb": 175
+      },
+      {
+        "exit": 1,
+        "wall_s": 1.62,
+        "peak_rss_mb": 175
+      },
+      {
+        "exit": 1,
+        "wall_s": 1.48,
+        "peak_rss_mb": 175
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 1.03,
+      "peak_rss_mb": 171
+    },
+    "effectTsrsDiagnostics": 51,
+    "effectTsrsOwnFileDiagnostics": 41,
+    "effectTsrsGatingOwn": 31,
+    "effectTsrsGatingAll": 40,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [
+      [
+        "infra/stage.ts",
+        79,
+        377076,
+        "error"
+      ],
+      [
+        "packages/sdk/src/aa/rpc.ts",
+        23,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/board-client.ts",
+        9,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/clocks.ts",
+        159,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/delegation/permissions.ts",
+        86,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/deployment.ts",
+        336,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/privy-server.ts",
+        20,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/privy.ts",
+        30,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/v1-flows.ts",
+        30,
+        377055,
+        "error"
+      ]
+    ],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "apps/api/tsconfig.json",
+    "ownFiles": 245,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 8.95,
+      "peak_rss_mb": 1207,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 14.75,
+      "peak_rss_mb": 1119,
+      "diagnostics": 103,
+      "gating": 63,
+      "filesChecked": 245,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 6.68,
+        "peak_rss_mb": 431
+      },
+      {
+        "exit": 1,
+        "wall_s": 5.85,
+        "peak_rss_mb": 431
+      },
+      {
+        "exit": 1,
+        "wall_s": 4.66,
+        "peak_rss_mb": 430
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 3.24,
+      "peak_rss_mb": 422
+    },
+    "effectTsrsDiagnostics": 120,
+    "effectTsrsOwnFileDiagnostics": 103,
+    "effectTsrsGatingOwn": 63,
+    "effectTsrsGatingAll": 79,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [
+      [
+        "apps/indexer/src/worker.ts",
+        70,
+        377076,
+        "error"
+      ],
+      [
+        "apps/indexer/src/worker.ts",
+        75,
+        377076,
+        "error"
+      ],
+      [
+        "apps/indexer/src/worker.ts",
+        79,
+        377076,
+        "error"
+      ],
+      [
+        "apps/indexer/src/worker.ts",
+        80,
+        377076,
+        "error"
+      ],
+      [
+        "apps/indexer/src/worker.ts",
+        87,
+        377076,
+        "error"
+      ],
+      [
+        "apps/indexer/src/worker.ts",
+        98,
+        377067,
+        "error"
+      ],
+      [
+        "apps/indexer/src/worker.ts",
+        120,
+        377067,
+        "error"
+      ],
+      [
+        "apps/indexer/src/worker.ts",
+        128,
+        377067,
+        "error"
+      ],
+      [
+        "apps/indexer/src/worker.ts",
+        141,
+        377079,
+        "error"
+      ],
+      [
+        "apps/indexer/src/worker.ts",
+        151,
+        377067,
+        "error"
+      ],
+      [
+        "apps/indexer/src/worker.ts",
+        161,
+        377067,
+        "error"
+      ],
+      [
+        "apps/indexer/src/worker.ts",
+        212,
+        377067,
+        "error"
+      ],
+      [
+        "infra/stage.ts",
+        79,
+        377076,
+        "error"
+      ],
+      [
+        "packages/sdk/src/board-client.ts",
+        9,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/clocks.ts",
+        159,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/deployment.ts",
+        336,
+        377055,
+        "error"
+      ]
+    ],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "apps/arbiter/tsconfig.json",
+    "ownFiles": 22,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 4.01,
+      "peak_rss_mb": 609,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 3.19,
+      "peak_rss_mb": 426,
+      "diagnostics": 27,
+      "gating": 14,
+      "filesChecked": 22,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 1.63,
+        "peak_rss_mb": 186
+      },
+      {
+        "exit": 1,
+        "wall_s": 1.79,
+        "peak_rss_mb": 186
+      },
+      {
+        "exit": 1,
+        "wall_s": 1.93,
+        "peak_rss_mb": 186
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 1.64,
+      "peak_rss_mb": 184
+    },
+    "effectTsrsDiagnostics": 27,
+    "effectTsrsOwnFileDiagnostics": 27,
+    "effectTsrsGatingOwn": 14,
+    "effectTsrsGatingAll": 14,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "apps/docs/tsconfig.json",
+    "ownFiles": 39,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 1.94,
+      "peak_rss_mb": 335,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 2.24,
+      "peak_rss_mb": 292,
+      "diagnostics": 2,
+      "gating": 2,
+      "filesChecked": 39,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 0.99,
+        "peak_rss_mb": 119
+      },
+      {
+        "exit": 1,
+        "wall_s": 0.9,
+        "peak_rss_mb": 119
+      },
+      {
+        "exit": 1,
+        "wall_s": 0.86,
+        "peak_rss_mb": 119
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 1.08,
+      "peak_rss_mb": 113
+    },
+    "effectTsrsDiagnostics": 5,
+    "effectTsrsOwnFileDiagnostics": 2,
+    "effectTsrsGatingOwn": 2,
+    "effectTsrsGatingAll": 5,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [
+      [
+        "packages/sdk/src/board-client.ts",
+        9,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/clocks.ts",
+        159,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/deployment.ts",
+        336,
+        377055,
+        "error"
+      ]
+    ],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "apps/explore/tsconfig.json",
+    "ownFiles": 471,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 15.71,
+      "peak_rss_mb": 1454,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 15.83,
+      "peak_rss_mb": 1543,
+      "diagnostics": 12,
+      "gating": 6,
+      "filesChecked": 471,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 7.36,
+        "peak_rss_mb": 493
+      },
+      {
+        "exit": 1,
+        "wall_s": 6.7,
+        "peak_rss_mb": 495
+      },
+      {
+        "exit": 1,
+        "wall_s": 7.29,
+        "peak_rss_mb": 497
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 4.08,
+      "peak_rss_mb": 498
+    },
+    "effectTsrsDiagnostics": 12,
+    "effectTsrsOwnFileDiagnostics": 12,
+    "effectTsrsGatingOwn": 6,
+    "effectTsrsGatingAll": 6,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "apps/indexer/tsconfig.json",
+    "ownFiles": 3,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 7.39,
+      "peak_rss_mb": 938,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 4.87,
+      "peak_rss_mb": 710,
+      "diagnostics": 12,
+      "gating": 12,
+      "filesChecked": 3,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 2.76,
+        "peak_rss_mb": 358
+      },
+      {
+        "exit": 1,
+        "wall_s": 2.55,
+        "peak_rss_mb": 358
+      },
+      {
+        "exit": 1,
+        "wall_s": 2.47,
+        "peak_rss_mb": 358
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 3.04,
+      "peak_rss_mb": 356
+    },
+    "effectTsrsDiagnostics": 14,
+    "effectTsrsOwnFileDiagnostics": 12,
+    "effectTsrsGatingOwn": 12,
+    "effectTsrsGatingAll": 13,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [
+      [
+        "infra/stage.ts",
+        79,
+        377076,
+        "error"
+      ]
+    ],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "packages/board/tsconfig.json",
+    "ownFiles": 135,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 9.95,
+      "peak_rss_mb": 1196,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 11.17,
+      "peak_rss_mb": 1073,
+      "diagnostics": 7,
+      "gating": 7,
+      "filesChecked": 135,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 4.96,
+        "peak_rss_mb": 406
+      },
+      {
+        "exit": 1,
+        "wall_s": 5.09,
+        "peak_rss_mb": 406
+      },
+      {
+        "exit": 1,
+        "wall_s": 4.51,
+        "peak_rss_mb": 407
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 3.37,
+      "peak_rss_mb": 396
+    },
+    "effectTsrsDiagnostics": 53,
+    "effectTsrsOwnFileDiagnostics": 7,
+    "effectTsrsGatingOwn": 7,
+    "effectTsrsGatingAll": 28,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [
+      [
+        "apps/api/src/board.ts",
+        329,
+        377067,
+        "error"
+      ],
+      [
+        "apps/api/src/board.ts",
+        538,
+        377067,
+        "error"
+      ],
+      [
+        "apps/api/src/board.ts",
+        544,
+        377073,
+        "error"
+      ],
+      [
+        "apps/api/src/board.ts",
+        563,
+        377067,
+        "error"
+      ],
+      [
+        "apps/api/src/board.ts",
+        585,
+        377067,
+        "error"
+      ],
+      [
+        "apps/api/src/board.ts",
+        619,
+        377073,
+        "error"
+      ],
+      [
+        "apps/api/src/commons/directory-live.ts",
+        41,
+        377067,
+        "error"
+      ],
+      [
+        "apps/api/src/commons/feed-live.ts",
+        11,
+        377067,
+        "error"
+      ],
+      [
+        "apps/api/src/commons/host.ts",
+        53,
+        377037,
+        "error"
+      ],
+      [
+        "apps/api/src/commons/host.ts",
+        61,
+        377037,
+        "error"
+      ],
+      [
+        "apps/api/src/commons/participants.ts",
+        34,
+        377037,
+        "error"
+      ],
+      [
+        "apps/api/src/commons/participants.ts",
+        44,
+        377037,
+        "error"
+      ],
+      [
+        "apps/api/src/commons/rpc.ts",
+        64,
+        377037,
+        "error"
+      ],
+      [
+        "apps/api/src/commons/stake-live.ts",
+        45,
+        377067,
+        "error"
+      ],
+      [
+        "apps/api/src/directory.ts",
+        176,
+        377055,
+        "error"
+      ],
+      [
+        "apps/api/src/mcp-metadata.ts",
+        1,
+        377057,
+        "error"
+      ],
+      [
+        "apps/api/src/observability.ts",
+        10,
+        377079,
+        "error"
+      ],
+      [
+        "infra/stage.ts",
+        79,
+        377076,
+        "error"
+      ],
+      [
+        "packages/sdk/src/board-client.ts",
+        9,
+        377055,
+        "error"
+      ],
+      [
+        "packages/sdk/src/clocks.ts",
+        159,
+        377055,
+        "error"
+      ]
+    ],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "packages/commons/tsconfig.json",
+    "ownFiles": 58,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 1.76,
+      "peak_rss_mb": 263,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 3.74,
+      "peak_rss_mb": 275,
+      "diagnostics": 27,
+      "gating": 1,
+      "filesChecked": 58,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 1.42,
+        "peak_rss_mb": 94
+      },
+      {
+        "exit": 1,
+        "wall_s": 1.1,
+        "peak_rss_mb": 95
+      },
+      {
+        "exit": 1,
+        "wall_s": 1.86,
+        "peak_rss_mb": 94
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 2.29,
+      "peak_rss_mb": 92
+    },
+    "effectTsrsDiagnostics": 27,
+    "effectTsrsOwnFileDiagnostics": 27,
+    "effectTsrsGatingOwn": 1,
+    "effectTsrsGatingAll": 1,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "packages/indexer/tsconfig.json",
+    "ownFiles": 34,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 9.02,
+      "peak_rss_mb": 933,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 6.28,
+      "peak_rss_mb": 775,
+      "diagnostics": 4,
+      "gating": 4,
+      "filesChecked": 34,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 3.59,
+        "peak_rss_mb": 356
+      },
+      {
+        "exit": 1,
+        "wall_s": 6.08,
+        "peak_rss_mb": 355
+      },
+      {
+        "exit": 1,
+        "wall_s": 4.99,
+        "peak_rss_mb": 355
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 7.13,
+      "peak_rss_mb": 351
+    },
+    "effectTsrsDiagnostics": 6,
+    "effectTsrsOwnFileDiagnostics": 4,
+    "effectTsrsGatingOwn": 4,
+    "effectTsrsGatingAll": 5,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [
+      [
+        "infra/stage.ts",
+        79,
+        377076,
+        "error"
+      ]
+    ],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "packages/react/tsconfig.json",
+    "ownFiles": 13,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 10.19,
+      "peak_rss_mb": 485,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 4.46,
+      "peak_rss_mb": 387,
+      "diagnostics": 2,
+      "gating": 2,
+      "filesChecked": 13,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 1.63,
+        "peak_rss_mb": 179
+      },
+      {
+        "exit": 1,
+        "wall_s": 1.66,
+        "peak_rss_mb": 182
+      },
+      {
+        "exit": 1,
+        "wall_s": 1.67,
+        "peak_rss_mb": 178
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 1.59,
+      "peak_rss_mb": 182
+    },
+    "effectTsrsDiagnostics": 2,
+    "effectTsrsOwnFileDiagnostics": 2,
+    "effectTsrsGatingOwn": 2,
+    "effectTsrsGatingAll": 2,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "packages/sdk/tsconfig.json",
+    "ownFiles": 164,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 6.33,
+      "peak_rss_mb": 697,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 1,
+      "wall_s": 11.03,
+      "peak_rss_mb": 760,
+      "diagnostics": 34,
+      "gating": 34,
+      "filesChecked": 164,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 1,
+        "wall_s": 4.25,
+        "peak_rss_mb": 204
+      },
+      {
+        "exit": 1,
+        "wall_s": 3.25,
+        "peak_rss_mb": 203
+      },
+      {
+        "exit": 1,
+        "wall_s": 3.47,
+        "peak_rss_mb": 204
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 2.42,
+      "peak_rss_mb": 200
+    },
+    "effectTsrsDiagnostics": 36,
+    "effectTsrsOwnFileDiagnostics": 34,
+    "effectTsrsGatingOwn": 34,
+    "effectTsrsGatingAll": 35,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [
+      [
+        "infra/stage.ts",
+        79,
+        377076,
+        "error"
+      ]
+    ],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  },
+  {
+    "project": "tools/tsconfig.json",
+    "ownFiles": 23,
+    "tsc": {
+      "exit": 0,
+      "wall_s": 1.53,
+      "peak_rss_mb": 202,
+      "errors": 0
+    },
+    "effectTsgo": {
+      "exit": 0,
+      "wall_s": 2.47,
+      "peak_rss_mb": 209,
+      "diagnostics": 2,
+      "gating": 0,
+      "filesChecked": 23,
+      "filesWithoutPlugin": 0
+    },
+    "effectTsrs": [
+      {
+        "exit": 0,
+        "wall_s": 0.69,
+        "peak_rss_mb": 79
+      },
+      {
+        "exit": 0,
+        "wall_s": 0.66,
+        "peak_rss_mb": 79
+      },
+      {
+        "exit": 0,
+        "wall_s": 1.05,
+        "peak_rss_mb": 79
+      }
+    ],
+    "effectTsrsRulesNone": {
+      "exit": 0,
+      "wall_s": 0.64,
+      "peak_rss_mb": 77
+    },
+    "effectTsrsDiagnostics": 2,
+    "effectTsrsOwnFileDiagnostics": 2,
+    "effectTsrsGatingOwn": 0,
+    "effectTsrsGatingAll": 0,
+    "effectOwnEqual": true,
+    "effectGatingOwnEqual": true,
+    "onlyTsgo": [],
+    "onlyTsrsOwn": [],
+    "gatingOutsideOwn": [],
+    "tsEqual": true,
+    "onlyTsc": [],
+    "onlyTsrs": [],
+    "deterministic": true
+  }
+]
