@@ -329,7 +329,7 @@
     "effect(multipleEffectProvide)": 1
   },
   "apps/api/test/oauth.test.ts": {
-    "anti-slop(require-safety-comment-for-type-assertion)": 15,
+    "anti-slop(require-safety-comment-for-type-assertion)": 14,
     "typescript(no-unnecessary-type-assertion)": 3
   },
   "apps/api/test/privy-identity.test.ts": {
@@ -357,7 +357,7 @@
     "effect(globalRandomInEffect)": 1,
     "effect(schemaSyncInEffect)": 3,
     "typescript(no-unnecessary-type-parameters)": 1,
-    "typescript(restrict-template-expressions)": 3
+    "typescript(restrict-template-expressions)": 2
   },
   "apps/api/test/stage-profile.test.ts": {
     "anti-slop(no-chained-type-assertions)": 3,
