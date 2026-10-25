@@ -1,0 +1,165 @@
+{
+  "label": "sidequest-prod",
+  "mcpUrl": "https://sidequest.exchange/mcp",
+  "at": "2026-10-25T12:58:35.879Z",
+  "active": false,
+  "challenge": {
+    "post": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer resource_metadata=\"https://sidequest.exchange/.well-known/oauth-protected-resource/mcp\", scope=\"sidequest:read sidequest:hire sidequest:work\"",
+      "parsed": {
+        "resource_metadata": "https://sidequest.exchange/.well-known/oauth-protected-resource/mcp",
+        "scope": "sidequest:read sidequest:hire sidequest:work"
+      },
+      "body": {
+        "ok": false,
+        "code": "unauthenticated",
+        "message": "A resource-scoped OAuth bearer token is required"
+      }
+    },
+    "get": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer resource_metadata=\"https://sidequest.exchange/.well-known/oauth-protected-resource/mcp\", scope=\"sidequest:read sidequest:hire sidequest:work\""
+    },
+    "invalidToken": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer error=\"invalid_token\", resource_metadata=\"https://sidequest.exchange/.well-known/oauth-protected-resource/mcp\", scope=\"sidequest:read sidequest:hire sidequest:work\""
+    },
+    "forgedJwt": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer error=\"invalid_token\", resource_metadata=\"https://sidequest.exchange/.well-known/oauth-protected-resource/mcp\", scope=\"sidequest:read sidequest:hire sidequest:work\""
+    }
+  },
+  "prm": [
+    {
+      "url": "https://sidequest.exchange/.well-known/oauth-protected-resource/mcp",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "access-control-allow-origin": "*",
+        "access-control-allow-headers": "authorization, content-type"
+      },
+      "body": {
+        "resource": "https://sidequest.exchange/mcp",
+        "authorization_servers": [
+          "https://sidequest.exchange"
+        ],
+        "scopes_supported": [
+          "sidequest:read",
+          "sidequest:hire",
+          "sidequest:work",
+          "sidequest:maintain",
+          "sidequest:media",
+          "sidequest:setup"
+        ],
+        "bearer_methods_supported": [
+          "header"
+        ]
+      }
+    },
+    {
+      "url": "https://sidequest.exchange/.well-known/oauth-protected-resource",
+      "status": 200,
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "access-control-allow-origin": "*",
+        "access-control-allow-headers": "authorization, content-type"
+      },
+      "body": {
+        "resource": "https://sidequest.exchange/mcp",
+        "authorization_servers": [
+          "https://sidequest.exchange"
+        ],
+        "scopes_supported": [
+          "sidequest:read",
+          "sidequest:hire",
+          "sidequest:work",
+          "sidequest:maintain",
+          "sidequest:media",
+          "sidequest:setup"
+        ],
+        "bearer_methods_supported": [
+          "header"
+        ]
+      }
+    }
+  ],
+  "prmWithOrigin": {
+    "status": 200,
+    "acao": "*"
+  },
+  "as": [
+    {
+      "issuer": "https://sidequest.exchange",
+      "tries": [
+        {
+          "url": "https://sidequest.exchange/.well-known/oauth-authorization-server",
+          "status": 200,
+          "issuer": "https://sidequest.exchange",
+          "contentType": "application/json",
+          "cors": "*"
+        },
+        {
+          "url": "https://sidequest.exchange/.well-known/openid-configuration",
+          "status": 404,
+          "contentType": "text/plain"
+        }
+      ],
+      "bareRoot": {
+        "status": 200,
+        "issuer": "https://sidequest.exchange"
+      },
+      "selected": "https://sidequest.exchange/.well-known/oauth-authorization-server",
+      "fields": {
+        "issuer": "https://sidequest.exchange",
+        "authorization_endpoint": "https://sidequest.exchange/oauth/authorize",
+        "token_endpoint": "https://sidequest.exchange/oauth/token",
+        "registration_endpoint": "https://sidequest.exchange/oauth/register",
+        "revocation_endpoint": "https://sidequest.exchange/oauth/revoke",
+        "introspection_endpoint": null,
+        "jwks_uri": null,
+        "response_types_supported": [
+          "code"
+        ],
+        "grant_types_supported": [
+          "authorization_code",
+          "refresh_token"
+        ],
+        "code_challenge_methods_supported": [
+          "S256"
+        ],
+        "token_endpoint_auth_methods_supported": [
+          "none"
+        ],
+        "scopes_supported": [
+          "sidequest:read",
+          "sidequest:hire",
+          "sidequest:work",
+          "sidequest:maintain",
+          "sidequest:media",
+          "sidequest:setup"
+        ],
+        "client_id_metadata_document_supported": true,
+        "authorization_response_iss_parameter_supported": true,
+        "dpop_signing_alg_values_supported": null,
+        "response_modes_supported": null,
+        "resource_indicators_supported": null,
+        "protected_resources": null
+      }
+    }
+  ],
+  "http": {
+    "prm": {
+      "status": 301,
+      "location": "https://sidequest.exchange/.well-known/oauth-protected-resource"
+    },
+    "token": {
+      "status": 301,
+      "location": "https://sidequest.exchange/oauth/token"
+    },
+    "hsts": "max-age=31536000; includeSubDomains"
+  },
+  "findings": []
+}

@@ -41,3 +41,12 @@ Initial readback at 12:25 UTC still saw the sponsor Durable Object's old metadat
 [Dev cleanup](dev-cleanup.json) removed 30 tagged audit clients, ten related requests and three pending CIMD audit requests. There were no audit token families or issued tokens. Readback shows zero tagged clients and zero pending CIMD audit requests. Production was not touched by cleanup.
 
 Reproduce read-only discovery with `curl -s https://dev.sidequest.exchange/.well-known/oauth-authorization-server` and `curl -i -H 'Origin: https://inspector.example' https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp`. Run `bun run smoke dev`; run `bun run drift dev` with the documented complete stage environment. In the audit conformance checkout: `npx tsx src/index.ts authorization --url https://dev.sidequest.exchange --scenario authorization-server-metadata-endpoint --output-dir /tmp/sidequest-oauth-conformance`.
+
+
+## Production acceptance
+
+Accepted runtime SHA `1a562ae727897a02f0ee82b9aed8bd1579825073` was pushed to `prod` under the overnight Sidequest lock. [Production CI 40194845004](https://github.com/grmkris/sidequest/actions/runs/40194845004) passed verify, deploy-prod, smoke and drift. A separate `bun run smoke prod` passed. Local drift, with the explicit prod guard enabled, refused before planning because the local stage env lacks `PIMLICO_API_KEY`; CI drift passed with protected credentials.
+
+Production's sponsor Durable Object also briefly served the previous version after Worker deployment. By 12:58 UTC the new flags were visible, and the final read-only [production probe](prod-probe.json) reported no findings. [Production headers](prod-headers.json) confirm edge HTTPS/HSTS, foreign-Origin discovery, and retained consent-origin refusal. No production client registrations, consents, cleanup, wallet signatures or mainnet transactions were performed.
+
+The dev evidence commit `41ae4298` also passed [CI 40194808490](https://github.com/grmkris/sidequest/actions/runs/40194808490). Later commits carry receipts only; production remains on the accepted runtime SHA above.
