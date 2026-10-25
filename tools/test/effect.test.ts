@@ -1,11 +1,9 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { ConfigProvider, Effect } from 'effect'
 import { afterEach, describe, expect, test } from 'vitest'
 import {
   verifiedEffectOutput,
-  CHECKER,
   PLUGIN,
   effectArgs,
   effectProjects,
@@ -16,18 +14,11 @@ import {
 import { decodeEffect, fromEffect, typescriptErrors, uncheckedFiles } from '../report.ts'
 import { repoRoot } from '../run.ts'
 
-const parse = (env: Readonly<Record<string, string>>) => Effect.runSync(CHECKER.parse(ConfigProvider.fromUnknown(env)))
 const at = { line: 4, column: 2, message: 'm' }
 
 describe('the checker (ADR 0030)', () => {
-  test('effect-tsrs by default, effect-tsgo with EFFECT_CHECKER=tsgo, and nothing else', () => {
-    expect(parse({})).toBe('tsrs')
-    expect(parse({ EFFECT_CHECKER: 'tsgo' })).toBe('tsgo')
-    expect(() => parse({ EFFECT_CHECKER: 'tsc' })).toThrow()
-  })
-
   test('effect-tsrs runs as its native binary; the typecheck pass is the compiler alone', () => {
-    const [binary, ...args] = effectArgs('tools/tsconfig.json', 'tsrs', 'none')
+    const [binary, ...args] = effectArgs('tools/tsconfig.json', 'none')
     expect(binary).toMatch(/@yielded\/effect-tsrs-[a-z0-9]+-[a-z0-9]+\/bin\/effect-tsrs$/u)
     expect(args).toEqual([
       'diagnostics',
@@ -38,7 +29,7 @@ describe('the checker (ADR 0030)', () => {
       '--rules',
       'none',
     ])
-    expect(effectArgs('tools/tsconfig.json', 'tsrs')).not.toContain('--rules')
+    expect(effectArgs('tools/tsconfig.json')).not.toContain('--rules')
   })
 })
 
@@ -100,7 +91,7 @@ describe('effect-tsrs output', () => {
     ])
   })
 
-  test('TypeScript errors print as tsc prints them; effect-tsgo counts files without the plugin', () => {
+  test('TypeScript errors print as tsc prints them; files counted without the plugin fail the check', () => {
     const output = decodeEffect({
       diagnostics: [],
       typescriptDiagnostics: [

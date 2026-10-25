@@ -85,7 +85,7 @@ export const safeFixCodes = (rules: unknown): Set<string> =>
 export const ruleCode = (scope: string, rule: string): string => `${scope.split('_').join('-')}(${rule})`
 
 // ---------------------------------------------------------------------------------------------------------------------
-// effect-tsrs and effect-tsgo
+// effect-tsrs
 
 const EffectDiagnostic = Schema.Struct({
   file: Schema.String,
@@ -108,19 +108,18 @@ const TypescriptDiagnostic = Schema.Struct({
 
 const EffectOutput = Schema.Struct({
   diagnostics: Schema.Array(EffectDiagnostic),
-  // effect-tsrs reports the TypeScript diagnostics of the same program; effect-tsgo reports none and counts the files
-  // it checked without the plugin instead.
+  // effect-tsrs reports the TypeScript diagnostics of the same program beside the Effect ones.
   typescriptDiagnostics: Schema.optional(Schema.Array(TypescriptDiagnostic)),
   summary: Schema.Struct({ filesChecked: Schema.Number, filesWithoutPlugin: Schema.optional(Schema.Number) }),
 })
 export type EffectOutput = typeof EffectOutput.Type
 
-/** `effect-tsrs diagnostics --format json` or `effect-tsgo diagnostics --format json` output. */
+/** `effect-tsrs diagnostics --format json` output. */
 export const decodeEffect = Schema.decodeUnknownSync(EffectOutput)
 
 /**
- * The code of an `@effect-diagnostics` directive that changes nothing. effect-tsrs names it `unusedDirective`,
- * effect-tsgo `effect(377000)`.
+ * The code of an `@effect-diagnostics` directive that changes nothing. effect-tsrs names it `unusedDirective` (editors'
+ * effect-tsgo `effect(377000)`).
  */
 export const UNUSED_DIRECTIVE = 377000
 
@@ -154,9 +153,9 @@ export const gatingDiagnostics = (output: EffectOutput): EffectDiagnostic[] =>
     }))
 
 /**
- * Why a project's diagnostics are incomplete by effect-tsgo's count: files its tsconfig checks without the plugin, which
- * go unchecked. `label` names the project in the message. Undefined when every file was checked, and for effect-tsrs,
- * which does not count them (`missingPlugin` in effect.ts reads the tsconfig instead).
+ * Why a project's diagnostics are incomplete by the checker's own count: files its tsconfig checks without the plugin,
+ * which go unchecked. `label` names the project in the message. Undefined when every file was checked, and when the
+ * output has no count (`missingPlugin` in effect.ts reads the tsconfig before the run either way).
  */
 export const uncheckedFiles = (label: string, output: EffectOutput): string | undefined =>
   (output.summary.filesWithoutPlugin ?? 0) > 0

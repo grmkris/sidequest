@@ -6,7 +6,7 @@
  */
 import { Schema } from 'effect'
 import path from 'node:path'
-import { checker, effectProjects } from './effect.ts'
+import { effectProjects } from './effect.ts'
 import type { Project } from './effect.ts'
 import { effectPass, ownFiles } from './pass.ts'
 import { fromEffect, fromKnip, fromOxlint, safeFixCodes } from './report.ts'
@@ -87,18 +87,15 @@ export const oxlintFindings = async (config: string): Promise<Collected> => {
 // ---------------------------------------------------------------------------------------------------------------------
 // Effect diagnostics
 
-/**
- * Projects checked at the same time. Each is a full type check: effect-tsrs holds at most about 0.5 GB on one thread,
- * effect-tsgo about 1.5 GB.
- */
-const EFFECT_CONCURRENCY = { tsrs: 4, tsgo: 1 } as const
+/** Projects checked at the same time. Each is a full type check: effect-tsrs holds at most about 0.5 GB on one thread. */
+const EFFECT_CONCURRENCY = 4
 
 /**
  * One project's Effect findings. effect-tsrs reports the project's TypeScript errors in the same run; a project with any
  * fails the collection, since its Effect diagnostics are incomplete.
  */
 const effectProject = async ({ dir, tsconfig }: Project): Promise<Collected> => {
-  const result = await effectPass(path.join(dir, tsconfig), checker())
+  const result = await effectPass(path.join(dir, tsconfig))
   const typescript =
     result.typescript.length === 0
       ? []
@@ -123,13 +120,13 @@ const mapLimit = async <A, B>(items: readonly A[], limit: number, fn: (item: A) 
 /**
  * Every project's Effect findings; one a file gets in several programs counts once. Only files some typecheck tsconfig
  * includes count: effect-tsrs also reports a file a project merely imports (`infra/stage.ts` through `alchemy.run.ts`),
- * which effect-tsgo does not, and the baseline must hold under either checker.
+ * which no tsconfig covers.
  */
 export const effectFindings = async (): Promise<Collected> => {
   const projects = effectProjects()
   const owned = await Promise.all(projects.map(({ dir, tsconfig }) => ownFiles(path.join(dir, tsconfig))))
   const covered = new Set(owned.flatMap((own) => own.files))
-  const results = await mapLimit(projects, EFFECT_CONCURRENCY[checker()], effectProject)
+  const results = await mapLimit(projects, EFFECT_CONCURRENCY, effectProject)
   const seen = new Map<string, Finding>()
   for (const finding of results.flatMap((result) => result.findings)) {
     if (covered.has(finding.file)) seen.set(`${finding.file}:${finding.line}:${finding.rule}`, finding)

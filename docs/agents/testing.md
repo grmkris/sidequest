@@ -29,7 +29,7 @@ Run a workspace with `bunx turbo run test --filter <filter>`. The contracts floo
 
 Use `bun run check:files <owned paths>` after a change, or workspace typecheck plus `bun run lint:gate`. `typecheck` runs
 the TypeScript diagnostics on tsrs; `lint:gate` adds the Effect diagnostics to oxlint and knip, all against
-`tools/lint-baseline.json` (ADR 0030; `EFFECT_CHECKER=tsgo` falls back to tsc and effect-tsgo).
+`tools/lint-baseline.json` (ADR 0030; the tsgo fallback is gone, nothing in the gates runs tsc or effect-tsgo).
 Do not set `MONAD_TESTNET_RPC_URL`, and do not run fork, live, browser, Playwright, end-to-end or full repository checks in
 a cleanup lane. Contracts unit runs explicitly exclude `test/fork/*`. The coordinator runs the full suite after merging.
 

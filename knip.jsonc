@@ -60,7 +60,8 @@
     "tools": {
       // Root scripts load these CLIs; oxlint loads the repository plugins by filename.
       "entry": ["*.ts!", "oxlint/*.ts!"],
-      // Run as binaries by path (tools/effect.ts): effect-tsrs's native executable, and effect-tsgo for the fallback.
+      // effect-tsrs runs as its native executable, found by path (tools/effect.ts). Nothing here runs effect-tsgo: it is
+      // the language service editors read the tsconfig plugin block through (ADR 0030).
       "ignoreDependencies": ["@effect/tsgo", "@yielded/effect-tsrs"],
     },
     "packages/sdk": {
