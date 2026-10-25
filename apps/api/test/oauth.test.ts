@@ -5,7 +5,7 @@ import { Schema } from 'effect'
 import { AgentStore, fromNodeSqlite } from '@sidequest/board'
 import type { Address } from 'viem'
 import { oauthRoute, resolveOAuth, type OAuthReply } from '../src/oauth.ts'
-import { pkceChallenge } from '../src/oauth-validation.ts'
+import { pkceChallenge, matchesRedirect } from '../src/oauth-validation.ts'
 import { fromNodeSqlite as asyncSql, stmt } from '@sidequest/indexer'
 import { McpEvents } from '../src/mcp-events.ts'
 import { deliverWebhooks, terminateGrantSubscriptions } from '../src/webhooks.ts'
@@ -517,4 +517,57 @@ test('RFC 9207 issuer responses are advertised in authorization server metadata 
   } finally {
     f.db.close()
   }
+})
+
+test.each(['127.0.0.1', '[::1]'])(
+  'loopback %s accepts a fresh port; exchange requires that actual URI (M3)',
+  async (host) => {
+    const f = fixture()
+    try {
+      const registered = `http://${host}:1111/cb?fixed=1`
+      const actual = `http://${host}:2222/cb?fixed=1`
+      const client = await f.route('/oauth/register', { redirect_uris: [registered] })
+      const clientId = (client.body as { client_id: string }).client_id
+      const query = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: actual,
+        response_type: 'code',
+        scope: 'sidequest:read',
+        resource,
+        code_challenge_method: 'S256',
+        code_challenge: await pkceChallenge(verifier),
+      })
+      const authorize = await f.route('/oauth/authorize', {}, query, 'GET')
+      expect(authorize.status).toBe(302)
+      const requestId = new URL(authorize.redirect!).searchParams.get('oauth_request')!
+      const approve = await f.route(`/oauth/requests/${requestId}/approve`, { agentIds: ['one'] })
+      const callback = new URL((approve.body as { result: { redirectUrl: string } }).result.redirectUrl)
+      expect(callback.host).toBe(`${host}:2222`)
+      const token = {
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        redirect_uri: registered,
+        resource,
+        code: callback.searchParams.get('code'),
+        code_verifier: verifier,
+      }
+      expect((await f.route('/oauth/token', token)).status).toBe(400)
+      expect((await f.route('/oauth/token', { ...token, redirect_uri: actual })).status).toBe(200)
+    } finally {
+      f.db.close()
+    }
+  },
+)
+
+test.each([
+  ['http://127.0.0.1:1111/cb', 'http://127.0.0.1:2222/other'],
+  ['http://127.0.0.1:1111/cb?x=1', 'http://127.0.0.1:2222/cb?x=2'],
+  ['http://127.0.0.1:1111/cb', 'http://127.0.0.1:2222/a/../cb'],
+  ['http://127.0.0.1:1111/cb', 'http://[::1]:2222/cb'],
+  ['http://127.0.0.1:1111/cb', 'http://user@127.0.0.1:2222/cb'],
+  ['http://127.0.0.1:1111/cb', 'http://127.0.0.1:2222/cb#fragment'],
+  ['https://example.com:1111/cb', 'https://example.com:2222/cb'],
+  ['http://localhost:1111/cb', 'http://localhost:2222/cb'],
+])('does not relax redirect binding from %s to %s', (registered, requested) => {
+  expect(matchesRedirect(registered, requested)).toBe(false)
 })

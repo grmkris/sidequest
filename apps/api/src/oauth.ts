@@ -8,6 +8,7 @@ import {
   resourceBoard,
   tokenHash,
   validRedirect,
+  matchesRedirect,
   OAUTH_SCOPES as AGENT_SCOPES,
 } from './oauth-validation.ts'
 
@@ -208,7 +209,10 @@ export async function oauthRoute(input: {
       'SELECT redirect_uris_json FROM agent_oauth_clients WHERE id=?',
       clientId,
     )[0]
-    if (client === undefined || !(JSON.parse(client.redirect_uris_json) as string[]).includes(redirectUri))
+    if (
+      client === undefined ||
+      !(JSON.parse(client.redirect_uris_json) as string[]).some((uri) => matchesRedirect(uri, redirectUri))
+    )
       return failure('invalid_request', 'Unknown client or redirect URI')
     const scopes = parseScopes(query.get('scope') ?? OAUTH_SCOPES.join(' '))
     const challenge = query.get('code_challenge') ?? ''

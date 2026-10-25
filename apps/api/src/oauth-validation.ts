@@ -35,6 +35,16 @@ export function validRedirect(value: unknown): value is string {
   }
 }
 
+/** Only the port may differ for an IP loopback callback; every other byte stays registered. */
+export function matchesRedirect(registered: string, requested: string): boolean {
+  if (registered === requested) return true
+  if (!validRedirect(requested)) return false
+  const loopback = /^(http:\/\/(?:127\.0\.0\.1|\[::1\]))(?::\d+)?(\/[^#]*)$/
+  const expected = loopback.exec(registered)
+  const actual = loopback.exec(requested)
+  return expected !== null && actual !== null && expected[1] === actual[1] && expected[2] === actual[2]
+}
+
 export function resourceBoard(value: unknown, origin: string): string | undefined {
   if (typeof value !== 'string') return undefined
   try {
