@@ -131,7 +131,9 @@ export async function mcpRoute(input: {
     return json(
       { ok: false, code: 'unauthenticated', message: 'A resource-scoped OAuth bearer token is required' },
       401,
-      { 'www-authenticate': `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource${pathname}"` },
+      {
+        'www-authenticate': `Bearer ${/^Bearer\s+\S/i.test(input.headers.authorization ?? '') ? 'error="invalid_token", ' : ''}resource_metadata="${origin}/.well-known/oauth-protected-resource${pathname}", scope="sidequest:read sidequest:hire sidequest:work"`,
+      },
     )
   if (method === 'GET') return json({ ok: false, code: 'method-not-allowed', message: 'SSE is not offered' }, 405)
   if (method === 'DELETE') return { status: 204, headers: { 'cache-control': 'no-store' } }

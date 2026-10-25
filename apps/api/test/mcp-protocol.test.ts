@@ -246,7 +246,7 @@ describe('2026-07-28 MCP lane', () => {
       status: 401,
       headers: {
         'cache-control': 'no-store',
-        'www-authenticate': `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp"`,
+        'www-authenticate': `Bearer resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp", scope="sidequest:read sidequest:hire sidequest:work"`,
       },
       body: { ok: false, code: 'unauthenticated', message: 'A resource-scoped OAuth bearer token is required' },
     })
@@ -739,3 +739,22 @@ it('keeps a transient list_tasks refusal distinct from empty success and retries
     failure.mockRestore()
   }
 })
+
+it.each(['/mcp', '/b/team/mcp'])(
+  'invalid bearer on %s returns the RFC 6750 error and scope (S2/S4)',
+  async (pathname) => {
+    const reply = await mcpRoute({
+      method: 'POST',
+      pathname,
+      origin,
+      headers: { authorization: 'Bearer invalid' },
+      body: { jsonrpc: '2.0', id: 1, method: 'initialize' },
+      tools: {},
+      call: vi.fn(),
+    })
+    expect(reply.status).toBe(401)
+    expect(reply.headers?.['www-authenticate']).toBe(
+      `Bearer error="invalid_token", resource_metadata="${origin}/.well-known/oauth-protected-resource${pathname}", scope="sidequest:read sidequest:hire sidequest:work"`,
+    )
+  },
+)
