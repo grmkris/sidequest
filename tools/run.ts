@@ -20,6 +20,8 @@ export interface RunOptions {
   readonly heavy?: boolean
   /** Stream output to this process instead of capturing it. */
   readonly inherit?: boolean
+  /** The child's environment; by default this process's. */
+  readonly env?: NodeJS.ProcessEnv
 }
 
 const BUSY = 75
@@ -34,9 +36,10 @@ const MAX_RETRIES = 20
 export const heavyAvailable = (): boolean =>
   Bun.which('heavy') !== null && existsSync(path.join('/run/user', String(process.getuid?.() ?? 'none')))
 
-const once = async (argv: readonly string[], inherit: boolean): Promise<RunResult> => {
+const once = async (argv: readonly string[], { inherit = false, env }: RunOptions): Promise<RunResult> => {
   const child = Bun.spawn([...argv], {
     cwd: repoRoot,
+    ...(env === undefined ? {} : { env }),
     stdout: inherit ? 'inherit' : 'pipe',
     stderr: inherit ? 'inherit' : 'pipe',
   })
@@ -52,7 +55,7 @@ const once = async (argv: readonly string[], inherit: boolean): Promise<RunResul
 export const run = async (argv: readonly string[], options: RunOptions = {}): Promise<RunResult> => {
   const wrapped = options.heavy === true && heavyAvailable() ? ['heavy', ...argv] : argv
   for (let attempt = 0; ; attempt++) {
-    const result = await once(wrapped, options.inherit === true)
+    const result = await once(wrapped, options)
     if (result.exitCode !== BUSY || wrapped[0] !== 'heavy' || attempt >= MAX_RETRIES) return result
     console.error(`heavy: every slot is busy (exit 75); retrying in ${RETRY_EVERY_MS / 1000} s`)
     await Bun.sleep(RETRY_EVERY_MS)

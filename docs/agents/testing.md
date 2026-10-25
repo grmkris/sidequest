@@ -19,7 +19,7 @@ unit/local-binding evidence, not live or authenticated acceptance.
 | `packages/board` | 454 | 52 | `@sidequest/board` |
 | `packages/indexer` | 53 | 1 | `@sidequest/indexer` |
 | `packages/react` | 6 | 0 | `@sidequest/react` |
-| `tools` | 60 | 0 | `tools` |
+| `tools` | 81 | 0 | `tools` |
 
 Run a workspace with `bunx turbo run test --filter <filter>`. The contracts floor is 416 passing unit tests (fork tests excluded); see
 [contracts/AGENTS.md](../../contracts/AGENTS.md). The mandatory MainnetRunbook check passed 10 tests with

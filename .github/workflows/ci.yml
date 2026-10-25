@@ -46,6 +46,8 @@ jobs:
             contracts/cache
           key: foundry-${{ runner.os }}-${{ hashFiles('contracts/**/*.sol', 'contracts/foundry.toml') }}
       - run: bun install --frozen-lockfile
+      # The type-aware lint backend, a pinned release binary verified by checksum (tools/tsrs-lint.ts, ADR 0032).
+      - run: bun tools/tsrs-lint.ts
       - run: bun run check
       - run: bun run build
       - name: Working tree is clean after the gates

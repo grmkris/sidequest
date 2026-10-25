@@ -24,6 +24,7 @@ import path from 'node:path'
 import { nodes } from '../tools/graph.ts'
 import { ROOT_WORKSPACE, workspaceOf } from '../tools/report.ts'
 import { bin, repoRoot, run } from '../tools/run.ts'
+import { oxlintEnv } from '../tools/tsrs-lint.ts'
 
 type Outcome = 'pass' | 'fail' | 'skipped'
 interface StepResult {
@@ -96,7 +97,7 @@ const lint = async (files: readonly string[], heavy: boolean): Promise<StepResul
   }
   const argv = [bin('oxlint'), '-c', 'oxlint.config.ts', ...targets]
   announce(argv)
-  const result = await run(argv, { heavy, inherit: true })
+  const result = await run(argv, { heavy, inherit: true, env: await oxlintEnv() })
   const skipped = lintable.length - targets.length
   const detail = `${targets.length} files${skipped > 0 ? `, ${skipped} skipped (ignored)` : ''}`
   return { step: 'lint', outcome: result.exitCode === 0 ? 'pass' : 'fail', detail }

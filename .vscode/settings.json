@@ -4,5 +4,7 @@
   // oxlint.config.ts. Effect diagnostics come from `bun run typecheck` (README.md "Editors").
   "js/ts.experimental.useTsgo": true,
   "js/ts.tsdk.path": "./.vscode/tsrs",
-  "oxc.enable.oxlint": true
+  "oxc.enable.oxlint": true,
+  // The type-aware rules run on the pinned tsrs-lint that `bun tools/tsrs-lint.ts` caches; the tag equals its pin.
+  "oxc.path.tsgolint": "${userHome}/.cache/tsrs-lint/lint-pr624-0acc433-regions.1/tsrs-lint"
 }

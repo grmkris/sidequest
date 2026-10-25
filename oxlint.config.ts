@@ -26,8 +26,9 @@ export default defineConfig({
     // vendored skills, harness dirs, generated MCP files (tools/vendored.ts)
     ...agentIgnorePatterns(),
   ],
-  // Type-aware rules run through oxlint-tsgolint, pinned with TypeScript (the root catalog). A bare `oxlint`
-  // therefore matches CI. `--type-check` is never used: it picks the wrong tsconfig in workspaces with several.
+  // Type-aware rules run through tsrs-lint, the pinned release tools/tsrs-lint.ts fetches and names in
+  // OXLINT_TSGOLINT_PATH (ADR 0032): run oxlint as `bun run lint`, which sets it; a bare `oxlint` has no backend.
+  // `--type-check` is never used: it picks the wrong tsconfig in workspaces with several.
   options: { typeAware: true, reportUnusedDisableDirectives: 'error' },
   jsPlugins: [
     './tools/oxlint/boundaries.ts',

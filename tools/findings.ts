@@ -13,6 +13,7 @@ import { fromEffect, fromKnip, fromOxlint, safeFixCodes } from './report.ts'
 import type { Finding, Source } from './report.ts'
 import { bin, repoRoot, run } from './run.ts'
 import type { RunResult } from './run.ts'
+import { oxlintEnv } from './tsrs-lint.ts'
 
 export const SOURCES: readonly Source[] = ['oxlint', 'effect', 'knip']
 
@@ -77,7 +78,7 @@ const pluginFixCodes = async (config: string): Promise<Set<string>> => {
 export const oxlintFindings = async (config: string): Promise<Collected> => {
   const rules = await run([bin('oxlint'), '--rules', '-f', 'json'])
   const fixCodes = new Set([...safeFixCodes(JSON.parse(rules.stdout)), ...(await pluginFixCodes(config))])
-  const lint = await run([bin('oxlint'), '-c', config, '-f', 'json', '.'], { heavy: true })
+  const lint = await run([bin('oxlint'), '-c', config, '-f', 'json', '.'], { heavy: true, env: await oxlintEnv() })
   const failures = didNotRun('oxlint', lint)
   if (failures.length > 0) return { findings: [], failures }
   if (lint.stderr.trim() !== '') console.error(lint.stderr.trim())
