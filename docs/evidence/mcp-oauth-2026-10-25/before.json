@@ -1,0 +1,195 @@
+{
+  "observedAt": "2026-10-25T10:51:02.136Z",
+  "source": "MCP OAuth audit 2026-10-25; evidence/read and evidence/active2/sidequest-dev.json",
+  "challenge": {
+    "post": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer resource_metadata=\"https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp\"",
+      "parsed": {
+        "resource_metadata": "https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp"
+      },
+      "body": {
+        "ok": false,
+        "code": "unauthenticated",
+        "message": "A resource-scoped OAuth bearer token is required"
+      }
+    },
+    "get": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer resource_metadata=\"https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp\""
+    },
+    "invalidToken": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer resource_metadata=\"https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp\""
+    },
+    "forgedJwt": {
+      "status": 401,
+      "wwwAuthenticate": "Bearer resource_metadata=\"https://dev.sidequest.exchange/.well-known/oauth-protected-resource/mcp\""
+    }
+  },
+  "as": [
+    {
+      "issuer": "https://dev.sidequest.exchange",
+      "tries": [
+        {
+          "url": "https://dev.sidequest.exchange/.well-known/oauth-authorization-server",
+          "status": 200,
+          "issuer": "https://dev.sidequest.exchange",
+          "contentType": "application/json"
+        },
+        {
+          "url": "https://dev.sidequest.exchange/.well-known/openid-configuration",
+          "status": 404,
+          "contentType": "text/plain"
+        }
+      ],
+      "bareRoot": {
+        "status": 200,
+        "issuer": "https://dev.sidequest.exchange"
+      },
+      "selected": "https://dev.sidequest.exchange/.well-known/oauth-authorization-server",
+      "fields": {
+        "issuer": "https://dev.sidequest.exchange",
+        "authorization_endpoint": "https://dev.sidequest.exchange/oauth/authorize",
+        "token_endpoint": "https://dev.sidequest.exchange/oauth/token",
+        "registration_endpoint": "https://dev.sidequest.exchange/oauth/register",
+        "revocation_endpoint": "https://dev.sidequest.exchange/oauth/revoke",
+        "introspection_endpoint": null,
+        "jwks_uri": null,
+        "response_types_supported": [
+          "code"
+        ],
+        "grant_types_supported": [
+          "authorization_code",
+          "refresh_token"
+        ],
+        "code_challenge_methods_supported": [
+          "S256"
+        ],
+        "token_endpoint_auth_methods_supported": [
+          "none"
+        ],
+        "scopes_supported": [
+          "sidequest:read",
+          "sidequest:hire",
+          "sidequest:work",
+          "sidequest:maintain",
+          "sidequest:media",
+          "sidequest:setup"
+        ],
+        "client_id_metadata_document_supported": null,
+        "authorization_response_iss_parameter_supported": null,
+        "dpop_signing_alg_values_supported": null,
+        "response_modes_supported": null,
+        "resource_indicators_supported": null,
+        "protected_resources": null
+      }
+    }
+  ],
+  "cors": null,
+  "findings": [
+    "SHOULD: 401 WWW-Authenticate has no scope",
+    "RFC6750 \u00a73.1 SHOULD: 401 for a bad token has no error=\"invalid_token\"",
+    "interop: PRM with a foreign Origin header -> 403 (browser-based clients fail)",
+    "SHOULD: CIMD not advertised (client_id_metadata_document_supported != true)",
+    "SHOULD: RFC 9207 iss not advertised",
+    "MUST(AS endpoints over HTTPS): http:// serves metadata (no redirect); http token endpoint -> 400; HSTS absent"
+  ],
+  "authorize": {
+    "ipSamePort": {
+      "status": 302,
+      "ms": 99,
+      "location": "https://dev.sidequest.exchange/connect",
+      "error": null,
+      "error_description": ""
+    },
+    "ipOtherPort": {
+      "status": 400,
+      "ms": 69,
+      "location": null,
+      "error": "invalid_request",
+      "error_description": "Unknown client or redirect URI"
+    },
+    "ipOtherPath": {
+      "status": 400,
+      "ms": 64,
+      "location": null,
+      "error": "invalid_request",
+      "error_description": "Unknown client or redirect URI"
+    },
+    "uppercaseResource": {
+      "status": 302,
+      "ms": 134,
+      "location": "https://dev.sidequest.exchange/connect",
+      "error": null,
+      "error_description": ""
+    },
+    "trailingSlashResource": {
+      "status": 400,
+      "ms": 82,
+      "location": null,
+      "error": "invalid_request",
+      "error_description": "Require authorization code, PKCE S256, supported scope and explicit MCP resource"
+    },
+    "originResource": {
+      "status": 400,
+      "ms": 73,
+      "location": null,
+      "error": "invalid_request",
+      "error_description": "Require authorization code, PKCE S256, supported scope and explicit MCP resource"
+    }
+  },
+  "dcr": {
+    "deviceCodeExtra": {
+      "status": 201,
+      "client_id": "hl_e4f2c64de3866c2d06d4c92a2853ec38",
+      "grant_types": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "redirect_uris": [
+        "http://127.0.0.1:33430/callback"
+      ]
+    },
+    "jwtBearerExtra": {
+      "status": 201,
+      "client_id": "hl_8001c4e5446d45a6cc948012172b92d3",
+      "grant_types": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "redirect_uris": [
+        "https://claude.ai/api/mcp/auth_callback"
+      ]
+    },
+    "vscodeShape": {
+      "status": 201,
+      "client_id": "hl_851f36a58082f82e35110ea6412f0d31",
+      "grant_types": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "redirect_uris": [
+        "http://127.0.0.1:33418/",
+        "https://vscode.dev/redirect"
+      ]
+    },
+    "customScheme": {
+      "status": 400,
+      "error": "invalid_client_metadata",
+      "error_description": "Provide exact HTTPS or loopback redirect URIs"
+    },
+    "ipLoopback": {
+      "status": 201,
+      "client_id": "hl_5f8c3db42cf8532fb399b6df859cbc13",
+      "grant_types": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "redirect_uris": [
+        "http://127.0.0.1:33431/callback"
+      ]
+    }
+  },
+  "interpretation": "Public/anonymous probes only; no signed-in session or tokens."
+}
