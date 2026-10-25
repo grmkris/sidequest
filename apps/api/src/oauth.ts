@@ -162,6 +162,7 @@ export async function oauthRoute(input: {
       token_endpoint: `${origin}/oauth/token`,
       registration_endpoint: `${origin}/oauth/register`,
       revocation_endpoint: `${origin}/oauth/revoke`,
+      authorization_response_iss_parameter_supported: true,
       response_types_supported: ['code'],
       grant_types_supported: ['authorization_code', 'refresh_token'],
       token_endpoint_auth_methods_supported: ['none'],

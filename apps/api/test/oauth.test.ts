@@ -89,6 +89,9 @@ async function connection(
     ...(scopes === undefined ? {} : { scopes }),
     ...consentBody,
   })
+  expect(
+    new URL((approve.body as { result: { redirectUrl: string } }).result.redirectUrl).searchParams.get('iss'),
+  ).toBe(origin)
   const code = new URL((approve.body as { result: { redirectUrl: string } }).result.redirectUrl).searchParams.get(
     'code',
   )!
@@ -502,5 +505,16 @@ test('offers and grants sidequest:media only to an operator on the media team, f
     expect(narrow).toBeDefined()
   } finally {
     inside.db.close()
+  }
+})
+
+test('RFC 9207 issuer responses are advertised in authorization server metadata (M4)', async () => {
+  const f = fixture()
+  try {
+    expect(
+      (await f.route('/.well-known/oauth-authorization-server', {}, new URLSearchParams(), 'GET')).body,
+    ).toMatchObject({ issuer: origin, authorization_response_iss_parameter_supported: true })
+  } finally {
+    f.db.close()
   }
 })

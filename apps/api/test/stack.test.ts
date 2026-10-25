@@ -371,6 +371,7 @@ test(
     const discovery = yield* HttpClient.get(`${apiUrl}/.well-known/oauth-authorization-server`)
     expect(discovery.status).toBe(200)
     expect(yield* discovery.json).toMatchObject({
+      authorization_response_iss_parameter_supported: true,
       token_endpoint: `${apiUrl}/oauth/token`,
       code_challenge_methods_supported: ['S256'],
       token_endpoint_auth_methods_supported: ['none'],
