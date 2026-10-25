@@ -2167,3 +2167,12 @@ Kris approved the cutover on 24 Oct (the prod media team is Kris alone). What is
 - **Not done:** prod gap 18 (a stake-free pass note on mainnet) waits on a policy decision; gap statuses are set only
   after a prod release. The board fork fixture fails at deploy (a constructor takes three arguments, the fixture
   passes two), so fork tests did not run.
+
+## Em dash copy rule on dev (25 Oct 2026)
+
+- **Implemented and tested:** `no-em-dash-copy` checks shipped JSX, literals and template fragments; the named empty-cell
+  marker remains the only exception. The dev commit is `28e4615e`; local `bun run check` and `bun run build` passed.
+- **Live-verified on dev:** CI run [40152874145](https://github.com/grmkris/sidequest/actions/runs/40152874145) passed verify,
+  deploy-dev, smoke and drift for `https://dev.sidequest.exchange`. Anonymous smoke is public proof; authenticated hiring
+  and paid-provider acceptance were not run. The A06f outage probe needs a prepared operator session and released fixture,
+  so no outage success is claimed.
