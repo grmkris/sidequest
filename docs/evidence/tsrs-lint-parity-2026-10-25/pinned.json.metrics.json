@@ -1,0 +1,33 @@
+{
+  "backendEnv": {
+    "OXLINT_TSGOLINT_PATH": "/home/kristjan/spikes/tsrslint-20261025/scripts/adopt/tee-helper.sh"
+  },
+  "childSystemSeconds": 6.346826,
+  "childUserSeconds": 35.858224,
+  "command": [
+    "/home/kristjan/code/agent-jobs.wt/night-tsrslint-adopt/node_modules/.bin/oxlint",
+    "-c",
+    "oxlint.config.ts",
+    "-f",
+    "json",
+    "."
+  ],
+  "cwd": "/home/kristjan/code/agent-jobs.wt/night-tsrslint-adopt",
+  "exitCode": 1,
+  "label": "agent-jobs-pinned",
+  "loadAverageEnd": [
+    25.24267578125,
+    19.66796875,
+    17.6796875
+  ],
+  "loadAverageStart": [
+    20.2294921875,
+    18.24560546875,
+    17.17041015625
+  ],
+  "output": "/home/kristjan/spikes/tsrslint-20261025/evidence/adopt/agent-jobs-pinned.json",
+  "resourceMaxRssKb": 1531308,
+  "sampledTreePeakRssKb": 2224628,
+  "samples": 287,
+  "wallSeconds": 30.428
+}

@@ -1,0 +1,31 @@
+{
+  "backendEnv": {},
+  "childSystemSeconds": 5.797148,
+  "childUserSeconds": 66.753331,
+  "command": [
+    "/home/kristjan/code/agent-jobs.wt/night-tsrslint-adopt/node_modules/.bin/oxlint",
+    "-c",
+    "oxlint.config.ts",
+    "-f",
+    "json",
+    "."
+  ],
+  "cwd": "/home/kristjan/code/agent-jobs.wt/night-tsrslint-adopt",
+  "exitCode": 1,
+  "label": "agent-jobs-stock",
+  "loadAverageEnd": [
+    20.2294921875,
+    18.24560546875,
+    17.17041015625
+  ],
+  "loadAverageStart": [
+    20.5283203125,
+    18.181640625,
+    17.1240234375
+  ],
+  "output": "/home/kristjan/spikes/tsrslint-20261025/evidence/adopt/agent-jobs-stock.json",
+  "resourceMaxRssKb": 3130944,
+  "sampledTreePeakRssKb": 4412228,
+  "samples": 218,
+  "wallSeconds": 23.099
+}
