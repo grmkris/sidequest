@@ -400,10 +400,13 @@ test(
       scope: 'sidequest:read',
       resource: `${apiUrl}/mcp`,
     })
-    const evilOrigin = yield* HttpClient.get(`${apiUrl}/oauth/authorize?${query}`, {
-      headers: { origin: 'https://evil.example' },
-    })
-    expect(evilOrigin.status).toBe(403)
+    const foreignOrigin = yield* Effect.promise(() =>
+      fetch(`${apiUrl}/oauth/authorize?${query.toString()}`, {
+        headers: { origin: 'https://evil.example' },
+        redirect: 'manual',
+      }),
+    )
+    expect(foreignOrigin.status).toBe(302)
     query.set('resource', 'https://evil.example/mcp')
     const evilResource = yield* HttpClient.get(`${apiUrl}/oauth/authorize?${query}`)
     expect(evilResource.status).toBe(400)
@@ -634,3 +637,36 @@ function postEventStream(apiUrl: string, token: string, method: string) {
     }),
   })
 }
+
+test(
+  'public OAuth supports foreign browser origins while consent stays same-origin (I6)',
+  Effect.gen(function* () {
+    const { apiUrl } = yield* stack
+    const origin = 'https://inspector.example'
+    for (const path of ['/.well-known/oauth-authorization-server', '/.well-known/oauth-protected-resource/mcp']) {
+      const reply = yield* HttpClient.get(`${apiUrl}${path}`, { headers: { origin } })
+      expect(reply.status).toBe(200)
+      expect(reply.headers['access-control-allow-origin']).toBe('*')
+      expect(reply.headers['access-control-allow-credentials']).toBeUndefined()
+    }
+    for (const path of ['/oauth/register', '/oauth/token', '/oauth/revoke']) {
+      const reply = yield* Effect.promise(() =>
+        fetch(`${apiUrl}${path}`, {
+          method: 'OPTIONS',
+          headers: {
+            origin,
+            'access-control-request-method': 'POST',
+            'access-control-request-headers': 'content-type',
+          },
+        }),
+      )
+      expect(reply.status).toBe(204)
+      expect(reply.headers.get('access-control-allow-origin')).toBe('*')
+    }
+    const refused = yield* postJson(`${apiUrl}/oauth/requests/oauth_abc/approve`, {}, { origin })
+    expect(refused.status).toBe(403)
+    const revoke = yield* postJson(`${apiUrl}/oauth/revoke`, { client_id: 'unknown', token: 'unknown' }, { origin })
+    expect(revoke.status).toBe(200)
+    expect(revoke.headers['access-control-allow-origin']).toBe('*')
+  }),
+)

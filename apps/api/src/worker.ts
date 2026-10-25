@@ -35,6 +35,7 @@ import * as sdk from '@sidequest/sdk'
 import { stageProfile } from '../../../infra/stage.ts'
 import type { Address, Hex } from 'viem'
 import Board, { type BoardCall, type BoardReply } from './board.ts'
+import { publicOAuthCors } from './oauth-cors.ts'
 import { corsHeaders } from './cors.ts'
 import { Database } from './database.ts'
 import { dripOnce } from './drip.ts'
@@ -431,7 +432,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
         }).pipe(Effect.withSpan('api.tenant'))
         const origin = request.headers.origin
         const allowed = tenant === undefined ? false : isAllowedOrigin(tenant, origin, url.host)
-        const cors = corsHeaders(origin, allowed)
+        const cors = publicOAuthCors(path) ?? corsHeaders(origin, allowed)
         const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
           jsonResponse(body, { status, headers: { ...cors, ...headers } })
         // SAFETY: runtimeEnv holds this Worker's configured bindings (TOOL_ARGS_MODE, DEPLOY_STAGE, NETWORK).
@@ -783,7 +784,7 @@ export default class Api extends Cloudflare.Worker<Api>()(
           return json(reply, reply.ok ? 200 : (STATUS[reply.code] ?? 503), { 'cache-control': 'no-store' })
         }
         if (path.startsWith('/oauth/') || path.startsWith('/.well-known/oauth-')) {
-          if (origin !== undefined && origin !== url.origin)
+          if (path.startsWith('/oauth/requests/') && origin !== undefined && origin !== url.origin)
             return json(
               { error: 'invalid_request', error_description: 'OAuth requests require the website origin' },
               403,
