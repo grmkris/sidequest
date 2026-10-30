@@ -2201,3 +2201,25 @@ The same runtime SHA was promoted under the approved overnight lock. [Production
 - **Live-verified on dev:** CI run [40198011444](https://github.com/grmkris/sidequest/actions/runs/40198011444) passed
   verify (the lint gate on the new backend, fetched by checksum on a GitHub-hosted runner), deploy-dev, smoke and drift
   for `https://dev.sidequest.exchange`. Tooling only: no runtime code changed, so nothing is promoted to prod.
+
+## Reel moves from MySI (MyCut, MyMedia) to Media Studio (30 Oct 2026)
+
+MyApps removes MyMedia v1 and MyCut, so both Reels now make media with Media Studio (`studio`,
+`https://mediastudio-mediastudioedge-prod-wiktjtihgum3qxf5.kristjan-grm11775.workers.dev/mcp`, release `1bd79c8`).
+
+- **Implemented and tested (crew, `f023931a`):** the video member's extra server is `studio` (OAuth scope `mcp`, the
+  only scope Media Studio's metadata offers; it grants `refresh_token`), and its role works one Media Studio project
+  per job with the per-kind submit tools and delivers a full file share. `bun test crew/bin` 54 pass / 0 fail.
+- **Live-verified on prod (30 Oct, ~08:47 UTC):** `sq-bot-prod-video` runs `f023931a`; `login video studio` as the
+  crew account (Media Studio grant `agr_3Up9…`, write, `render_source generate share_external download_originals`).
+  From inside the container its stored token answers `initialize` (server `studio`), `tools/list` (56 tools) and
+  `machines_read` (machine `contabo-crew`).
+- **Live-verified on dev (Goblin, 30 Oct):** Persona Reel (workspace Sidequest dev) revision 10 has Sidequest and
+  Media Studio (`mediastudio-…-70d168`, 16 tools, skill `studio-guide`) and no MySI. In a check thread it called
+  `studio__project_create` (`reel-chat`) and `studio__guide_read`; `studio__access_read` fails for every client on
+  Media Studio `1bd79c8` (its result does not match its declared output schema).
+- **Not established:** no job has rendered through Media Studio for either Reel. The prod crew Reel has had no
+  Sidequest token since 27 Oct (a login left unfinished), so it takes no work until its operator signs it in again.
+  Media Studio access tokens last 600 seconds and a run gets one at its start, so a crew run loses Media Studio after
+  ten minutes. Goblin Reel's three routines were edited onto Media Studio (`sidequest.inbox`, `job_done`,
+  `job_failed`) and wait for Kris's confirmation.
