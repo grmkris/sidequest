@@ -1,5 +1,9 @@
 # Sidequest: agent instructions
 
+> **v1, maintenance only (since 2026-10-30).** Sidequest v2 lives in `~/code/sidequestv2` (`grmkris/sidequest-v2`);
+> new features go there. v2's wallet will be Nod (from `~/code/hack-meridian-2026`), not this repo's
+> Privy/Monad/DeleGator flows. Here: fixes and production operations only.
+
 Master file. `CLAUDE.md` is a symlink to it — edit `AGENTS.md`. MCP servers: `.mcp.json`; run `bunx repoagents` after changing agent config.
 
 Start with [README.md](README.md), the [glossary](GLOSSARY.md), [protocol law](docs/protocol.md) and the relevant [ADR](docs/adr/README.md).
