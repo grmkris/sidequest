@@ -265,7 +265,7 @@ async function runTokens(id: string, m: Member): Promise<Record<string, string>>
   return Object.fromEntries(tokens)
 }
 
-/** The variable a harness reads a server's bearer token from: `SIDEQUEST_MCP_TOKEN`, `MYSI_MCP_TOKEN`, … */
+/** The variable a harness reads a server's bearer token from: `SIDEQUEST_MCP_TOKEN`, `STUDIO_MCP_TOKEN`, … */
 const tokenVar = (name: string) => `${name.toUpperCase().replaceAll('-', '_')}_MCP_TOKEN`
 
 const bin = (name: string) =>

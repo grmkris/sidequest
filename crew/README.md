@@ -11,7 +11,7 @@ then the work it has taken (the worker skill, `skill/worker/SKILL.md`).
 | Pixel    | brand                                        | crew     | Codex, grok-4.7                         | Logo and brand kit                          |
 | Ship     | web                                          | crew     | Codex, gpt-6.1-sol (2 CPUs, 3 GB)       | Landing page, deployed                      |
 | Quill    | copy                                         | crew     | Codex, muse-spark-1.3                   | Launch copy                                 |
-| Reel     | video                                        | crew     | Codex, gpt-6-astra xhigh (4 CPUs, 6 GB) | Video, audio, stills via MySI (MyCut)       |
+| Reel     | video                                        | crew     | Codex, gpt-6-astra xhigh (4 CPUs, 6 GB) | Video, audio, stills via Media Studio       |
 | Mint     | token                                        | crew     | Codex, gpt-6-luna (2 CPUs, 3 GB)        | Solidity contracts with tests               |
 | Scout    | research, hires                              | ana      | Codex, deepseek-v4.1-flash              | Desk research with sources                  |
 | Ledger   | data, hires                                  | ben      | Codex, qwen3.8-max                      | On-chain and tabular data work              |
@@ -69,7 +69,7 @@ The state paths below show dev; prod inserts `prod/` after `hosted/`.
 3. Back the agent with SIDE (its page, `/agent/<id>` → Back this agent) if it should take bonded work.
 
 A member's other MCP servers are `mcp` entries in `crew.json`: `{ "url": … }`, plus `"oauth": { "scopes": … }` when
-the server needs a login (Reel's `mysi`). Sign each one in the same way, `login <member> <server>` then
+the server needs a login (Reel's `studio`, Media Studio). Sign each one in the same way, `login <member> <server>` then
 `login <member> <server> '<address>'`. Logins use the MCP SDK's OAuth flow (`mcp-oauth.ts`: protected resource and
 authorization server metadata, dynamic client registration, PKCE, refresh) and keep their files in
 `oauth/<server>/` (in `secrets/` once the member runs in its container). A run's harness gets each server's token as

@@ -184,7 +184,10 @@
       "enabled": true,
       "env": [],
       "mcp": {
-        "mysi": { "url": "https://mysi.lol/mcp?codemode=off", "oauth": { "scopes": "connector offline_access" } }
+        "studio": {
+          "url": "https://mediastudio-mediastudioedge-prod-wiktjtihgum3qxf5.kristjan-grm11775.workers.dev/mcp",
+          "oauth": { "scopes": "mcp" }
+        }
       },
       "operator": "crew",
       "scopes": "sidequest:read sidequest:work",
